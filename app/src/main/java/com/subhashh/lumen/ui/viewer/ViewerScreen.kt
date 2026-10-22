@@ -45,14 +45,12 @@ import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -74,6 +72,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.SeekParameters
 import androidx.media3.ui.compose.state.rememberPlayPauseButtonState
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
@@ -308,15 +307,15 @@ private fun TopBar(
 private fun VideoControls(backdrop: Backdrop, player: Player) {
     val colors = LocalGlassColors.current
     val playPause = rememberPlayPauseButtonState(player)
-    var position by remember { mutableFloatStateOf(0f) }
-    var duration by remember { mutableFloatStateOf(0f) }
+    var position by remember { mutableLongStateOf(0L) }
+    var duration by remember { mutableLongStateOf(0L) }
     var scrubbing by remember { mutableStateOf(false) }
 
     LaunchedEffect(player) {
         while (true) {
-            if (!scrubbing) position = player.currentPosition.toFloat()
-            duration = player.duration.coerceAtLeast(0).toFloat()
-            delay(200)
+            if (!scrubbing) position = player.currentPosition
+            duration = player.duration.coerceAtLeast(0)
+            delay(100)
         }
     }
 
@@ -324,7 +323,7 @@ private fun VideoControls(backdrop: Backdrop, player: Player) {
         Modifier
             .fillMaxWidth()
             .glass(backdrop, shape = RoundedCornerShape(50))
-            .padding(horizontal = 8.dp),
+            .padding(start = 4.dp, end = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
@@ -332,34 +331,38 @@ private fun VideoControls(backdrop: Backdrop, player: Player) {
             contentDescription = if (playPause.showPlay) "Play" else "Pause",
             tint = colors.content,
             modifier = Modifier
-                .size(40.dp)
-                .padding(8.dp)
+                .size(44.dp)
+                .padding(10.dp)
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
                     onClick = playPause::onClick,
                 ),
         )
-        Slider(
-            value = if (duration > 0f) position.coerceIn(0f, duration) else 0f,
-            onValueChange = { scrubbing = true; position = it },
-            onValueChangeFinished = { player.seekTo(position.toLong()); scrubbing = false },
-            valueRange = 0f..duration.coerceAtLeast(1f),
-            colors = SliderDefaults.colors(
-                thumbColor = colors.content,
-                activeTrackColor = colors.content,
-                inactiveTrackColor = colors.contentSecondary.copy(alpha = 0.3f),
-            ),
-            modifier = Modifier.weight(1f),
-        )
-        Text(
-            formatClock(position.toLong()),
+        Text(formatClock(position), color = colors.content, fontSize = 12.sp)
+        Scrubber(
+            progress = if (duration > 0) position.toFloat() / duration else 0f,
+            onScrub = { fraction ->
+                if (!scrubbing) {
+                    scrubbing = true
+                    // Snap to keyframes while dragging so the preview keeps up.
+                    (player as? ExoPlayer)?.setSeekParameters(SeekParameters.CLOSEST_SYNC)
+                }
+                position = (fraction * duration).toLong()
+                player.seekTo(position)
+            },
+            onScrubEnd = {
+                (player as? ExoPlayer)?.setSeekParameters(SeekParameters.EXACT)
+                player.seekTo(position)
+                scrubbing = false
+            },
             color = colors.content,
-            fontSize = 12.sp,
+            trackColor = colors.contentSecondary.copy(alpha = 0.3f),
             modifier = Modifier
-                .width(52.dp)
-                .padding(start = 8.dp),
+                .weight(1f)
+                .padding(horizontal = 10.dp),
         )
+        Text("-" + formatClock(duration - position), color = colors.content, fontSize = 12.sp)
     }
 }
 
@@ -415,6 +418,6 @@ private fun formatTakenAt(millis: Long): Pair<String, String> {
 }
 
 private fun formatClock(ms: Long): String {
-    val total = ms / 1000
+    val total = ms.coerceAtLeast(0) / 1000
     return "%d:%02d".format(total / 60, total % 60)
 }
