@@ -1,9 +1,9 @@
 package com.subhashh.lumen.ui.collections
 
 import com.subhashh.lumen.ui.icons.LumenIcons
+import com.subhashh.lumen.ui.components.pressable
 import com.subhashh.lumen.ui.images.ImageKeys
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -114,9 +114,9 @@ private fun UtilityTile(collection: MediaCollection, onClick: () -> Unit) {
     // Icon above the label so long names like "Recently Deleted" fit a half-width tile.
     Column(
         Modifier
+            .pressable(onClick, pressedScale = 0.96f)
             .clip(RoundedCornerShape(16.dp))
             .background(onBackground.copy(alpha = 0.07f))
-            .clickable(onClick = onClick)
             .padding(14.dp),
     ) {
         Icon(
@@ -151,7 +151,7 @@ private fun utilityIcon(key: String): ImageVector = when (key) {
 @Composable
 private fun AlbumCard(collection: MediaCollection, onClick: () -> Unit) {
     val onBackground = MaterialTheme.colorScheme.onBackground
-    Column(Modifier.clickable(onClick = onClick)) {
+    Column(Modifier.pressable(onClick, pressedScale = 0.96f)) {
         Box(
             Modifier
                 .fillMaxWidth()

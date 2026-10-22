@@ -3,8 +3,6 @@ package com.subhashh.lumen.ui.components
 import com.subhashh.lumen.ui.icons.LumenIcons
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,7 +16,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -77,13 +74,8 @@ fun GlassTabBar(
         Column(
             modifier = Modifier
                 .size(60.dp)
-                .glass(backdrop)
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    enabled = enabled,
-                    onClick = onSearch,
-                ),
+                .pressable(onSearch, enabled)
+                .glass(backdrop),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
@@ -115,14 +107,9 @@ private fun TabItem(
     )
     Column(
         modifier = Modifier
+            .pressable(onClick, enabled, pressedScale = 0.9f)
             .clip(CircleShape)
             .background(pill)
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                enabled = enabled,
-                onClick = onClick,
-            )
             .width(88.dp)
             .padding(vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
