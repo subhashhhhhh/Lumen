@@ -2,6 +2,11 @@ package com.subhashh.lumen.ui.viewer
 
 import com.subhashh.lumen.ui.icons.LumenIcons
 import android.app.Activity
+import coil3.SingletonImageLoader
+import coil3.memory.MemoryCache
+import coil3.request.ImageRequest
+import com.subhashh.lumen.ui.images.ImageKeys
+import kotlin.math.roundToInt
 import android.os.Handler
 import android.os.Looper
 import android.Manifest
@@ -173,6 +178,26 @@ fun ViewerScreen(
         // Read inside graphicsLayer blocks so dragging redraws without recomposing.
         val infoFraction = { (motion.reveal / sheetHeight).coerceIn(0f, 1f) }
         val width = constraints.maxWidth.toFloat()
+
+        // Keep screen-size decodes of the settled photo and its neighbors in memory: the close
+        // flight then starts sharp even after swiping away from the photo that was tapped, and
+        // swipes land on an already-sharp placeholder.
+        LaunchedEffect(pager.settledPage, items) {
+            val loader = SingletonImageLoader.get(context)
+            for (i in pager.settledPage - 1..pager.settledPage + 1) {
+                val item = items.getOrNull(i) ?: continue
+                val key = ImageKeys.screen(item.id)
+                if (loader.memoryCache?.get(MemoryCache.Key(key)) != null) continue
+                val target = fullScreenRect(item, width, height)
+                loader.enqueue(
+                    ImageRequest.Builder(context)
+                        .data(item.uri)
+                        .size(target.width.roundToInt().coerceAtLeast(1), target.height.roundToInt().coerceAtLeast(1))
+                        .memoryCacheKey(key)
+                        .build(),
+                )
+            }
+        }
         // Scale about the touch point while dismissing (photo stays under the thumb), else the center.
         val pageOrigin = {
             if (motion.dismissX != 0f || motion.dismissY != 0f) motion.pivot else TransformOrigin.Center
