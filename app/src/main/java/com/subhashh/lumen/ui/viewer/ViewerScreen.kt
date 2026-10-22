@@ -5,6 +5,7 @@ import android.app.Activity
 import android.Manifest
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -107,7 +108,7 @@ private const val SheetFraction = 0.55f
 fun ViewerScreen(
     items: List<MediaItem>,
     initialIndex: Int,
-    onClose: (index: Int) -> Unit,
+    onClose: (ViewerExit) -> Unit,
     onMediaChanged: () -> Unit,
     /** Viewing Recently Deleted: offer restore and delete forever instead of share/favorite/trash. */
     inTrash: Boolean = false,
@@ -129,10 +130,7 @@ fun ViewerScreen(
     ) { granted -> if (granted) locationRefresh++ }
 
     // Everything was deleted out from under us.
-    LaunchedEffect(items.isEmpty()) { if (items.isEmpty()) onClose(0) }
 
-    BackHandler { onClose(pager.currentPage) }
-    BackHandler(enabled = motion.infoOpen) { motion.closeInfo() }
     SystemBarsVisibility(visible = chromeVisible)
 
     val player = rememberViewerPlayer(current)
@@ -159,6 +157,43 @@ fun ViewerScreen(
         }
         // Read inside graphicsLayer blocks so dragging redraws without recomposing.
         val infoFraction = { (motion.reveal / sheetHeight).coerceIn(0f, 1f) }
+        val width = constraints.maxWidth.toFloat()
+
+        // Where the current photo is on screen right now — fitted, then moved by any dismiss drag
+        // or open details sheet — so the close transition can fly from exactly there.
+        val close: (velocityY: Float) -> Unit = { velocityY ->
+            val index = pager.currentPage
+            val item = items.getOrNull(index)
+            val rect = item?.let {
+                val fitted = fittedHeight(it, width, height)
+                val fraction = infoFraction()
+                val available = (height - sheetHeight - topInset).coerceAtLeast(1f)
+                val infoScale = 1f - (1f - (available / fitted).coerceAtMost(1f)) * fraction
+                val infoShift = (topInset + available / 2f - height / 2f) * fraction
+                val scale = (1f - progress * 0.4f) * infoScale
+                val centerY = height / 2f + motion.dismiss + infoShift
+                Rect(
+                    left = width / 2f - width * scale / 2f,
+                    top = centerY - fitted * scale / 2f,
+                    right = width / 2f + width * scale / 2f,
+                    bottom = centerY + fitted * scale / 2f,
+                )
+            }
+            onClose(
+                ViewerExit(
+                    index = index,
+                    photoRect = rect,
+                    velocityY = velocityY,
+                    background = background,
+                    backgroundAlpha = 1f - (progress * 3f).coerceAtMost(1f),
+                ),
+            )
+        }
+
+        // Everything was deleted out from under us.
+        LaunchedEffect(items.isEmpty()) { if (items.isEmpty()) close(0f) }
+        BackHandler { close(0f) }
+        BackHandler(enabled = motion.infoOpen) { motion.closeInfo() }
 
         Box(
             Modifier
@@ -174,7 +209,7 @@ fun ViewerScreen(
                     state = rememberDraggableState(motion::onDrag),
                     onDragStarted = { motion.onDragStart() },
                     onDragStopped = { velocity ->
-                        if (motion.onDragStop(velocity, height * DismissThreshold)) onClose(pager.currentPage)
+                        if (motion.onDragStop(velocity, height * DismissThreshold)) close(velocity)
                     },
                 ),
         ) {
@@ -236,7 +271,7 @@ fun ViewerScreen(
                 TopBar(
                     backdrop = backdrop,
                     item = current,
-                    onBack = { onClose(pager.currentPage) },
+                    onBack = { close(0f) },
                     modifier = Modifier.align(Alignment.TopCenter),
                 )
                 Column(
@@ -317,6 +352,24 @@ fun ViewerScreen(
             )
         }
     }
+}
+
+/** How the viewer was left, so the grid can fly the photo back into place. */
+data class ViewerExit(
+    val index: Int,
+    /** The photo's on-screen rect at the moment of closing; null if there's no item. */
+    val photoRect: Rect?,
+    /** Vertical finger speed at release (px/s); 0 for buttons and back. */
+    val velocityY: Float,
+    val background: Color,
+    val backgroundAlpha: Float,
+)
+
+/** Where [item] sits when shown full screen in a width × height box (fitted, centered). */
+fun fullScreenRect(item: MediaItem, width: Float, height: Float): Rect {
+    val h = fittedHeight(item, width, height)
+    val top = (height - h) / 2f
+    return Rect(0f, top, width, top + h)
 }
 
 /** On-screen height of [item] when fit inside a width × height box; the box height if unknown. */

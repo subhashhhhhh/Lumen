@@ -47,6 +47,8 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.subhashh.lumen.data.MediaItem
 import com.subhashh.lumen.data.MediaThumbnail
+import com.subhashh.lumen.ui.transition.PhotoTransition
+import com.subhashh.lumen.ui.transition.transitionCell
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -61,6 +63,7 @@ fun LibraryScreen(
     items: List<MediaItem>,
     gridState: LazyGridState,
     contentPadding: PaddingValues,
+    transition: PhotoTransition,
     onOpen: (index: Int) -> Unit,
     modifier: Modifier = Modifier,
     /** Extra space above the title, e.g. for an album's back button. */
@@ -107,6 +110,7 @@ fun LibraryScreen(
                     item = item,
                     showDuration = columns <= 5,
                     onClick = { onOpen(index) },
+                    modifier = Modifier.transitionCell(transition, item.id),
                 )
             }
         }
@@ -129,10 +133,15 @@ fun LibraryScreen(
 }
 
 @Composable
-private fun Thumbnail(item: MediaItem, showDuration: Boolean, onClick: () -> Unit) {
+private fun Thumbnail(
+    item: MediaItem,
+    showDuration: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val context = LocalContext.current
     Box(
-        Modifier
+        modifier
             .aspectRatio(1f)
             .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
             .clickable(onClick = onClick),

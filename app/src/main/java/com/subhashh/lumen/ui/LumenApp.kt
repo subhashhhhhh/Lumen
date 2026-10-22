@@ -8,16 +8,17 @@ import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import com.subhashh.lumen.ui.viewer.ViewerScreen
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.IntSize
+import com.subhashh.lumen.ui.transition.PhotoTransition
+import com.subhashh.lumen.ui.transition.PhotoTransitionOverlay
+import com.subhashh.lumen.ui.viewer.fullScreenRect
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -143,6 +144,9 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
     val libraryGrid = rememberLazyGridState()
     val collectionGrid = key(openCollection) { rememberLazyGridState() }
     val scope = rememberCoroutineScope()
+    val transition = remember { PhotoTransition() }
+    var screenSize by remember { mutableStateOf(IntSize.Zero) }
+    val viewerBackground = MaterialTheme.colorScheme.background
 
     val utilities = remember(library, trash) { MediaCollections.utilities(library.orEmpty(), trash) }
     val folders = remember(library) { MediaCollections.folders(library.orEmpty()) }
@@ -157,7 +161,23 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
     val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val gridPadding = PaddingValues(top = statusTop + 96.dp, bottom = navBottom + 96.dp)
 
-    Box(Modifier.fillMaxSize()) {
+    // Grow the tapped photo out of its cell, then build the viewer behind it before revealing,
+    // so the viewer's setup cost never stutters the animation.
+    val openViewer: (key: String, index: Int) -> Unit = open@{ key, index ->
+        if (transition.item != null) return@open
+        val item = itemsOf(key).getOrNull(index) ?: return@open
+        scope.launch {
+            val target = fullScreenRect(item, screenSize.width.toFloat(), screenSize.height.toFloat())
+            transition.open(item, target, viewerBackground)
+            viewerStart = index
+            viewerSource = key
+            withFrameNanos { }
+            withFrameNanos { }
+            transition.finish()
+        }
+    }
+
+    Box(Modifier.fillMaxSize().onSizeChanged { screenSize = it }) {
         // Everything the glass controls refract lives inside this layer.
         Box(
             Modifier
@@ -173,7 +193,8 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                     items = library.orEmpty(),
                     gridState = libraryGrid,
                     contentPadding = gridPadding,
-                    onOpen = { index -> viewerStart = index; viewerSource = CollectionKeys.Library },
+                    transition = transition,
+                    onOpen = { index -> openViewer(CollectionKeys.Library, index) },
                 )
                 openCollection != null -> {
                     val key = openCollection!!
@@ -183,7 +204,8 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                         gridState = collectionGrid,
                         contentPadding = PaddingValues(top = statusTop + 152.dp, bottom = navBottom + 96.dp),
                         titleTopPadding = 64.dp,
-                        onOpen = { index -> viewerStart = index; viewerSource = key },
+                        transition = transition,
+                        onOpen = { index -> openViewer(key, index) },
                     )
                 }
                 else -> CollectionsScreen(
@@ -226,29 +248,35 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
             )
         }
 
-        AnimatedVisibility(
-            visible = viewerOpen,
-            enter = fadeIn() + scaleIn(initialScale = 0.92f),
-            exit = fadeOut() + scaleOut(targetScale = 0.92f),
-        ) {
-            // Keep the source during the exit animation, after viewerSource is cleared.
-            val source = remember { viewerSource ?: CollectionKeys.Library }
-            val start = remember { viewerStart }
+        viewerSource?.let { source ->
             val list = remember(source, library, trash) { itemsOf(source) }
             val grid = if (source == CollectionKeys.Library) libraryGrid else collectionGrid
             ViewerScreen(
                 items = list,
-                initialIndex = start.coerceAtMost(list.lastIndex.coerceAtLeast(0)),
+                initialIndex = viewerStart.coerceAtMost(list.lastIndex.coerceAtLeast(0)),
                 inTrash = source == CollectionKeys.RecentlyDeleted,
-                onClose = { closedAt ->
+                onClose = { exit ->
                     viewerSource = null
-                    // Bring the photo the user ended on into view, like iOS does.
-                    val visible = grid.layoutInfo.visibleItemsInfo.map { it.index }
-                    if (closedAt !in visible) scope.launch { grid.scrollToItem(closedAt) }
+                    val item = list.getOrNull(exit.index)
+                    val from = exit.photoRect
+                    if (item != null && from != null) {
+                        // Same frame the viewer goes: the photo keeps flying from where it was.
+                        transition.beginClose(item, from, exit.background, exit.backgroundAlpha)
+                        scope.launch {
+                            // Bring the photo's cell into view first, like iOS, then land in it.
+                            if (grid.layoutInfo.visibleItemsInfo.none { it.index == exit.index }) {
+                                grid.scrollToItem(exit.index)
+                            }
+                            withFrameNanos { }
+                            transition.land(exit.velocityY)
+                        }
+                    }
                 },
                 onMediaChanged = viewModel::refresh,
             )
         }
+
+        PhotoTransitionOverlay(transition)
     }
 }
 
