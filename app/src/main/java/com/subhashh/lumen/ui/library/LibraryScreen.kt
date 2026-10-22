@@ -189,13 +189,12 @@ private fun LibraryHeader(title: String, subtitle: String, topPadding: Dp, modif
     Column(
         modifier
             .fillMaxWidth()
-            .background(
-                Brush.verticalGradient(
-                    listOf(Color.Black.copy(alpha = 0.55f), Color.Transparent),
-                ),
-            )
+            // Stays dark behind the title and subtitle, then eases out well below them. An
+            // eased curve rather than a linear one: a linear fade is already thin at the text
+            // and leaves a visible edge where it ends.
+            .background(Brush.verticalGradient(*HeaderScrim))
             .statusBarsPadding()
-            .padding(top = topPadding, start = 20.dp, end = 20.dp, bottom = 32.dp),
+            .padding(top = topPadding, start = 20.dp, end = 20.dp, bottom = 72.dp),
     ) {
         Text(title, style = OverlayText.copy(fontSize = 34.sp, fontWeight = FontWeight.Bold))
         if (subtitle.isNotEmpty()) {
@@ -231,6 +230,15 @@ private fun Modifier.pinchToChangeColumns(onZoomIn: () -> Unit, onZoomOut: () ->
     }
 
 private const val PinchStep = 1.25f
+
+private val HeaderScrim = arrayOf(
+    0.00f to Color.Black.copy(alpha = 0.70f),
+    0.45f to Color.Black.copy(alpha = 0.58f),
+    0.62f to Color.Black.copy(alpha = 0.40f),
+    0.78f to Color.Black.copy(alpha = 0.18f),
+    0.90f to Color.Black.copy(alpha = 0.06f),
+    1.00f to Color.Transparent,
+)
 
 private val MonthFormat = SimpleDateFormat("MMMM yyyy", Locale.getDefault())
 
