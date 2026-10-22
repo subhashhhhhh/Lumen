@@ -20,6 +20,12 @@ object MediaActions {
         context.startActivity(Intent.createChooser(send, null))
     }
 
+    /** Hands the location to whatever maps app the user has; nothing is sent anywhere by Lumen. */
+    fun openInMaps(context: Context, point: GeoPoint) {
+        val geo = "geo:${point.latitude},${point.longitude}?q=${point.latitude},${point.longitude}"
+        runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(geo))) }
+    }
+
     /** Moves to the system trash, which Android purges after 30 days. */
     fun trashRequest(context: Context, item: MediaItem): IntentSender =
         MediaStore.createTrashRequest(context.contentResolver, listOf(item.uri), true).intentSender

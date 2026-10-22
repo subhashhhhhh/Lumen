@@ -28,6 +28,9 @@ class MediaRepository(private val context: Context) {
             MediaStore.MediaColumns.RELATIVE_PATH,
             MediaStore.MediaColumns.BUCKET_ID,
             MediaStore.MediaColumns.BUCKET_DISPLAY_NAME,
+            MediaStore.MediaColumns.WIDTH,
+            MediaStore.MediaColumns.HEIGHT,
+            MediaStore.MediaColumns.ORIENTATION,
         )
         // MediaStore classifies TypeScript sources (.ts) as MPEG-TS video. Real transport streams
         // get a duration when scanned; source files never do, so drop mp2ts rows without one.
@@ -62,10 +65,14 @@ class MediaRepository(private val context: Context) {
             val pathCol = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.RELATIVE_PATH)
             val bucketIdCol = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.BUCKET_ID)
             val bucketNameCol = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.BUCKET_DISPLAY_NAME)
+            val widthCol = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.WIDTH)
+            val heightCol = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.HEIGHT)
+            val orientationCol = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.ORIENTATION)
 
             while (cursor.moveToNext()) {
                 val id = cursor.getLong(idCol)
                 val isVideo = cursor.getInt(typeCol) == MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO
+                val rotated = cursor.getInt(orientationCol).let { it == 90 || it == 270 }
                 val baseUri = if (isVideo) {
                     MediaStore.Video.Media.EXTERNAL_CONTENT_URI
                 } else {
@@ -86,6 +93,8 @@ class MediaRepository(private val context: Context) {
                     relativePath = cursor.getString(pathCol).orEmpty(),
                     bucketId = cursor.getLong(bucketIdCol),
                     bucketName = cursor.getString(bucketNameCol) ?: "Internal storage",
+                    width = if (rotated) cursor.getInt(heightCol) else cursor.getInt(widthCol),
+                    height = if (rotated) cursor.getInt(widthCol) else cursor.getInt(heightCol),
                 )
             }
         }

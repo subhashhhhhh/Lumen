@@ -1,6 +1,15 @@
 package com.subhashh.lumen.ui.viewer
 
 import android.app.Activity
+import android.Manifest
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Velocity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
@@ -19,6 +28,8 @@ import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -95,6 +106,9 @@ import androidx.media3.common.MediaItem as PlayerMediaItem
 /** Fraction of the screen height a downward drag must cover to dismiss on release. */
 private const val DismissThreshold = 0.15f
 
+/** Height of the details sheet as a fraction of the screen. */
+private const val SheetFraction = 0.55f
+
 @Composable
 fun ViewerScreen(
     items: List<MediaItem>,
@@ -113,11 +127,18 @@ fun ViewerScreen(
     var chromeVisible by rememberSaveable { mutableStateOf(true) }
     var zoomed by remember { mutableStateOf(false) }
     val dismissOffset = remember { Animatable(0f) }
+    /** How far the details sheet is pulled up, in px (0 = closed). */
+    val infoReveal = remember { Animatable(0f) }
+    var locationRefresh by remember { mutableIntStateOf(0) }
+    val locationPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted -> if (granted) locationRefresh++ }
 
     // Everything was deleted out from under us.
     LaunchedEffect(items.isEmpty()) { if (items.isEmpty()) onClose(0) }
 
     BackHandler { onClose(pager.currentPage) }
+    BackHandler(enabled = infoReveal.targetValue > 0f) { scope.launch { infoReveal.animateTo(0f) } }
     SystemBarsVisibility(visible = chromeVisible)
 
     val player = rememberViewerPlayer(current)
@@ -136,6 +157,15 @@ fun ViewerScreen(
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val height = constraints.maxHeight.toFloat()
         val progress = (abs(dismissOffset.value) / height).coerceIn(0f, 1f)
+        val sheetHeight = height * SheetFraction
+        // Status bar plus the top bar's back button row.
+        val topInset = with(LocalDensity.current) {
+            WindowInsets.statusBars.getTop(this) + 64.dp.toPx()
+        }
+        val infoFraction = (infoReveal.value / sheetHeight).coerceIn(0f, 1f)
+        val openInfo: () -> Unit = { scope.launch { infoReveal.animateTo(sheetHeight) } }
+        val closeInfo: () -> Unit = { scope.launch { infoReveal.animateTo(0f) } }
+        val sheetScroll = remember(sheetHeight) { sheetNestedScroll(infoReveal, sheetHeight, scope) }
 
         Box(
             Modifier
@@ -146,10 +176,22 @@ fun ViewerScreen(
                     orientation = Orientation.Vertical,
                     enabled = !zoomed,
                     state = rememberDraggableState { delta ->
-                        scope.launch { dismissOffset.snapTo(dismissOffset.value + delta) }
+                        scope.launch {
+                            // Up from rest (or while the sheet is out) moves the details sheet;
+                            // down from rest drags the photo to dismiss.
+                            if (infoReveal.value > 0f || (delta < 0f && dismissOffset.value == 0f)) {
+                                infoReveal.snapTo((infoReveal.value - delta).coerceIn(0f, sheetHeight))
+                            } else {
+                                dismissOffset.snapTo(dismissOffset.value + delta)
+                            }
+                        }
                     },
                     onDragStopped = { velocity ->
-                        if (abs(dismissOffset.value) > height * DismissThreshold || abs(velocity) > 2500f) {
+                        if (infoReveal.value > 0f) {
+                            val open = velocity < -1000f ||
+                                (velocity <= 1000f && infoReveal.value > sheetHeight * 0.3f)
+                            infoReveal.animateTo(if (open) sheetHeight else 0f)
+                        } else if (abs(dismissOffset.value) > height * DismissThreshold || abs(velocity) > 2500f) {
                             onClose(pager.currentPage)
                         } else {
                             dismissOffset.animateTo(0f)
@@ -168,15 +210,23 @@ fun ViewerScreen(
                 val isCurrent = page == pager.currentPage
                 val pageModifier = if (isCurrent) {
                     Modifier.graphicsLayer {
-                        translationY = dismissOffset.value
-                        val scale = 1f - progress * 0.4f
+                        // With details open, shrink the photo to fit the space between the top
+                        // bar and the sheet, centered in it — like iOS.
+                        val fitted = fittedHeight(item, size.width, size.height)
+                        val available = (size.height - sheetHeight - topInset).coerceAtLeast(1f)
+                        val infoScale = 1f - (1f - (available / fitted).coerceAtMost(1f)) * infoFraction
+                        val infoShift = (topInset + available / 2f - size.height / 2f) * infoFraction
+                        translationY = dismissOffset.value + infoShift
+                        val scale = (1f - progress * 0.4f) * infoScale
                         scaleX = scale
                         scaleY = scale
                     }
                 } else {
                     Modifier
                 }
-                val toggleChrome = { chromeVisible = !chromeVisible }
+                val toggleChrome = {
+                    if (infoReveal.value > 0f) closeInfo() else chromeVisible = !chromeVisible
+                }
                 if (item.isVideo) {
                     VideoPage(
                         item = item,
@@ -212,6 +262,7 @@ fun ViewerScreen(
                 Column(
                     Modifier
                         .align(Alignment.BottomCenter)
+                        .graphicsLayer { alpha = 1f - infoFraction }
                         .navigationBarsPadding()
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                 ) {
@@ -256,6 +307,12 @@ fun ViewerScreen(
                             )
                             GlassIconButton(
                                 backdrop = backdrop,
+                                icon = Icons.Rounded.Info,
+                                contentDescription = "Details",
+                                onClick = openInfo,
+                            )
+                            GlassIconButton(
+                                backdrop = backdrop,
                                 icon = Icons.Rounded.Delete,
                                 contentDescription = "Delete",
                                 onClick = { launch(MediaActions.trashRequest(context, current)) },
@@ -265,6 +322,63 @@ fun ViewerScreen(
                 }
             }
         }
+
+        if (current != null && infoReveal.value > 0f) {
+            DetailsSheet(
+                item = current,
+                locationRefresh = locationRefresh,
+                onOpenMap = { MediaActions.openInMaps(context, it) },
+                onAllowLocation = { locationPermission.launch(Manifest.permission.ACCESS_MEDIA_LOCATION) },
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .height(with(LocalDensity.current) { sheetHeight.toDp() })
+                    .graphicsLayer { translationY = sheetHeight - infoReveal.value }
+                    .nestedScroll(sheetScroll),
+            )
+        }
+    }
+}
+
+/** On-screen height of [item] when fit inside a width × height box; the box height if unknown. */
+private fun fittedHeight(item: MediaItem, boxWidth: Float, boxHeight: Float): Float {
+    if (item.width <= 0 || item.height <= 0) return boxHeight
+    return (boxWidth * item.height / item.width).coerceAtMost(boxHeight)
+}
+
+/**
+ * Lets a drag on the sheet's content close it once the content is scrolled to the top,
+ * and settles it open or closed on release.
+ */
+private fun sheetNestedScroll(
+    reveal: Animatable<Float, *>,
+    sheetHeight: Float,
+    scope: kotlinx.coroutines.CoroutineScope,
+) = object : NestedScrollConnection {
+    override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+        // Dragging up while the sheet is partly closed: reopen it before scrolling content.
+        if (available.y < 0f && reveal.value < sheetHeight) {
+            val consumed = available.y.coerceAtLeast(reveal.value - sheetHeight)
+            scope.launch { reveal.snapTo(reveal.value - consumed) }
+            return Offset(0f, consumed)
+        }
+        return Offset.Zero
+    }
+
+    override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
+        if (available.y > 0f && source == NestedScrollSource.UserInput) {
+            scope.launch { reveal.snapTo((reveal.value - available.y).coerceIn(0f, sheetHeight)) }
+            return Offset(0f, available.y)
+        }
+        return Offset.Zero
+    }
+
+    override suspend fun onPreFling(available: Velocity): Velocity {
+        if (reveal.value in 0.1f..(sheetHeight - 0.1f)) {
+            val open = available.y < -1000f || (available.y <= 1000f && reveal.value > sheetHeight * 0.7f)
+            reveal.animateTo(if (open) sheetHeight else 0f)
+            return available
+        }
+        return Velocity.Zero
     }
 }
 

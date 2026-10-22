@@ -17,4 +17,7 @@ data class MediaItem(
     val relativePath: String,
     val bucketId: Long,
     val bucketName: String,
+    /** Display dimensions (EXIF rotation applied); 0 when unknown. */
+    val width: Int,
+    val height: Int,
 )
