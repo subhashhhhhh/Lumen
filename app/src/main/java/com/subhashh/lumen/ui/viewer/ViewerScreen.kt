@@ -50,6 +50,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -96,6 +97,9 @@ import androidx.media3.common.MediaItem as PlayerMediaItem
 /** Fraction of the screen height a downward drag must cover to dismiss on release. */
 private const val DismissThreshold = 0.15f
 
+/** Release speed that counts as a flick. */
+private val FlingVelocity = 400.dp // per second
+
 /** Height of the details sheet as a fraction of the screen. */
 private const val SheetFraction = 0.55f
 
@@ -116,9 +120,9 @@ fun ViewerScreen(
 
     var chromeVisible by rememberSaveable { mutableStateOf(true) }
     var zoomed by remember { mutableStateOf(false) }
-    val dismissOffset = remember { Animatable(0f) }
-    /** How far the details sheet is pulled up, in px (0 = closed). */
-    val infoReveal = remember { Animatable(0f) }
+    val flingVelocity = with(LocalDensity.current) { FlingVelocity.toPx() }
+    val motion = remember(scope, flingVelocity) { ViewerMotion(scope, flingVelocity) }
+    val sheetVisible by remember { derivedStateOf { motion.reveal > 0f } }
     var locationRefresh by remember { mutableIntStateOf(0) }
     val locationPermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
@@ -128,7 +132,7 @@ fun ViewerScreen(
     LaunchedEffect(items.isEmpty()) { if (items.isEmpty()) onClose(0) }
 
     BackHandler { onClose(pager.currentPage) }
-    BackHandler(enabled = infoReveal.targetValue > 0f) { scope.launch { infoReveal.animateTo(0f) } }
+    BackHandler(enabled = motion.infoOpen) { motion.closeInfo() }
     SystemBarsVisibility(visible = chromeVisible)
 
     val player = rememberViewerPlayer(current)
@@ -146,16 +150,15 @@ fun ViewerScreen(
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val height = constraints.maxHeight.toFloat()
-        val progress = (abs(dismissOffset.value) / height).coerceIn(0f, 1f)
+        val progress = (abs(motion.dismiss) / height).coerceIn(0f, 1f)
         val sheetHeight = height * SheetFraction
+        motion.sheetHeight = sheetHeight
         // Status bar plus the top bar's back button row.
         val topInset = with(LocalDensity.current) {
             WindowInsets.statusBars.getTop(this) + 64.dp.toPx()
         }
-        val infoFraction = (infoReveal.value / sheetHeight).coerceIn(0f, 1f)
-        val openInfo: () -> Unit = { scope.launch { infoReveal.animateTo(sheetHeight) } }
-        val closeInfo: () -> Unit = { scope.launch { infoReveal.animateTo(0f) } }
-        val sheetScroll = remember(sheetHeight) { sheetNestedScroll(infoReveal, sheetHeight, scope) }
+        // Read inside graphicsLayer blocks so dragging redraws without recomposing.
+        val infoFraction = { (motion.reveal / sheetHeight).coerceIn(0f, 1f) }
 
         Box(
             Modifier
@@ -165,27 +168,13 @@ fun ViewerScreen(
                 .draggable(
                     orientation = Orientation.Vertical,
                     enabled = !zoomed,
-                    state = rememberDraggableState { delta ->
-                        scope.launch {
-                            // Up from rest (or while the sheet is out) moves the details sheet;
-                            // down from rest drags the photo to dismiss.
-                            if (infoReveal.value > 0f || (delta < 0f && dismissOffset.value == 0f)) {
-                                infoReveal.snapTo((infoReveal.value - delta).coerceIn(0f, sheetHeight))
-                            } else {
-                                dismissOffset.snapTo(dismissOffset.value + delta)
-                            }
-                        }
-                    },
+                    // Starting the drag from the touch-down point keeps the photo level with the
+                    // finger instead of jumping by the touch slop.
+                    startDragImmediately = sheetVisible,
+                    state = rememberDraggableState(motion::onDrag),
+                    onDragStarted = { motion.onDragStart() },
                     onDragStopped = { velocity ->
-                        if (infoReveal.value > 0f) {
-                            val open = velocity < -1000f ||
-                                (velocity <= 1000f && infoReveal.value > sheetHeight * 0.3f)
-                            infoReveal.animateTo(if (open) sheetHeight else 0f)
-                        } else if (abs(dismissOffset.value) > height * DismissThreshold || abs(velocity) > 2500f) {
-                            onClose(pager.currentPage)
-                        } else {
-                            dismissOffset.animateTo(0f)
-                        }
+                        if (motion.onDragStop(velocity, height * DismissThreshold)) onClose(pager.currentPage)
                     },
                 ),
         ) {
@@ -193,7 +182,7 @@ fun ViewerScreen(
                 state = pager,
                 key = { items[it].id },
                 beyondViewportPageCount = 1,
-                userScrollEnabled = !zoomed && dismissOffset.value == 0f,
+                userScrollEnabled = !zoomed && motion.dismiss == 0f,
                 modifier = Modifier.fillMaxSize(),
             ) { page ->
                 val item = items[page]
@@ -204,9 +193,10 @@ fun ViewerScreen(
                         // bar and the sheet, centered in it — like iOS.
                         val fitted = fittedHeight(item, size.width, size.height)
                         val available = (size.height - sheetHeight - topInset).coerceAtLeast(1f)
-                        val infoScale = 1f - (1f - (available / fitted).coerceAtMost(1f)) * infoFraction
-                        val infoShift = (topInset + available / 2f - size.height / 2f) * infoFraction
-                        translationY = dismissOffset.value + infoShift
+                        val fraction = infoFraction()
+                        val infoScale = 1f - (1f - (available / fitted).coerceAtMost(1f)) * fraction
+                        val infoShift = (topInset + available / 2f - size.height / 2f) * fraction
+                        translationY = motion.dismiss + infoShift
                         val scale = (1f - progress * 0.4f) * infoScale
                         scaleX = scale
                         scaleY = scale
@@ -215,7 +205,7 @@ fun ViewerScreen(
                     Modifier
                 }
                 val toggleChrome = {
-                    if (infoReveal.value > 0f) closeInfo() else chromeVisible = !chromeVisible
+                    if (motion.infoOpen) motion.closeInfo() else chromeVisible = !chromeVisible
                 }
                 if (item.isVideo) {
                     VideoPage(
@@ -252,7 +242,7 @@ fun ViewerScreen(
                 Column(
                     Modifier
                         .align(Alignment.BottomCenter)
-                        .graphicsLayer { alpha = 1f - infoFraction }
+                        .graphicsLayer { alpha = 1f - infoFraction() }
                         .navigationBarsPadding()
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                 ) {
@@ -299,7 +289,7 @@ fun ViewerScreen(
                                 backdrop = backdrop,
                                 icon = LumenIcons.Info,
                                 contentDescription = "Details",
-                                onClick = openInfo,
+                                onClick = motion::openInfo,
                             )
                             GlassIconButton(
                                 backdrop = backdrop,
@@ -313,7 +303,7 @@ fun ViewerScreen(
             }
         }
 
-        if (current != null && infoReveal.value > 0f) {
+        if (current != null && sheetVisible) {
             DetailsSheet(
                 item = current,
                 locationRefresh = locationRefresh,
@@ -322,8 +312,8 @@ fun ViewerScreen(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .height(with(LocalDensity.current) { sheetHeight.toDp() })
-                    .graphicsLayer { translationY = sheetHeight - infoReveal.value }
-                    .nestedScroll(sheetScroll),
+                    .graphicsLayer { translationY = sheetHeight - motion.reveal }
+                    .nestedScroll(motion.sheetScroll),
             )
         }
     }
@@ -335,42 +325,6 @@ private fun fittedHeight(item: MediaItem, boxWidth: Float, boxHeight: Float): Fl
     return (boxWidth * item.height / item.width).coerceAtMost(boxHeight)
 }
 
-/**
- * Lets a drag on the sheet's content close it once the content is scrolled to the top,
- * and settles it open or closed on release.
- */
-private fun sheetNestedScroll(
-    reveal: Animatable<Float, *>,
-    sheetHeight: Float,
-    scope: kotlinx.coroutines.CoroutineScope,
-) = object : NestedScrollConnection {
-    override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-        // Dragging up while the sheet is partly closed: reopen it before scrolling content.
-        if (available.y < 0f && reveal.value < sheetHeight) {
-            val consumed = available.y.coerceAtLeast(reveal.value - sheetHeight)
-            scope.launch { reveal.snapTo(reveal.value - consumed) }
-            return Offset(0f, consumed)
-        }
-        return Offset.Zero
-    }
-
-    override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
-        if (available.y > 0f && source == NestedScrollSource.UserInput) {
-            scope.launch { reveal.snapTo((reveal.value - available.y).coerceIn(0f, sheetHeight)) }
-            return Offset(0f, available.y)
-        }
-        return Offset.Zero
-    }
-
-    override suspend fun onPreFling(available: Velocity): Velocity {
-        if (reveal.value in 0.1f..(sheetHeight - 0.1f)) {
-            val open = available.y < -1000f || (available.y <= 1000f && reveal.value > sheetHeight * 0.7f)
-            reveal.animateTo(if (open) sheetHeight else 0f)
-            return available
-        }
-        return Velocity.Zero
-    }
-}
 
 @Composable
 private fun TopBar(
