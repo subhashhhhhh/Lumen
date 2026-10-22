@@ -1,0 +1,2 @@
+Place names: GeoNames (https://www.geonames.org/), licensed under CC BY 4.0
+(https://creativecommons.org/licenses/by/4.0/). Trimmed to name, region and country.

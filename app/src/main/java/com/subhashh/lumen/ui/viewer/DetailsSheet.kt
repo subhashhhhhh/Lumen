@@ -45,6 +45,7 @@ import com.subhashh.lumen.data.GeoPoint
 import com.subhashh.lumen.data.MediaDetails
 import com.subhashh.lumen.data.MediaDetailsLoader
 import com.subhashh.lumen.data.MediaItem
+import com.subhashh.lumen.data.PlaceLookup
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -229,11 +230,13 @@ private fun MediaCard(item: MediaItem, d: MediaDetails, colors: SheetColors) {
 
 @Composable
 private fun LocationCard(location: GeoPoint, colors: SheetColors, onOpenMap: (GeoPoint) -> Unit) {
+    val context = LocalContext.current
+    val place by produceState<String?>(null, location) { value = PlaceLookup.describe(context, location) }
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(Icons.Rounded.LocationOn, null, tint = colors.secondary, modifier = Modifier.size(20.dp))
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
-            Text("Location", color = colors.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            Text(place ?: "Location", color = colors.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
             Text(formatCoordinates(location), color = colors.secondary, fontSize = 13.sp)
         }
         Text(
