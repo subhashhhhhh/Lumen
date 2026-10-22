@@ -268,7 +268,7 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                                 grid.scrollToItem(exit.index)
                             }
                             withFrameNanos { }
-                            transition.land(exit.velocityY)
+                            transition.land(exit.velocity)
                         }
                     }
                 },

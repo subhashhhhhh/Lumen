@@ -15,7 +15,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.lerp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
@@ -25,12 +24,13 @@ import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.toSize
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.subhashh.lumen.data.MediaItem
-import kotlin.math.abs
-import kotlin.math.max
 import kotlin.math.roundToInt
 
 /**
@@ -51,8 +51,14 @@ class PhotoTransition {
     var item by mutableStateOf<MediaItem?>(null)
         private set
 
-    /** 0 = at the thumbnail, 1 = at the full-screen rect. Read in layout/draw only. */
-    private var progress by mutableFloatStateOf(0f)
+    /**
+     * The photo's center and how grown it is (0 = cell size, 1 = full size) are animated
+     * separately: position springs carry the finger's speed in each axis, so a flick keeps
+     * going the way it was thrown before curving into the cell. Read in layout/draw only.
+     */
+    private var centerX by mutableFloatStateOf(0f)
+    private var centerY by mutableFloatStateOf(0f)
+    private var grown by mutableFloatStateOf(0f)
     private var thumb = Rect.Zero
     private var full = Rect.Zero
     private var background = Color.Black
@@ -74,10 +80,15 @@ class PhotoTransition {
 
     /** Grow from the item's grid cell to [target]. Suspends until the photo is full screen. */
     suspend fun open(item: MediaItem, target: Rect, background: Color) {
-        val cell = cellRect(item.id)
-        start(item, from = cell, full = target, background = background, backgroundStart = 1f)
-        progress = 0f
-        animate(0f, 1f, animationSpec = OpenSpring) { value, _ -> progress = value }
+        start(item, from = cellRect(item.id), full = target, background = background, backgroundStart = 1f)
+        centerX = thumb.center.x
+        centerY = thumb.center.y
+        grown = 0f
+        coroutineScope {
+            launch { animate(centerX, full.center.x, animationSpec = OpenSpring) { v, _ -> centerX = v } }
+            launch { animate(centerY, full.center.y, animationSpec = OpenSpring) { v, _ -> centerY = v } }
+            launch { animate(0f, 1f, animationSpec = OpenSpring) { v, _ -> grown = v } }
+        }
     }
 
     /**
@@ -86,19 +97,25 @@ class PhotoTransition {
      */
     fun beginClose(item: MediaItem, from: Rect, background: Color, backgroundAlpha: Float) {
         start(item, from = null, full = from, background = background, backgroundStart = backgroundAlpha)
-        progress = 1f
+        centerX = from.center.x
+        centerY = from.center.y
+        grown = 1f
     }
 
-    suspend fun land(velocityY: Float) {
+    suspend fun land(velocity: Velocity) {
         val current = item ?: return
         cellRect(current.id)?.let {
             thumb = it
             landless = false
         }
-        // Carry the swipe's speed into the flight, as a fraction of the distance to travel.
-        val distance = max(abs(full.center.y - thumb.center.y), 1f)
-        val initialVelocity = -abs(velocityY) / distance
-        animate(progress, 0f, initialVelocity, CloseSpring) { value, _ -> progress = value }
+        val vx = velocity.x.coerceIn(-MaxThrow, MaxThrow)
+        val vy = velocity.y.coerceIn(-MaxThrow, MaxThrow)
+        coroutineScope {
+            launch { animate(centerX, thumb.center.x, vx, LandPositionSpring) { v, _ -> centerX = v } }
+            launch { animate(centerY, thumb.center.y, vy, LandPositionSpring) { v, _ -> centerY = v } }
+            // Size never overshoots: shrinking past the cell and back reads as a second animation.
+            launch { animate(grown, 0f, animationSpec = LandSizeSpring) { v, _ -> grown = v } }
+        }
         finish()
     }
 
@@ -121,17 +138,28 @@ class PhotoTransition {
         return Rect(r.center.x - w / 2f, r.center.y - h / 2f, r.center.x + w / 2f, r.center.y + h / 2f)
     }
 
-    internal fun currentRect(): Rect = lerp(thumb, full, progress)
-    internal fun backgroundAlpha(): Float = progress * backgroundStart
-    internal fun photoAlpha(): Float = if (landless) progress else 1f
+    internal fun currentRect(): Rect {
+        val g = grown.coerceIn(0f, 1f)
+        val w = thumb.width + (full.width - thumb.width) * g
+        val h = thumb.height + (full.height - thumb.height) * g
+        return Rect(centerX - w / 2f, centerY - h / 2f, centerX + w / 2f, centerY + h / 2f)
+    }
+
+    internal fun backgroundAlpha(): Float = grown.coerceIn(0f, 1f) * backgroundStart
+    internal fun photoAlpha(): Float = if (landless) grown.coerceIn(0f, 1f) else 1f
     internal fun backgroundColor(): Color = background
 
     private companion object {
         /** Quick and smooth with a hint of settle, ~0.35 s. */
         val OpenSpring = spring<Float>(dampingRatio = 0.9f, stiffness = 320f)
 
-        /** A little softer on the way back, so a fast swipe glides into place. */
-        val CloseSpring = spring<Float>(dampingRatio = 0.86f, stiffness = 280f)
+        /** Loose enough that a throw visibly carries before curving home; a trace of settle. */
+        val LandPositionSpring = spring<Float>(dampingRatio = 0.82f, stiffness = 230f)
+
+        val LandSizeSpring = spring<Float>(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 260f)
+
+        /** px/s; beyond this a hard flick would sail off screen before coming back. */
+        const val MaxThrow = 5000f
     }
 }
 

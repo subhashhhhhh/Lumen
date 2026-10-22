@@ -25,6 +25,15 @@ android {
         debug {
             applicationIdSuffix = ".debug"
         }
+        // Release-optimized (R8, not debuggable) but debug-signed, for judging smoothness on the
+        // phone: Compose debug builds run several times slower. Same app id as debug, so it
+        // installs over it and keeps granted permissions.
+        create("profile") {
+            initWith(getByName("release"))
+            signingConfig = signingConfigs.getByName("debug")
+            applicationIdSuffix = ".debug"
+            matchingFallbacks += listOf("release")
+        }
     }
 
     compileOptions {

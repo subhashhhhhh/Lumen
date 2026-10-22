@@ -6,6 +6,8 @@ import android.Manifest
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -124,6 +126,8 @@ fun ViewerScreen(
     val flingVelocity = with(LocalDensity.current) { FlingVelocity.toPx() }
     val motion = remember(scope, flingVelocity) { ViewerMotion(scope, flingVelocity) }
     val sheetVisible by remember { derivedStateOf { motion.reveal > 0f } }
+    // Composition only cares whether the photo is displaced, not by how much.
+    val atRest by remember { derivedStateOf { motion.dismissX == 0f && motion.dismissY == 0f } }
     var locationRefresh by remember { mutableIntStateOf(0) }
     val locationPermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
@@ -148,7 +152,9 @@ fun ViewerScreen(
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val height = constraints.maxHeight.toFloat()
-        val progress = (abs(motion.dismiss) / height).coerceIn(0f, 1f)
+        // Lambdas, read only inside draw/layer blocks: a drag then redraws the photo without
+        // recomposing the viewer (pager, image, chrome) on every frame.
+        val progress = { (abs(motion.dismissY) / height).coerceIn(0f, 1f) }
         val sheetHeight = height * SheetFraction
         motion.sheetHeight = sheetHeight
         // Status bar plus the top bar's back button row.
@@ -158,10 +164,14 @@ fun ViewerScreen(
         // Read inside graphicsLayer blocks so dragging redraws without recomposing.
         val infoFraction = { (motion.reveal / sheetHeight).coerceIn(0f, 1f) }
         val width = constraints.maxWidth.toFloat()
+        // Scale about the touch point while dismissing (photo stays under the thumb), else the center.
+        val pageOrigin = {
+            if (motion.dismissX != 0f || motion.dismissY != 0f) motion.pivot else TransformOrigin.Center
+        }
 
         // Where the current photo is on screen right now — fitted, then moved by any dismiss drag
         // or open details sheet — so the close transition can fly from exactly there.
-        val close: (velocityY: Float) -> Unit = { velocityY ->
+        val close: (velocity: Velocity) -> Unit = { velocity ->
             val index = pager.currentPage
             val item = items.getOrNull(index)
             val rect = item?.let {
@@ -170,54 +180,54 @@ fun ViewerScreen(
                 val available = (height - sheetHeight - topInset).coerceAtLeast(1f)
                 val infoScale = 1f - (1f - (available / fitted).coerceAtMost(1f)) * fraction
                 val infoShift = (topInset + available / 2f - height / 2f) * fraction
-                val scale = (1f - progress * 0.4f) * infoScale
-                val centerY = height / 2f + motion.dismiss + infoShift
+                val scale = (1f - progress() * 0.4f) * infoScale
+                // Same transform the page's graphicsLayer applies: scale about the pivot, then move.
+                val origin = pageOrigin()
+                val px = origin.pivotFractionX * width
+                val py = origin.pivotFractionY * height
+                val top = (height - fitted) / 2f
+                val tx = motion.dismissX
+                val ty = motion.dismissY + infoShift
                 Rect(
-                    left = width / 2f - width * scale / 2f,
-                    top = centerY - fitted * scale / 2f,
-                    right = width / 2f + width * scale / 2f,
-                    bottom = centerY + fitted * scale / 2f,
+                    left = px + (0f - px) * scale + tx,
+                    top = py + (top - py) * scale + ty,
+                    right = px + (width - px) * scale + tx,
+                    bottom = py + (top + fitted - py) * scale + ty,
                 )
             }
             onClose(
                 ViewerExit(
                     index = index,
                     photoRect = rect,
-                    velocityY = velocityY,
+                    velocity = velocity,
                     background = background,
-                    backgroundAlpha = 1f - (progress * 3f).coerceAtMost(1f),
+                    backgroundAlpha = 1f - (progress() * 3f).coerceAtMost(1f),
                 ),
             )
         }
 
         // Everything was deleted out from under us.
-        LaunchedEffect(items.isEmpty()) { if (items.isEmpty()) close(0f) }
-        BackHandler { close(0f) }
+        LaunchedEffect(items.isEmpty()) { if (items.isEmpty()) close(Velocity.Zero) }
+        BackHandler { close(Velocity.Zero) }
         BackHandler(enabled = motion.infoOpen) { motion.closeInfo() }
 
         Box(
             Modifier
                 .fillMaxSize()
                 .layerBackdrop(backdrop)
-                .background(background.copy(alpha = 1f - (progress * 3f).coerceAtMost(1f)))
-                .draggable(
-                    orientation = Orientation.Vertical,
-                    enabled = !zoomed,
-                    // Starting the drag from the touch-down point keeps the photo level with the
-                    // finger instead of jumping by the touch slop.
-                    startDragImmediately = sheetVisible,
-                    state = rememberDraggableState(motion::onDrag),
-                    onDragStarted = { motion.onDragStart() },
-                    onDragStopped = { velocity ->
-                        if (motion.onDragStop(velocity, height * DismissThreshold)) close(velocity)
-                    },
+                .drawBehind { drawRect(background, alpha = 1f - (progress() * 3f).coerceAtMost(1f)) }
+                .viewerDrag(
+                    motion = motion,
+                    enabled = { !zoomed },
+                    dismissDistance = { height * DismissThreshold },
+                    onDismiss = close,
                 ),
         ) {
             HorizontalPager(
                 state = pager,
                 key = { items[it].id },
                 beyondViewportPageCount = 1,
-                userScrollEnabled = !zoomed && motion.dismiss == 0f,
+                userScrollEnabled = !zoomed && !motion.dragging && atRest,
                 modifier = Modifier.fillMaxSize(),
             ) { page ->
                 val item = items[page]
@@ -231,8 +241,10 @@ fun ViewerScreen(
                         val fraction = infoFraction()
                         val infoScale = 1f - (1f - (available / fitted).coerceAtMost(1f)) * fraction
                         val infoShift = (topInset + available / 2f - size.height / 2f) * fraction
-                        translationY = motion.dismiss + infoShift
-                        val scale = (1f - progress * 0.4f) * infoScale
+                        transformOrigin = pageOrigin()
+                        translationX = motion.dismissX
+                        translationY = motion.dismissY + infoShift
+                        val scale = (1f - progress() * 0.4f) * infoScale
                         scaleX = scale
                         scaleY = scale
                     }
@@ -262,7 +274,7 @@ fun ViewerScreen(
         }
 
         AnimatedVisibility(
-            visible = chromeVisible && progress == 0f && current != null,
+            visible = chromeVisible && atRest && current != null,
             enter = fadeIn(),
             exit = fadeOut(),
         ) {
@@ -271,7 +283,7 @@ fun ViewerScreen(
                 TopBar(
                     backdrop = backdrop,
                     item = current,
-                    onBack = { close(0f) },
+                    onBack = { close(Velocity.Zero) },
                     modifier = Modifier.align(Alignment.TopCenter),
                 )
                 Column(
@@ -359,8 +371,8 @@ data class ViewerExit(
     val index: Int,
     /** The photo's on-screen rect at the moment of closing; null if there's no item. */
     val photoRect: Rect?,
-    /** Vertical finger speed at release (px/s); 0 for buttons and back. */
-    val velocityY: Float,
+    /** Finger speed at release (px/s); zero for buttons and back. */
+    val velocity: Velocity,
     val background: Color,
     val backgroundAlpha: Float,
 )
