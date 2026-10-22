@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Android 11–12 -->
     <uses-permission
@@ -10,6 +11,13 @@
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
     <!-- Android 14+ "Select photos" partial access -->
     <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
+    <!-- Unredacted GPS in EXIF (info panel, places) -->
+    <uses-permission android:name="android.permission.ACCESS_MEDIA_LOCATION" />
+    <!-- "All files access": hidden (.nomedia) folders, which MediaStore doesn't index.
+         Optional — the app works without it. Needs a Play Store declaration. -->
+    <uses-permission
+        android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
+        tools:ignore="ScopedStorage" />
 
     <application
         android:allowBackup="true"
