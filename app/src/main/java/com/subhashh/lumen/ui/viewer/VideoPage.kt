@@ -15,7 +15,8 @@ import androidx.media3.ui.compose.SURFACE_TYPE_TEXTURE_VIEW
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.subhashh.lumen.data.MediaItem
-import com.subhashh.lumen.ui.images.ImageKeys
+import coil3.SingletonImageLoader
+import com.subhashh.lumen.ui.images.bestPlaceholderKey
 
 /** The viewer owns a single player; only the current page attaches to it, others show a still frame. */
 @Composable
@@ -56,8 +57,9 @@ private fun StillFrame(item: MediaItem) {
         model = remember(item.uri) {
             ImageRequest.Builder(context)
                 .data(item.uri)
-                .memoryCacheKey(ImageKeys.screen(item.id))
-                .placeholderMemoryCacheKey(ImageKeys.thumb(item.id))
+                // Sharp from the first frame when the open transition already decoded it at
+                // screen size; neighbors not decoded yet start from the grid thumbnail.
+                .placeholderMemoryCacheKey(bestPlaceholderKey(SingletonImageLoader.get(context), item.id))
                 .build()
         },
         contentDescription = null,

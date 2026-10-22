@@ -38,6 +38,10 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import com.subhashh.lumen.ui.images.bestPlaceholderKey
+import coil3.SingletonImageLoader
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -55,8 +59,8 @@ import java.util.Date
 import java.util.Locale
 
 /** Grid densities, from most zoomed in to most zoomed out. */
-private val ColumnSteps = listOf(1, 3, 5, 9)
-private const val DefaultColumnStep = 2
+private val ColumnSteps = listOf(1, 2, 3, 4, 5, 6, 8)
+private const val DefaultColumnStep = 4 // 5 columns
 
 @Composable
 fun LibraryScreen(
@@ -72,6 +76,9 @@ fun LibraryScreen(
 ) {
     var step by rememberSaveable { mutableIntStateOf(DefaultColumnStep) }
     val columns = ColumnSteps[step]
+    // Decode thumbnails for the cell size actually shown, so fewer, bigger cells stay sharp.
+    val cellPx = with(LocalDensity.current) { LocalConfiguration.current.screenWidthDp.dp.roundToPx() } / columns
+    val thumbBucket = ImageKeys.thumbBucket(cellPx)
 
     // iOS Photos opens at the newest photo, which sits at the bottom of the grid. Only on first
     // load — later refreshes (a deletion, returning to the app) must keep the scroll position.
@@ -109,6 +116,7 @@ fun LibraryScreen(
             itemsIndexed(items, key = { _, item -> item.id }) { index, item ->
                 Thumbnail(
                     item = item,
+                    bucket = thumbBucket,
                     showDuration = columns <= 5,
                     onClick = { onOpen(index) },
                     modifier = Modifier.transitionCell(transition, item.id),
@@ -136,6 +144,7 @@ fun LibraryScreen(
 @Composable
 private fun Thumbnail(
     item: MediaItem,
+    bucket: Int,
     showDuration: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -148,10 +157,15 @@ private fun Thumbnail(
             .clickable(onClick = onClick),
     ) {
         AsyncImage(
-            model = remember(item.uri) {
+            model = remember(item.uri, bucket) {
                 ImageRequest.Builder(context)
-                    .data(MediaThumbnail(item.uri))
-                    .memoryCacheKey(ImageKeys.thumb(item.id))
+                    // Small cells: Android's thumbnail cache (fast). Big cells: the original,
+                    // decoded at cell size, so screenshot text stays readable.
+                    .data(if (bucket <= ImageKeys.SystemThumbnailMaxPx) MediaThumbnail(item.uri) else item.uri)
+                    .size(bucket, bucket)
+                    .memoryCacheKey(ImageKeys.thumb(item.id, bucket))
+                    // While a bigger size decodes after a pinch, keep showing the one we have.
+                    .placeholderMemoryCacheKey(bestPlaceholderKey(SingletonImageLoader.get(context), item.id))
                     .build()
             },
             contentDescription = null,
@@ -198,22 +212,25 @@ private fun Modifier.pinchToChangeColumns(onZoomIn: () -> Unit, onZoomOut: () ->
     pointerInput(Unit) {
         awaitEachGesture {
             awaitFirstDown(requireUnconsumed = false)
+            // One column step per 1.25× of pinch, so a small pinch moves one step and a big
+            // one can move several in the same gesture.
             var zoom = 1f
-            var handled = false
             do {
                 val event = awaitPointerEvent(PointerEventPass.Initial)
                 if (event.changes.count { it.pressed } >= 2) {
                     zoom *= event.calculateZoom()
                     event.changes.forEach { it.consume() }
-                    if (!handled && zoom > 1.25f) {
-                        onZoomIn(); handled = true
-                    } else if (!handled && zoom < 0.8f) {
-                        onZoomOut(); handled = true
+                    if (zoom > PinchStep) {
+                        onZoomIn(); zoom = 1f
+                    } else if (zoom < 1f / PinchStep) {
+                        onZoomOut(); zoom = 1f
                     }
                 }
             } while (event.changes.any { it.pressed })
         }
     }
+
+private const val PinchStep = 1.25f
 
 private val MonthFormat = SimpleDateFormat("MMMM yyyy", Locale.getDefault())
 

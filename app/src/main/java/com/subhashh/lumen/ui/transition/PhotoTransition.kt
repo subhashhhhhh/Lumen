@@ -32,7 +32,9 @@ import kotlinx.coroutines.launch
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.subhashh.lumen.data.MediaItem
+import coil3.SingletonImageLoader
 import com.subhashh.lumen.ui.images.ImageKeys
+import com.subhashh.lumen.ui.images.bestPlaceholderKey
 import kotlin.math.roundToInt
 
 /**
@@ -212,7 +214,7 @@ fun PhotoTransitionOverlay(transition: PhotoTransition) {
                     // matters: otherwise Coil sizes it from the first (cell-sized) frame.
                     .size(size.width, size.height)
                     .memoryCacheKey(ImageKeys.screen(item.id))
-                    .placeholderMemoryCacheKey(ImageKeys.thumb(item.id))
+                    .placeholderMemoryCacheKey(bestPlaceholderKey(SingletonImageLoader.get(context), item.id))
                     .build()
             },
             contentDescription = null,

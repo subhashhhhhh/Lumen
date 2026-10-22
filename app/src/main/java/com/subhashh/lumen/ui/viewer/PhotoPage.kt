@@ -9,7 +9,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import coil3.request.ImageRequest
 import com.subhashh.lumen.data.MediaItem
-import com.subhashh.lumen.ui.images.ImageKeys
+import coil3.SingletonImageLoader
+import com.subhashh.lumen.ui.images.bestPlaceholderKey
 import me.saket.telephoto.zoomable.ZoomSpec
 import me.saket.telephoto.zoomable.coil3.ZoomableAsyncImage
 import me.saket.telephoto.zoomable.rememberZoomableImageState
@@ -39,11 +40,9 @@ fun PhotoPage(
         model = remember(item.uri) {
             ImageRequest.Builder(context)
                 .data(item.uri)
-                // The open transition already decoded this at screen size under the same key, so
-                // the photo is sharp the moment the viewer appears; neighbors fall back to the
-                // grid thumbnail while they decode.
-                .memoryCacheKey(ImageKeys.screen(item.id))
-                .placeholderMemoryCacheKey(ImageKeys.thumb(item.id))
+                // Sharp from the first frame when the open transition already decoded it at
+                // screen size; neighbors not decoded yet start from the grid thumbnail.
+                .placeholderMemoryCacheKey(bestPlaceholderKey(SingletonImageLoader.get(context), item.id))
                 .build()
         },
         contentDescription = null,
