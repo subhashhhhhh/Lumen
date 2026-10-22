@@ -43,6 +43,8 @@ fun GlassTabBar(
     searchSelected: Boolean,
     onSearch: () -> Unit,
     modifier: Modifier = Modifier,
+    /** False while covered (e.g. by the viewer): stays composed so its glass shaders aren't rebuilt. */
+    enabled: Boolean = true,
 ) {
     Row(
         modifier = modifier,
@@ -57,6 +59,7 @@ fun GlassTabBar(
         ) {
             LumenTab.entries.forEach { tab ->
                 TabItem(
+                    enabled = enabled,
                     // Outline normally, filled when selected — like iOS.
                     icon = if (tab == selected) tab.selectedIcon else tab.icon,
                     label = tab.label,
@@ -78,6 +81,7 @@ fun GlassTabBar(
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
+                    enabled = enabled,
                     onClick = onSearch,
                 ),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -94,6 +98,7 @@ fun GlassTabBar(
 
 @Composable
 private fun TabItem(
+    enabled: Boolean,
     icon: ImageVector,
     label: String,
     selected: Boolean,
@@ -115,6 +120,7 @@ private fun TabItem(
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
+                enabled = enabled,
                 onClick = onClick,
             )
             .width(88.dp)

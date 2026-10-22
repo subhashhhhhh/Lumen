@@ -51,6 +51,10 @@ class PhotoTransition {
     var item by mutableStateOf<MediaItem?>(null)
         private set
 
+    /** True from the moment a photo starts growing until the viewer takes over. */
+    var opening by mutableStateOf(false)
+        private set
+
     /**
      * The photo's center and how grown it is (0 = cell size, 1 = full size) are animated
      * separately: position springs carry the finger's speed in each axis, so a flick keeps
@@ -81,13 +85,14 @@ class PhotoTransition {
     /** Grow from the item's grid cell to [target]. Suspends until the photo is full screen. */
     suspend fun open(item: MediaItem, target: Rect, background: Color) {
         start(item, from = cellRect(item.id), full = target, background = background, backgroundStart = 1f)
+        opening = true
         centerX = thumb.center.x
         centerY = thumb.center.y
         grown = 0f
         coroutineScope {
-            launch { animate(centerX, full.center.x, animationSpec = OpenSpring) { v, _ -> centerX = v } }
-            launch { animate(centerY, full.center.y, animationSpec = OpenSpring) { v, _ -> centerY = v } }
-            launch { animate(0f, 1f, animationSpec = OpenSpring) { v, _ -> grown = v } }
+            launch { animate(centerX, full.center.x, animationSpec = OpenPosition) { v, _ -> centerX = v } }
+            launch { animate(centerY, full.center.y, animationSpec = OpenPosition) { v, _ -> centerY = v } }
+            launch { animate(0f, 1f, animationSpec = OpenSize) { v, _ -> grown = v } }
         }
     }
 
@@ -97,6 +102,7 @@ class PhotoTransition {
      */
     fun beginClose(item: MediaItem, from: Rect, background: Color, backgroundAlpha: Float) {
         start(item, from = null, full = from, background = background, backgroundStart = backgroundAlpha)
+        opening = false
         centerX = from.center.x
         centerY = from.center.y
         grown = 1f
@@ -121,6 +127,7 @@ class PhotoTransition {
 
     fun finish() {
         item = null
+        opening = false
     }
 
     private fun start(item: MediaItem, from: Rect?, full: Rect, background: Color, backgroundStart: Float) {
@@ -150,13 +157,24 @@ class PhotoTransition {
     internal fun backgroundColor(): Color = background
 
     private companion object {
+        // Springs settle to their visibility threshold before the animation ends. The default
+        // (0.01) means 0.01 px for positions: an invisible tail that delayed the viewer by
+        // ~0.3 s after the photo had visibly arrived. Half a pixel / 0.2% is indistinguishable.
+        const val PxThreshold = 0.5f
+        const val FractionThreshold = 0.002f
+
         /** Quick and smooth with a hint of settle, ~0.35 s. */
-        val OpenSpring = spring<Float>(dampingRatio = 0.9f, stiffness = 320f)
+        val OpenPosition = spring(dampingRatio = 0.9f, stiffness = 320f, visibilityThreshold = PxThreshold)
+        val OpenSize = spring(dampingRatio = 0.9f, stiffness = 320f, visibilityThreshold = FractionThreshold)
 
         /** Loose enough that a throw visibly carries before curving home; a trace of settle. */
-        val LandPositionSpring = spring<Float>(dampingRatio = 0.82f, stiffness = 230f)
+        val LandPositionSpring = spring(dampingRatio = 0.82f, stiffness = 230f, visibilityThreshold = PxThreshold)
 
-        val LandSizeSpring = spring<Float>(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 260f)
+        val LandSizeSpring = spring(
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = 260f,
+            visibilityThreshold = FractionThreshold,
+        )
 
         /** px/s; beyond this a hard flick would sail off screen before coming back. */
         const val MaxThrow = 5000f

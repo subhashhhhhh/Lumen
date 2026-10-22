@@ -14,6 +14,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import com.subhashh.lumen.ui.viewer.ViewerScreen
 import androidx.compose.runtime.withFrameNanos
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.IntSize
 import com.subhashh.lumen.ui.transition.PhotoTransition
@@ -230,9 +234,20 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
             )
         }
 
-        if (!viewerOpen) {
+        // Always composed, even under the viewer: recreating it means recompiling its glass
+        // shaders right as a photo flies home.
+        // Hidden (alpha 0, so the GPU skips its blur entirely) from the instant a photo starts
+        // opening until one flies back home, where it fades in again.
+        val tabBarHidden = viewerOpen || transition.opening
+        val tabBarAlpha by animateFloatAsState(
+            targetValue = if (tabBarHidden) 0f else 1f,
+            animationSpec = if (tabBarHidden) snap() else tween(durationMillis = 220),
+            label = "tabBarAlpha",
+        )
+        run {
             GlassTabBar(
                 backdrop = backdrop,
+                enabled = !tabBarHidden,
                 selected = tab.takeUnless { searching },
                 onSelect = { selected ->
                     // Tapping the current tab again pops back to its root, like iOS.
@@ -244,6 +259,7 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                 onSearch = { searching = true },
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
+                    .graphicsLayer { alpha = tabBarAlpha }
                     .padding(bottom = navBottom + 12.dp),
             )
         }

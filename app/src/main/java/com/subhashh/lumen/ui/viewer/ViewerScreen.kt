@@ -2,6 +2,8 @@ package com.subhashh.lumen.ui.viewer
 
 import com.subhashh.lumen.ui.icons.LumenIcons
 import android.app.Activity
+import android.os.Handler
+import android.os.Looper
 import android.Manifest
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.geometry.Offset
@@ -257,7 +259,7 @@ fun ViewerScreen(
                 if (item.isVideo) {
                     VideoPage(
                         item = item,
-                        player = player.takeIf { isCurrent },
+                        player = player?.takeIf { isCurrent },
                         onTap = toggleChrome,
                         modifier = pageModifier,
                     )
@@ -294,7 +296,7 @@ fun ViewerScreen(
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                 ) {
                     if (current.isVideo) {
-                        VideoControls(backdrop, player)
+                        if (player != null) VideoControls(backdrop, player)
                         Spacer(Modifier.height(12.dp))
                     }
                     val launch = { sender: android.content.IntentSender ->
@@ -489,27 +491,43 @@ private fun VideoControls(backdrop: Backdrop, player: Player) {
     }
 }
 
-/** One player for the whole viewer, re-pointed at whichever page is current. */
+/**
+ * One player for the whole viewer, re-pointed at whichever page is current. Created only once a
+ * video is actually shown (most opens are photos), and released a beat after the viewer closes:
+ * ExoPlayer.release() blocks the main thread while its playback thread shuts down, which would
+ * otherwise land on the first frames of the close animation.
+ */
 @Composable
-private fun rememberViewerPlayer(current: MediaItem?): Player {
+private fun rememberViewerPlayer(current: MediaItem?): Player? {
     val context = LocalContext.current
-    val player = remember {
-        ExoPlayer.Builder(context).build().apply { repeatMode = Player.REPEAT_MODE_ONE }
-    }
-    DisposableEffect(player) { onDispose { player.release() } }
-    LaunchedEffect(current?.id) {
-        if (current?.isVideo == true) {
-            player.setMediaItem(PlayerMediaItem.fromUri(current.uri))
-            player.prepare()
-            player.playWhenReady = true
-        } else {
-            player.stop()
-            player.clearMediaItems()
+    var player by remember { mutableStateOf<ExoPlayer?>(null) }
+    DisposableEffect(Unit) {
+        onDispose {
+            val p = player ?: return@onDispose
+            p.pause()
+            Handler(Looper.getMainLooper()).postDelayed({ p.release() }, PlayerReleaseDelayMs)
         }
     }
-    LifecycleEventEffect(Lifecycle.Event.ON_PAUSE) { player.pause() }
+    LaunchedEffect(current?.id) {
+        val p = player
+        if (current?.isVideo == true) {
+            val active = p ?: ExoPlayer.Builder(context).build()
+                .apply { repeatMode = Player.REPEAT_MODE_ONE }
+                .also { player = it }
+            active.setMediaItem(PlayerMediaItem.fromUri(current.uri))
+            active.prepare()
+            active.playWhenReady = true
+        } else if (p != null) {
+            p.stop()
+            p.clearMediaItems()
+        }
+    }
+    LifecycleEventEffect(Lifecycle.Event.ON_PAUSE) { player?.pause() }
     return player
 }
+
+/** Long enough for the close animation to finish before the player's blocking teardown. */
+private const val PlayerReleaseDelayMs = 700L
 
 /** Immersive mode while the chrome is hidden, like iOS Photos. */
 @Composable
