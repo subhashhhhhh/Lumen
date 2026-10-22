@@ -24,6 +24,7 @@ import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.toSize
 import kotlinx.coroutines.coroutineScope
@@ -31,6 +32,7 @@ import kotlinx.coroutines.launch
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.subhashh.lumen.data.MediaItem
+import com.subhashh.lumen.ui.images.ImageKeys
 import kotlin.math.roundToInt
 
 /**
@@ -156,6 +158,10 @@ class PhotoTransition {
     internal fun photoAlpha(): Float = if (landless) grown.coerceIn(0f, 1f) else 1f
     internal fun backgroundColor(): Color = background
 
+    /** Full-screen size of the photo in flight, for decoding it once at that size. */
+    internal fun targetSize(): IntSize =
+        IntSize(full.width.roundToInt().coerceAtLeast(1), full.height.roundToInt().coerceAtLeast(1))
+
     private companion object {
         // Springs settle to their visibility threshold before the animation ends. The default
         // (0.01) means 0.01 px for positions: an invisible tail that delayed the viewer by
@@ -198,10 +204,15 @@ fun PhotoTransitionOverlay(transition: PhotoTransition) {
     ) {
         AsyncImage(
             model = remember(item.id) {
+                val size = transition.targetSize()
                 ImageRequest.Builder(context)
                     .data(item.uri)
-                    // Starts as the grid thumbnail instantly; sharpens if the full image decodes in time.
-                    .placeholderMemoryCacheKey("thumb:${item.id}")
+                    // Decode once at screen size, starting the moment the photo is tapped; the
+                    // viewer and the close flight reuse it under the same key. A fixed size
+                    // matters: otherwise Coil sizes it from the first (cell-sized) frame.
+                    .size(size.width, size.height)
+                    .memoryCacheKey(ImageKeys.screen(item.id))
+                    .placeholderMemoryCacheKey(ImageKeys.thumb(item.id))
                     .build()
             },
             contentDescription = null,

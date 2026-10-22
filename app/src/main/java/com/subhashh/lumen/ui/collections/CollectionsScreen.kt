@@ -1,6 +1,7 @@
 package com.subhashh.lumen.ui.collections
 
 import com.subhashh.lumen.ui.icons.LumenIcons
+import com.subhashh.lumen.ui.images.ImageKeys
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -193,7 +194,7 @@ private fun Cover(item: MediaItem) {
         model = remember(item.uri) {
             ImageRequest.Builder(context)
                 .data(MediaThumbnail(item.uri))
-                .memoryCacheKey("cover:${item.id}")
+                .memoryCacheKey(ImageKeys.cover(item.id))
                 .build()
         },
         contentDescription = null,

@@ -56,6 +56,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -127,6 +128,12 @@ fun ViewerScreen(
     var zoomed by remember { mutableStateOf(false) }
     val flingVelocity = with(LocalDensity.current) { FlingVelocity.toPx() }
     val motion = remember(scope, flingVelocity) { ViewerMotion(scope, flingVelocity) }
+    var preloadNeighbors by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        withFrameNanos { }
+        withFrameNanos { }
+        preloadNeighbors = true
+    }
     val sheetVisible by remember { derivedStateOf { motion.reveal > 0f } }
     // Composition only cares whether the photo is displaced, not by how much.
     val atRest by remember { derivedStateOf { motion.dismissX == 0f && motion.dismissY == 0f } }
@@ -228,7 +235,9 @@ fun ViewerScreen(
             HorizontalPager(
                 state = pager,
                 key = { items[it].id },
-                beyondViewportPageCount = 1,
+                // Neighbors come a couple of frames after the first page, so the viewer's first
+                // frame builds one page instead of three.
+                beyondViewportPageCount = if (preloadNeighbors) 1 else 0,
                 userScrollEnabled = !zoomed && !motion.dragging && atRest,
                 modifier = Modifier.fillMaxSize(),
             ) { page ->

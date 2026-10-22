@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.subhashh.lumen.data.MediaItem
+import com.subhashh.lumen.ui.images.ImageKeys
 import com.subhashh.lumen.data.MediaThumbnail
 import com.subhashh.lumen.ui.transition.PhotoTransition
 import com.subhashh.lumen.ui.transition.transitionCell
@@ -150,7 +151,7 @@ private fun Thumbnail(
             model = remember(item.uri) {
                 ImageRequest.Builder(context)
                     .data(MediaThumbnail(item.uri))
-                    .memoryCacheKey("thumb:${item.id}")
+                    .memoryCacheKey(ImageKeys.thumb(item.id))
                     .build()
             },
             contentDescription = null,

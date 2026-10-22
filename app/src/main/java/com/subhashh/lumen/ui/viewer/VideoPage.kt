@@ -15,6 +15,7 @@ import androidx.media3.ui.compose.SURFACE_TYPE_TEXTURE_VIEW
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.subhashh.lumen.data.MediaItem
+import com.subhashh.lumen.ui.images.ImageKeys
 
 /** The viewer owns a single player; only the current page attaches to it, others show a still frame. */
 @Composable
@@ -55,7 +56,8 @@ private fun StillFrame(item: MediaItem) {
         model = remember(item.uri) {
             ImageRequest.Builder(context)
                 .data(item.uri)
-                .placeholderMemoryCacheKey("thumb:${item.id}")
+                .memoryCacheKey(ImageKeys.screen(item.id))
+                .placeholderMemoryCacheKey(ImageKeys.thumb(item.id))
                 .build()
         },
         contentDescription = null,
