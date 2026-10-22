@@ -1,8 +1,8 @@
 package com.subhashh.lumen.ui.viewer
 
+import com.subhashh.lumen.ui.icons.LumenIcons
 import android.app.Activity
 import android.Manifest
-import androidx.compose.material.icons.rounded.Info
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
@@ -44,16 +44,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBackIos
-import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.DeleteForever
-import androidx.compose.material.icons.rounded.RestoreFromTrash
-import androidx.compose.material.icons.rounded.Favorite
-import androidx.compose.material.icons.rounded.FavoriteBorder
-import androidx.compose.material.icons.rounded.Pause
-import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -280,13 +270,13 @@ fun ViewerScreen(
                         if (inTrash) {
                             GlassIconButton(
                                 backdrop = backdrop,
-                                icon = Icons.Rounded.RestoreFromTrash,
+                                icon = LumenIcons.Restore,
                                 contentDescription = "Restore",
                                 onClick = { launch(MediaActions.restoreRequest(context, current)) },
                             )
                             GlassIconButton(
                                 backdrop = backdrop,
-                                icon = Icons.Rounded.DeleteForever,
+                                icon = LumenIcons.DeleteForever,
                                 contentDescription = "Delete forever",
                                 tint = Color(0xFFFF453A),
                                 onClick = { launch(MediaActions.deleteForeverRequest(context, current)) },
@@ -294,26 +284,26 @@ fun ViewerScreen(
                         } else {
                             GlassIconButton(
                                 backdrop = backdrop,
-                                icon = Icons.Rounded.Share,
+                                icon = LumenIcons.Share,
                                 contentDescription = "Share",
                                 onClick = { MediaActions.share(context, current) },
                             )
                             GlassIconButton(
                                 backdrop = backdrop,
-                                icon = if (current.isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
+                                icon = if (current.isFavorite) LumenIcons.HeartFilled else LumenIcons.Heart,
                                 contentDescription = "Favorite",
                                 tint = if (current.isFavorite) Color(0xFFFF375F) else LocalGlassColors.current.content,
                                 onClick = { launch(MediaActions.favoriteRequest(context, current)) },
                             )
                             GlassIconButton(
                                 backdrop = backdrop,
-                                icon = Icons.Rounded.Info,
+                                icon = LumenIcons.Info,
                                 contentDescription = "Details",
                                 onClick = openInfo,
                             )
                             GlassIconButton(
                                 backdrop = backdrop,
-                                icon = Icons.Rounded.Delete,
+                                icon = LumenIcons.Delete,
                                 contentDescription = "Delete",
                                 onClick = { launch(MediaActions.trashRequest(context, current)) },
                             )
@@ -398,7 +388,7 @@ private fun TopBar(
     ) {
         GlassIconButton(
             backdrop = backdrop,
-            icon = Icons.AutoMirrored.Rounded.ArrowBackIos,
+            icon = LumenIcons.Back,
             contentDescription = "Back",
             onClick = onBack,
             modifier = Modifier.align(Alignment.CenterStart),
@@ -441,7 +431,7 @@ private fun VideoControls(backdrop: Backdrop, player: Player) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
-            imageVector = if (playPause.showPlay) Icons.Rounded.PlayArrow else Icons.Rounded.Pause,
+            imageVector = if (playPause.showPlay) LumenIcons.Play else LumenIcons.Pause,
             contentDescription = if (playPause.showPlay) "Play" else "Pause",
             tint = colors.content,
             modifier = Modifier

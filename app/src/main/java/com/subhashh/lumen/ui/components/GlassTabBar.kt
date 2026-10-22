@@ -1,5 +1,6 @@
 package com.subhashh.lumen.ui.components
 
+import com.subhashh.lumen.ui.icons.LumenIcons
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -13,10 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Collections
-import androidx.compose.material.icons.rounded.PhotoLibrary
-import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -32,9 +29,9 @@ import androidx.compose.ui.unit.sp
 import com.kyant.backdrop.Backdrop
 import com.subhashh.lumen.ui.theme.LocalGlassColors
 
-enum class LumenTab(val label: String, val icon: ImageVector) {
-    Library("Library", Icons.Rounded.PhotoLibrary),
-    Collections("Collections", Icons.Rounded.Collections),
+enum class LumenTab(val label: String, val icon: ImageVector, val selectedIcon: ImageVector) {
+    Library("Library", LumenIcons.Library, LumenIcons.LibraryFilled),
+    Collections("Collections", LumenIcons.Collections, LumenIcons.CollectionsFilled),
 }
 
 /** iOS 26 Photos-style bar: a glass capsule of tabs, plus a separate glass search button. */
@@ -60,7 +57,8 @@ fun GlassTabBar(
         ) {
             LumenTab.entries.forEach { tab ->
                 TabItem(
-                    icon = tab.icon,
+                    // Outline normally, filled when selected — like iOS.
+                    icon = if (tab == selected) tab.selectedIcon else tab.icon,
                     label = tab.label,
                     selected = tab == selected,
                     onClick = { onSelect(tab) },
@@ -85,7 +83,11 @@ fun GlassTabBar(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
-            Icon(Icons.Rounded.Search, contentDescription = "Search", tint = searchTint)
+            Icon(
+                if (searchSelected) LumenIcons.SearchFilled else LumenIcons.Search,
+                contentDescription = "Search",
+                tint = searchTint,
+            )
         }
     }
 }

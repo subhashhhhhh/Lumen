@@ -1,5 +1,6 @@
 package com.subhashh.lumen.ui
 
+import com.subhashh.lumen.ui.icons.LumenIcons
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
@@ -31,8 +32,6 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBackIos
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import com.subhashh.lumen.data.CollectionKeys
@@ -199,7 +198,7 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
         if (inCollection && !viewerOpen) {
             GlassIconButton(
                 backdrop = backdrop,
-                icon = Icons.AutoMirrored.Rounded.ArrowBackIos,
+                icon = LumenIcons.Back,
                 contentDescription = "Back",
                 onClick = { openCollection = null },
                 modifier = Modifier

@@ -1,5 +1,6 @@
 package com.subhashh.lumen.ui.viewer
 
+import com.subhashh.lumen.ui.icons.LumenIcons
 import android.text.format.Formatter
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -20,11 +21,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.CameraAlt
-import androidx.compose.material.icons.rounded.Image
-import androidx.compose.material.icons.rounded.LocationOn
-import androidx.compose.material.icons.rounded.Videocam
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -128,7 +124,7 @@ fun DetailsSheet(
                 Spacer(Modifier.height(12.dp))
                 Card(colors) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Rounded.LocationOn, null, tint = colors.secondary, modifier = Modifier.size(20.dp))
+                        Icon(LumenIcons.Location, null, tint = colors.secondary, modifier = Modifier.size(20.dp))
                         Spacer(Modifier.width(10.dp))
                         Text(
                             "Allow location access to see where photos were taken",
@@ -175,9 +171,9 @@ private fun MediaCard(item: MediaItem, d: MediaDetails, colors: SheetColors) {
     val context = LocalContext.current
     val camera = d.camera
     val icon: ImageVector = when {
-        item.isVideo -> Icons.Rounded.Videocam
-        camera?.device != null -> Icons.Rounded.CameraAlt
-        else -> Icons.Rounded.Image
+        item.isVideo -> LumenIcons.Video
+        camera?.device != null -> LumenIcons.Camera
+        else -> LumenIcons.Image
     }
     val title = camera?.device ?: formatName(d.mimeType, item.isVideo)
 
@@ -233,7 +229,7 @@ private fun LocationCard(location: GeoPoint, colors: SheetColors, onOpenMap: (Ge
     val context = LocalContext.current
     val place by produceState<String?>(null, location) { value = PlaceLookup.describe(context, location) }
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(Icons.Rounded.LocationOn, null, tint = colors.secondary, modifier = Modifier.size(20.dp))
+        Icon(LumenIcons.Location, null, tint = colors.secondary, modifier = Modifier.size(20.dp))
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
             Text(place ?: "Location", color = colors.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)

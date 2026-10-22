@@ -1,5 +1,6 @@
 package com.subhashh.lumen.ui.collections
 
+import com.subhashh.lumen.ui.icons.LumenIcons
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -21,12 +22,6 @@ import androidx.compose.foundation.lazy.grid.LazyGridScope
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.Favorite
-import androidx.compose.material.icons.rounded.Folder
-import androidx.compose.material.icons.rounded.PhoneAndroid
-import androidx.compose.material.icons.rounded.Videocam
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -145,11 +140,11 @@ private fun UtilityTile(collection: MediaCollection, onClick: () -> Unit) {
 }
 
 private fun utilityIcon(key: String): ImageVector = when (key) {
-    CollectionKeys.Favorites -> Icons.Rounded.Favorite
-    CollectionKeys.Videos -> Icons.Rounded.Videocam
-    CollectionKeys.Screenshots -> Icons.Rounded.PhoneAndroid
-    CollectionKeys.RecentlyDeleted -> Icons.Rounded.Delete
-    else -> Icons.Rounded.Folder
+    CollectionKeys.Favorites -> LumenIcons.HeartFilled
+    CollectionKeys.Videos -> LumenIcons.Video
+    CollectionKeys.Screenshots -> LumenIcons.Screenshot
+    CollectionKeys.RecentlyDeleted -> LumenIcons.Delete
+    else -> LumenIcons.Folder
 }
 
 @Composable
@@ -168,7 +163,7 @@ private fun AlbumCard(collection: MediaCollection, onClick: () -> Unit) {
             if (cover != null) {
                 Cover(cover)
             } else {
-                Icon(Icons.Rounded.Folder, contentDescription = null, tint = onBackground.copy(alpha = 0.3f))
+                Icon(LumenIcons.Folder, contentDescription = null, tint = onBackground.copy(alpha = 0.3f))
             }
         }
         Spacer(Modifier.height(6.dp))
