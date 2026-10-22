@@ -1,6 +1,7 @@
 package com.subhashh.lumen.ui.library
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.calculateZoom
@@ -12,10 +13,11 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.grid.LazyGridState
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -23,6 +25,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -37,11 +40,13 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.subhashh.lumen.data.MediaItem
+import com.subhashh.lumen.data.MediaThumbnail
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -52,17 +57,26 @@ private const val DefaultColumnStep = 2
 
 @Composable
 fun LibraryScreen(
+    title: String,
     items: List<MediaItem>,
+    gridState: LazyGridState,
     contentPadding: PaddingValues,
+    onOpen: (index: Int) -> Unit,
     modifier: Modifier = Modifier,
+    /** Extra space above the title, e.g. for an album's back button. */
+    titleTopPadding: Dp = 16.dp,
 ) {
     var step by rememberSaveable { mutableIntStateOf(DefaultColumnStep) }
     val columns = ColumnSteps[step]
-    val gridState = rememberLazyGridState()
 
-    // iOS Photos opens at the newest photo, which sits at the bottom of the grid.
-    LaunchedEffect(items.size) {
-        if (items.isNotEmpty()) gridState.scrollToItem(items.lastIndex)
+    // iOS Photos opens at the newest photo, which sits at the bottom of the grid. Only on first
+    // load — later refreshes (a deletion, returning to the app) must keep the scroll position.
+    var scrolledToNewest by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(items.isNotEmpty()) {
+        if (items.isNotEmpty() && !scrolledToNewest) {
+            gridState.scrollToItem(items.lastIndex)
+            scrolledToNewest = true
+        }
     }
 
     val visibleMonth by remember(items) {
@@ -88,30 +102,45 @@ fun LibraryScreen(
                     onZoomOut = { if (step < ColumnSteps.lastIndex) step++ },
                 ),
         ) {
-            items(items, key = { it.id }) { item ->
-                Thumbnail(item, showDuration = columns <= 5)
+            itemsIndexed(items, key = { _, item -> item.id }) { index, item ->
+                Thumbnail(
+                    item = item,
+                    showDuration = columns <= 5,
+                    onClick = { onOpen(index) },
+                )
             }
         }
 
+        if (items.isEmpty()) {
+            Text(
+                "No photos or videos",
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                modifier = Modifier.align(Alignment.Center),
+            )
+        }
+
         LibraryHeader(
+            title = title,
             subtitle = visibleMonth,
+            topPadding = titleTopPadding,
             modifier = Modifier.align(Alignment.TopStart),
         )
     }
 }
 
 @Composable
-private fun Thumbnail(item: MediaItem, showDuration: Boolean) {
+private fun Thumbnail(item: MediaItem, showDuration: Boolean, onClick: () -> Unit) {
     val context = LocalContext.current
     Box(
         Modifier
             .aspectRatio(1f)
-            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)),
+            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+            .clickable(onClick = onClick),
     ) {
         AsyncImage(
             model = remember(item.uri) {
                 ImageRequest.Builder(context)
-                    .data(item.uri)
+                    .data(MediaThumbnail(item.uri))
                     .memoryCacheKey("thumb:${item.id}")
                     .build()
             },
@@ -132,7 +161,7 @@ private fun Thumbnail(item: MediaItem, showDuration: Boolean) {
 }
 
 @Composable
-private fun LibraryHeader(subtitle: String, modifier: Modifier = Modifier) {
+private fun LibraryHeader(title: String, subtitle: String, topPadding: Dp, modifier: Modifier = Modifier) {
     Column(
         modifier
             .fillMaxWidth()
@@ -141,9 +170,10 @@ private fun LibraryHeader(subtitle: String, modifier: Modifier = Modifier) {
                     listOf(Color.Black.copy(alpha = 0.55f), Color.Transparent),
                 ),
             )
-            .padding(top = 56.dp, start = 20.dp, end = 20.dp, bottom = 32.dp),
+            .statusBarsPadding()
+            .padding(top = topPadding, start = 20.dp, end = 20.dp, bottom = 32.dp),
     ) {
-        Text("Library", style = OverlayText.copy(fontSize = 34.sp, fontWeight = FontWeight.Bold))
+        Text(title, style = OverlayText.copy(fontSize = 34.sp, fontWeight = FontWeight.Bold))
         if (subtitle.isNotEmpty()) {
             Text(subtitle, style = OverlayText.copy(fontSize = 15.sp, color = Color(0xCCFFFFFF)))
         }

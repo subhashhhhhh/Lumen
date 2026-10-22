@@ -2,20 +2,32 @@ package com.subhashh.lumen.data
 
 import android.content.ContentUris
 import android.content.Context
+import android.os.Bundle
 import android.provider.MediaStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 class MediaRepository(private val context: Context) {
 
-    /** All photos and videos, oldest first — the Library grid shows the newest at the bottom, like iOS Photos. */
-    suspend fun loadLibrary(): List<MediaItem> = withContext(Dispatchers.IO) {
+    /** All photos and videos, oldest first — grids show the newest at the bottom, like iOS Photos. */
+    suspend fun loadLibrary(): List<MediaItem> = query(trashed = false)
+
+    /** Items in the system trash (Recently Deleted), oldest first. */
+    suspend fun loadTrash(): List<MediaItem> = query(trashed = true)
+
+    private suspend fun query(trashed: Boolean): List<MediaItem> = withContext(Dispatchers.IO) {
         val projection = arrayOf(
             MediaStore.Files.FileColumns._ID,
             MediaStore.Files.FileColumns.MEDIA_TYPE,
             MediaStore.MediaColumns.DATE_TAKEN,
             MediaStore.MediaColumns.DATE_ADDED,
+            MediaStore.MediaColumns.DATE_MODIFIED,
             MediaStore.MediaColumns.DURATION,
+            MediaStore.MediaColumns.MIME_TYPE,
+            MediaStore.MediaColumns.IS_FAVORITE,
+            MediaStore.MediaColumns.RELATIVE_PATH,
+            MediaStore.MediaColumns.BUCKET_ID,
+            MediaStore.MediaColumns.BUCKET_DISPLAY_NAME,
         )
         // MediaStore classifies TypeScript sources (.ts) as MPEG-TS video. Real transport streams
         // get a duration when scanned; source files never do, so drop mp2ts rows without one.
@@ -26,22 +38,30 @@ class MediaRepository(private val context: Context) {
             MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE.toString(),
             MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO.toString(),
         )
-        val sortOrder = "COALESCE(${MediaStore.MediaColumns.DATE_TAKEN}, " +
-            "${MediaStore.MediaColumns.DATE_ADDED} * 1000) ASC"
+        val queryArgs = Bundle().apply {
+            putString(android.content.ContentResolver.QUERY_ARG_SQL_SELECTION, selection)
+            putStringArray(android.content.ContentResolver.QUERY_ARG_SQL_SELECTION_ARGS, args)
+            if (trashed) putInt(MediaStore.QUERY_ARG_MATCH_TRASHED, MediaStore.MATCH_ONLY)
+        }
 
         val items = ArrayList<MediaItem>()
         context.contentResolver.query(
             MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL),
             projection,
-            selection,
-            args,
-            sortOrder,
+            queryArgs,
+            null,
         )?.use { cursor ->
             val idCol = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID)
             val typeCol = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MEDIA_TYPE)
             val takenCol = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATE_TAKEN)
             val addedCol = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATE_ADDED)
+            val modifiedCol = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATE_MODIFIED)
             val durationCol = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DURATION)
+            val mimeCol = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.MIME_TYPE)
+            val favoriteCol = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.IS_FAVORITE)
+            val pathCol = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.RELATIVE_PATH)
+            val bucketIdCol = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.BUCKET_ID)
+            val bucketNameCol = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.BUCKET_DISPLAY_NAME)
 
             while (cursor.moveToNext()) {
                 val id = cursor.getLong(idCol)
@@ -51,20 +71,36 @@ class MediaRepository(private val context: Context) {
                 } else {
                     MediaStore.Images.Media.EXTERNAL_CONTENT_URI
                 }
-                val takenAt = if (cursor.isNull(takenCol)) {
-                    cursor.getLong(addedCol) * 1000
-                } else {
-                    cursor.getLong(takenCol)
-                }
                 items += MediaItem(
                     id = id,
                     uri = ContentUris.withAppendedId(baseUri, id),
+                    mimeType = cursor.getString(mimeCol) ?: if (isVideo) "video/*" else "image/*",
                     isVideo = isVideo,
-                    takenAt = takenAt,
+                    takenAt = captureTime(
+                        takenMs = cursor.getLong(takenCol),
+                        modifiedSec = cursor.getLong(modifiedCol),
+                        addedSec = cursor.getLong(addedCol),
+                    ),
                     durationMs = cursor.getLong(durationCol),
+                    isFavorite = cursor.getInt(favoriteCol) == 1,
+                    relativePath = cursor.getString(pathCol).orEmpty(),
+                    bucketId = cursor.getLong(bucketIdCol),
+                    bucketName = cursor.getString(bucketNameCol) ?: "Internal storage",
                 )
             }
         }
+        items.sortWith(compareBy<MediaItem> { it.takenAt }.thenBy { it.id })
         items
+    }
+
+    /**
+     * EXIF capture time (MediaStore's DATE_TAKEN) when the file has one, else the file's modified
+     * time — same as Fossify and Aves. Never DATE_ADDED first: it resets whenever MediaStore
+     * rebuilds its index, which would date a whole library to that day.
+     */
+    private fun captureTime(takenMs: Long, modifiedSec: Long, addedSec: Long): Long = when {
+        takenMs > 0 -> takenMs
+        modifiedSec > 0 -> modifiedSec * 1000
+        else -> addedSec * 1000
     }
 }

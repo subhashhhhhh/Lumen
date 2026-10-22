@@ -55,6 +55,11 @@ dependencies {
     implementation(libs.coil.video)
     implementation(libs.coil.svg)
 
+    // Zoomable, subsampled photos — saket/telephoto, Apache 2.0.
+    implementation(libs.telephoto.zoomable.image.coil3)
+    implementation(libs.media3.exoplayer)
+    implementation(libs.media3.ui.compose)
+
     // Liquid glass — Kyant0/backdrop, Apache 2.0.
     implementation(libs.backdrop)
 }
