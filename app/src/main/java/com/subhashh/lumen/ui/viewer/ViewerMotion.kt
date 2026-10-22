@@ -42,6 +42,8 @@ class ViewerMotion(
     private val scope: CoroutineScope,
     /** Release speed, px/s, that counts as a flick regardless of position. */
     private val flingVelocity: Float,
+    /** The details sheet was let go and is snapping open or shut (for a haptic tick). */
+    private val onSheetSnap: () -> Unit = {},
 ) {
     /** Photo offset while being dragged toward dismissal, px. */
     var dismissX by mutableFloatStateOf(0f)
@@ -165,6 +167,7 @@ class ViewerMotion(
     private fun settleReveal(velocityY: Float) {
         // A flick decides on its own; otherwise go to whichever end is nearer.
         val open = if (abs(velocityY) >= flingVelocity) velocityY < 0f else reveal > sheetHeight / 2f
+        onSheetSnap()
         animateReveal(open, velocityY)
     }
 

@@ -1,5 +1,7 @@
 package com.subhashh.lumen.ui.components
 
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import com.subhashh.lumen.ui.icons.LumenIcons
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
@@ -43,6 +45,7 @@ fun GlassTabBar(
     /** False while covered (e.g. by the viewer): stays composed so its glass shaders aren't rebuilt. */
     enabled: Boolean = true,
 ) {
+    val haptics = LocalHapticFeedback.current
     Row(
         modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -61,7 +64,10 @@ fun GlassTabBar(
                     icon = if (tab == selected) tab.selectedIcon else tab.icon,
                     label = tab.label,
                     selected = tab == selected,
-                    onClick = { onSelect(tab) },
+                    onClick = {
+                        if (tab != selected) haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                        onSelect(tab)
+                    },
                 )
             }
         }
@@ -74,7 +80,13 @@ fun GlassTabBar(
         Column(
             modifier = Modifier
                 .size(60.dp)
-                .pressable(onSearch, enabled)
+                .pressable(
+                    onClick = {
+                        if (!searchSelected) haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                        onSearch()
+                    },
+                    enabled = enabled,
+                )
                 .glass(backdrop),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,

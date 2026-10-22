@@ -1,5 +1,7 @@
 package com.subhashh.lumen.ui.viewer
 
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import com.subhashh.lumen.ui.icons.LumenIcons
 import com.subhashh.lumen.ui.components.pressable
 import android.app.Activity
@@ -124,7 +126,12 @@ fun ViewerScreen(
     var chromeVisible by rememberSaveable { mutableStateOf(true) }
     var zoomed by remember { mutableStateOf(false) }
     val flingVelocity = with(LocalDensity.current) { FlingVelocity.toPx() }
-    val motion = remember(scope, flingVelocity) { ViewerMotion(scope, flingVelocity) }
+    val haptics = LocalHapticFeedback.current
+    val motion = remember(scope, flingVelocity) {
+        ViewerMotion(scope, flingVelocity, onSheetSnap = {
+            haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
+        })
+    }
     var preloadNeighbors by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         withFrameNanos { }
@@ -358,7 +365,12 @@ fun ViewerScreen(
                                 icon = if (current.isFavorite) LumenIcons.HeartFilled else LumenIcons.Heart,
                                 contentDescription = "Favorite",
                                 tint = if (current.isFavorite) Color(0xFFFF375F) else LocalGlassColors.current.content,
-                                onClick = { launch(MediaActions.favoriteRequest(context, current)) },
+                                onClick = {
+                                    haptics.performHapticFeedback(
+                                        if (current.isFavorite) HapticFeedbackType.ToggleOff else HapticFeedbackType.ToggleOn,
+                                    )
+                                    launch(MediaActions.favoriteRequest(context, current))
+                                },
                             )
                             GlassIconButton(
                                 backdrop = backdrop,

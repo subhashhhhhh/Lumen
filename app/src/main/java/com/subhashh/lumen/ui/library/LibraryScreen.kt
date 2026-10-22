@@ -1,5 +1,7 @@
 package com.subhashh.lumen.ui.library
 
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -75,6 +77,7 @@ fun LibraryScreen(
     titleTopPadding: Dp = 16.dp,
 ) {
     var step by rememberSaveable { mutableIntStateOf(DefaultColumnStep) }
+    val haptics = LocalHapticFeedback.current
     val columns = ColumnSteps[step]
     // Decode thumbnails for the cell size actually shown, so fewer, bigger cells stay sharp.
     val cellPx = with(LocalDensity.current) { LocalConfiguration.current.screenWidthDp.dp.roundToPx() } / columns
@@ -109,8 +112,18 @@ fun LibraryScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .pinchToChangeColumns(
-                    onZoomIn = { if (step > 0) step-- },
-                    onZoomOut = { if (step < ColumnSteps.lastIndex) step++ },
+                    onZoomIn = {
+                        if (step > 0) {
+                            step--
+                            haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                        }
+                    },
+                    onZoomOut = {
+                        if (step < ColumnSteps.lastIndex) {
+                            step++
+                            haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                        }
+                    },
                 ),
         ) {
             itemsIndexed(items, key = { _, item -> item.id }) { index, item ->
