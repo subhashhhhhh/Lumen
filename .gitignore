@@ -8,3 +8,8 @@ local.properties
 captures/
 *.keystore
 *.jks
+AGENTS.md
+CLAUDE.md
+DESIGN.md
+PRODUCT.md
+ROADMAP.md
