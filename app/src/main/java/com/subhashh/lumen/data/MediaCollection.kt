@@ -49,6 +49,16 @@ object CollectionKeys {
     }
 }
 
+/** Camera RAW file extensions Android can show (DNG fully, the others by their embedded preview). */
+internal val RawExtensions = setOf(
+    "dng", "cr2", "cr3", "crw", "nef", "nrw", "arw", "sr2", "srf", "raf", "orf", "rw2", "pef", "srw", "x3f", "erf", "kdc", "mrw", "dcr",
+)
+
+/** A camera RAW file, by type or, when the type is generic, by extension. */
+val MediaItem.isRaw: Boolean
+    get() = mimeType == "image/x-adobe-dng" || mimeType.startsWith("image/x-") &&
+        name.substringAfterLast('.', "").lowercase() in RawExtensions
+
 internal val MediaItem.isScreenshot: Boolean
     get() = relativePath.contains("screenshot", ignoreCase = true)
 

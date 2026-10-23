@@ -26,6 +26,10 @@ object HiddenMedia {
         "gif" to "image/gif", "heic" to "image/heic", "heif" to "image/heif", "avif" to "image/avif",
         "mp4" to "video/mp4", "mkv" to "video/x-matroska", "webm" to "video/webm",
         "3gp" to "video/3gpp", "mov" to "video/quicktime",
+        "dng" to "image/x-adobe-dng", "cr2" to "image/x-canon-cr2", "cr3" to "image/x-canon-cr3",
+        "nef" to "image/x-nikon-nef", "arw" to "image/x-sony-arw", "raf" to "image/x-fuji-raf",
+        "orf" to "image/x-olympus-orf", "rw2" to "image/x-panasonic-rw2", "pef" to "image/x-pentax-pef",
+        "srw" to "image/x-samsung-srw",
     )
 
     /** Caches and temp folders apps hide with .nomedia; not anyone's private photos. */

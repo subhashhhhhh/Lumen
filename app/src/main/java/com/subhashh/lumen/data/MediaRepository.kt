@@ -3,6 +3,7 @@ package com.subhashh.lumen.data
 import android.content.ContentUris
 import android.content.Context
 import android.os.Bundle
+import android.media.ExifInterface
 import android.media.MediaFormat
 import android.provider.MediaStore
 import kotlinx.coroutines.Dispatchers
@@ -90,7 +91,10 @@ class MediaRepository(private val context: Context) {
                     mimeType = cursor.getString(mimeCol) ?: if (isVideo) "video/*" else "image/*",
                     isVideo = isVideo,
                     takenAt = captureTime(
-                        takenMs = cursor.getLong(takenCol),
+                        // MediaStore often leaves RAW files undated (CR2, NEF…); their EXIF knows.
+                        takenMs = cursor.getLong(takenCol).takeIf { it > 0 }
+                            ?: rawCaptureTime(cursor.getString(mimeCol), cursor.getString(nameCol), id, isVideo)
+                            ?: 0L,
                         modifiedSec = cursor.getLong(modifiedCol),
                         addedSec = cursor.getLong(addedCol),
                     ),
@@ -110,6 +114,28 @@ class MediaRepository(private val context: Context) {
         }
         items.sortWith(compareBy<MediaItem> { it.takenAt }.thenBy { it.id })
         items
+    }
+
+    /**
+     * A RAW file's capture time from its EXIF, for the RAW files MediaStore didn't date.
+     * Only RAW: reading every undated file this way would slow the library down, and the
+     * rest (screenshots, downloads) has no EXIF date anyway.
+     */
+    private fun rawCaptureTime(mime: String?, name: String?, id: Long, isVideo: Boolean): Long? {
+        if (isVideo || mime?.startsWith("image/x-") != true) return null
+        if (name?.substringAfterLast('.', "")?.lowercase() !in RawExtensions) return null
+        return runCatching {
+            val uri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id)
+            context.contentResolver.openInputStream(uri)?.use { stream ->
+                val exif = ExifInterface(stream)
+                val stamp = exif.getAttribute(ExifInterface.TAG_DATETIME_ORIGINAL)
+                    ?: exif.getAttribute(ExifInterface.TAG_DATETIME)
+                    ?: return@use null
+                val offset = exif.getAttribute(ExifInterface.TAG_OFFSET_TIME_ORIGINAL)
+                val format = java.text.SimpleDateFormat(if (offset != null) "yyyy:MM:dd HH:mm:ssXXX" else "yyyy:MM:dd HH:mm:ss", java.util.Locale.US)
+                format.parse(stamp + (offset ?: ""))?.time
+            }
+        }.getOrNull()
     }
 
     /**

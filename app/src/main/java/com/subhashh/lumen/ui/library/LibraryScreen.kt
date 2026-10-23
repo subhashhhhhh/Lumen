@@ -59,6 +59,7 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.subhashh.lumen.data.MediaItem
+import com.subhashh.lumen.data.isRaw
 import com.subhashh.lumen.ui.images.ImageKeys
 import com.subhashh.lumen.data.GridThumbnail
 import com.subhashh.lumen.ui.transition.PhotoTransition
@@ -266,10 +267,14 @@ internal fun Thumbnail(
                     modifier = Modifier.fillMaxSize(),
                 )
             }
-            if (showDuration && (item.isVideo || item.mimeType == "image/gif")) {
+            if (showDuration && (item.isVideo || item.mimeType == "image/gif" || item.isRaw)) {
                 Text(
-                    // GIFs play in the viewer; say so, as iOS does.
-                    text = if (item.isVideo) formatDuration(item.durationMs) else "GIF",
+                    // GIFs move and RAW files are special; say so, as iOS does.
+                    text = when {
+                        item.isVideo -> formatDuration(item.durationMs)
+                        item.isRaw -> "RAW"
+                        else -> "GIF"
+                    },
                     style = OverlayText,
                     modifier = Modifier
                         .align(Alignment.BottomEnd)

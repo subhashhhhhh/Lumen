@@ -68,6 +68,7 @@ class SearchIndex private constructor(
                 if (item.mimeType == "image/gif") itemWords += "gif"
                 if (item.isScreenshot) itemWords += ScreenshotWords
                 if (item.isFavorite) itemWords += FavoriteWords
+                if (item.isRaw) itemWords += "raw"
                 for (word in itemWords) {
                     if (word.isNotEmpty()) byWord.getOrPut(word) { ArrayList() } += index
                 }

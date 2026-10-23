@@ -1,5 +1,7 @@
 package com.subhashh.lumen.ui.viewer
 
+import com.subhashh.lumen.data.RawExtensions
+import com.subhashh.lumen.data.isRaw
 import com.subhashh.lumen.ui.icons.LumenIcons
 import android.text.format.Formatter
 import androidx.compose.foundation.background
@@ -175,7 +177,7 @@ private fun MediaCard(item: MediaItem, d: MediaDetails, colors: SheetColors) {
         camera?.device != null -> LumenIcons.Camera
         else -> LumenIcons.Image
     }
-    val title = camera?.device ?: formatName(d.mimeType, item.isVideo)
+    val title = camera?.device?.let { if (item.isRaw) "$it · RAW" else it } ?: formatName(d.mimeType, item.isVideo)
 
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(icon, null, tint = colors.secondary, modifier = Modifier.size(20.dp))
@@ -256,6 +258,10 @@ private fun formatNumber(v: Double): String =
     if (abs(v - v.roundToInt()) < 0.05) v.roundToInt().toString() else "%.1f".format(Locale.US, v)
 
 private fun formatName(mime: String, isVideo: Boolean): String {
+    // RAW types look like image/x-adobe-dng or image/x-canon-cr2: show "DNG RAW", "CR2 RAW".
+    if (!isVideo && mime.startsWith("image/x-") && mime.substringAfterLast('-') in RawExtensions) {
+        return mime.substringAfterLast('-').uppercase() + " RAW"
+    }
     val subtype = mime.substringAfter('/').uppercase()
     return when {
         subtype == "*" || subtype.isEmpty() -> if (isVideo) "Video" else "Photo"
