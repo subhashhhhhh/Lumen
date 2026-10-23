@@ -113,6 +113,8 @@ object SmartIndex {
             val model = ModelDownloads.installed(applicationContext) ?: return Result.success()
             val backlog = inputData.getString(KeyMode) == Backlog
             val outcome = Indexer(applicationContext, model).run(limit = if (backlog) Int.MAX_VALUE else NewLimit)
+            // Suggested searches follow what's in the library; refreshed once it's all indexed.
+            if (outcome == Indexer.Outcome.Done) SearchSuggestions.refreshIfStale(applicationContext, model)
             if (backlog) {
                 // Too warm: try again later (WorkManager backs off); otherwise finished.
                 return if (outcome == Indexer.Outcome.TooHot) Result.retry() else Result.success()

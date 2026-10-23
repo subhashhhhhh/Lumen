@@ -418,11 +418,25 @@ private fun MainScaffold(
         val years = library.orEmpty().asReversed().asSequence()
             .map { java.util.Calendar.getInstance().apply { timeInMillis = it.takenAt }.get(java.util.Calendar.YEAR).toString() }
             .distinct().take(2).toList()
-        // With Smart Search set up, lead with what it can do: describe what's in a photo.
-        val smart = if (com.subhashh.lumen.data.ai.ModelDownloads.installed(context) != null) {
-            listOf("cat", "sunset at the beach", "receipt", "food")
-        } else emptyList()
-        smart + listOf("Videos", "Screenshots", "Favorites") + years + folders.take(3).map { it.title }
+        listOf("Videos", "Screenshots", "Favorites") + years + folders.take(3).map { it.title }
+    }
+    var recentSearches by remember { mutableStateOf(prefs.recentSearches) }
+    val rememberSearch = { query: String ->
+        prefs.addRecentSearch(query)
+        recentSearches = prefs.recentSearches
+    }
+    // Suggested searches from what this library has (Smart Search), each with its best photo;
+    // a different handful each time Search opens.
+    val smartSuggestions by produceState<List<Pair<String, MediaItem>>>(emptyList(), searching, library) {
+        if (!searching) return@produceState
+        value = withContext(Dispatchers.IO) {
+            val model = com.subhashh.lumen.data.ai.ModelDownloads.installed(context) ?: return@withContext emptyList()
+            val byId = library.orEmpty().associateBy { it.id }
+            com.subhashh.lumen.data.ai.SearchSuggestions.load(context, model)
+                .mapNotNull { s -> byId[s.coverId]?.let { s.term to it } }
+                .shuffled()
+                .take(8)
+        }
     }
     val searchGrid = rememberLazyGridState()
     LaunchedEffect(searchQuery) { searchGrid.scrollToItem(0) }
@@ -994,11 +1008,20 @@ private fun MainScaffold(
                     results = searchResults,
                     lookingInside = smartPending,
                     albums = searchAlbums,
-                    suggestions = searchSuggestions,
+                    recent = recentSearches,
+                    suggested = smartSuggestions,
+                    suggestions = if (smartSuggestions.isEmpty()) searchSuggestions else emptyList(),
+                    onClearRecent = {
+                        prefs.recentSearches = emptyList()
+                        recentSearches = emptyList()
+                    },
                     gridState = searchGrid,
                     contentPadding = PaddingValues(top = statusTop + 72.dp, bottom = navBottom + 96.dp),
                     transition = transition,
-                    onOpen = { index -> openViewer(CollectionKeys.Search, index) },
+                    onOpen = { index ->
+                        rememberSearch(searchQuery)
+                        openViewer(CollectionKeys.Search, index)
+                    },
                     onOpenAlbum = { key ->
                         searching = false
                         settingsPage = null
@@ -1274,6 +1297,7 @@ private fun MainScaffold(
                 onQueryChange = { searchQuery = it },
                 autoFocus = focusSearch,
                 onAutoFocused = { focusSearch = false },
+                onSubmit = { rememberSearch(searchQuery) },
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .statusBarsPadding()

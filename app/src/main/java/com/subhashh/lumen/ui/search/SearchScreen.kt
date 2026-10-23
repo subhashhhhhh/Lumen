@@ -1,6 +1,15 @@
 package com.subhashh.lumen.ui.search
 
 import androidx.compose.foundation.background
+import com.subhashh.lumen.data.MediaThumbnail
+import coil3.compose.AsyncImage
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -65,7 +74,13 @@ fun SearchScreen(
     /** Smart Search is still working on this query; its matches will follow these. */
     lookingInside: Boolean,
     albums: List<MediaCollection>,
+    /** Recent searches, newest first. */
+    recent: List<String>,
+    /** Smart Search's suggestions for this library, with each one's best photo. */
+    suggested: List<Pair<String, MediaItem>>,
+    /** Name/date starting points, for when there's no Smart Search. */
     suggestions: List<String>,
+    onClearRecent: () -> Unit,
     gridState: LazyGridState,
     contentPadding: PaddingValues,
     transition: PhotoTransition,
@@ -94,7 +109,7 @@ fun SearchScreen(
     val bucket = ImageKeys.thumbBucket(cellPx)
 
     if (query.isBlank()) {
-        Suggestions(suggestions, contentPadding, onSuggestion, modifier)
+        Suggestions(recent, suggested, suggestions, contentPadding, onSuggestion, onClearRecent, modifier)
         return
     }
     val photos = results.orEmpty()
@@ -179,54 +194,121 @@ private fun SectionTitle(text: String, detail: String? = null) {
     }
 }
 
-/** Starting points while nothing is typed: tap one to search for it. */
+/**
+ * Starting points while nothing is typed: recent searches, then things this library has plenty
+ * of (each with its best photo), or name/date ideas without Smart Search. Tap one to search it.
+ */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun Suggestions(
-    suggestions: List<String>,
+    recent: List<String>,
+    suggested: List<Pair<String, MediaItem>>,
+    keywords: List<String>,
     contentPadding: PaddingValues,
     onSuggestion: (String) -> Unit,
+    onClearRecent: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val onBackground = MaterialTheme.colorScheme.onBackground
-    Box(modifier.fillMaxSize().padding(contentPadding)) {
-        Column(Modifier.padding(horizontal = 16.dp)) {
+    Column(
+        modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(contentPadding)
+            .padding(horizontal = 16.dp),
+    ) {
+        Text(
+            "Search",
+            fontSize = 34.sp,
+            fontWeight = FontWeight.Bold,
+            color = onBackground,
+            modifier = Modifier.padding(start = 4.dp, bottom = 12.dp),
+        )
+        if (recent.isNotEmpty()) {
+            Row(Modifier.fillMaxWidth().padding(start = 4.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("Recent", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = onBackground, modifier = Modifier.weight(1f))
+                Text(
+                    "Clear",
+                    fontSize = 15.sp,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.pressable(onClearRecent, pressedScale = 0.94f).padding(6.dp),
+                )
+            }
+            Chips(recent, onSuggestion)
+            Spacer(Modifier.size(24.dp))
+        }
+        if (suggested.isNotEmpty()) {
             Text(
-                "Search",
-                fontSize = 34.sp,
+                "From your photos",
+                fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 color = onBackground,
-                modifier = Modifier.padding(start = 4.dp, bottom = 12.dp),
+                modifier = Modifier.padding(start = 4.dp, bottom = 10.dp),
             )
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+                maxItemsInEachRow = 4,
+            ) {
+                suggested.forEach { (term, cover) ->
+                    Column(
+                        Modifier.weight(1f).pressable({ onSuggestion(term) }, pressedScale = 0.94f),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        AsyncImage(
+                            model = MediaThumbnail(cover.uri),
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(14.dp)),
+                        )
+                        Text(
+                            term.replaceFirstChar { it.uppercase() },
+                            fontSize = 13.sp,
+                            color = onBackground,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(top = 6.dp),
+                        )
+                    }
+                }
+            }
+        } else if (keywords.isNotEmpty()) {
             Text(
                 "Try",
                 fontSize = 15.sp,
                 color = onBackground.copy(alpha = 0.6f),
                 modifier = Modifier.padding(start = 4.dp, bottom = 10.dp),
             )
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+            Chips(keywords, onSuggestion)
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun Chips(items: List<String>, onClick: (String) -> Unit) {
+    val onBackground = MaterialTheme.colorScheme.onBackground
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        items.forEach { item ->
+            Row(
+                Modifier
+                    .pressable({ onClick(item) }, pressedScale = 0.94f)
+                    .clip(CircleShape)
+                    .background(onBackground.copy(alpha = 0.08f))
+                    .padding(horizontal = 14.dp, vertical = 9.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                suggestions.forEach { suggestion ->
-                    Row(
-                        Modifier
-                            .pressable({ onSuggestion(suggestion) }, pressedScale = 0.94f)
-                            .clip(CircleShape)
-                            .background(onBackground.copy(alpha = 0.08f))
-                            .padding(horizontal = 14.dp, vertical = 9.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(
-                            LumenIcons.Search,
-                            contentDescription = null,
-                            tint = onBackground.copy(alpha = 0.6f),
-                            modifier = Modifier.size(16.dp),
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        Text(suggestion, fontSize = 15.sp, color = onBackground)
-                    }
-                }
+                Icon(
+                    LumenIcons.Search,
+                    contentDescription = null,
+                    tint = onBackground.copy(alpha = 0.6f),
+                    modifier = Modifier.size(16.dp),
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(item, fontSize = 15.sp, color = onBackground)
             }
         }
     }

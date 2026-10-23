@@ -45,6 +45,8 @@ fun SearchField(
     onQueryChange: (String) -> Unit,
     autoFocus: Boolean,
     onAutoFocused: () -> Unit,
+    /** The keyboard's search key: the query is final (saved to recent searches). */
+    onSubmit: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalGlassColors.current
@@ -78,7 +80,10 @@ fun SearchField(
                 textStyle = TextStyle(color = colors.content, fontSize = 17.sp),
                 cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(onSearch = { keyboard?.hide() }),
+                keyboardActions = KeyboardActions(onSearch = {
+                    keyboard?.hide()
+                    onSubmit()
+                }),
                 modifier = Modifier
                     .fillMaxWidth()
                     .focusRequester(focus),

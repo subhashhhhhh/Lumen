@@ -32,6 +32,17 @@ class LumenPrefs(context: Context) {
         get() = prefs.getInt(KeyColumns, 5)
         set(value) = prefs.edit { putInt(KeyColumns, value) }
 
+    /** Recent searches, newest first (at most [MaxRecentSearches]). */
+    var recentSearches: List<String>
+        get() = prefs.getString(KeyRecentSearches, null)?.lines()?.filter { it.isNotBlank() }.orEmpty()
+        set(value) = prefs.edit { putString(KeyRecentSearches, value.take(MaxRecentSearches).joinToString("\n")) }
+
+    fun addRecentSearch(query: String) {
+        val q = query.trim().replace('\n', ' ')
+        if (q.isEmpty()) return
+        recentSearches = listOf(q) + recentSearches.filterNot { it.equals(q, ignoreCase = true) }
+    }
+
     /** Search results' columns, separate from the Library's. */
     var searchColumns: Int
         get() = prefs.getInt(KeySearchColumns, 4)
@@ -191,6 +202,8 @@ class LumenPrefs(context: Context) {
         const val KeyColumns = "grid_columns"
         const val KeyAlbumColumns = "album_columns"
         const val KeySearchColumns = "search_columns"
+        const val KeyRecentSearches = "recent_searches"
+        const val MaxRecentSearches = 8
         const val KeyFilter = "library_filter"
         const val KeyAspect = "aspect_ratio_grid"
     }

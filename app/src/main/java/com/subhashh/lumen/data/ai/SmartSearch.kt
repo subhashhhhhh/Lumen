@@ -3,7 +3,10 @@ package com.subhashh.lumen.data.ai
 import android.content.Context
 import android.os.SystemClock
 import android.util.Log
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -33,8 +36,14 @@ object SmartSearch {
         withContext(Dispatchers.Default) {
             val installed = ModelDownloads.installed(context) ?: return@withContext
             lock.withLock { ready(context, installed).also { embedder?.warmText() } }
+            // First time after an update or a fresh index: work out suggestions in the background.
+            if (SearchSuggestions.load(context, installed).isEmpty()) {
+                background.launch { SearchSuggestions.refreshIfStale(context, installed) }
+            }
         }
     }
+
+    private val background = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     /** Best matches first; empty when nothing clears the bar; null when Smart Search isn't set up. */
     suspend fun search(context: Context, query: String): List<SmartHit>? = withContext(Dispatchers.Default) {
