@@ -203,6 +203,7 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
     val allItems by viewModel.allItems.collectAsState()
     val excluded by viewModel.excluded.collectAsState()
     val hidden by viewModel.hidden.collectAsState()
+    val hiddenExcluded by viewModel.hiddenExcluded.collectAsState()
     // Folder grouping stats each folder for .nomedia, so it runs off the main thread.
     val hiddenFolderList by produceState<List<HiddenFolder>?>(null, hidden) {
         value = hidden?.let { withContext(Dispatchers.IO) { hiddenFolders(it) } }
@@ -543,6 +544,19 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
         )
     }
 
+    val excludeFromHidden: (List<MediaItem>) -> Unit = { items ->
+        val folders = items.map { it.relativePath }.distinct()
+        viewModel.excludeFromHidden(folders)
+        endSelection()
+        // A folder whose contents just left Hidden would be empty: step back to the list.
+        if (CollectionKeys.hiddenFolderId(openCollection.orEmpty()) != null) openCollection = CollectionKeys.Hidden
+        val name = folders.singleOrNull()?.trimEnd('/')?.substringAfterLast('/')
+        toast(
+            (if (name != null) "Removed “$name” from Hidden." else "Removed ${folders.size} folders from Hidden.") +
+                " Undo at the bottom of Hidden",
+        )
+    }
+
     // Changing files Lumen didn't create: with All files access go straight ahead; otherwise ask
     // MediaStore for write access first (one dialog per batch, none with Media management on).
     var pendingWrite by remember { mutableStateOf<(() -> Unit)?>(null) }
@@ -735,6 +749,8 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                 openCollection == CollectionKeys.Hidden -> HiddenScreen(
                     folders = hiddenFolderList,
                     gridState = hiddenGrid,
+                    excluded = hiddenExcluded.sorted(),
+                    onInclude = viewModel::includeInHidden,
                     title = albumSelection?.let { albumSelectionTitle(it.size, "Folder") } ?: "Hidden",
                     columns = albumColumns,
                     onColumnsChange = onAlbumColumns,
@@ -953,7 +969,14 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
             backdrop = backdrop,
             open = selectionMenuOpen && selecting && !viewerOpen,
             onDismiss = { selectionMenuOpen = false },
-            sections = if (albumSelection != null) {
+            sections = if (CollectionKeys.isHidden(selectionScope)) {
+                // Hidden files can't be moved around like library ones; they can be left out of Hidden.
+                val many = if (albumSelection != null) albumSelection.orEmpty().size > 1
+                else selectedItems.map { it.relativePath }.distinct().size > 1
+                listOf(
+                    listOf(MenuItem(if (many) "Exclude Folders" else "Exclude Folder") { excludeFromHidden(selectedItems) }),
+                )
+            } else if (albumSelection != null) {
                 // Whole albums: move or copy their contents, or hide / exclude the folders.
                 listOf(
                     listOf(

@@ -1,5 +1,15 @@
 package com.subhashh.lumen.ui.hidden
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -62,6 +72,9 @@ fun hiddenFolders(items: List<MediaItem>): List<HiddenFolder> =
 fun HiddenScreen(
     folders: List<HiddenFolder>?,
     gridState: LazyGridState,
+    /** Folders left out of Hidden (relative paths), listed at the bottom to bring back. */
+    excluded: List<String>,
+    onInclude: (folder: String) -> Unit,
     contentPadding: PaddingValues,
     onOpen: (key: String) -> Unit,
     /** "Hidden", or the selection count while selecting. */
@@ -94,7 +107,7 @@ fun HiddenScreen(
             Spacer(Modifier.height(14.dp))
             Text("Looking for hidden photos…", color = colors.onBackground.copy(alpha = 0.6f), fontSize = 15.sp)
         }
-        folders.isEmpty() -> Box(modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
+        folders.isEmpty() && excluded.isEmpty() -> Box(modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
             Text(
                 "Nothing hidden yet.\nUse ⋯ → Hide or Hide Folder on any photo.",
                 color = colors.onBackground.copy(alpha = 0.6f),
@@ -122,6 +135,74 @@ fun HiddenScreen(
                     onClick = { gestures.click(folder.collection.key) { onOpen(folder.collection.key) } },
                     subtitle = if (folder.wholeFolder) "Hidden folder · $n" else "$n hidden ${if (n == 1) "file" else "files"}",
                 )
+            }
+            if (excluded.isNotEmpty()) {
+                item(span = { GridItemSpan(maxLineSpan) }) { ExcludedSection(excluded, onInclude) }
+            }
+        }
+    }
+}
+
+/** Folders left out of Hidden via ⋯ → Exclude Folder, each with Include to bring it back. */
+@Composable
+private fun ExcludedSection(excluded: List<String>, onInclude: (String) -> Unit) {
+    val onBackground = MaterialTheme.colorScheme.onBackground
+    Column(Modifier.padding(top = 20.dp)) {
+        Text(
+            "Excluded from Hidden",
+            fontSize = 22.sp,
+            fontWeight = FontWeight.Bold,
+            color = onBackground,
+            modifier = Modifier.padding(start = 4.dp, bottom = 8.dp),
+        )
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(onBackground.copy(alpha = 0.07f)),
+        ) {
+            excluded.forEachIndexed { i, folder ->
+                if (i > 0) {
+                    Box(
+                        Modifier
+                            .padding(start = 16.dp)
+                            .fillMaxWidth()
+                            .height(0.5.dp)
+                            .background(onBackground.copy(alpha = 0.15f)),
+                    )
+                }
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 56.dp)
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            folder.trimEnd('/').substringAfterLast('/'),
+                            fontSize = 16.sp,
+                            color = onBackground,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Text(
+                            folder.trimEnd('/'),
+                            fontSize = 13.sp,
+                            color = onBackground.copy(alpha = 0.55f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Text(
+                        "Include",
+                        color = MaterialTheme.colorScheme.primary,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.clickable { onInclude(folder) },
+                    )
+                }
             }
         }
     }

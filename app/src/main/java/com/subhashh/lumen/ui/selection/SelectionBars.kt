@@ -43,7 +43,7 @@ fun SelectionActionBar(
     backdrop: Backdrop,
     hasSelection: Boolean,
     inTrash: Boolean,
-    /** Hidden section: Share, Unhide, Delete (permanent). */
+    /** Hidden section: Share, Unhide, Delete (permanent), More. */
     inHidden: Boolean,
     allFavorite: Boolean,
     /** False for whole albums. */
@@ -79,6 +79,10 @@ fun SelectionActionBar(
             GlassIconButton(
                 backdrop, LumenIcons.DeleteForever, "Delete permanently", guard(onDeleteForever),
                 tint = if (hasSelection) Color(0xFFFF453A) else idle,
+            )
+            GlassIconButton(
+                backdrop, LumenIcons.More, "More", guard(onMore),
+                tint = if (hasSelection) colors.content else idle,
             )
         } else if (inTrash) {
             GlassIconButton(
