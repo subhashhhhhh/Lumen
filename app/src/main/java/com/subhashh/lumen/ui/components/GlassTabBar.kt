@@ -115,12 +115,12 @@ fun GlassTabBar(
 
             val colors = LocalGlassColors.current
             val searchTint by animateColorAsState(
-                if (searchSelected) Accent else colors.content,
+                colors.content,
                 label = "searchTint",
             )
             Column(
                 modifier = Modifier
-                    .size(60.dp)
+                    .size(Bar)
                     .pressable(
                         onClick = {
                             if (!searchSelected) haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
@@ -152,7 +152,7 @@ private fun TabItem(
 ) {
     val colors = LocalGlassColors.current
     val tint by animateColorAsState(
-        if (selected) Accent else colors.content,
+        colors.content,
         label = "tabTint",
     )
     // Centered in the capsule's fixed height (not padded), so the label never clips, even with
@@ -312,7 +312,7 @@ private fun MorphingTabs(
             Icon(
                 LumenIcons.LibraryFilled,
                 contentDescription = "Tabs",
-                tint = Accent,
+                tint = colors.content,
                 modifier = Modifier
                     .align(Alignment.Center)
                     .graphicsLayer { alpha = ((t - 0.5f) * 2f).coerceIn(0f, 1f) },
@@ -367,11 +367,10 @@ private fun ZoomItem(label: String, width: Dp, selected: Boolean, enabled: Boole
     }
 }
 
-private val Accent = Color(0xFF0A84FF)
 private val TabWidth = 88.dp
 private val ZoomWidth = 78.dp
 /** Bar height, and the circle's diameter. */
-private val Bar = 60.dp
+private val Bar = 66.dp
 private val Gap = 12.dp
 private val TabSpacing = 2.dp
 /** Gap between the capsule's edge and the selection pill. */
