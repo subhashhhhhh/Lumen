@@ -203,7 +203,7 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
     val allItems by viewModel.allItems.collectAsState()
     val excluded by viewModel.excluded.collectAsState()
     val hidden by viewModel.hidden.collectAsState()
-    val hiddenExcluded by viewModel.hiddenExcluded.collectAsState()
+    val hiddenAll by viewModel.hiddenAll.collectAsState()
     // Folder grouping stats each folder for .nomedia, so it runs off the main thread.
     val hiddenFolderList by produceState<List<HiddenFolder>?>(null, hidden) {
         value = hidden?.let { withContext(Dispatchers.IO) { hiddenFolders(it) } }
@@ -546,14 +546,14 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
 
     val excludeFromHidden: (List<MediaItem>) -> Unit = { items ->
         val folders = items.map { it.relativePath }.distinct()
-        viewModel.excludeFromHidden(folders)
+        viewModel.exclude(folders)
         endSelection()
         // A folder whose contents just left Hidden would be empty: step back to the list.
         if (CollectionKeys.hiddenFolderId(openCollection.orEmpty()) != null) openCollection = CollectionKeys.Hidden
         val name = folders.singleOrNull()?.trimEnd('/')?.substringAfterLast('/')
         toast(
-            (if (name != null) "Removed “$name” from Hidden." else "Removed ${folders.size} folders from Hidden.") +
-                " Undo at the bottom of Hidden",
+            (if (name != null) "Excluded “$name”." else "Excluded ${folders.size} folders.") +
+                " Undo in Settings → Excluded folders",
         )
     }
 
@@ -686,9 +686,14 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                 )
                 settingsPage == SettingsExcluded -> {
                     val all = allItems.orEmpty()
+                    // Hidden folders count too, once Hidden has been scanned.
+                    val hiddenFiles = hiddenAll.orEmpty()
                     ExcludedFoldersScreen(
-                        excluded = remember(excluded, all) {
-                            excluded.sorted().map { folder -> folder to all.count { it.relativePath.startsWith(folder) } }
+                        excluded = remember(excluded, all, hiddenFiles) {
+                            excluded.sorted().map { folder ->
+                                folder to (all.count { it.relativePath.startsWith(folder) } +
+                                    hiddenFiles.count { it.relativePath.startsWith(folder) })
+                            }
                         },
                         suggestions = remember(excluded, all) { ExcludedFolders.suggestions(all, excluded) },
                         contentPadding = PaddingValues(top = statusTop + 72.dp, bottom = navBottom + 96.dp),
@@ -749,8 +754,6 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                 openCollection == CollectionKeys.Hidden -> HiddenScreen(
                     folders = hiddenFolderList,
                     gridState = hiddenGrid,
-                    excluded = hiddenExcluded.sorted(),
-                    onInclude = viewModel::includeInHidden,
                     title = albumSelection?.let { albumSelectionTitle(it.size, "Folder") } ?: "Hidden",
                     columns = albumColumns,
                     onColumnsChange = onAlbumColumns,

@@ -48,16 +48,13 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    /** Raw scan result, before exclusions; null until loaded (only once Hidden is opened). */
     private val _hiddenAll = MutableStateFlow<List<MediaItem>?>(null)
+    /** Raw scan result, excluded folders included (Settings counts them); null until loaded. */
+    val hiddenAll: StateFlow<List<MediaItem>?> = _hiddenAll.asStateFlow()
 
-    private val _hiddenExcluded = MutableStateFlow(prefs.hiddenExcludedFolders)
-    /** Folders left out of Hidden only; shown inside Hidden, behind its lock. */
-    val hiddenExcluded: StateFlow<Set<String>> = _hiddenExcluded.asStateFlow()
-
-    /** Hidden photos and videos, minus both kinds of excluded folder. Null until first loaded. */
-    val hidden: StateFlow<List<MediaItem>?> = combine(_hiddenAll, _excluded, _hiddenExcluded) { all, excluded, hiddenExcluded ->
-        all?.filterNot { ExcludedFolders.covers(excluded, it) || ExcludedFolders.covers(hiddenExcluded, it) }
+    /** Hidden photos and videos minus excluded folders. Null until first loaded (only once Hidden opens). */
+    val hidden: StateFlow<List<MediaItem>?> = combine(_hiddenAll, _excluded) { all, excluded ->
+        all?.let { list -> if (excluded.isEmpty()) list else list.filterNot { ExcludedFolders.covers(excluded, it) } }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     private var hiddenScan: kotlinx.coroutines.Job? = null
@@ -81,15 +78,6 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
             if (sized != _hiddenAll.value) _hiddenAll.value = sized
             HiddenIndex.save(app, sized)
         }
-    }
-
-    fun excludeFromHidden(folders: Collection<String>) = setHiddenExcluded(_hiddenExcluded.value + folders)
-
-    fun includeInHidden(folder: String) = setHiddenExcluded(_hiddenExcluded.value - folder)
-
-    private fun setHiddenExcluded(folders: Set<String>) {
-        prefs.hiddenExcludedFolders = folders
-        _hiddenExcluded.value = folders
     }
 
     fun exclude(folders: Collection<String>) = setExcluded(_excluded.value + folders)
