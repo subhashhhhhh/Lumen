@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.IntSize
 import com.subhashh.lumen.ui.transition.PhotoTransition
 import com.subhashh.lumen.ui.transition.PhotoTransitionOverlay
 import com.subhashh.lumen.ui.viewer.fullScreenRect
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -162,6 +163,8 @@ import com.subhashh.lumen.ui.library.LibraryViewModel
 import com.subhashh.lumen.ui.search.SearchScreen
 import com.subhashh.lumen.ui.search.SearchField
 import com.subhashh.lumen.data.SearchIndex
+import com.subhashh.lumen.data.ai.SmartHit
+import com.subhashh.lumen.data.ai.SmartSearch
 
 private val MediaPermissions = when {
     Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE -> arrayOf(
@@ -374,9 +377,28 @@ private fun MainScaffold(
     val searchIndex by produceState<SearchIndex?>(null, library) {
         value = library?.let { withContext(Dispatchers.Default) { SearchIndex.build(it) } }
     }
-    val searchResults by produceState<List<MediaItem>?>(null, searchIndex, searchQuery) {
+    val keywordResults by produceState<List<MediaItem>?>(null, searchIndex, searchQuery) {
         val index = searchIndex ?: return@produceState
         value = withContext(Dispatchers.Default) { index.search(searchQuery) }
+    }
+    // Smart Search: by what's in the photos, once a model is downloaded and photos are indexed.
+    // A short pause after typing, so the text model runs once per word, not once per letter.
+    val smartHits by produceState<List<SmartHit>?>(null, searchQuery) {
+        if (searchQuery.isBlank()) {
+            value = null
+            return@produceState
+        }
+        delay(250)
+        value = SmartSearch.search(context, searchQuery.trim())
+    }
+    // Exact name, folder and date matches first, then Smart Search's, best first.
+    val searchResults = remember(keywordResults, smartHits, library) {
+        val keyword = keywordResults ?: return@remember null
+        val hits = smartHits.orEmpty()
+        if (hits.isEmpty()) return@remember keyword
+        val byId = library.orEmpty().associateBy { it.id }
+        val seen = keyword.mapTo(HashSet()) { it.id }
+        keyword + hits.mapNotNull { hit -> byId[hit.mediaId]?.takeIf { it.id !in seen } }
     }
     val searchAlbums = remember(folders, searchQuery) {
         val terms = SearchIndex.terms(searchQuery)
@@ -390,7 +412,11 @@ private fun MainScaffold(
         val years = library.orEmpty().asReversed().asSequence()
             .map { java.util.Calendar.getInstance().apply { timeInMillis = it.takenAt }.get(java.util.Calendar.YEAR).toString() }
             .distinct().take(2).toList()
-        listOf("Videos", "Screenshots", "Favorites") + years + folders.take(3).map { it.title }
+        // With Smart Search set up, lead with what it can do: describe what's in a photo.
+        val smart = if (com.subhashh.lumen.data.ai.ModelDownloads.installed(context) != null) {
+            listOf("cat", "sunset at the beach", "receipt", "food")
+        } else emptyList()
+        smart + listOf("Videos", "Screenshots", "Favorites") + years + folders.take(3).map { it.title }
     }
     val searchGrid = rememberLazyGridState()
     LaunchedEffect(searchQuery) { searchGrid.scrollToItem(0) }

@@ -46,9 +46,13 @@ class OnnxEmbedder(dir: File, private val spec: OnnxSpec, threads: Int) : Embedd
         setIntraOpNumThreads(threads)
         setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL_OPT)
     }
-    private val visual = env.createSession(File(dir, spec.visualFile).path, options)
-    private val textual = env.createSession(File(dir, spec.textualFile).path, options)
-    private val tokenize = spec.tokenizer(dir)
+    // Each half loads on first use: indexing never needs the text model, searching never the
+    // image one (371 MB for Accurate).
+    private val visualSession = lazy { env.createSession(File(dir, spec.visualFile).path, options) }
+    private val textualSession = lazy { env.createSession(File(dir, spec.textualFile).path, options) }
+    private val visual by visualSession
+    private val textual by textualSession
+    private val tokenize by lazy { spec.tokenizer(dir) }
     override val dim = spec.dim
 
     override fun embedImage(bitmap: Bitmap): FloatArray {
@@ -80,8 +84,8 @@ class OnnxEmbedder(dir: File, private val spec: OnnxSpec, threads: Int) : Embedd
     }
 
     override fun close() {
-        visual.close()
-        textual.close()
+        if (visualSession.isInitialized()) visual.close()
+        if (textualSession.isInitialized()) textual.close()
         options.close()
     }
 

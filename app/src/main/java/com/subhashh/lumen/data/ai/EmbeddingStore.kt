@@ -26,6 +26,11 @@ class EmbeddingStore private constructor(context: Context, private val model: Ai
         setWriteAheadLoggingEnabled(true)
     }
 
+    /** Bumped on every write, so a search cache knows its copy is stale. */
+    @Volatile
+    var version = 0
+        private set
+
     override fun onCreate(db: SQLiteDatabase) {
         // frames = 0: tried and unreadable (corrupt, DRM); kept so it isn't retried every run.
         db.execSQL("CREATE TABLE items (media_id INTEGER PRIMARY KEY, modified INTEGER NOT NULL, frames INTEGER NOT NULL)")
@@ -65,6 +70,7 @@ class EmbeddingStore private constructor(context: Context, private val model: Ai
                 put("frames", frames.size)
             }, SQLiteDatabase.CONFLICT_REPLACE)
             db.setTransactionSuccessful()
+            version++
         } finally {
             db.endTransaction()
         }
@@ -81,6 +87,7 @@ class EmbeddingStore private constructor(context: Context, private val model: Ai
                 db.delete("items", "media_id = ?", args)
             }
             db.setTransactionSuccessful()
+            version++
         } finally {
             db.endTransaction()
         }

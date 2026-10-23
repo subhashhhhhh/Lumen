@@ -149,7 +149,8 @@ fun SearchScreen(
         if (results != null && photos.isEmpty() && albums.isEmpty()) {
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Text(
-                    "Try a file name, a folder, a month or a year, or words like videos and screenshots.",
+                    "Try describing what's in the photo, like “cat on a sofa” (with Smart Search in " +
+                        "Settings), or a file name, a folder, a month or a year.",
                     color = colors.onBackground.copy(alpha = 0.6f),
                     fontSize = 15.sp,
                     textAlign = TextAlign.Center,
