@@ -26,6 +26,16 @@
     <uses-permission
         android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
         tools:ignore="ScopedStorage" />
+    <!-- Smart Search: the one-time model download from Hugging Face, only when the user taps
+         Download in Settings. Nothing else in Lumen uses the network. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Android 14+: the download runs as a user-initiated data transfer job. -->
+    <uses-permission android:name="android.permission.RUN_USER_INITIATED_JOBS" />
+    <!-- Android 11–13: as a WorkManager foreground worker. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
     <application
         android:name=".LumenApplication"
@@ -72,6 +82,18 @@
                 <data android:mimeType="vnd.android.cursor.dir/video" />
             </intent-filter>
         </activity>
+
+        <service
+            android:name=".data.ai.ModelDownloadJob"
+            android:exported="false"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
+        <service
+            android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:foregroundServiceType="dataSync"
+            tools:node="merge" />
+        <receiver
+            android:name=".data.ai.DownloadNotification$CancelReceiver"
+            android:exported="false" />
 
         <!-- "Open with Lumen" from other apps, and the camera's review button. -->
         <activity

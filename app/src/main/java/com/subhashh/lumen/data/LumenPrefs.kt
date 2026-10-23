@@ -133,6 +133,11 @@ class LumenPrefs(context: Context) {
         set(value) = prefs.edit { putString(KeySections, value.name) }
 
     /** The phone's screen curves over its sides: keep edge controls off the curve. */
+    /** Smart Search model download waits for an unmetered network. */
+    var modelWifiOnly: Boolean
+        get() = prefs.getBoolean(KeyModelWifiOnly, true)
+        set(value) = prefs.edit { putBoolean(KeyModelWifiOnly, value) }
+
     var curvedEdge: Boolean
         get() = prefs.getBoolean(KeyCurvedEdge, false)
         set(value) = prefs.edit { putBoolean(KeyCurvedEdge, value) }
@@ -157,6 +162,7 @@ class LumenPrefs(context: Context) {
         const val KeyAppLock = "app_lock"
         const val KeyAppLockMinutes = "app_lock_minutes"
         const val KeyCurvedEdge = "curved_edge"
+        const val KeyModelWifiOnly = "model_wifi_only"
         const val KeySections = "section_mode"
         const val KeyReduceMotion = "reduce_motion"
         const val KeyHdr = "hdr_photos"

@@ -74,6 +74,10 @@ fun SettingsScreen(
     onExport: () -> Unit,
     onImport: () -> Unit,
     onImportFavorites: () -> Unit,
+    onConfirm: (com.subhashh.lumen.ui.components.Confirmation) -> Unit,
+    onEnterHfToken: () -> Unit,
+    /** Bumped when the Hugging Face token is saved, so the row re-reads it. */
+    hfTokenVersion: Int,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -315,6 +319,8 @@ fun SettingsScreen(
             }
         }
 
+        SmartSearchGroup(prefs, refresh + hfTokenVersion, onConfirm, onEnterHfToken)
+
         Group("Permissions", footer = "Lumen works without these; they unlock the features named. Each opens Android's settings.") {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 SettingsRow(
@@ -419,8 +425,8 @@ private fun Context.openSettings(action: String) {
 private fun Context.versionName(): String =
     runCatching { packageManager.getPackageInfo(packageName, 0).versionName }.getOrNull().orEmpty()
 
-private val Indigo = Color(0xFF5E5CE6)
-private val Blue = Color(0xFF0A84FF)
+internal val Indigo = Color(0xFF5E5CE6)
+internal val Blue = Color(0xFF0A84FF)
 private val Teal = Color(0xFF30B0C7)
 private val Purple = Color(0xFFBF5AF2)
 private val Pink = Color(0xFFFF375F)

@@ -77,6 +77,8 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.exifinterface)
     implementation(libs.androidx.print)
+    // Model downloads on Android 11–13 (14+ uses a user-initiated job instead).
+    implementation(libs.androidx.work.runtime)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
 

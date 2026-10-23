@@ -83,6 +83,7 @@ import androidx.compose.ui.geometry.Offset
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
 import com.subhashh.lumen.ui.components.RenameDialog
+import com.subhashh.lumen.data.ai.HfTokenStore
 import com.subhashh.lumen.ui.components.DateTimeDialog
 import com.subhashh.lumen.data.MediaDates
 import com.subhashh.lumen.data.vault.Vault
@@ -242,6 +243,8 @@ private fun MainScaffold(
     /** Hidden opens only after biometric unlock and re-locks whenever it's left. */
     var hiddenUnlocked by remember { mutableStateOf(false) }
     var confirmation by remember { mutableStateOf<Confirmation?>(null) }
+    var enteringHfToken by remember { mutableStateOf(false) }
+    var hfTokenVersion by remember { mutableIntStateOf(0) }
     val appContext = LocalContext.current.applicationContext
     val lockStore = remember { HiddenLockStore(appContext) }
     /** Hidden's own lock screen, when up; and whether a lock exists yet (for "Set Up"). */
@@ -984,6 +987,9 @@ private fun MainScaffold(
                 settingsPage == SettingsMain -> SettingsScreen(
                     contentPadding = PaddingValues(top = statusTop + 72.dp, bottom = navBottom + 96.dp),
                     onOpenLicenses = { settingsPage = SettingsLicenses },
+                    onConfirm = { confirmation = it },
+                    onEnterHfToken = { enteringHfToken = true },
+                    hfTokenVersion = hfTokenVersion,
                     onOpenExcluded = { settingsPage = SettingsExcluded },
                     onOpenHidden = {
                         // Hidden lives in Collections; go there, then unlock.
@@ -1699,6 +1705,19 @@ private fun MainScaffold(
         }
 
         ConfirmDialog(confirmation, onDismiss = { confirmation = null })
+
+        RenameDialog(
+            currentName = if (enteringHfToken) "" else null,
+            title = "Hugging Face Token",
+            confirm = "Save",
+            keepExtension = false,
+            onRename = { token ->
+                enteringHfToken = false
+                HfTokenStore(context).token = token
+                hfTokenVersion++
+            },
+            onDismiss = { enteringHfToken = false },
+        )
 
         RenameDialog(
             currentName = renameName,
