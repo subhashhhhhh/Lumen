@@ -137,7 +137,19 @@ class LumenPrefs(context: Context) {
         get() = prefs.getBoolean(KeyCurvedEdge, false)
         set(value) = prefs.edit { putBoolean(KeyCurvedEdge, value) }
 
+    /** Settings → Privacy → App Lock: Lumen asks for its lock when opened. */
+    var appLock: Boolean
+        get() = prefs.getBoolean(KeyAppLock, false)
+        set(value) = prefs.edit { putBoolean(KeyAppLock, value) }
+
+    /** Minutes in the background before App Lock asks again; 0 = every time. */
+    var appLockMinutes: Int
+        get() = prefs.getInt(KeyAppLockMinutes, 1)
+        set(value) = prefs.edit { putInt(KeyAppLockMinutes, value) }
+
     private companion object {
+        const val KeyAppLock = "app_lock"
+        const val KeyAppLockMinutes = "app_lock_minutes"
         const val KeyCurvedEdge = "curved_edge"
         const val KeySections = "section_mode"
         const val KeyReduceMotion = "reduce_motion"

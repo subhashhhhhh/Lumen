@@ -21,6 +21,13 @@ import com.subhashh.lumen.ui.theme.LocalMotion
 import com.subhashh.lumen.ui.theme.MotionSetting
 import android.provider.Settings
 import com.subhashh.lumen.ui.theme.LumenTheme
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.Modifier
+import com.subhashh.lumen.data.HiddenLockStore
+import com.subhashh.lumen.ui.hidden.HiddenLock
+import com.subhashh.lumen.ui.hidden.HiddenLockScreen
+import com.subhashh.lumen.ui.hidden.LockFlow
 
 /**
  * Edge-to-edge content in Lumen's theme, honouring Settings → Appearance. Call before
@@ -57,7 +64,27 @@ fun ComponentActivity.setLumenContent(content: @Composable () -> Unit) {
                 prefs.reduceMotion = it
             },
         ) {
-            LumenTheme(darkTheme = dark, content = content)
+            LumenTheme(darkTheme = dark) {
+                Box(Modifier.fillMaxSize()) {
+                    content()
+                    // App Lock covers whatever Lumen screen this is; it takes every touch.
+                    if (AppLock.locked) {
+                        val activity = this@setLumenContent
+                        val store = remember { HiddenLockStore(activity) }
+                        HiddenLockScreen(
+                            flow = LockFlow.Unlock,
+                            store = store,
+                            lockedName = "Lumen",
+                            onDone = { AppLock.unlock() },
+                            onCancel = { activity.finish() },
+                            onForgot = {
+                                // The phone's own screen lock can vouch for whoever forgot Lumen's.
+                                if (HiddenLock.deviceLockSet(activity)) HiddenLock.deviceCredential(activity, "Unlock Lumen") { AppLock.unlock() }
+                            },
+                        )
+                    }
+                }
+            }
         }
     }
 }

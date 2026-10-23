@@ -67,6 +67,8 @@ fun SettingsScreen(
     biometricsOn: Boolean,
     onToggleBiometrics: () -> Unit,
     excludedCount: Int,
+    appLockOn: Boolean,
+    onToggleAppLock: (Boolean) -> Unit,
     onExport: () -> Unit,
     onImport: () -> Unit,
     onImportFavorites: () -> Unit,
@@ -237,7 +239,35 @@ fun SettingsScreen(
             )
         }
 
-        Group("Privacy", footer = "Hidden has its own lock, separate from your phone's screen lock.") {
+        Group(
+            "Privacy",
+            footer = "Lumen's lock (PIN, pattern or password) guards Hidden, and with App Lock all of Lumen. " +
+                "It's separate from your phone's screen lock.",
+        ) {
+            ToggleRow(
+                title = "App Lock",
+                subtitle = "Ask for Lumen's lock when opening Lumen",
+                checked = appLockOn,
+                onCheckedChange = onToggleAppLock,
+                icon = LumenIcons.Lock,
+                iconColor = Indigo,
+            )
+            if (appLockOn) {
+                Divider()
+                var minutes by remember { mutableStateOf(prefs.appLockMinutes) }
+                PickerRow(
+                    title = "Lock After",
+                    options = LockMinutes.map { if (it == 0) "Immediately" else if (it == 1) "1 minute" else "$it minutes" },
+                    selected = LockMinutes.indexOf(minutes).coerceAtLeast(0),
+                    onSelect = {
+                        minutes = LockMinutes[it]
+                        prefs.appLockMinutes = minutes
+                    },
+                    icon = LumenIcons.Timer,
+                    iconColor = Purple,
+                )
+            }
+            Divider()
             SettingsRow(
                 title = "Hidden",
                 subtitle = "Hidden from every app, locked in Lumen",
@@ -256,7 +286,7 @@ fun SettingsScreen(
             )
             Divider()
             SettingsRow(
-                title = if (hiddenLockSet) "Change Hidden Lock" else "Set Up Hidden Lock",
+                title = if (hiddenLockSet) "Change Lumen Lock" else "Set Up Lumen Lock",
                 onClick = onChangeLock,
                 icon = LumenIcons.Lock,
                 iconColor = Blue,
@@ -350,6 +380,9 @@ fun SettingsScreen(
         Spacer(Modifier.height(24.dp))
     }
 }
+
+/** App Lock's "Lock After" choices, in minutes in the background. */
+private val LockMinutes = listOf(0, 1, 5, 15)
 
 /** Slideshow intervals the row cycles through, in seconds. */
 private val SlideSeconds = listOf(2, 3, 5, 10)

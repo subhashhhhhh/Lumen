@@ -98,6 +98,8 @@ fun HiddenLockScreen(
     onDone: () -> Unit,
     onCancel: () -> Unit,
     onForgot: () -> Unit,
+    /** What the lock guards, for its wording: "Hidden", or "Lumen" for App Lock. */
+    lockedName: String = "Hidden",
 ) {
     val activity = LocalActivity.current
     val scope = rememberCoroutineScope()
@@ -188,7 +190,7 @@ fun HiddenLockScreen(
             HiddenLock.biometric(activity, "Use ${type.label}", onSuccess = {
                 store.recordSuccess()
                 onDone()
-            }, onFallback = {})
+            }, onFallback = {}, title = "Unlock $lockedName")
         }
     }
 
@@ -221,7 +223,7 @@ fun HiddenLockScreen(
             Spacer(Modifier.height(20.dp))
             Icon(LumenIcons.Lock, null, tint = Accent, modifier = Modifier.size(40.dp))
             Spacer(Modifier.height(14.dp))
-            val (title, subtitle) = titles(step, store, flow)
+            val (title, subtitle) = titles(step, store, flow, lockedName)
             Text(title, color = colors.onBackground, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
             Spacer(Modifier.height(6.dp))
             Text(
@@ -284,11 +286,11 @@ fun HiddenLockScreen(
     }
 }
 
-private fun titles(step: Step, store: HiddenLockStore, flow: LockFlow): Pair<String, String> = when (step) {
+private fun titles(step: Step, store: HiddenLockStore, flow: LockFlow, lockedName: String): Pair<String, String> = when (step) {
     Step.Choose -> (if (flow == LockFlow.Change) "New Lock" else "Lock Hidden") to
         "Choose how to lock your hidden photos. This is separate from your phone's lock."
     is Step.Verify -> "Enter ${store.type?.label ?: "PIN"}" to
-        if (step.then == LockFlow.Change) "Enter your current lock first" else "Hidden is locked"
+        if (step.then == LockFlow.Change) "Enter your current lock first" else "$lockedName is locked"
     is Step.New -> when (step.type) {
         LockType.Pin -> "Create a PIN" to "4 to 8 digits"
         LockType.Pattern -> "Draw a Pattern" to "Connect at least 4 dots"

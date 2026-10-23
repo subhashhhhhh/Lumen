@@ -244,6 +244,9 @@ private fun MainScaffold(
     var lockSet by remember { mutableStateOf(lockStore.isSet) }
     /** Mirrors lockStore.biometrics so the Settings toggle redraws the moment it changes. */
     var biometrics by remember { mutableStateOf(lockStore.biometrics) }
+    var appLockOn by remember { mutableStateOf(LumenPrefs(appContext).appLock) }
+    /** A lock is being set up so App Lock can turn on (not to open Hidden). */
+    var setupForAppLock by remember { mutableStateOf(false) }
     var excludePicker by remember { mutableStateOf(false) }
     val trash by viewModel.trash.collectAsState()
     var tab by rememberSaveable { mutableStateOf(LumenTab.Library) }
@@ -605,7 +608,7 @@ private fun MainScaffold(
             lockFlow = LockFlow.Setup
         }
         if (HiddenLock.deviceLockSet(host)) {
-            HiddenLock.deviceCredential(host, reset)
+            HiddenLock.deviceCredential(host, onSuccess = reset)
         } else {
             confirmation = Confirmation(
                 title = "Reset Hidden lock?",
@@ -895,6 +898,18 @@ private fun MainScaffold(
                         }
                     },
                     excludedCount = excluded.size,
+                    appLockOn = appLockOn,
+                    onToggleAppLock = { on ->
+                        if (on && !lockStore.isSet) {
+                            // App Lock uses the same lock as Hidden: set one up first.
+                            setupForAppLock = true
+                            lockFlow = LockFlow.Setup
+                        } else {
+                            prefs.appLock = on
+                            appLockOn = on
+                            activity?.let(AppLock::settingsChanged)
+                        }
+                    },
                     onExport = {
                         exportLauncher.launch("Lumen settings ${java.time.LocalDate.now()}.json")
                     },
@@ -1500,7 +1515,19 @@ private fun MainScaffold(
                     lockSet = lockStore.isSet
                     biometrics = lockStore.biometrics
                     // Changing the lock from Settings doesn't open Hidden; setting up or unlocking does.
-                    if (flow != LockFlow.Change) showHidden() else toast("Hidden lock changed")
+                    when {
+                        setupForAppLock -> {
+                            setupForAppLock = false
+                            if (lockStore.isSet) {
+                                prefs.appLock = true
+                                appLockOn = true
+                                activity?.let(AppLock::settingsChanged)
+                                toast("App Lock is on")
+                            }
+                        }
+                        flow != LockFlow.Change -> showHidden()
+                        else -> toast("Lumen lock changed")
+                    }
                 },
                 onCancel = { lockFlow = null },
                 onForgot = resetLock,
