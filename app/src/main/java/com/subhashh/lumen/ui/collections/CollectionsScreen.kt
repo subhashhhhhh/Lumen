@@ -43,6 +43,7 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.subhashh.lumen.data.CollectionKeys
 import com.subhashh.lumen.data.MediaCollection
+import com.subhashh.lumen.data.MediaCollections
 import com.subhashh.lumen.data.MediaItem
 import com.subhashh.lumen.data.MediaThumbnail
 
@@ -136,7 +137,11 @@ private fun UtilityTile(collection: MediaCollection, onClick: () -> Unit) {
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            Text(collection.count.toString(), fontSize = 13.sp, color = onBackground.copy(alpha = 0.55f))
+            Text(
+                if (collection.count == MediaCollections.LockedCount) "Locked" else collection.count.toString(),
+                fontSize = 13.sp,
+                color = onBackground.copy(alpha = 0.55f),
+            )
         }
     }
 }
@@ -146,6 +151,7 @@ private fun utilityIcon(key: String): ImageVector = when (key) {
     CollectionKeys.Videos -> LumenIcons.Video
     CollectionKeys.Screenshots -> LumenIcons.Screenshot
     CollectionKeys.RecentlyDeleted -> LumenIcons.Delete
+    CollectionKeys.Hidden -> LumenIcons.Lock
     else -> LumenIcons.Folder
 }
 

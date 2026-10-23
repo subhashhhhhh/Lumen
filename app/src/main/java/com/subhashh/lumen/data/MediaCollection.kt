@@ -9,6 +9,8 @@ object CollectionKeys {
     const val Videos = "videos"
     const val Screenshots = "screenshots"
     const val RecentlyDeleted = "trash"
+    /** Hidden files come from a storage scan, not MediaStore; the caller supplies them. */
+    const val Hidden = "hidden"
     private const val FolderPrefix = "folder:"
 
     fun folder(bucketId: Long) = "$FolderPrefix$bucketId"
@@ -50,7 +52,10 @@ object MediaCollections {
         ).map { (key, title) ->
             val items = CollectionKeys.items(key, library, trash)
             MediaCollection(key, title, items.lastOrNull(), items.size)
-        }
+        } + MediaCollection(CollectionKeys.Hidden, "Hidden", cover = null, count = LockedCount)
+
+    /** Count shown for Hidden, which stays unknown (and unshown) until unlocked. */
+    const val LockedCount = -1
 
     /** One album per device folder, most recently updated first. */
     fun folders(library: List<MediaItem>): List<MediaCollection> =

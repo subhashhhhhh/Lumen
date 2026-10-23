@@ -126,6 +126,10 @@ fun ViewerScreen(
     onMediaChanged: () -> Unit,
     /** Viewing Recently Deleted: offer restore and delete forever instead of share/favorite/trash. */
     inTrash: Boolean = false,
+    /** Hidden section: Share, Info, Unhide and permanent Delete; no favorite or ⋯ menu. */
+    inHidden: Boolean = false,
+    onUnhide: (MediaItem) -> Unit = {},
+    onDeleteHidden: (MediaItem) -> Unit = {},
     onCopyToAlbum: (MediaItem) -> Unit = {},
     onMoveToAlbum: (MediaItem) -> Unit = {},
     onRename: (MediaItem) -> Unit = {},
@@ -358,7 +362,7 @@ fun ViewerScreen(
                     item = current,
                     onBack = { close(Velocity.Zero) },
                     // Recently Deleted items only get restore / delete forever.
-                    onMore = if (inTrash) null else ({ moreOpen = !moreOpen }),
+                    onMore = if (inTrash || inHidden) null else ({ moreOpen = !moreOpen }),
                     modifier = Modifier.align(Alignment.TopCenter),
                 )
                 Column(
@@ -379,7 +383,33 @@ fun ViewerScreen(
                         Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
-                        if (inTrash) {
+                        if (inHidden) {
+                            GlassIconButton(
+                                backdrop = backdrop,
+                                icon = LumenIcons.Share,
+                                contentDescription = "Share",
+                                onClick = { MediaActions.share(context, current) },
+                            )
+                            GlassIconButton(
+                                backdrop = backdrop,
+                                icon = LumenIcons.Info,
+                                contentDescription = "Details",
+                                onClick = motion::openInfo,
+                            )
+                            GlassIconButton(
+                                backdrop = backdrop,
+                                icon = LumenIcons.Unhide,
+                                contentDescription = "Unhide",
+                                onClick = { onUnhide(current) },
+                            )
+                            GlassIconButton(
+                                backdrop = backdrop,
+                                icon = LumenIcons.DeleteForever,
+                                contentDescription = "Delete permanently",
+                                tint = Color(0xFFFF453A),
+                                onClick = { onDeleteHidden(current) },
+                            )
+                        } else if (inTrash) {
                             GlassIconButton(
                                 backdrop = backdrop,
                                 icon = LumenIcons.Restore,

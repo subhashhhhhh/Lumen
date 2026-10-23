@@ -43,12 +43,15 @@ fun SelectionActionBar(
     backdrop: Backdrop,
     hasSelection: Boolean,
     inTrash: Boolean,
+    /** Hidden section: Share, Unhide, Delete (permanent). */
+    inHidden: Boolean,
     allFavorite: Boolean,
     onShare: () -> Unit,
     onFavorite: () -> Unit,
     onDelete: () -> Unit,
     onRestore: () -> Unit,
     onDeleteForever: () -> Unit,
+    onUnhide: () -> Unit,
     onMore: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -62,7 +65,20 @@ fun SelectionActionBar(
             .padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        if (inTrash) {
+        if (inHidden) {
+            GlassIconButton(
+                backdrop, LumenIcons.Share, "Share", guard(onShare),
+                tint = if (hasSelection) colors.content else idle,
+            )
+            GlassIconButton(
+                backdrop, LumenIcons.Unhide, "Unhide", guard(onUnhide),
+                tint = if (hasSelection) colors.content else idle,
+            )
+            GlassIconButton(
+                backdrop, LumenIcons.DeleteForever, "Delete permanently", guard(onDeleteForever),
+                tint = if (hasSelection) Color(0xFFFF453A) else idle,
+            )
+        } else if (inTrash) {
             GlassIconButton(
                 backdrop, LumenIcons.Restore, "Restore", guard(onRestore),
                 tint = if (hasSelection) colors.content else idle,

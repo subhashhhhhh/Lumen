@@ -49,6 +49,16 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.subhashh.lumen.ui.hidden.HiddenLock
+import com.subhashh.lumen.ui.components.Confirmation
+import com.subhashh.lumen.ui.components.ConfirmDialog
+import com.subhashh.lumen.data.HiddenMedia
+import androidx.lifecycle.compose.LifecycleEventEffect
+import androidx.lifecycle.Lifecycle
+import androidx.core.net.toUri
+import androidx.activity.compose.LocalActivity
+import android.provider.Settings
+import android.content.Intent
 import com.subhashh.lumen.ui.settings.ExcludedFoldersScreen
 import com.subhashh.lumen.data.ExcludedFolders
 import androidx.compose.ui.platform.LocalDensity
@@ -184,6 +194,10 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
     val library by viewModel.items.collectAsState()
     val allItems by viewModel.allItems.collectAsState()
     val excluded by viewModel.excluded.collectAsState()
+    val hidden by viewModel.hidden.collectAsState()
+    /** Hidden opens only after biometric unlock and re-locks whenever it's left. */
+    var hiddenUnlocked by remember { mutableStateOf(false) }
+    var confirmation by remember { mutableStateOf<Confirmation?>(null) }
     var excludePicker by remember { mutableStateOf(false) }
     val trash by viewModel.trash.collectAsState()
     var tab by rememberSaveable { mutableStateOf(LumenTab.Library) }
@@ -246,7 +260,11 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
         library.orEmpty().let { all -> if (filter == LibraryFilter.All) all else all.filter(filter::matches) }
     }
     val itemsOf = { key: String ->
-        if (key == CollectionKeys.Library) libraryItems else CollectionKeys.items(key, library.orEmpty(), trash)
+        when (key) {
+            CollectionKeys.Library -> libraryItems
+            CollectionKeys.Hidden -> if (hiddenUnlocked) hidden.orEmpty() else emptyList()
+            else -> CollectionKeys.items(key, library.orEmpty(), trash)
+        }
     }
     val months = remember(libraryItems) { periods(libraryItems, byYear = false) }
     val years = remember(libraryItems) { periods(libraryItems, byYear = true) }
@@ -305,6 +323,97 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
     /** Set when the viewer should open straight into a slideshow of these ids. */
     var slideshowOf by remember { mutableStateOf<Set<Long>?>(null) }
     val toast = { message: String -> Toast.makeText(context, message, Toast.LENGTH_LONG).show() }
+    val activity = LocalActivity.current
+    val openHidden: () -> Unit = open@{
+        val host = activity ?: return@open
+        if (!HiddenMedia.available()) {
+            confirmation = Confirmation(
+                title = "Hidden needs All files access",
+                message = "Android's media index skips hidden photos on purpose, so Lumen has to read storage " +
+                    "directly to show them. Nothing ever leaves your phone.",
+                confirm = "Open Settings",
+            ) {
+                runCatching {
+                    context.startActivity(
+                        Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, "package:${context.packageName}".toUri()),
+                    )
+                }
+            }
+            return@open
+        }
+        val show = {
+            hiddenUnlocked = true
+            viewModel.loadHidden()
+            openCollection = CollectionKeys.Hidden
+        }
+        if (HiddenLock.canLock(host)) {
+            HiddenLock.unlock(host, show)
+        } else {
+            toast("Set a screen lock in system settings to protect Hidden")
+            show()
+        }
+    }
+    val afterHiddenChange = { message: String ->
+        viewModel.refresh()
+        viewModel.loadHidden()
+        selection = null
+        toast(message)
+    }
+    val unhide: (List<MediaItem>) -> Unit = unhide@{ items ->
+        val plans = items.mapNotNull(HiddenMedia::unhidePlan).distinct()
+        val doable = plans.filterNot { it is HiddenMedia.Unhide.DotFolder }
+        if (doable.isEmpty()) {
+            val folder = plans.filterIsInstance<HiddenMedia.Unhide.DotFolder>().firstOrNull()?.folder?.name
+            toast("“$folder” is hidden by its dot-name; rename that folder in a file manager to unhide it")
+            return@unhide
+        }
+        val run = { scope.launch { afterHiddenChange(if (HiddenMedia.unhide(context, doable) > 0) "Unhidden" else "Couldn't unhide") } }
+        val folders = doable.filterIsInstance<HiddenMedia.Unhide.Folder>()
+        if (folders.isEmpty()) {
+            run()
+        } else {
+            val folderSet = folders.mapTo(HashSet()) { it.folder.absolutePath }
+            val affected = hidden.orEmpty().count { HiddenMedia.file(it)?.parentFile?.absolutePath in folderSet }
+            val name = folders.singleOrNull()?.folder?.name
+            confirmation = Confirmation(
+                title = if (name != null) "Unhide “$name”?" else "Unhide ${folders.size} folders?",
+                message = "These are hidden as whole folders, so all $affected items in them become visible again, " +
+                    "in Lumen and in every other app.",
+                confirm = "Unhide",
+            ) { run() }
+        }
+    }
+    val deleteHidden: (List<MediaItem>) -> Unit = { items ->
+        val n = items.size
+        confirmation = Confirmation(
+            title = if (n == 1) "Delete this item?" else "Delete $n items?",
+            message = "Hidden items can't go to Recently Deleted, so this is permanent.",
+            confirm = "Delete",
+            destructive = true,
+        ) {
+            scope.launch {
+                val deleted = HiddenMedia.delete(items)
+                afterHiddenChange(if (deleted == n) "Deleted" else "Couldn't delete ${n - deleted} of $n")
+            }
+        }
+    }
+    // Re-lock as soon as Hidden is left: its grid and the viewer over it are the only ways in.
+    LaunchedEffect(openCollection, viewerSource) {
+        if (openCollection != CollectionKeys.Hidden && viewerSource != CollectionKeys.Hidden) hiddenUnlocked = false
+    }
+    // Leaving the app locks it too, closing anything that shows hidden photos.
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) {
+        if (hiddenUnlocked) {
+            if (viewerSource == CollectionKeys.Hidden) viewerSource = null
+            if (openCollection == CollectionKeys.Hidden) openCollection = null
+            hiddenUnlocked = false
+        }
+    }
+    // After a restart, never land inside Hidden without unlocking (its list is empty until then).
+    LaunchedEffect(openCollection, hiddenUnlocked) {
+        if (openCollection == CollectionKeys.Hidden && !hiddenUnlocked) openCollection = null
+    }
+
     val excludeFolders: (List<MediaItem>) -> Unit = { items ->
         val folders = items.map { it.relativePath }.distinct()
         viewModel.exclude(folders)
@@ -504,7 +613,7 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                     utilities = utilities,
                     folders = folders,
                     contentPadding = PaddingValues(top = statusTop + 16.dp, bottom = navBottom + 96.dp),
-                    onOpen = { openCollection = it },
+                    onOpen = { key -> if (key == CollectionKeys.Hidden) openHidden() else openCollection = key },
                 )
             }
         }
@@ -651,12 +760,17 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                 backdrop = backdrop,
                 hasSelection = selectedItems.isNotEmpty(),
                 inTrash = selectableKey == CollectionKeys.RecentlyDeleted,
+                inHidden = selectableKey == CollectionKeys.Hidden,
                 allFavorite = allFavorite,
                 onShare = { MediaActions.share(context, selectedItems) },
                 onFavorite = { launch(MediaActions.favoriteRequest(context, selectedItems, favorite = !allFavorite)) },
                 onDelete = { launch(MediaActions.trashRequest(context, selectedItems)) },
                 onRestore = { launch(MediaActions.restoreRequest(context, selectedItems)) },
-                onDeleteForever = { launch(MediaActions.deleteForeverRequest(context, selectedItems)) },
+                onDeleteForever = {
+                    if (selectableKey == CollectionKeys.Hidden) deleteHidden(selectedItems)
+                    else launch(MediaActions.deleteForeverRequest(context, selectedItems))
+                },
+                onUnhide = { unhide(selectedItems) },
                 onMore = { selectionMenuOpen = !selectionMenuOpen },
             )
         }
@@ -703,6 +817,9 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                 items = list,
                 initialIndex = viewerStart.coerceAtMost(list.lastIndex.coerceAtLeast(0)),
                 inTrash = source == CollectionKeys.RecentlyDeleted,
+                inHidden = source == CollectionKeys.Hidden,
+                onUnhide = { unhide(listOf(it)) },
+                onDeleteHidden = { deleteHidden(listOf(it)) },
                 onClose = { exit ->
                     viewerSource = null
                     slideshowOf = null
@@ -755,6 +872,8 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
             newAlbumPath = MediaFiles::newAlbumPath,
             allowNewAlbum = false,
         )
+
+        ConfirmDialog(confirmation, onDismiss = { confirmation = null })
 
         RenameDialog(
             currentName = renameName,
