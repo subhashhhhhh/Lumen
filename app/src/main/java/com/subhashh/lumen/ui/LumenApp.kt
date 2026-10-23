@@ -784,10 +784,6 @@ private fun MainScaffold(
     }
 
     Box(Modifier.fillMaxSize().onSizeChanged { screenSize = it }) {
-        // Settings pages blur the newest photo behind their glass.
-        androidx.compose.runtime.CompositionLocalProvider(
-            com.subhashh.lumen.ui.settings.LocalSettingsCover provides library?.lastOrNull(),
-        ) {
         // Everything the glass controls refract lives inside this layer.
         Box(
             Modifier
@@ -994,7 +990,6 @@ private fun MainScaffold(
             }
         }
 
-        }
 
         if (selecting && !viewerOpen) {
             val albums = albumSelection
