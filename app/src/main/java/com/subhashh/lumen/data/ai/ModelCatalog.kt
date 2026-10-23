@@ -39,7 +39,7 @@ object ModelCatalog {
         id = "siglip2-b16",
         label = "Accurate",
         repo = "subhashhhhhh/lumen-siglip2-b16",
-        commit = "main",
+        commit = "3b8370763a260d8acf13e91b96073606c9bdbd11",
         files = listOf(
             ModelFile("visual.onnx", 371_674_292, "fee10c729875dd203d94f396ac3d664e301d39c977ef6d92e7f467a2a716f0b0"),
             ModelFile("textual_int8.onnx", 283_187_112, "6fdbedc85c54262bcbf380cfb048f03e10cf07237333fe4ca1e204a8f954d608"),
@@ -52,7 +52,7 @@ object ModelCatalog {
         id = "clip-vit-b32",
         label = "Fast",
         repo = "subhashhhhhh/lumen-clip-vit-b32",
-        commit = "main",
+        commit = "8163ae3be41a5698dad50a5696c9d577d390c91c",
         files = listOf(
             ModelFile("visual_int8.onnx", 95_777_877, "17755a1228aee44f4274eadac14a600a5e45ab9f6325b6ad070b5d0d75e05073"),
             ModelFile("textual_int8.onnx", 140_296_927, "e1631f9b00b2a14e5b268a9c73000b1eec3c79bd7d4876ce10fe4f0de1a03b1e"),
