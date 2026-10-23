@@ -1,5 +1,6 @@
 package com.subhashh.lumen.ui.viewer
 
+import com.subhashh.lumen.data.HdrMode
 import android.os.Build
 import android.content.pm.ActivityInfo
 import androidx.activity.compose.LocalActivity
@@ -220,18 +221,28 @@ fun ViewerScreen(
 
     // Ultra HDR photos get the window's HDR mode while they're on screen; nothing else does.
     val activity = LocalActivity.current
-    var hdr by remember { mutableStateOf(false) }
+    /** The current photo's full-HDR ratio while it's shown in HDR; null for everything else. */
+    var hdrRatio by remember { mutableStateOf<Float?>(null) }
+    var hdrMode by remember { mutableStateOf(HdrMode.Off) }
     LaunchedEffect(current?.id) {
-        hdr = current != null && LumenPrefs(context).hdrPhotos && UltraHdr.hasGainmap(context, current)
+        hdrMode = LumenPrefs(context).hdrMode
+        hdrRatio = if (current != null && hdrMode != HdrMode.Off) UltraHdr.fullHdrRatio(context, current) else null
     }
-    DisposableEffect(hdr, activity) {
+    DisposableEffect(hdrRatio, hdrMode, activity) {
         val window = activity?.window
+        val hdr = hdrRatio != null
         if (window != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             window.colorMode = if (hdr) ActivityInfo.COLOR_MODE_HDR else ActivityInfo.COLOR_MODE_DEFAULT
+            // Full HDR: ask for everything the photo wants, even if Android has to brighten
+            // the screen to give it. 0 = Android's default, which keeps to the brightness setting.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+                window.desiredHdrHeadroom = if (hdr && hdrMode == HdrMode.Full) hdrRatio!!.coerceIn(1f, 10_000f) else 0f
+            }
         }
         onDispose {
             if (window != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
                 window.colorMode = ActivityInfo.COLOR_MODE_DEFAULT
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) window.desiredHdrHeadroom = 0f
             }
         }
     }

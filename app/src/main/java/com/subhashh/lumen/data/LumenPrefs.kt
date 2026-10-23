@@ -4,6 +4,13 @@ import android.content.Context
 import androidx.core.content.edit
 import com.subhashh.lumen.ui.theme.Appearance
 
+/**
+ * Settings → Photos → Ultra HDR. Match Brightness lets highlights glow within what the screen
+ * allows at your brightness; Full HDR asks for all the headroom the photo wants, which can raise
+ * the whole screen's brightness (Android 15+), like Chrome.
+ */
+enum class HdrMode(val label: String) { Off("Off"), MatchBrightness("Match Brightness"), Full("Full HDR") }
+
 /** Small persisted view preferences. */
 class LumenPrefs(context: Context) {
     private val prefs = context.getSharedPreferences("lumen", Context.MODE_PRIVATE)
@@ -88,10 +95,11 @@ class LumenPrefs(context: Context) {
         get() = prefs.getBoolean(KeyMuted, false)
         set(value) = prefs.edit { putBoolean(KeyMuted, value) }
 
-    /** Show Ultra HDR photos with their extra brightness (Android 14+). */
-    var hdrPhotos: Boolean
-        get() = prefs.getBoolean(KeyHdr, true)
-        set(value) = prefs.edit { putBoolean(KeyHdr, value) }
+    /** How Ultra HDR photos are shown (Android 14+). */
+    var hdrMode: HdrMode
+        get() = prefs.getString(KeyHdrMode, null)?.let { name -> HdrMode.entries.firstOrNull { it.name == name } }
+            ?: if (prefs.getBoolean(KeyHdr, true)) HdrMode.MatchBrightness else HdrMode.Off
+        set(value) = prefs.edit { putString(KeyHdrMode, value.name) }
 
     /** Seconds each slideshow photo stays up. */
     var slideshowSeconds: Int
@@ -114,6 +122,7 @@ class LumenPrefs(context: Context) {
 
     private companion object {
         const val KeyHdr = "hdr_photos"
+        const val KeyHdrMode = "hdr_mode"
         const val KeySlideSeconds = "slideshow_seconds"
         const val KeySlideFade = "slideshow_fade"
         const val KeySlideShuffle = "slideshow_shuffle"

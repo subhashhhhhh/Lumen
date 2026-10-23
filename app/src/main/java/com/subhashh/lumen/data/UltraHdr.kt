@@ -16,10 +16,13 @@ object UltraHdr {
     /** Formats that can carry a gain map Android understands. */
     private val Candidates = setOf("image/jpeg", "image/heic", "image/heif")
 
-    /** True when [item] has a gain map. A tiny decode is enough to find out. Android 14+ only. */
-    suspend fun hasGainmap(context: Context, item: MediaItem): Boolean {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return false
-        if (item.isVideo || item.mimeType !in Candidates) return false
+    /**
+     * How much brighter than normal white [item] wants to go at full HDR (its gain map's
+     * display ratio), or null when it has no gain map. A tiny decode is enough. Android 14+ only.
+     */
+    suspend fun fullHdrRatio(context: Context, item: MediaItem): Float? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return null
+        if (item.isVideo || item.mimeType !in Candidates) return null
         return withContext(Dispatchers.IO) {
             runCatching {
                 val source = if (item.uri.scheme == "file") {
@@ -30,8 +33,8 @@ object UltraHdr {
                 ImageDecoder.decodeBitmap(source) { decoder, _, _ ->
                     decoder.setTargetSampleSize(32)
                     decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
-                }.hasGainmap()
-            }.getOrDefault(false)
+                }.gainmap?.displayRatioForFullHdr
+            }.getOrNull()
         }
     }
 }

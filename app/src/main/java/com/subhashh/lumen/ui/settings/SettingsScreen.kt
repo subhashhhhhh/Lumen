@@ -1,5 +1,6 @@
 package com.subhashh.lumen.ui.settings
 
+import com.subhashh.lumen.data.HdrMode
 import androidx.compose.runtime.mutableStateOf
 import com.subhashh.lumen.data.LumenPrefs
 import android.Manifest
@@ -161,16 +162,19 @@ fun SettingsScreen(
             )
         }
 
-        var hdr by remember { mutableStateOf(prefs.hdrPhotos) }
+        var hdrMode by remember { mutableStateOf(prefs.hdrMode) }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            Group("Photos") {
+            Group(
+                "Photos",
+                footer = "Ultra HDR photos (from phones like Pixel and Galaxy) can glow brighter than white. " +
+                    "Match Brightness keeps to your brightness setting; Full HDR can turn the screen up for them, like Chrome.",
+            ) {
                 SettingsRow(
                     title = "Ultra HDR",
-                    subtitle = "Show HDR photos from phones like Pixel with their full brightness",
-                    value = if (hdr) "On" else "Off",
+                    value = hdrMode.label,
                     onClick = {
-                        hdr = !hdr
-                        prefs.hdrPhotos = hdr
+                        hdrMode = HdrMode.entries[(hdrMode.ordinal + 1) % HdrMode.entries.size]
+                        prefs.hdrMode = hdrMode
                     },
                 )
             }
