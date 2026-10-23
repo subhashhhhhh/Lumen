@@ -549,11 +549,8 @@ private fun viewerMenu(
             MenuItem("Slideshow") { onSlideshow() },
             onMakeCover?.let { MenuItem("Make Album Cover") { it(item) } },
         ),
-        listOf(
-            MenuItem("Hide") { onHide(item) },
-            MenuItem("Hide Folder") { onHideFolder(item) },
-            MenuItem("Exclude Folder") { onExcludeFolder(item) },
-        ),
+        // Folder actions live on albums (Collections → long-press), not on a single photo.
+        listOf(MenuItem("Hide") { onHide(item) }),
         listOfNotNull(
             MenuItem("Open with…") { MediaActions.openWith(context, item) },
             if (photo) MenuItem("Set as…") { MediaActions.setAs(context, item) } else null,

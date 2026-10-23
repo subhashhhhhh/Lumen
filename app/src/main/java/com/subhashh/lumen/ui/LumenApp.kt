@@ -1206,15 +1206,7 @@ private fun MainScaffold(
                 listOfNotNull(
                     if (selectedItems.any(MediaFiles::canRotate)) rotateMenu { rotate(selectedItems, it) } else null,
                 ),
-                listOf(
-                    MenuItem("Hide") { hide(selectedItems) },
-                    MenuItem(if (selectedItems.map { it.relativePath }.distinct().size > 1) "Hide Folders" else "Hide Folder") {
-                        hideFolders(selectedItems)
-                    },
-                    MenuItem(if (selectedItems.map { it.relativePath }.distinct().size > 1) "Exclude Folders" else "Exclude Folder") {
-                        excludeFolders(selectedItems)
-                    },
-                ),
+                listOf(MenuItem("Hide") { hide(selectedItems) }),
                 listOf(
                     MenuItem("Slideshow") {
                         val key = selectableKey ?: return@MenuItem
