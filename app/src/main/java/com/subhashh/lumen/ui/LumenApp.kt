@@ -85,6 +85,7 @@ import kotlinx.coroutines.Dispatchers
 import com.subhashh.lumen.ui.components.RenameDialog
 import com.subhashh.lumen.ui.components.DateTimeDialog
 import com.subhashh.lumen.data.MediaDates
+import com.subhashh.lumen.data.vault.Vault
 import com.subhashh.lumen.data.SettingsBackup
 import com.subhashh.lumen.data.ImageExport
 import com.subhashh.lumen.ui.settings.ResizeDialog
@@ -592,8 +593,14 @@ private fun MainScaffold(
         // First time: set up Lumen's own lock; afterwards: unlock with it.
         lockFlow = if (lockStore.isSet) LockFlow.Unlock else LockFlow.Setup
     }
+    /** The lock as last typed, kept only until Hidden opens: the vault's recovery path needs it. */
+    var enteredSecret by remember { mutableStateOf<String?>(null) }
     val showHidden = {
         hiddenUnlocked = true
+        // The vault (Encrypt Hidden) opens with Hidden: from the Keystore, or after a reinstall
+        // from its recovery file with the lock just typed.
+        Vault.open(appContext, enteredSecret)
+        enteredSecret = null
         viewModel.loadHidden()
         tab = LumenTab.Collections
         openCollection = CollectionKeys.Hidden
@@ -625,7 +632,17 @@ private fun MainScaffold(
         endSelection()
         toast(message)
     }
-    val unhide: (List<MediaItem>) -> Unit = unhide@{ items ->
+    val unhide: (List<MediaItem>) -> Unit = unhide@{ all ->
+        // Encrypted items decrypt back to their folder, visible.
+        val (vaulted, items) = all.partition(Vault::isVault)
+        if (vaulted.isNotEmpty()) {
+            scope.launch {
+                val restored = vaulted.count { Vault.restore(context, it, hidden = false) != null }
+                viewModel.loadVault()
+                if (items.isEmpty()) afterHiddenChange(if (restored == vaulted.size) "Unhidden" else "Couldn't unhide ${vaulted.size - restored}")
+            }
+            if (items.isEmpty()) return@unhide
+        }
         val plans = items.mapNotNull(HiddenMedia::unhidePlan).distinct()
         val doable = plans.filterNot { it is HiddenMedia.Unhide.DotFolder }
         if (doable.isEmpty()) {
@@ -682,6 +699,16 @@ private fun MainScaffold(
             }
         }
     }
+    /** Share from Hidden: encrypted items go out as decrypted copies in Lumen's private cache. */
+    val shareHidden: (List<MediaItem>) -> Unit = { items ->
+        scope.launch {
+            val shareable = items.mapNotNull { item ->
+                if (!Vault.isVault(item)) item
+                else Vault.cachedCopy(context, item)?.let { item.copy(uri = android.net.Uri.fromFile(it)) }
+            }
+            MediaActions.share(context, shareable)
+        }
+    }
     val deleteHidden: (List<MediaItem>) -> Unit = { items ->
         val n = items.size
         confirmation = Confirmation(
@@ -691,7 +718,9 @@ private fun MainScaffold(
             destructive = true,
         ) {
             scope.launch {
-                val deleted = HiddenMedia.delete(items)
+                val (vaulted, plain) = items.partition(Vault::isVault)
+                val deleted = HiddenMedia.delete(plain) + vaulted.count(Vault::delete)
+                if (vaulted.isNotEmpty()) viewModel.loadVault()
                 afterHiddenChange(if (deleted == n) "Deleted" else "Couldn't delete ${n - deleted} of $n")
             }
         }
@@ -699,6 +728,14 @@ private fun MainScaffold(
     // Re-lock as soon as Hidden is left: its grid and the viewer over it are the only ways in.
     LaunchedEffect(openCollection, viewerSource) {
         if (!CollectionKeys.isHidden(openCollection) && !CollectionKeys.isHidden(viewerSource)) hiddenUnlocked = false
+    }
+    // Locking Hidden locks the vault too: key forgotten, decrypted share copies gone.
+    LaunchedEffect(hiddenUnlocked) {
+        if (!hiddenUnlocked) {
+            Vault.close()
+            Vault.clearCache(appContext)
+            viewModel.clearVault()
+        }
     }
     // Leaving the app locks it too, closing anything that shows hidden photos.
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) {
@@ -1324,7 +1361,10 @@ private fun MainScaffold(
                 // Favoriting whole albums isn't a thing.
                 showFavorite = albumSelection == null,
                 allFavorite = allFavorite,
-                onShare = { MediaActions.share(context, selectedItems) },
+                onShare = {
+                    if (CollectionKeys.isHidden(selectionScope)) shareHidden(selectedItems)
+                    else MediaActions.share(context, selectedItems)
+                },
                 onFavorite = { launch(MediaActions.favoriteRequest(context, selectedItems, favorite = !allFavorite)) },
                 onDelete = {
                     // Empty new albums have nothing to trash; deleting one just forgets it.
@@ -1434,6 +1474,7 @@ private fun MainScaffold(
                 initialIndex = viewerStart.coerceAtMost(list.lastIndex.coerceAtLeast(0)),
                 inTrash = source == CollectionKeys.RecentlyDeleted,
                 inHidden = CollectionKeys.isHidden(source),
+                onShareHidden = { shareHidden(listOf(it)) },
                 onUnhide = { unhide(listOf(it)) },
                 onDeleteHidden = { deleteHidden(listOf(it)) },
                 onClose = { exit ->
@@ -1511,6 +1552,11 @@ private fun MainScaffold(
             HiddenLockScreen(
                 flow = flow,
                 store = lockStore,
+                onSecret = { secret ->
+                    enteredSecret = secret
+                    // A new lock (set up, changed, or after Forgot) reseals the vault's recovery copy.
+                    if (flow == LockFlow.Setup || flow == LockFlow.Change) Vault.changeSecret(appContext, secret)
+                },
                 onDone = {
                     lockFlow = null
                     lockSet = lockStore.isSet

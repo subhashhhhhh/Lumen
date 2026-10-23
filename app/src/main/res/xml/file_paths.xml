@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Hidden files have no MediaStore Uri; sharing them goes through this provider. -->
+<!-- Hidden files have no MediaStore Uri; sharing them goes through this provider. Encrypted
+     Hidden items are shared as decrypted copies in Lumen's private cache (vault-share). -->
 <paths>
     <external-path name="storage" path="." />
+    <cache-path name="vault_share" path="vault-share/" />
 </paths>

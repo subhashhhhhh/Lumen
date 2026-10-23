@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.subhashh.lumen.data.ExcludedFolders
 import com.subhashh.lumen.data.HiddenIndex
+import com.subhashh.lumen.data.vault.Vault
 import com.subhashh.lumen.data.HiddenMedia
 import com.subhashh.lumen.data.LumenPrefs
 import com.subhashh.lumen.data.MediaItem
@@ -52,10 +53,29 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
     /** Raw scan result, excluded folders included (Settings counts them); null until loaded. */
     val hiddenAll: StateFlow<List<MediaItem>?> = _hiddenAll.asStateFlow()
 
-    /** Hidden photos and videos minus excluded folders. Null until first loaded (only once Hidden opens). */
-    val hidden: StateFlow<List<MediaItem>?> = combine(_hiddenAll, _excluded) { all, excluded ->
-        all?.let { list -> if (excluded.isEmpty()) list else list.filterNot { ExcludedFolders.covers(excluded, it) } }
+    /** What's in the encrypted vault (Settings → Encrypt Hidden), while it's open. */
+    private val _vault = MutableStateFlow<List<MediaItem>>(emptyList())
+
+    /**
+     * Hidden photos and videos, Fossify-style and encrypted together, minus excluded folders.
+     * Null until first loaded (only once Hidden opens).
+     */
+    val hidden: StateFlow<List<MediaItem>?> = combine(_hiddenAll, _vault, _excluded) { all, vault, excluded ->
+        all?.let { list ->
+            val both = if (vault.isEmpty()) list else (list + vault).sortedWith(compareBy<MediaItem> { it.takenAt }.thenBy { it.id })
+            if (excluded.isEmpty()) both else both.filterNot { ExcludedFolders.covers(excluded, it) }
+        }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    /** Re-reads the vault (after adding, restoring or deleting); empty while it's closed. */
+    fun loadVault() {
+        viewModelScope.launch { _vault.value = Vault.list() }
+    }
+
+    /** Hidden locked: drop the vault's items along with its key. */
+    fun clearVault() {
+        _vault.value = emptyList()
+    }
 
     private var hiddenScan: kotlinx.coroutines.Job? = null
 
@@ -68,6 +88,7 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
         hiddenScan = viewModelScope.launch {
             val app = getApplication<Application>()
             if (_hiddenAll.value == null) _hiddenAll.value = HiddenIndex.load(app)
+            _vault.value = Vault.list()
             // Unchanged files keep the sizes already read, so they compare equal and nothing redraws.
             val known = _hiddenAll.value.orEmpty().associateBy { it.uri.path }
             val found = HiddenMedia.scan().map { item ->

@@ -100,6 +100,9 @@ object MediaActions {
 
     /** Hidden files are file:// Uris, which other apps can't open; hand them a provider Uri instead. */
     private fun shareableUri(context: Context, item: MediaItem): Uri {
+        if (item.uri.scheme == "file" && item.uri.path?.contains("/vault-share/") == true) {
+            return FileProvider.getUriForFile(context, "${context.packageName}.files", java.io.File(item.uri.path!!))
+        }
         val file = HiddenMedia.file(item)
         return if (item.uri.scheme == "file" && file != null) {
             FileProvider.getUriForFile(context, "${context.packageName}.files", file)

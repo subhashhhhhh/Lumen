@@ -159,6 +159,8 @@ fun ViewerScreen(
     onAdjustDate: (MediaItem) -> Unit = {},
     onSetWallpaper: (MediaItem) -> Unit = {},
     onResize: (MediaItem) -> Unit = {},
+    /** Hidden's Share: encrypted items need a decrypted copy first. */
+    onShareHidden: (MediaItem) -> Unit = {},
 ) {
     val context = LocalContext.current
     val pager = rememberPagerState(initialPage = initialIndex) { items.size }
@@ -497,7 +499,7 @@ fun ViewerScreen(
                                 backdrop = backdrop,
                                 icon = LumenIcons.Share,
                                 contentDescription = "Share",
-                                onClick = { MediaActions.share(context, current) },
+                                onClick = { onShareHidden(current) },
                             )
                             GlassIconButton(
                                 backdrop = backdrop,
