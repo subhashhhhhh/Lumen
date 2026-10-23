@@ -26,6 +26,7 @@ import com.subhashh.lumen.data.ai.DownloadState
 import com.subhashh.lumen.data.ai.HfTokenStore
 import com.subhashh.lumen.data.ai.ModelCatalog
 import com.subhashh.lumen.data.ai.ModelDownloads
+import com.subhashh.lumen.data.ai.OcrModel
 import com.subhashh.lumen.ui.components.Confirmation
 import com.subhashh.lumen.ui.icons.LumenIcons
 
@@ -73,18 +74,20 @@ internal fun SmartSearchGroup(
         }
     }
 
-    val size = megabytes(chosen.bytes)
+    val size = megabytes(chosen.bytes + OcrModel.bytes)
+    val readerMissing = remember(refresh, state, removed) { !OcrModel.installed(context) }
+    val remaining = remember(state, refresh, removed, chosenId) { ModelDownloads.remainingBytes(context) }
+    val update = if (remaining < chosen.bytes + OcrModel.bytes) "Update available · ${megabytes(remaining)}" to "Update"
+        else "Not downloaded · $size" to "Download"
     val (status, action) = when (val s = state) {
         is DownloadState.Running -> "Downloading · ${megabytes(s.done)} of ${megabytes(s.total)}" to "Cancel"
         DownloadState.Waiting -> (if (wifiOnly) "Waiting for Wi-Fi…" else "Waiting for a connection…") to "Cancel"
         is DownloadState.Failed -> "Couldn't download: ${s.message}" to "Retry"
         DownloadState.Idle -> when (installed) {
-            chosen -> "Ready · $size on this phone" to "Remove"
+            // A newer version added the text reader: search keeps working until it's fetched.
+            chosen -> if (readerMissing) update else "Ready · $size on this phone" to "Remove"
             // Part of it is here already: a newer version changed some files (Accurate's image model).
-            null -> remember(state, refresh) { ModelDownloads.remainingBytes(context) }.let { remaining ->
-                if (remaining < chosen.bytes) "Update available · ${megabytes(remaining)}" to "Update"
-                else "Not downloaded · $size" to "Download"
-            }
+            null -> update
             // Switching tiers: the current one keeps working until the new one is in.
             else -> "Using ${installed.label} · ${chosen.label} is $size" to "Download"
         }
@@ -93,7 +96,8 @@ internal fun SmartSearchGroup(
 
     Group(
         "Search Model",
-        footer = "Find photos by what's in them, like “cat asleep on a sofa”. Accurate finds more " +
+        footer = "Find photos by what's in them, like “cat asleep on a sofa”, or by the words in " +
+            "them, like a name in a chat screenshot. Accurate finds more " +
             "and understands many languages; Fast is smaller and quicker to set up, in English. " +
             "The search model downloads once from Hugging Face; your photos and searches never " +
             "leave this phone.",

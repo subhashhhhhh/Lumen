@@ -19,19 +19,24 @@ class DownloadException(message: String, val retry: Boolean) : IOException(messa
  * HTTP Range request after any interruption, then must match its SHA-256 before it's renamed into
  * place. Files already in place are skipped, so a rerun only fetches what's missing.
  */
-class ModelDownloader(private val model: AiModel, private val dir: File, private val token: String?) {
+class ModelDownloader(
+    private val files: List<ModelFile>,
+    private val url: (ModelFile) -> String,
+    private val dir: File,
+    private val token: String?,
+) {
 
-    suspend fun run(onProgress: (done: Long, total: Long) -> Unit) = withContext(Dispatchers.IO) {
+    /** [base] and [total] place these files' progress within a larger download. */
+    suspend fun run(base: Long = 0, total: Long = files.sumOf { it.bytes }, onProgress: (done: Long, total: Long) -> Unit) = withContext(Dispatchers.IO) {
         dir.mkdirs()
-        val total = model.bytes
-        var finished = 0L
-        for (file in model.files) {
+        var finished = base
+        for (file in files) {
             val dest = File(dir, file.name)
             if (dest.length() != file.bytes) {
                 val part = File(dir, file.name + ".part")
                 part.parentFile?.mkdirs()
                 val base = finished
-                fetch(model.url(file), part, file.bytes) { got -> onProgress(base + got, total) }
+                fetch(url(file), part, file.bytes) { got -> onProgress(base + got, total) }
                 if (sha256(part) != file.sha256) {
                     part.delete()
                     throw DownloadException("${file.name} didn't match its checksum", retry = true)

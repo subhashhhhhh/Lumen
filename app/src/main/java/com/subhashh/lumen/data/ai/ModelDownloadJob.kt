@@ -22,8 +22,8 @@ class ModelDownloadJob : JobService() {
     private var transfer: Job? = null
 
     override fun onStartJob(params: JobParameters): Boolean {
-                val model = ModelDownloads.model(this)
-        notify(params, DownloadNotification.build(this, done = model.bytes - ModelDownloads.remainingBytes(this), total = model.bytes))
+        val total = ModelDownloads.totalBytes(this)
+        notify(params, DownloadNotification.build(this, done = total - ModelDownloads.remainingBytes(this), total = total))
         transfer = scope.launch {
             val retry = ModelDownloads.run(this@ModelDownloadJob) { done, total ->
                 notify(params, DownloadNotification.build(this@ModelDownloadJob, done, total))

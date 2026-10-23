@@ -84,7 +84,7 @@ object ModelDownloads {
         mutableState.value = DownloadState.Idle
     }
 
-    /** Removes every tier's files, half-downloaded parts and indexes. */
+    /** Removes every tier's files, the text reader's, half-downloaded parts and indexes. */
     fun delete(context: Context) {
         cancel(context)
         SmartIndex.cancel(context)
@@ -92,16 +92,20 @@ object ModelDownloads {
             it.dir(context).deleteRecursively()
             EmbeddingStore.delete(context, it)
         }
+        OcrModel.dir(context).deleteRecursively()
+        TextStore.delete(context)
     }
 
+    /** What a download fetches: the chosen tier and the text reader. */
+    fun totalBytes(context: Context): Long = model(context).bytes + OcrModel.bytes
+
     /** Bytes still to fetch, counting partial files already on disk. */
-    fun remainingBytes(context: Context): Long {
-        val model = model(context)
-        return model.files.sumOf { file ->
-        val dir = model.dir(context)
+    fun remainingBytes(context: Context): Long =
+        remaining(model(context).files, model(context).dir(context)) + remaining(OcrModel.files, OcrModel.dir(context))
+
+    private fun remaining(files: List<ModelFile>, dir: File): Long = files.sumOf { file ->
         if (File(dir, file.name).length() == file.bytes) 0L
         else file.bytes - File(dir, file.name + ".part").length().coerceAtMost(file.bytes)
-        }
     }
 
     /**
@@ -110,18 +114,21 @@ object ModelDownloads {
      */
     suspend fun run(context: Context, onProgress: (done: Long, total: Long) -> Unit): Boolean? {
         val model = model(context)
-        val downloader = ModelDownloader(model, model.dir(context), HfTokenStore(context).token)
+        val token = HfTokenStore(context).token
+        val total = model.bytes + OcrModel.bytes
         var lastPercent = -1L
-        return try {
-            downloader.run { done, total ->
-                mutableState.value = DownloadState.Running(done, total)
-                // The notification only redraws when the percentage moves.
-                val percent = done * 100 / total.coerceAtLeast(1)
-                if (percent != lastPercent) {
-                    lastPercent = percent
-                    onProgress(done, total)
-                }
+        val report = { done: Long, all: Long ->
+            mutableState.value = DownloadState.Running(done, all)
+            // The notification only redraws when the percentage moves.
+            val percent = done * 100 / all.coerceAtLeast(1)
+            if (percent != lastPercent) {
+                lastPercent = percent
+                onProgress(done, all)
             }
+        }
+        return try {
+            ModelDownloader(model.files, model::url, model.dir(context), token).run(0, total, report)
+            ModelDownloader(OcrModel.files, { it.url!! }, OcrModel.dir(context), token).run(model.bytes, total, report)
             // Files a newer version no longer uses (Accurate's ONNX image model, before LiteRT).
             val wanted = model.files.mapTo(HashSet()) { it.name }
             model.dir(context).listFiles()?.filter { it.name !in wanted }?.forEach { it.deleteRecursively() }

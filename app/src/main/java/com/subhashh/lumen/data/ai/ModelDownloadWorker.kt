@@ -10,8 +10,8 @@ import androidx.work.WorkerParameters
 class ModelDownloadWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
-        val model = ModelDownloads.model(applicationContext)
-        setForeground(info(model.bytes - ModelDownloads.remainingBytes(applicationContext), model.bytes))
+        val total = ModelDownloads.totalBytes(applicationContext)
+        setForeground(info(total - ModelDownloads.remainingBytes(applicationContext), total))
         val retry = ModelDownloads.run(applicationContext) { done, total -> setForegroundAsync(info(done, total)) }
         return when (retry) {
             null -> Result.success()

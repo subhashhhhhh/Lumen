@@ -3,7 +3,8 @@ package com.subhashh.lumen.data.ai
 import android.content.Context
 import java.io.File
 
-data class ModelFile(val name: String, val bytes: Long, val sha256: String)
+/** [url]: where it comes from, when that isn't its model's own repo. */
+data class ModelFile(val name: String, val bytes: Long, val sha256: String, val url: String? = null)
 
 /**
  * A downloadable model, pinned to one commit of its Hugging Face repo so the files can't change
@@ -21,7 +22,7 @@ data class AiModel(
 ) {
     val bytes: Long get() = files.sumOf { it.bytes }
 
-    fun url(file: ModelFile) = "https://huggingface.co/$repo/resolve/$commit/${file.name}"
+    fun url(file: ModelFile) = file.url ?: "https://huggingface.co/$repo/resolve/$commit/${file.name}"
 
     /** App-private, never backed up: the files are large and re-downloadable. */
     fun dir(context: Context) = File(context.noBackupFilesDir, "models/$id")
@@ -68,4 +69,33 @@ object ModelCatalog {
     val all = listOf(Accurate, Fast)
 
     fun byId(id: String?) = all.firstOrNull { it.id == id } ?: Accurate
+}
+
+/**
+ * Reading text in photos: Baidu's PP-OCRv6 small (Apache 2.0), text detection and recognition,
+ * 50 languages (Chinese, English, Japanese, Latin scripts). Downloaded with either Smart Search
+ * tier, straight from PaddlePaddle's own repos at pinned commits. `rec.yml` carries the
+ * recognizer's character list.
+ */
+object OcrModel {
+    private const val Hf = "https://huggingface.co/PaddlePaddle"
+    val files = listOf(
+        ModelFile(
+            "det.onnx", 9_880_512, "d73e0058b7a8086bbd57f3d10b8bcd4ff95363f67e06e2762b5e814fe9c9410e",
+            "$Hf/PP-OCRv6_small_det_onnx/resolve/28fe5895c24fd108c19eb3e8479f4ab385fbfc62/inference.onnx",
+        ),
+        ModelFile(
+            "rec.onnx", 21_159_378, "5435fd747c9e0efe15a96d0b378d5bd157e9492ed8fd80edf08f30d02fa24634",
+            "$Hf/PP-OCRv6_small_rec_onnx/resolve/b8f84f0b80c529de40b4fbb3544b84fa7233a513/inference.onnx",
+        ),
+        ModelFile(
+            "rec.yml", 150_579, "ab078671bb49f06228eadccd34f1bb501e157f7a047095ffb943ba81512c77d1",
+            "$Hf/PP-OCRv6_small_rec_onnx/resolve/b8f84f0b80c529de40b4fbb3544b84fa7233a513/inference.yml",
+        ),
+    )
+    val bytes: Long get() = files.sumOf { it.bytes }
+
+    fun dir(context: Context) = File(context.noBackupFilesDir, "models/ppocrv6-small")
+
+    fun installed(context: Context): Boolean = files.all { File(dir(context), it.name).length() == it.bytes }
 }
