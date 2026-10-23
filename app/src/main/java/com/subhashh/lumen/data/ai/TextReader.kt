@@ -3,6 +3,9 @@ package com.subhashh.lumen.data.ai
 import ai.onnxruntime.OnnxTensor
 import ai.onnxruntime.OrtEnvironment
 import ai.onnxruntime.OrtSession
+import com.google.ai.edge.litert.Accelerator
+import com.google.ai.edge.litert.CompiledModel
+import com.google.ai.edge.litert.Environment
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Matrix
@@ -23,13 +26,15 @@ import kotlin.math.roundToInt
  * Same steps as tools/ocr/ocr_reference.py, which checks them on the Mac. No OpenCV: every step
  * is a few lines here.
  */
-class TextReader(dir: File, threads: Int) : AutoCloseable {
+class TextReader(dir: File, threads: Int, gpu: Boolean = false) : AutoCloseable {
     private val env = OrtEnvironment.getEnvironment()
     private val options = OrtSession.SessionOptions().apply {
         setIntraOpNumThreads(threads)
         setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL_OPT)
     }
-    private val det = env.createSession(File(dir, "det.onnx").path, options)
+    /** Detection on the GPU ([OcrModel.DetGpu], only after [GpuCheck] passed), else the CPU. */
+    private val gpuDet = if (gpu) GpuDetector(File(dir, OcrModel.DetGpu)) else null
+    private val det = if (gpuDet == null) env.createSession(File(dir, "det.onnx").path, options) else null
     private val rec = env.createSession(File(dir, "rec.onnx").path, options)
     /** Index 0 is CTC's "no character"; the model adds a space after the list. */
     private val chars: Array<String> = loadChars(File(dir, "rec.yml"))
@@ -49,6 +54,10 @@ class TextReader(dir: File, threads: Int) : AutoCloseable {
     private class Point(val x: Float, val y: Float)
 
     private fun detect(image: Bitmap): List<Array<Point>> {
+        gpuDet?.let { gpu ->
+            val (prob, scale) = gpu.run(image)
+            return boxes(prob, GpuSide, GpuSide, 1 / scale, 1 / scale)
+        }
         val scale = minOf(1f, DetMaxSide.toFloat() / maxOf(image.width, image.height))
         val w = maxOf(32, (image.width * scale / 32).roundToInt() * 32)
         val h = maxOf(32, (image.height * scale / 32).roundToInt() * 32)
@@ -67,7 +76,7 @@ class TextReader(dir: File, threads: Int) : AutoCloseable {
         }
         val prob = FloatArray(plane)
         OnnxTensor.createTensor(env, FloatBuffer.wrap(input), longArrayOf(1, 3, h.toLong(), w.toLong())).use { x ->
-            det.run(mapOf("x" to x)).use { (it[0] as OnnxTensor).floatBuffer.get(prob) }
+            det!!.run(mapOf("x" to x)).use { (it[0] as OnnxTensor).floatBuffer.get(prob) }
         }
         return boxes(prob, w, h, image.width.toFloat() / w, image.height.toFloat() / h)
     }
@@ -288,14 +297,66 @@ class TextReader(dir: File, threads: Int) : AutoCloseable {
     }
 
     override fun close() {
-        det.close()
+        gpuDet?.close()
+        det?.close()
         rec.close()
         options.close()
+    }
+
+    /**
+     * The GPU takes one fixed input size, so every photo goes into a [GpuSide] square: scaled
+     * to fit (never up), top-left, the rest left at 0 (the mean colour after normalizing), where
+     * nothing is ever found.
+     */
+    private class GpuDetector(file: File) : AutoCloseable {
+        private val environment = Environment.create()
+        private val model = CompiledModel.create(
+            file.path,
+            CompiledModel.Options(Accelerator.GPU).apply {
+                gpuOptions = CompiledModel.GpuOptions(precision = CompiledModel.GpuOptions.Precision.FP32)
+            },
+            environment,
+        )
+        private val inputs = model.createInputBuffers(0)
+        private val outputs = model.createOutputBuffers(0)
+        private val input = FloatArray(GpuSide * GpuSide * 3)
+
+        /** The text map and the scale the image went in at. */
+        fun run(image: Bitmap): Pair<FloatArray, Float> {
+            val scale = minOf(1f, GpuSide.toFloat() / maxOf(image.width, image.height))
+            val w = maxOf(1, (image.width * scale).roundToInt())
+            val h = maxOf(1, (image.height * scale).roundToInt())
+            val scaled = Bitmap.createScaledBitmap(image, w, h, true)
+            val argb = IntArray(w * h)
+            scaled.getPixels(argb, 0, w, 0, 0, w, h)
+            if (scaled !== image) scaled.recycle()
+            input.fill(0f)
+            // NHWC, BGR, ImageNet's mean and spread, as on the CPU.
+            for (y in 0 until h) for (x in 0 until w) {
+                val p = argb[y * w + x]
+                val o = (y * GpuSide + x) * 3
+                input[o] = ((p and 0xFF) / 255f - 0.485f) / 0.229f
+                input[o + 1] = ((p shr 8 and 0xFF) / 255f - 0.456f) / 0.224f
+                input[o + 2] = ((p shr 16 and 0xFF) / 255f - 0.406f) / 0.225f
+            }
+            inputs[0].writeFloat(input)
+            model.run(inputs, outputs, 0)
+            return outputs[0].readFloat() to scale
+        }
+
+        override fun close() {
+            inputs.forEach { it.close() }
+            outputs.forEach { it.close() }
+            model.close()
+            environment.close()
+        }
     }
 
     private companion object {
         /** Long side for detection: chat text reads the same at 960 as at full size, ~7× faster. */
         const val DetMaxSide = 960
+        /** The GPU model's fixed input: [DetMaxSide] square. */
+        const val GpuSide = 960
         const val BinThresh = 0.2f
         const val BoxThresh = 0.45
         const val Unclip = 1.4

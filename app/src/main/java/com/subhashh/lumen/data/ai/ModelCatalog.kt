@@ -95,6 +95,9 @@ object OcrModel {
     )
     val bytes: Long get() = files.sumOf { it.bytes }
 
+    /** Detection for LiteRT's GPU, 960×960 (tools/ocr/README.md); used where [GpuCheck] passes. */
+    const val DetGpu = "det_gpu.tflite"
+
     fun dir(context: Context) = File(context.noBackupFilesDir, "models/ppocrv6-small")
 
     fun installed(context: Context): Boolean = files.all { File(dir(context), it.name).length() == it.bytes }

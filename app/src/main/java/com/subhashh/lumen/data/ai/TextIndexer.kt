@@ -27,7 +27,11 @@ class TextIndexer(private val context: Context) {
         if (todo.isEmpty()) return Indexer.Outcome.Done
 
         val power = context.getSystemService(PowerManager::class.java)
-        TextReader(OcrModel.dir(context), Threads).use { reader ->
+        val gpu = GpuCheck.useGpu(
+            context, GpuCheck.Target("ppocrv6-det", java.io.File(OcrModel.dir(context), OcrModel.DetGpu), 960 * 960 * 3),
+        )
+        Log.i(Tag, "Reading text with detection on the ${if (gpu) "GPU" else "CPU"}")
+        TextReader(OcrModel.dir(context), Threads, gpu).use { reader ->
             for ((n, item) in todo.withIndex()) {
                 if (n >= limit) return Indexer.Outcome.Partial
                 coroutineContext.ensureActive()

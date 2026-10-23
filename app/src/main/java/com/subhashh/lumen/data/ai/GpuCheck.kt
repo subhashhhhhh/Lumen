@@ -30,22 +30,35 @@ object GpuCheck {
     private const val Tag = "LumenGpu"
     private const val Timeout = 120_000L
 
-    private fun file(context: Context, model: AiModel) = File(context.noBackupFilesDir, "gpu-check-${model.id}.txt")
+    /** A LiteRT model to check: [id] names its result file; [inputs] floats of test input. */
+    class Target(val id: String, val file: File, val inputs: Int)
+
+    private fun target(context: Context, model: AiModel) =
+        Target(model.id, File(model.dir(context), model.spec.visualFile), 3 * model.spec.size * model.spec.size)
+
+    private fun file(context: Context, id: String) = File(context.noBackupFilesDir, "gpu-check-$id.txt")
 
     /** Results only hold for the system build they were taken on (drivers change with updates). */
     private val build get() = Build.FINGERPRINT
 
     /** True when [model] should run on the GPU. Checks on first call (up to two minutes). */
-    suspend fun useGpu(context: Context, model: AiModel): Boolean {
-        if (!model.spec.visualFile.endsWith(".tflite")) return false
-        val file = file(context, model)
+    suspend fun useGpu(context: Context, model: AiModel): Boolean =
+        model.spec.visualFile.endsWith(".tflite") && useGpu(context, target(context, model))
+
+    /** True when [target] should run on the GPU. Checks on first call (up to two minutes). */
+    suspend fun useGpu(context: Context, target: Target): Boolean {
+        if (!target.file.isFile) return false
+        val file = file(context, target.id)
         read(file)?.let { return it }
         file.delete()
         val connection = object : ServiceConnection {
             override fun onServiceConnected(name: ComponentName?, service: IBinder?) = Unit
             override fun onServiceDisconnected(name: ComponentName?) = Unit
         }
-        val intent = Intent(context, GpuCheckService::class.java).putExtra(GpuCheckService.ExtraModel, model.id)
+        val intent = Intent(context, GpuCheckService::class.java)
+            .putExtra(GpuCheckService.ExtraId, target.id)
+            .putExtra(GpuCheckService.ExtraPath, target.file.path)
+            .putExtra(GpuCheckService.ExtraInputs, target.inputs)
         if (!context.bindService(intent, connection, Context.BIND_AUTO_CREATE)) return false
         try {
             val start = SystemClock.elapsedRealtime()
@@ -55,7 +68,7 @@ object GpuCheck {
             }
             // Never answered: the check crashed or hung. Remember, so it isn't retried every run.
             file.writeText("fail\n$build\n")
-            Log.w(Tag, "GPU check for ${model.id} didn't finish; using the CPU")
+            Log.w(Tag, "GPU check for ${target.id} didn't finish; using the CPU")
             return false
         } finally {
             runCatching { context.unbindService(connection) }
@@ -74,19 +87,19 @@ object GpuCheck {
     }
 
     /** Runs in the `:gpucheck` process. */
-    internal fun run(context: Context, model: AiModel) {
-        val file = file(context, model)
+    internal fun run(context: Context, target: Target) {
+        val file = file(context, target.id)
         file.writeText("running\n$build\n")
         val ok = try {
-            val path = File(model.dir(context), model.spec.visualFile).path
-            val input = FloatArray(3 * model.spec.size * model.spec.size) { i -> ((i * 7919) % 2000) / 1000f - 1f }
+            val path = target.file.path
+            val input = FloatArray(target.inputs) { i -> ((i * 7919) % 2000) / 1000f - 1f }
             val gpu = infer(path, Accelerator.GPU, input)
             val cpu = infer(path, Accelerator.CPU, input)
             val agreement = cosine(gpu, cpu)
-            Log.i(Tag, "GPU check ${model.id}: agreement $agreement")
+            Log.i(Tag, "GPU check ${target.id}: agreement $agreement")
             agreement >= 0.99f
         } catch (e: Throwable) {
-            Log.w(Tag, "GPU check ${model.id} failed", e)
+            Log.w(Tag, "GPU check ${target.id} failed", e)
             false
         }
         file.writeText("${if (ok) "ok" else "fail"}\n$build\n")
@@ -130,12 +143,18 @@ object GpuCheck {
 /** Hosts [GpuCheck.run] in a separate process, so a GPU driver crash can't take Lumen down. */
 class GpuCheckService : Service() {
     override fun onBind(intent: Intent): IBinder {
-        val model = ModelCatalog.byId(intent.getStringExtra(ExtraModel))
-        Thread { GpuCheck.run(applicationContext, model) }.start()
+        val target = GpuCheck.Target(
+            intent.getStringExtra(ExtraId)!!,
+            File(intent.getStringExtra(ExtraPath)!!),
+            intent.getIntExtra(ExtraInputs, 0),
+        )
+        Thread { GpuCheck.run(applicationContext, target) }.start()
         return Binder()
     }
 
     companion object {
-        const val ExtraModel = "model"
+        const val ExtraId = "id"
+        const val ExtraPath = "path"
+        const val ExtraInputs = "inputs"
     }
 }
