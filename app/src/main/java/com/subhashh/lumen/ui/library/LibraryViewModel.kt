@@ -53,14 +53,18 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
     /** Raw scan result, excluded folders included (Settings counts them); null until loaded. */
     val hiddenAll: StateFlow<List<MediaItem>?> = _hiddenAll.asStateFlow()
 
-    /** What's in the encrypted vault (Settings → Encrypt Hidden), while it's open. */
-    private val _vault = MutableStateFlow<List<MediaItem>>(emptyList())
+    /**
+     * What's in the encrypted vault (Settings → Encrypt Hidden), while it's open. Null while it's
+     * open but not listed yet: Hidden then says it's unlocking, never "nothing hidden".
+     */
+    private val _vault = MutableStateFlow<List<MediaItem>?>(emptyList())
 
     /**
      * Hidden photos and videos, Fossify-style and encrypted together, minus excluded folders.
      * Null until first loaded (only once Hidden opens).
      */
     val hidden: StateFlow<List<MediaItem>?> = combine(_hiddenAll, _vault, _excluded) { all, vault, excluded ->
+        if (vault == null) return@combine null
         all?.let { list ->
             val both = if (vault.isEmpty()) list else (list + vault).sortedWith(compareBy<MediaItem> { it.takenAt }.thenBy { it.id })
             if (excluded.isEmpty()) both else both.filterNot { ExcludedFolders.covers(excluded, it) }
@@ -69,7 +73,7 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
 
     /** Re-reads the vault (after adding, restoring or deleting); empty while it's closed. */
     fun loadVault() {
-        viewModelScope.launch { _vault.value = Vault.list() }
+        viewModelScope.launch { _vault.value = Vault.list(getApplication()) }
     }
 
     /** Hidden locked: drop the vault's items along with its key. */
@@ -85,10 +89,20 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
      */
     fun loadHidden() {
         hiddenScan?.cancel()
+        val app = getApplication<Application>()
+        // The vault, alongside the storage scan: its cached list at once (null meanwhile, so
+        // Hidden shows "unlocking", not "nothing hidden"), then the folder checked for changes.
+        if (Vault.isOpen) {
+            viewModelScope.launch {
+                if (_vault.value.isNullOrEmpty()) {
+                    _vault.value = null
+                    Vault.listCached(app)?.let { _vault.value = it }
+                }
+                _vault.value = Vault.list(app)
+            }
+        }
         hiddenScan = viewModelScope.launch {
-            val app = getApplication<Application>()
             if (_hiddenAll.value == null) _hiddenAll.value = HiddenIndex.load(app)
-            _vault.value = Vault.list()
             // Unchanged files keep the sizes already read, so they compare equal and nothing redraws.
             val known = _hiddenAll.value.orEmpty().associateBy { it.uri.path }
             val found = HiddenMedia.scan().map { item ->

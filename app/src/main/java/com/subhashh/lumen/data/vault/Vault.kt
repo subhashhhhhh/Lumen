@@ -40,7 +40,7 @@ object Vault {
     private var key: SecretKey? = null
 
     /** Headers already read, by vault file name and size: listing doesn't re-decrypt them. */
-    private val listed = HashMap<String, MediaItem>()
+    private val listed = HashMap<String, Pair<MediaItem, Details>>()
 
     val isOpen: Boolean get() = key != null
 
@@ -98,16 +98,62 @@ object Vault {
     }
 
     /** Everything in the vault, oldest first. Empty while it's closed. */
-    suspend fun list(): List<MediaItem> = withContext(Dispatchers.IO) {
+    suspend fun list(context: Context? = null): List<MediaItem> = withContext(Dispatchers.IO) {
         val k = key ?: return@withContext emptyList()
         val files = dir().listFiles { f -> f.isFile && f.name.endsWith(Extension) }.orEmpty()
-        files.mapNotNull { f ->
+        val entries = files.mapNotNull { f ->
             val cacheKey = "${f.name}:${f.length()}"
-            synchronized(listed) { listed[cacheKey] }?.let { return@mapNotNull it }
-            runCatching { Details.parse(VaultCrypto.readHeader(k, f)).toItem(f) }.getOrNull()
+            synchronized(listed) { listed[cacheKey] }?.let { return@mapNotNull Triple(f, cacheKey, it) }
+            runCatching { Details.parse(VaultCrypto.readHeader(k, f)) }.getOrNull()
+                ?.let { details -> details.toItem(f) to details }
                 ?.also { synchronized(listed) { listed[cacheKey] = it } }
-        }.sortedWith(compareBy<MediaItem> { it.takenAt }.thenBy { it.id })
+                ?.let { Triple(f, cacheKey, it) }
+        }
+        if (context != null) saveIndex(context, k, entries.map { (f, _, pair) -> f to pair.second })
+        entries.map { it.third.first }
+            .sortedWith(compareBy<MediaItem> { it.takenAt }.thenBy { it.id })
             .also(VaultIndex::update)
+    }
+
+    /**
+     * The list as last seen, from an index sealed with the vault's own key in Lumen's private
+     * storage: one small decryption instead of reading every file, so Hidden opens instantly.
+     * [list] then checks the folder for anything added or removed. Null when there's no index.
+     */
+    suspend fun listCached(context: Context): List<MediaItem>? = withContext(Dispatchers.IO) {
+        val k = key ?: return@withContext null
+        val index = indexFile(context)
+        if (!index.exists()) return@withContext null
+        runCatching {
+            val array = org.json.JSONArray(VaultCrypto.open(k, index.readBytes()).decodeToString())
+            (0 until array.length()).map { i ->
+                val entry = array.getJSONObject(i)
+                val f = File(dir(), entry.getString("file"))
+                val details = Details.parse(entry.getString("details").toByteArray())
+                val item = details.toItem(f)
+                synchronized(listed) { listed["${f.name}:${entry.getLong("length")}"] = item to details }
+                item
+            }.sortedWith(compareBy<MediaItem> { it.takenAt }.thenBy { it.id }).also(VaultIndex::update)
+        }.getOrNull()
+    }
+
+    private fun indexFile(context: Context) = File(context.noBackupFilesDir, "vault_index.bin")
+
+    private fun saveIndex(context: Context, k: SecretKey, entries: List<Pair<File, Details>>) {
+        runCatching {
+            val array = org.json.JSONArray()
+            for ((f, details) in entries) {
+                array.put(
+                    JSONObject()
+                        .put("file", f.name)
+                        .put("length", f.length())
+                        .put("details", details.toJson().decodeToString()),
+                )
+            }
+            val temp = File(context.noBackupFilesDir, "vault_index.tmp")
+            temp.writeBytes(VaultCrypto.seal(k, array.toString().toByteArray()))
+            temp.renameTo(indexFile(context))
+        }
     }
 
     /**

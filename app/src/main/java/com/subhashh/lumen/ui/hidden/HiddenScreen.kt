@@ -1,5 +1,9 @@
 package com.subhashh.lumen.ui.hidden
 
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -71,6 +75,8 @@ fun HiddenScreen(
     /** Selected folder keys while selecting; null when not in selection mode. */
     selection: Set<String>?,
     onSelectionChange: (Set<String>?) -> Unit,
+    /** Encrypt Hidden is on: loading means unlocking the vault, and says so. */
+    encrypted: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val colors = MaterialTheme.colorScheme
@@ -90,9 +96,17 @@ fun HiddenScreen(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            CircularProgressIndicator(Modifier.size(28.dp), strokeWidth = 2.5.dp)
-            Spacer(Modifier.height(14.dp))
-            Text("Looking for hidden photos…", color = colors.onBackground.copy(alpha = 0.6f), fontSize = 15.sp)
+            if (encrypted) {
+                UnlockingVault()
+                Spacer(Modifier.height(18.dp))
+                Text("Unlocking your vault…", color = colors.onBackground, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.height(4.dp))
+                Text("Your files are safe; they're just encrypted.", color = colors.onBackground.copy(alpha = 0.55f), fontSize = 13.sp)
+            } else {
+                CircularProgressIndicator(Modifier.size(28.dp), strokeWidth = 2.5.dp)
+                Spacer(Modifier.height(14.dp))
+                Text("Looking for hidden photos…", color = colors.onBackground.copy(alpha = 0.6f), fontSize = 15.sp)
+            }
         }
         folders.isEmpty() -> Box(modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
             Text(
@@ -124,5 +138,45 @@ fun HiddenScreen(
                 )
             }
         }
+    }
+}
+
+/** A lock in a slowly turning ring: the vault opening, calmly. */
+@Composable
+private fun UnlockingVault() {
+    val reduce = com.subhashh.lumen.ui.theme.LocalMotion.current.reduce
+    val spin = androidx.compose.animation.core.rememberInfiniteTransition(label = "vaultUnlock")
+    val angle by spin.animateFloat(
+        0f, 360f,
+        androidx.compose.animation.core.infiniteRepeatable(
+            androidx.compose.animation.core.tween(1600, easing = androidx.compose.animation.core.LinearEasing),
+        ),
+        label = "unlockAngle",
+    )
+    val accent = androidx.compose.ui.graphics.Color(0xFF30D158)
+    val track = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f)
+    Box(Modifier.size(88.dp), contentAlignment = Alignment.Center) {
+        androidx.compose.foundation.Canvas(
+            Modifier
+                .fillMaxSize()
+                .graphicsLayer { rotationZ = if (reduce) 0f else angle },
+        ) {
+            val stroke = 5.dp.toPx()
+            val inset = stroke / 2
+            val arc = androidx.compose.ui.geometry.Size(size.width - stroke, size.height - stroke)
+            val topLeft = androidx.compose.ui.geometry.Offset(inset, inset)
+            drawArc(track, 0f, 360f, false, topLeft, arc, style = androidx.compose.ui.graphics.drawscope.Stroke(stroke))
+            drawArc(
+                androidx.compose.ui.graphics.Brush.sweepGradient(listOf(androidx.compose.ui.graphics.Color.Transparent, accent)),
+                0f, 300f, false, topLeft, arc,
+                style = androidx.compose.ui.graphics.drawscope.Stroke(stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round),
+            )
+        }
+        androidx.compose.material3.Icon(
+            com.subhashh.lumen.ui.icons.LumenIcons.Lock,
+            contentDescription = null,
+            tint = accent,
+            modifier = Modifier.size(32.dp),
+        )
     }
 }

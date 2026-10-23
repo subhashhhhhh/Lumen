@@ -1147,6 +1147,7 @@ private fun MainScaffold(
                     }
                 }
                 openCollection == CollectionKeys.Hidden -> HiddenScreen(
+                    encrypted = encryptHidden,
                     folders = hiddenFolderList,
                     gridState = hiddenGrid,
                     title = albumSelection?.let { albumSelectionTitle(it.size, "Folder") } ?: "Hidden",
