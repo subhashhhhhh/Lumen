@@ -3,6 +3,7 @@ package com.subhashh.lumen.data
 import android.content.ContentUris
 import android.content.Context
 import android.os.Bundle
+import android.media.MediaFormat
 import android.provider.MediaStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -33,6 +34,7 @@ class MediaRepository(private val context: Context) {
             MediaStore.MediaColumns.ORIENTATION,
             MediaStore.MediaColumns.DISPLAY_NAME,
             MediaStore.MediaColumns.SIZE,
+            MediaStore.Video.VideoColumns.COLOR_TRANSFER,
         )
         // MediaStore classifies TypeScript sources (.ts) as MPEG-TS video. Real transport streams
         // get a duration when scanned; source files never do, so drop mp2ts rows without one.
@@ -72,6 +74,7 @@ class MediaRepository(private val context: Context) {
             val orientationCol = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.ORIENTATION)
             val nameCol = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DISPLAY_NAME)
             val sizeCol = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.SIZE)
+            val transferCol = cursor.getColumnIndexOrThrow(MediaStore.Video.VideoColumns.COLOR_TRANSFER)
 
             while (cursor.moveToNext()) {
                 val id = cursor.getLong(idCol)
@@ -102,6 +105,10 @@ class MediaRepository(private val context: Context) {
                     modified = cursor.getLong(modifiedCol),
                     name = cursor.getString(nameCol).orEmpty(),
                     size = cursor.getLong(sizeCol),
+                    // ST 2084 (PQ) or HLG, as MediaFormat numbers them.
+                    hdrVideo = isVideo && cursor.getInt(transferCol).let {
+                        it == MediaFormat.COLOR_TRANSFER_ST2084 || it == MediaFormat.COLOR_TRANSFER_HLG
+                    },
                 )
             }
         }

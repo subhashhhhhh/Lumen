@@ -37,6 +37,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.media3.common.Player
 import androidx.media3.ui.compose.ContentFrame
 import androidx.media3.ui.compose.SURFACE_TYPE_TEXTURE_VIEW
+import androidx.media3.ui.compose.SURFACE_TYPE_SURFACE_VIEW
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.subhashh.lumen.data.MediaItem
@@ -92,8 +93,10 @@ fun VideoPage(
         if (player != null) {
             ContentFrame(
                 player = player,
-                // TextureView, not SurfaceView, so the frame follows swipe-to-dismiss transforms.
-                surfaceType = SURFACE_TYPE_TEXTURE_VIEW,
+                // TextureView follows every swipe-to-dismiss transform but always shows standard
+                // range, squashing HDR video flat. HDR video gets a SurfaceView, the only surface
+                // Android shows HDR on; it tracks moves and scaling too (Android 7+).
+                surfaceType = if (item.hdrVideo) SURFACE_TYPE_SURFACE_VIEW else SURFACE_TYPE_TEXTURE_VIEW,
                 contentScale = ContentScale.Fit,
                 modifier = frame,
                 shutter = { StillFrame(item) },

@@ -26,4 +26,6 @@ data class MediaItem(
     val name: String = "",
     /** Bytes; 0 when unknown. For sorting by size. */
     val size: Long = 0,
+    /** HDR video (PQ or HLG: HDR10, HDR10+, Dolby Vision's base layer, HLG). */
+    val hdrVideo: Boolean = false,
 )
