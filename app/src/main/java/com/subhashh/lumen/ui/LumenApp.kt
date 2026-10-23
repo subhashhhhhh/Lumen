@@ -28,6 +28,7 @@ import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -258,7 +259,8 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
 
     val viewerOpen = viewerSource != null
     val inCollection = tab == LumenTab.Collections && openCollection != null && !searching
-    val inSettings = tab == LumenTab.Collections && settingsPage != null && !searching
+    // Settings opens from either tab and covers it; Back returns to where it was opened.
+    val inSettings = settingsPage != null && !searching
     val popSettings = { settingsPage = if (settingsPage == SettingsLicenses) SettingsMain else null }
     BackHandler(enabled = searching && !viewerOpen) { searching = false }
     BackHandler(enabled = inCollection && !viewerOpen) { openCollection = null }
@@ -392,6 +394,13 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
             when {
                 searching -> SearchScreen()
                 library == null -> Unit
+                settingsPage == SettingsLicenses -> LicensesScreen(
+                    contentPadding = PaddingValues(top = statusTop + 72.dp, bottom = navBottom + 96.dp),
+                )
+                settingsPage == SettingsMain -> SettingsScreen(
+                    contentPadding = PaddingValues(top = statusTop + 72.dp, bottom = navBottom + 96.dp),
+                    onOpenLicenses = { settingsPage = SettingsLicenses },
+                )
                 tab == LumenTab.Library -> Box(Modifier.nestedScroll(zoomBarScroll)) {
                     LibraryScreen(
                         title = selection?.let { selectionTitle(selectedItems) } ?: "Library",
@@ -441,13 +450,6 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                         }
                     }
                 }
-                settingsPage == SettingsLicenses -> LicensesScreen(
-                    contentPadding = PaddingValues(top = statusTop + 72.dp, bottom = navBottom + 96.dp),
-                )
-                settingsPage == SettingsMain -> SettingsScreen(
-                    contentPadding = PaddingValues(top = statusTop + 72.dp, bottom = navBottom + 96.dp),
-                    onOpenLicenses = { settingsPage = SettingsLicenses },
-                )
                 openCollection != null -> {
                     val key = openCollection!!
                     LibraryScreen(
@@ -491,19 +493,29 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
             )
         }
 
-        if (tab == LumenTab.Library && !searching && selection == null && !viewerOpen) {
-            GlassIconButton(
-                backdrop = backdrop,
-                icon = LumenIcons.Filter,
-                contentDescription = "View options",
-                onClick = { menuOpen = !menuOpen },
-                // Blue while a filter is on, like iOS, so a filtered library is never a surprise.
-                tint = if (filter != LibraryFilter.All) MaterialTheme.colorScheme.primary else LocalGlassColors.current.content,
+        if (tab == LumenTab.Library && !searching && selection == null && !viewerOpen && settingsPage == null) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .statusBarsPadding()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
-            )
+            ) {
+                GlassIconButton(
+                    backdrop = backdrop,
+                    icon = LumenIcons.Filter,
+                    contentDescription = "View options",
+                    onClick = { menuOpen = !menuOpen },
+                    // Blue while a filter is on, like iOS, so a filtered library is never a surprise.
+                    tint = if (filter != LibraryFilter.All) MaterialTheme.colorScheme.primary else LocalGlassColors.current.content,
+                )
+                GlassIconButton(
+                    backdrop = backdrop,
+                    icon = LumenIcons.Settings,
+                    contentDescription = "Settings",
+                    onClick = { settingsPage = SettingsMain },
+                )
+            }
         }
 
         if (tab == LumenTab.Collections && openCollection == null && settingsPage == null && !searching && !viewerOpen) {
@@ -549,10 +561,9 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                 selected = tab.takeUnless { searching },
                 onSelect = { selected ->
                     // Tapping the current tab again pops back to its root, like iOS.
-                    if (selected == tab && !searching) {
-                        openCollection = null
-                        settingsPage = null
-                    }
+                    if (selected == tab && !searching) openCollection = null
+                    // Settings covers whichever tab opened it; any tab tap leaves it.
+                    settingsPage = null
                     tab = selected
                     searching = false
                 },
@@ -574,7 +585,7 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
 
         ViewMenu(
             backdrop = backdrop,
-            open = menuOpen && tab == LumenTab.Library && !viewerOpen,
+            open = menuOpen && tab == LumenTab.Library && !viewerOpen && settingsPage == null,
             onDismiss = { menuOpen = false },
             filter = filter,
             onFilter = {
