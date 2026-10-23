@@ -2,6 +2,7 @@ package com.subhashh.lumen.data
 
 import android.content.Context
 import androidx.core.content.edit
+import com.subhashh.lumen.ui.theme.Appearance
 
 /** Small persisted view preferences. */
 class LumenPrefs(context: Context) {
@@ -33,7 +34,14 @@ class LumenPrefs(context: Context) {
         get() = prefs.getStringSet(KeyExcluded, emptySet()).orEmpty().toSet()
         set(value) = prefs.edit { putStringSet(KeyExcluded, value) }
 
+    var appearance: Appearance
+        get() = prefs.getString(KeyAppearance, null)
+            ?.let { name -> Appearance.entries.firstOrNull { it.name == name } }
+            ?: Appearance.System
+        set(value) = prefs.edit { putString(KeyAppearance, value.name) }
+
     private companion object {
+        const val KeyAppearance = "appearance"
         const val KeyExcluded = "excluded_folders"
         const val KeyColumns = "grid_columns"
         const val KeyAlbumColumns = "album_columns"

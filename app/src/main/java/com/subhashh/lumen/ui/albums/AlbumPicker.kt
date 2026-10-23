@@ -11,7 +11,7 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.isSystemInDarkTheme
+import com.subhashh.lumen.ui.theme.LocalDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -67,7 +67,7 @@ data class AlbumTarget(val relativePath: String, val title: String)
 private data class PickerColors(val sheet: Color, val row: Color, val text: Color, val secondary: Color)
 
 @Composable
-private fun pickerColors() = if (isSystemInDarkTheme()) {
+private fun pickerColors() = if (LocalDarkTheme.current) {
     PickerColors(Color(0xFF1C1C1E), Color(0xFF2C2C2E), Color.White, Color(0x99EBEBF5))
 } else {
     PickerColors(Color(0xFFF2F2F7), Color.White, Color.Black, Color(0x993C3C43))

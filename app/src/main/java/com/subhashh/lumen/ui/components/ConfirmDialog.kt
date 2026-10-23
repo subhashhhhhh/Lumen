@@ -10,7 +10,7 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.isSystemInDarkTheme
+import com.subhashh.lumen.ui.theme.LocalDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -62,7 +62,7 @@ fun ConfirmDialog(confirmation: Confirmation?, onDismiss: () -> Unit) {
         exit = fadeOut(tween(120)),
     ) {
         val c = confirmation ?: return@AnimatedVisibility
-        val dark = isSystemInDarkTheme()
+        val dark = LocalDarkTheme.current
         val card = if (dark) Color(0xFF2C2C2E) else Color.White
         val text = if (dark) Color.White else Color.Black
         val secondary = if (dark) Color(0x99EBEBF5) else Color(0x993C3C43)

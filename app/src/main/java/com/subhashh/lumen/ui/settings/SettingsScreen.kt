@@ -10,7 +10,9 @@ import android.provider.MediaStore
 import android.provider.Settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
+import com.subhashh.lumen.ui.theme.LocalDarkTheme
+import com.subhashh.lumen.ui.theme.Appearance
+import com.subhashh.lumen.ui.theme.LocalAppearance
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
@@ -51,7 +53,7 @@ import com.subhashh.lumen.ui.icons.LumenIcons
 internal data class GroupColors(val card: Color, val text: Color, val secondary: Color, val divider: Color)
 
 @Composable
-internal fun groupColors(): GroupColors = if (isSystemInDarkTheme()) {
+internal fun groupColors(): GroupColors = if (LocalDarkTheme.current) {
     GroupColors(Color(0xFF1C1C1E), Color.White, Color(0x99EBEBF5), Color(0x33EBEBF5))
 } else {
     GroupColors(Color(0xFFF2F2F7), Color.Black, Color(0x993C3C43), Color(0x333C3C43))
@@ -87,6 +89,14 @@ fun SettingsScreen(
             .padding(horizontal = 16.dp),
     ) {
         LargeTitle("Settings")
+
+        val appearance = LocalAppearance.current
+        Group("Appearance") {
+            Appearance.entries.forEachIndexed { i, option ->
+                if (i > 0) Divider()
+                CheckRow(option.label, checked = option == appearance.current) { appearance.onChange(option) }
+            }
+        }
 
         Group("Permissions", footer = "Lumen works without these; they unlock the features named.") {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -239,6 +249,25 @@ internal fun SettingsRow(
                     .size(16.dp)
                     .graphicsLayer { rotationZ = 180f },
             )
+        }
+    }
+}
+
+/** A row in a pick-one group: the chosen one gets a checkmark, like iOS. */
+@Composable
+private fun CheckRow(title: String, checked: Boolean, onClick: () -> Unit) {
+    val colors = groupColors()
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .heightIn(min = 52.dp)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(title, fontSize = 16.sp, color = colors.text, modifier = Modifier.weight(1f))
+        if (checked) {
+            Icon(LumenIcons.Check, contentDescription = "Selected", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
         }
     }
 }

@@ -4,7 +4,7 @@ import com.subhashh.lumen.ui.icons.LumenIcons
 import android.text.format.Formatter
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
+import com.subhashh.lumen.ui.theme.LocalDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -53,7 +53,7 @@ import kotlin.math.roundToInt
 private data class SheetColors(val sheet: Color, val card: Color, val text: Color, val secondary: Color)
 
 @Composable
-private fun sheetColors() = if (isSystemInDarkTheme()) {
+private fun sheetColors() = if (LocalDarkTheme.current) {
     SheetColors(Color(0xFF1C1C1E), Color(0xFF2C2C2E), Color.White, Color(0x99EBEBF5))
 } else {
     SheetColors(Color(0xFFF2F2F7), Color.White, Color.Black, Color(0x993C3C43))

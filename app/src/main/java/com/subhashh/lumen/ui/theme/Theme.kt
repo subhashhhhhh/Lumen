@@ -37,6 +37,18 @@ private val LightGlass = GlassColors(
 
 val LocalGlassColors = staticCompositionLocalOf { DarkGlass }
 
+/** Whether Lumen is drawing dark, which can differ from the phone (Settings → Appearance). */
+val LocalDarkTheme = staticCompositionLocalOf { true }
+
+/** Settings → Appearance: follow the phone, or always light or dark. */
+enum class Appearance(val label: String) { System("Match Phone"), Light("Light"), Dark("Dark") }
+
+/** The chosen [Appearance] and how to change it, for the Settings screen. */
+@Immutable
+class AppearanceSetting(val current: Appearance, val onChange: (Appearance) -> Unit)
+
+val LocalAppearance = staticCompositionLocalOf { AppearanceSetting(Appearance.System) {} }
+
 private val DarkScheme = darkColorScheme(
     primary = Color(0xFF0A84FF),
     background = Color.Black,
@@ -60,6 +72,7 @@ fun LumenTheme(
 ) {
     androidx.compose.runtime.CompositionLocalProvider(
         LocalGlassColors provides if (darkTheme) DarkGlass else LightGlass,
+        LocalDarkTheme provides darkTheme,
     ) {
         MaterialTheme(
             colorScheme = if (darkTheme) DarkScheme else LightScheme,
