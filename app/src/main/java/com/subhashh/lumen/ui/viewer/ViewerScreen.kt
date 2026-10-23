@@ -1,5 +1,8 @@
 package com.subhashh.lumen.ui.viewer
 
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.runtime.mutableFloatStateOf
+import com.subhashh.lumen.data.LumenPrefs
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import com.subhashh.lumen.ui.icons.LumenIcons
@@ -663,6 +666,9 @@ private fun VideoControls(backdrop: Backdrop, player: Player) {
     var position by remember { mutableLongStateOf(0L) }
     var duration by remember { mutableLongStateOf(0L) }
     var scrubbing by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    var muted by remember(player) { mutableStateOf(player.volume == 0f) }
+    var speed by remember(player) { mutableFloatStateOf(player.playbackParameters.speed) }
 
     LaunchedEffect(player) {
         while (true) {
@@ -676,7 +682,7 @@ private fun VideoControls(backdrop: Backdrop, player: Player) {
         Modifier
             .fillMaxWidth()
             .glass(backdrop, shape = RoundedCornerShape(50))
-            .padding(start = 4.dp, end = 16.dp),
+            .padding(start = 4.dp, end = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
@@ -712,8 +718,43 @@ private fun VideoControls(backdrop: Backdrop, player: Player) {
                 .padding(horizontal = 10.dp),
         )
         Text("-" + formatClock(duration - position), color = colors.content, fontSize = 12.sp)
+        // Speed cycles 1× → 1.25× → 1.5× → 2× → 0.5× and stays for the rest of the viewer.
+        Text(
+            formatSpeed(speed),
+            color = colors.content,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.SemiBold,
+            textAlign = TextAlign.Center,
+            modifier = Modifier
+                .padding(start = 10.dp)
+                .width(42.dp)
+                .pressable({
+                    val next = Speeds[(Speeds.indexOf(speed) + 1).mod(Speeds.size)]
+                    player.setPlaybackSpeed(next)
+                    speed = next
+                }, pressedScale = 0.85f)
+                .padding(vertical = 10.dp),
+        )
+        Icon(
+            imageVector = if (muted) LumenIcons.Muted else LumenIcons.Sound,
+            contentDescription = if (muted) "Unmute" else "Mute",
+            tint = colors.content,
+            modifier = Modifier
+                .size(36.dp)
+                .pressable({
+                    muted = !muted
+                    player.volume = if (muted) 0f else 1f
+                    LumenPrefs(context).videoMuted = muted
+                }, pressedScale = 0.8f)
+                .padding(7.dp),
+        )
     }
 }
+
+private val Speeds = listOf(1f, 1.25f, 1.5f, 2f, 0.5f)
+
+private fun formatSpeed(speed: Float): String =
+    (if (speed == speed.toInt().toFloat()) speed.toInt().toString() else speed.toString().trimEnd('0')) + "×"
 
 /**
  * One player for the whole viewer, re-pointed at whichever page is current. Created only once a
@@ -735,12 +776,14 @@ private fun rememberViewerPlayer(current: MediaItem?): Player? {
     LaunchedEffect(current?.id) {
         val p = player
         if (current?.isVideo == true) {
-            val active = p ?: ExoPlayer.Builder(context).build()
-                .apply { repeatMode = Player.REPEAT_MODE_ONE }
-                .also { player = it }
+            // Read per video, so a change in Settings applies to the next one.
+            val prefs = LumenPrefs(context)
+            val active = p ?: ExoPlayer.Builder(context).build().also { player = it }
+            active.repeatMode = if (prefs.videoLoop) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
+            active.volume = if (prefs.videoMuted) 0f else 1f
             active.setMediaItem(PlayerMediaItem.fromUri(current.uri))
             active.prepare()
-            active.playWhenReady = true
+            active.playWhenReady = prefs.videoAutoplay
         } else if (p != null) {
             p.stop()
             p.clearMediaItems()

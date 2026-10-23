@@ -73,7 +73,25 @@ class LumenPrefs(context: Context) {
         get() = prefs.getBoolean(KeySortDescending, false)
         set(value) = prefs.edit { putBoolean(KeySortDescending, value) }
 
+    /** Videos start playing as soon as they're on screen. */
+    var videoAutoplay: Boolean
+        get() = prefs.getBoolean(KeyAutoplay, true)
+        set(value) = prefs.edit { putBoolean(KeyAutoplay, value) }
+
+    /** Videos start over when they end, instead of stopping. */
+    var videoLoop: Boolean
+        get() = prefs.getBoolean(KeyLoop, true)
+        set(value) = prefs.edit { putBoolean(KeyLoop, value) }
+
+    /** The mute button's last state, kept from video to video and across launches. */
+    var videoMuted: Boolean
+        get() = prefs.getBoolean(KeyMuted, false)
+        set(value) = prefs.edit { putBoolean(KeyMuted, value) }
+
     private companion object {
+        const val KeyAutoplay = "video_autoplay"
+        const val KeyLoop = "video_loop"
+        const val KeyMuted = "video_muted"
         const val KeySort = "library_sort"
         const val KeySortDescending = "library_sort_descending"
         const val KeyAlbumSort = "album_sort"

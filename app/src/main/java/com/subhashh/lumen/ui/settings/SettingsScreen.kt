@@ -1,5 +1,7 @@
 package com.subhashh.lumen.ui.settings
 
+import androidx.compose.runtime.mutableStateOf
+import com.subhashh.lumen.data.LumenPrefs
 import android.Manifest
 import android.content.Context
 import android.content.Intent
@@ -132,6 +134,31 @@ fun SettingsScreen(
             )
             Divider()
             SettingsRow(title = "Hidden", subtitle = "Hidden from every app, locked in Lumen", onClick = onOpenHidden)
+        }
+
+        val prefs = remember { LumenPrefs(context) }
+        var autoplay by remember { mutableStateOf(prefs.videoAutoplay) }
+        var loop by remember { mutableStateOf(prefs.videoLoop) }
+        Group("Videos") {
+            SettingsRow(
+                title = "Autoplay",
+                subtitle = "Start playing as soon as a video opens",
+                value = if (autoplay) "On" else "Off",
+                onClick = {
+                    autoplay = !autoplay
+                    prefs.videoAutoplay = autoplay
+                },
+            )
+            Divider()
+            SettingsRow(
+                title = "Loop",
+                subtitle = "Start over at the end instead of stopping",
+                value = if (loop) "On" else "Off",
+                onClick = {
+                    loop = !loop
+                    prefs.videoLoop = loop
+                },
+            )
         }
 
         Group("Hidden lock", footer = "Lumen's own lock for Hidden, separate from your phone's screen lock.") {

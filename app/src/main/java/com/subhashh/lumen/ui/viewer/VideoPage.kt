@@ -1,7 +1,25 @@
 package com.subhashh.lumen.ui.viewer
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Text
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -41,14 +59,33 @@ fun VideoPage(
     // knows the shape; once the player reports its own, that wins (MediaStore can be wrong).
     val playerAspect = player?.let { rememberVideoAspect(it) }
     val aspect = playerAspect ?: item.aspectRatio()
+    val haptics = LocalHapticFeedback.current
+    /** The last double-tap skip, for the "−10 s / +10 s" flash; a new id restarts it. */
+    var skip by remember { mutableStateOf<Skip?>(null) }
+    LaunchedEffect(skip) {
+        if (skip != null) {
+            delay(600)
+            skip = null
+        }
+    }
     Box(
         modifier
             .fillMaxSize()
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onTap,
-            ),
+            // Double-tap the left or right half to skip back or ahead 10 s, like YouTube. A single
+            // tap still shows or hides the controls (a beat later, to tell it from a double).
+            .pointerInput(player) {
+                detectTapGestures(
+                    onTap = { onTap() },
+                    onDoubleTap = { offset ->
+                        val p = player ?: return@detectTapGestures
+                        val back = offset.x < size.width / 2f
+                        val end = p.duration.takeIf { it > 0 } ?: Long.MAX_VALUE
+                        p.seekTo((p.currentPosition + if (back) -SkipMs else SkipMs).coerceIn(0L, end))
+                        haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                        skip = Skip(back, (skip?.id ?: 0) + 1)
+                    },
+                )
+            },
         contentAlignment = Alignment.Center,
     ) {
         val frame = if (aspect != null) Modifier.aspectRatio(aspect) else Modifier.fillMaxSize()
@@ -64,8 +101,34 @@ fun VideoPage(
         } else {
             Box(frame) { StillFrame(item) }
         }
+        val shown = skip
+        AnimatedVisibility(
+            visible = shown != null,
+            enter = fadeIn(tween(90)) + scaleIn(tween(160), initialScale = 0.8f),
+            exit = fadeOut(tween(250)),
+            modifier = Modifier.align(if (shown?.back != false) Alignment.CenterStart else Alignment.CenterEnd),
+        ) {
+            Box(
+                Modifier
+                    .padding(horizontal = 36.dp)
+                    .size(96.dp)
+                    .background(Color.Black.copy(alpha = 0.35f), CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    if (shown?.back != false) "−10 s" else "+10 s",
+                    color = Color.White,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+        }
     }
 }
+
+private data class Skip(val back: Boolean, val id: Int)
+
+private const val SkipMs = 10_000L
 
 private fun MediaItem.aspectRatio(): Float? =
     if (width > 0 && height > 0) width.toFloat() / height else null
