@@ -1,5 +1,7 @@
 package com.subhashh.lumen.ui.components
 
+import androidx.compose.animation.core.snap
+import com.subhashh.lumen.ui.theme.LocalMotion
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -82,7 +84,7 @@ fun GlassTabBar(
     // One value drives the whole morph: 0 = tabs, 1 = circle + Years / Months / All.
     val morph by animateFloatAsState(
         targetValue = if (showZoom && zoomLevel != null) 1f else 0f,
-        animationSpec = spring(dampingRatio = 0.8f, stiffness = 220f),
+        animationSpec = if (LocalMotion.current.reduce) snap() else spring(dampingRatio = 0.8f, stiffness = 220f),
         label = "tabMorph",
     )
 

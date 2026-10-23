@@ -1,5 +1,6 @@
 package com.subhashh.lumen.ui.viewer
 
+import com.subhashh.lumen.ui.theme.LocalMotion
 import android.view.WindowManager
 import com.subhashh.lumen.data.HdrMode
 import android.os.Build
@@ -185,7 +186,8 @@ fun ViewerScreen(
     // Slideshow: hides the chrome and advances on a timer (Settings → Slideshow: interval, slide
     // or fade, shuffle, repeat); any tap stops it.
     var slideshow by remember { mutableStateOf(slideshowOf != null) }
-    /** The pages' opacity, for the fade transition. */
+    val reduceMotion = LocalMotion.current.reduce
+    /** The pages' opacity, for the fade transition (always used with Reduce Motion). */
     val slideshowAlpha = remember { Animatable(1f) }
     LaunchedEffect(slideshow) {
         if (!slideshow) return@LaunchedEffect
@@ -206,7 +208,7 @@ fun ViewerScreen(
                     if (queue.isEmpty()) break
                 }
                 val next = queue.removeFirst()
-                if (prefs.slideshowFade) {
+                if (prefs.slideshowFade || reduceMotion) {
                     slideshowAlpha.animateTo(0f, tween(SlideshowFadeMs))
                     pager.scrollToPage(next)
                     slideshowAlpha.animateTo(1f, tween(SlideshowFadeMs))

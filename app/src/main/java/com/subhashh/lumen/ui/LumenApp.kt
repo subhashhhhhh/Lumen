@@ -260,6 +260,7 @@ private fun MainScaffold(
     val hiddenGrid = rememberLazyGridState()
     val scope = rememberCoroutineScope()
     val transition = remember { PhotoTransition() }
+    val reduceMotion = com.subhashh.lumen.ui.theme.LocalMotion.current.reduce
     var screenSize by remember { mutableStateOf(IntSize.Zero) }
     val viewerBackground = MaterialTheme.colorScheme.background
 
@@ -735,6 +736,12 @@ private fun MainScaffold(
         }
         if (transition.item != null) return@open
         val item = itemsOf(key).getOrNull(index) ?: return@open
+        // Reduce Motion: the viewer just appears, no flight out of the cell.
+        if (reduceMotion) {
+            viewerStart = index
+            viewerSource = key
+            return@open
+        }
         scope.launch {
             val target = fullScreenRect(item, screenSize.width.toFloat(), screenSize.height.toFloat())
             transition.open(item, target, viewerBackground)
@@ -1324,7 +1331,7 @@ private fun MainScaffold(
                     slideshowOf = null
                     val item = list.getOrNull(exit.index)
                     val from = exit.photoRect
-                    if (item != null && from != null) {
+                    if (item != null && from != null && !reduceMotion) {
                         // Same frame the viewer goes: the photo keeps flying from where it was.
                         transition.beginClose(item, from, exit.background, exit.backgroundAlpha)
                         scope.launch {

@@ -12,6 +12,7 @@
  */
 package com.subhashh.lumen.ui.components
 
+import com.subhashh.lumen.ui.theme.LocalMotion
 import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -132,9 +133,16 @@ class LiquidPillState internal constructor(initial: Int, private val scope: Coro
     private val squashModel = SquashModel()
     private var running = false
 
+    /** Reduce Motion: every move lands at once, with no lift. */
+    internal var reduceMotion = false
+
     /** Travel to [index], lifted. Retargeting mid-flight keeps the current speed. */
     fun moveTo(index: Int) {
         if (index == target && !dragging) return
+        if (reduceMotion) {
+            snapTo(index)
+            return
+        }
         target = index
         dragging = false
         travelActive = true
@@ -144,6 +152,33 @@ class LiquidPillState internal constructor(initial: Int, private val scope: Coro
         travelSign = signOf(travelTarget - travelFrom)
         isFlat = false
         start()
+    }
+
+    /** On [index] at rest, no travel and no lift. */
+    private fun snapTo(index: Int) {
+        target = index
+        dragging = false
+        travelActive = false
+        lifted = false
+        travelPos = index.toDouble()
+        travelFrom = travelPos
+        travelTarget = travelPos
+        travelVel = 0.0
+        liftXPos = 0.0; liftXVel = 0.0
+        liftYPos = 0.0; liftYVel = 0.0
+        materialPos = 0.0; materialVel = 0.0
+        handover = 1.0
+        squash = 0.0
+        squashModel.stop()
+        travelSign = 0.0
+        travelSignEased = 0.0
+        position = index.toFloat()
+        liftX = 0f
+        liftY = 0f
+        material = 0f
+        deviation = 0f
+        glassPresence = 0f
+        isFlat = true
     }
 
     internal fun startDrag() {
@@ -174,6 +209,10 @@ class LiquidPillState internal constructor(initial: Int, private val scope: Coro
 
     /** Travel to [index] from wherever the finger left the pill, still lifted; comes down on landing. */
     internal fun settle(index: Int) {
+        if (reduceMotion) {
+            snapTo(index)
+            return
+        }
         if (!dragging) {
             target = -1
             moveTo(index)
@@ -388,7 +427,8 @@ private class SquashModel {
 @Composable
 fun rememberLiquidPillState(initial: Int): LiquidPillState {
     val scope = rememberCoroutineScope()
-    return remember { LiquidPillState(initial.coerceAtLeast(0), scope) }
+    val reduce = LocalMotion.current.reduce
+    return remember { LiquidPillState(initial.coerceAtLeast(0), scope) }.also { it.reduceMotion = reduce }
 }
 
 /**

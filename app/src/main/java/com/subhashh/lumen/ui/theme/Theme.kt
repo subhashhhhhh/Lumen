@@ -49,6 +49,15 @@ class AppearanceSetting(val current: Appearance, val onChange: (Appearance) -> U
 
 val LocalAppearance = staticCompositionLocalOf { AppearanceSetting(Appearance.System) {} }
 
+/**
+ * Settings → Appearance → Reduce Motion: no photo flights, springs or bounces; gestures that
+ * follow a finger stay. Defaults to Android's "Remove animations" until the user picks.
+ */
+@Immutable
+class MotionSetting(val reduce: Boolean, val onChange: (Boolean) -> Unit)
+
+val LocalMotion = staticCompositionLocalOf { MotionSetting(false) {} }
+
 private val DarkScheme = darkColorScheme(
     primary = Color(0xFF0A84FF),
     background = Color.Black,

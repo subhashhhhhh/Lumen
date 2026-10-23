@@ -1,5 +1,6 @@
 package com.subhashh.lumen.ui.settings
 
+import com.subhashh.lumen.ui.theme.LocalMotion
 import com.subhashh.lumen.data.HdrMode
 import androidx.compose.runtime.mutableStateOf
 import com.subhashh.lumen.data.LumenPrefs
@@ -89,6 +90,16 @@ fun SettingsScreen(
                 onSelect = { appearance.onChange(Appearance.entries[it]) },
                 icon = LumenIcons.DarkTheme,
                 iconColor = Indigo,
+            )
+            Divider()
+            val motion = LocalMotion.current
+            ToggleRow(
+                title = "Reduce Motion",
+                subtitle = "No flying photos, springs or bounces",
+                checked = motion.reduce,
+                onCheckedChange = motion.onChange,
+                icon = LumenIcons.Accessibility,
+                iconColor = Blue,
             )
         }
 

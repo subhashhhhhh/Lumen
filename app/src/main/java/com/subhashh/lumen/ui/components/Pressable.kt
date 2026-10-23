@@ -1,5 +1,6 @@
 package com.subhashh.lumen.ui.components
 
+import com.subhashh.lumen.ui.theme.LocalMotion
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.clickable
@@ -21,10 +22,12 @@ fun Modifier.pressable(
     enabled: Boolean = true,
     pressedScale: Float = 0.88f,
 ): Modifier = composed {
+    // Reduce Motion: still a button, just no squish.
+    val reduce = LocalMotion.current.reduce
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val scale by animateFloatAsState(
-        targetValue = if (pressed && enabled) pressedScale else 1f,
+        targetValue = if (pressed && enabled && !reduce) pressedScale else 1f,
         animationSpec = if (pressed) PressIn else Release,
         label = "pressScale",
     )

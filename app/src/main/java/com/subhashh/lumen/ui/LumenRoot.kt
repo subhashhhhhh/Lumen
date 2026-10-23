@@ -17,6 +17,9 @@ import com.subhashh.lumen.data.LumenPrefs
 import com.subhashh.lumen.ui.theme.Appearance
 import com.subhashh.lumen.ui.theme.AppearanceSetting
 import com.subhashh.lumen.ui.theme.LocalAppearance
+import com.subhashh.lumen.ui.theme.LocalMotion
+import com.subhashh.lumen.ui.theme.MotionSetting
+import android.provider.Settings
 import com.subhashh.lumen.ui.theme.LumenTheme
 
 /**
@@ -28,6 +31,11 @@ fun ComponentActivity.setLumenContent(content: @Composable () -> Unit) {
     val prefs = LumenPrefs(this)
     setContent {
         var appearance by remember { mutableStateOf(prefs.appearance) }
+        // Android's "Remove animations" (animator duration scale 0) until the user picks in Settings.
+        val systemReduce = remember {
+            Settings.Global.getFloat(contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
+        }
+        var reduceMotion by remember { mutableStateOf(prefs.reduceMotion ?: systemReduce) }
         val dark = when (appearance) {
             Appearance.System -> isSystemInDarkTheme()
             Appearance.Light -> false
@@ -43,6 +51,10 @@ fun ComponentActivity.setLumenContent(content: @Composable () -> Unit) {
             LocalAppearance provides AppearanceSetting(appearance) {
                 appearance = it
                 prefs.appearance = it
+            },
+            LocalMotion provides MotionSetting(reduceMotion) {
+                reduceMotion = it
+                prefs.reduceMotion = it
             },
         ) {
             LumenTheme(darkTheme = dark, content = content)

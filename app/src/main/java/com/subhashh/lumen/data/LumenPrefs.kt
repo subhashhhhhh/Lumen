@@ -120,7 +120,13 @@ class LumenPrefs(context: Context) {
         get() = prefs.getBoolean(KeySlideRepeat, false)
         set(value) = prefs.edit { putBoolean(KeySlideRepeat, value) }
 
+    /** Reduce Motion as chosen in Settings; null until the user picks (then Android's setting decides). */
+    var reduceMotion: Boolean?
+        get() = if (prefs.contains(KeyReduceMotion)) prefs.getBoolean(KeyReduceMotion, false) else null
+        set(value) = prefs.edit { if (value == null) remove(KeyReduceMotion) else putBoolean(KeyReduceMotion, value) }
+
     private companion object {
+        const val KeyReduceMotion = "reduce_motion"
         const val KeyHdr = "hdr_photos"
         const val KeyHdrMode = "hdr_mode"
         const val KeySlideSeconds = "slideshow_seconds"
