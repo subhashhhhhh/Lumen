@@ -73,7 +73,12 @@ import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 
 /** Why the lock screen is up. */
-enum class LockFlow { Setup, Unlock, Change }
+/**
+ * Setup: choose a new lock. Unlock: enter it (fingerprint or face offered). Change: enter the
+ * current one, then choose a new one. Confirm: enter it with no fingerprint shortcut, when the
+ * lock itself is needed (it seals the vault's recovery key).
+ */
+enum class LockFlow { Setup, Unlock, Change, Confirm }
 
 private sealed interface Step {
     data object Choose : Step
@@ -100,6 +105,8 @@ fun HiddenLockScreen(
     onForgot: () -> Unit,
     /** What the lock guards, for its wording: "Hidden", or "Lumen" for App Lock. */
     lockedName: String = "Hidden",
+    /** The lock itself, whenever it's entered correctly or newly set (never for fingerprint or face). */
+    onSecret: (String) -> Unit = {},
 ) {
     val activity = LocalActivity.current
     val scope = rememberCoroutineScope()
@@ -141,6 +148,7 @@ fun HiddenLockScreen(
                     if (ok) {
                         store.recordSuccess()
                         error = null
+                        onSecret(secret)
                         if (s.then == LockFlow.Change) step = Step.Choose else onDone()
                     } else {
                         store.recordFailure()
@@ -171,6 +179,7 @@ fun HiddenLockScreen(
                 scope.launch {
                     withContext(Dispatchers.Default) { store.set(s.type, secret) }
                     store.recordSuccess()
+                    onSecret(secret)
                     busy = false
                     error = null
                     if (activity != null && HiddenLock.biometricsAvailable(activity)) step = Step.Biometrics else onDone()
@@ -290,7 +299,11 @@ private fun titles(step: Step, store: HiddenLockStore, flow: LockFlow, lockedNam
     Step.Choose -> (if (flow == LockFlow.Change) "New Lock" else "Lock Hidden") to
         "Choose how to lock your hidden photos. This is separate from your phone's lock."
     is Step.Verify -> "Enter ${store.type?.label ?: "PIN"}" to
-        if (step.then == LockFlow.Change) "Enter your current lock first" else "$lockedName is locked"
+        when (step.then) {
+            LockFlow.Change -> "Enter your current lock first"
+            LockFlow.Confirm -> "Confirm it's you"
+            else -> "$lockedName is locked"
+        }
     is Step.New -> when (step.type) {
         LockType.Pin -> "Create a PIN" to "4 to 8 digits"
         LockType.Pattern -> "Draw a Pattern" to "Connect at least 4 dots"
