@@ -565,6 +565,12 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                     contentPadding = PaddingValues(top = statusTop + 72.dp, bottom = navBottom + 96.dp),
                     onOpenLicenses = { settingsPage = SettingsLicenses },
                     onOpenExcluded = { settingsPage = SettingsExcluded },
+                    onOpenHidden = {
+                        // Hidden lives in Collections; go there, then unlock.
+                        settingsPage = null
+                        tab = LumenTab.Collections
+                        openHidden()
+                    },
                     excludedCount = excluded.size,
                 )
                 settingsPage == SettingsExcluded -> {

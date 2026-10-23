@@ -62,6 +62,7 @@ fun SettingsScreen(
     contentPadding: PaddingValues,
     onOpenLicenses: () -> Unit,
     onOpenExcluded: () -> Unit,
+    onOpenHidden: () -> Unit,
     excludedCount: Int,
     modifier: Modifier = Modifier,
 ) {
@@ -116,7 +117,7 @@ fun SettingsScreen(
                 onClick = onOpenExcluded,
             )
             Divider()
-            SettingsRow(title = "Hidden folders", subtitle = "Hidden from every app, locked in Lumen", value = "Soon", onClick = null)
+            SettingsRow(title = "Hidden", subtitle = "Hidden from every app, locked in Lumen", onClick = onOpenHidden)
         }
 
         Group("About") {
