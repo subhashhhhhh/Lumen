@@ -49,6 +49,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.subhashh.lumen.ui.settings.ExcludedFoldersScreen
+import com.subhashh.lumen.data.ExcludedFolders
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
@@ -180,6 +182,9 @@ fun LumenApp() {
 @Composable
 private fun MainScaffold(viewModel: LibraryViewModel) {
     val library by viewModel.items.collectAsState()
+    val allItems by viewModel.allItems.collectAsState()
+    val excluded by viewModel.excluded.collectAsState()
+    var excludePicker by remember { mutableStateOf(false) }
     val trash by viewModel.trash.collectAsState()
     var tab by rememberSaveable { mutableStateOf(LumenTab.Library) }
     var searching by rememberSaveable { mutableStateOf(false) }
@@ -261,7 +266,9 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
     val inCollection = tab == LumenTab.Collections && openCollection != null && !searching
     // Settings opens from either tab and covers it; Back returns to where it was opened.
     val inSettings = settingsPage != null && !searching
-    val popSettings = { settingsPage = if (settingsPage == SettingsLicenses) SettingsMain else null }
+    val popSettings = {
+        settingsPage = if (settingsPage == SettingsLicenses || settingsPage == SettingsExcluded) SettingsMain else null
+    }
     BackHandler(enabled = searching && !viewerOpen) { searching = false }
     BackHandler(enabled = inCollection && !viewerOpen) { openCollection = null }
     BackHandler(enabled = inSettings && !viewerOpen) { popSettings() }
@@ -298,6 +305,16 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
     /** Set when the viewer should open straight into a slideshow of these ids. */
     var slideshowOf by remember { mutableStateOf<Set<Long>?>(null) }
     val toast = { message: String -> Toast.makeText(context, message, Toast.LENGTH_LONG).show() }
+    val excludeFolders: (List<MediaItem>) -> Unit = { items ->
+        val folders = items.map { it.relativePath }.distinct()
+        viewModel.exclude(folders)
+        selection = null
+        val name = folders.singleOrNull()?.trimEnd('/')?.substringAfterLast('/')
+        toast(
+            (if (name != null) "Excluded “$name”." else "Excluded ${folders.size} folders.") +
+                " Undo in Settings → Excluded folders",
+        )
+    }
 
     // Changing files Lumen didn't create: with All files access go straight ahead; otherwise ask
     // MediaStore for write access first (one dialog per batch, none with Media management on).
@@ -400,7 +417,22 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                 settingsPage == SettingsMain -> SettingsScreen(
                     contentPadding = PaddingValues(top = statusTop + 72.dp, bottom = navBottom + 96.dp),
                     onOpenLicenses = { settingsPage = SettingsLicenses },
+                    onOpenExcluded = { settingsPage = SettingsExcluded },
+                    excludedCount = excluded.size,
                 )
+                settingsPage == SettingsExcluded -> {
+                    val all = allItems.orEmpty()
+                    ExcludedFoldersScreen(
+                        excluded = remember(excluded, all) {
+                            excluded.sorted().map { folder -> folder to all.count { it.relativePath.startsWith(folder) } }
+                        },
+                        suggestions = remember(excluded, all) { ExcludedFolders.suggestions(all, excluded) },
+                        contentPadding = PaddingValues(top = statusTop + 72.dp, bottom = navBottom + 96.dp),
+                        onInclude = viewModel::include,
+                        onExclude = { viewModel.exclude(listOf(it)) },
+                        onChooseFolder = { excludePicker = true },
+                    )
+                }
                 tab == LumenTab.Library -> Box(Modifier.nestedScroll(zoomBarScroll)) {
                     LibraryScreen(
                         title = selection?.let { selectionTitle(selectedItems) } ?: "Library",
@@ -642,6 +674,11 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                     if (selectedItems.any(MediaFiles::canRotate)) rotateMenu { rotate(selectedItems, it) } else null,
                 ),
                 listOf(
+                    MenuItem(if (selectedItems.map { it.relativePath }.distinct().size > 1) "Exclude Folders" else "Exclude Folder") {
+                        excludeFolders(selectedItems)
+                    },
+                ),
+                listOf(
                     MenuItem("Slideshow") {
                         val key = selectableKey ?: return@MenuItem
                         val ids = selectedItems.mapTo(HashSet()) { it.id }
@@ -689,6 +726,7 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                 onMoveToAlbum = { albumRequest = AlbumRequest(move = true, items = listOf(it)) },
                 onRename = { renameItem = it },
                 onRotate = { item, degrees -> rotate(listOf(item), degrees) },
+                onExcludeFolder = { excludeFolders(listOf(it)) },
                 slideshowOf = slideshowOf,
             )
         }
@@ -703,6 +741,19 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
             },
             onDismiss = { albumRequest = null },
             newAlbumPath = MediaFiles::newAlbumPath,
+        )
+
+        AlbumPicker(
+            open = excludePicker,
+            title = "Exclude Folder",
+            albums = folders,
+            onPick = { target ->
+                excludePicker = false
+                viewModel.exclude(listOf(target.relativePath))
+            },
+            onDismiss = { excludePicker = false },
+            newAlbumPath = MediaFiles::newAlbumPath,
+            allowNewAlbum = false,
         )
 
         RenameDialog(
@@ -761,6 +812,7 @@ private fun selectionTitle(selected: List<MediaItem>): String {
 
 private const val SettingsMain = "settings"
 private const val SettingsLicenses = "licenses"
+private const val SettingsExcluded = "excluded"
 
 private data class AlbumRequest(val move: Boolean, val items: List<MediaItem>)
 

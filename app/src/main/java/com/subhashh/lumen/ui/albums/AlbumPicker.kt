@@ -85,6 +85,8 @@ fun AlbumPicker(
     onPick: (AlbumTarget) -> Unit,
     onDismiss: () -> Unit,
     newAlbumPath: (String) -> String,
+    /** Offer "New Album…" (not when choosing a folder to exclude). */
+    allowNewAlbum: Boolean = true,
 ) {
     BackHandler(enabled = open, onBack = onDismiss)
     AnimatedVisibility(visible = open, enter = fadeIn(tween(180)), exit = fadeOut(tween(180))) {
@@ -101,7 +103,7 @@ fun AlbumPicker(
         exit = slideOutVertically(tween(220)) { it },
     ) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
-            Sheet(title, albums, onPick, onDismiss, newAlbumPath)
+            Sheet(title, albums, onPick, onDismiss, newAlbumPath, allowNewAlbum)
         }
     }
 }
@@ -113,6 +115,7 @@ private fun Sheet(
     onPick: (AlbumTarget) -> Unit,
     onDismiss: () -> Unit,
     newAlbumPath: (String) -> String,
+    allowNewAlbum: Boolean,
 ) {
     val colors = pickerColors()
     var naming by remember { mutableStateOf(false) }
@@ -156,7 +159,7 @@ private fun Sheet(
         }
 
         LazyColumn(Modifier.fillMaxSize()) {
-            item {
+            if (allowNewAlbum) item {
                 Row(
                     Modifier
                         .fillMaxWidth()

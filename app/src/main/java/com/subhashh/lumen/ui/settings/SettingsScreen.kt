@@ -61,6 +61,8 @@ internal fun groupColors(): GroupColors = if (isSystemInDarkTheme()) {
 fun SettingsScreen(
     contentPadding: PaddingValues,
     onOpenLicenses: () -> Unit,
+    onOpenExcluded: () -> Unit,
+    excludedCount: Int,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -107,7 +109,12 @@ fun SettingsScreen(
         }
 
         Group("Folders") {
-            SettingsRow(title = "Excluded folders", subtitle = "Folders Lumen ignores", value = "Soon", onClick = null)
+            SettingsRow(
+                title = "Excluded folders",
+                subtitle = "Folders Lumen ignores",
+                value = if (excludedCount == 0) "None" else excludedCount.toString(),
+                onClick = onOpenExcluded,
+            )
             Divider()
             SettingsRow(title = "Hidden folders", subtitle = "Hidden from every app, locked in Lumen", value = "Soon", onClick = null)
         }

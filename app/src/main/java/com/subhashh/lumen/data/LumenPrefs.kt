@@ -23,7 +23,13 @@ class LumenPrefs(context: Context) {
         get() = prefs.getInt(KeyColumns, 5)
         set(value) = prefs.edit { putInt(KeyColumns, value) }
 
+    /** Folders Lumen ignores (relative paths, subfolders included). */
+    var excludedFolders: Set<String>
+        get() = prefs.getStringSet(KeyExcluded, emptySet()).orEmpty().toSet()
+        set(value) = prefs.edit { putStringSet(KeyExcluded, value) }
+
     private companion object {
+        const val KeyExcluded = "excluded_folders"
         const val KeyColumns = "grid_columns"
         const val KeyFilter = "library_filter"
         const val KeyAspect = "aspect_ratio_grid"
