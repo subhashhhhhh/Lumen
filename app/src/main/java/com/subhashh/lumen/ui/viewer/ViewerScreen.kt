@@ -154,6 +154,7 @@ fun ViewerScreen(
     /** Viewing a folder album: ⋯ offers Make Album Cover. */
     onMakeCover: ((MediaItem) -> Unit)? = null,
     onAdjustDate: (MediaItem) -> Unit = {},
+    onSetWallpaper: (MediaItem) -> Unit = {},
 ) {
     val context = LocalContext.current
     val pager = rememberPagerState(initialPage = initialIndex) { items.size }
@@ -564,6 +565,7 @@ fun ViewerScreen(
                     onSlideshow = { slideshow = true },
                     onMakeCover = onMakeCover,
                     onAdjustDate = onAdjustDate,
+                    onSetWallpaper = onSetWallpaper,
                 ),
                 origin = TransformOrigin(1f, 0f),
                 modifier = Modifier
@@ -603,6 +605,7 @@ private fun viewerMenu(
     onSlideshow: () -> Unit,
     onMakeCover: ((MediaItem) -> Unit)?,
     onAdjustDate: (MediaItem) -> Unit,
+    onSetWallpaper: (MediaItem) -> Unit,
 ): List<List<MenuItem>> {
     val photo = !item.isVideo
     return listOf(
@@ -623,6 +626,7 @@ private fun viewerMenu(
         listOf(MenuItem("Hide") { onHide(item) }),
         listOfNotNull(
             MenuItem("Open with…") { MediaActions.openWith(context, item) },
+            if (photo) MenuItem("Set as Wallpaper…") { onSetWallpaper(item) } else null,
             if (photo) MenuItem("Set as…") { MediaActions.setAs(context, item) } else null,
             MenuItem("Copy to clipboard") { MediaActions.copyToClipboard(context, item) },
         ),

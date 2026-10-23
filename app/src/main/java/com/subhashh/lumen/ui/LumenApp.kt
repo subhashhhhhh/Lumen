@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import com.subhashh.lumen.ui.viewer.ViewerScreen
+import com.subhashh.lumen.ui.viewer.WallpaperScreen
 import com.subhashh.lumen.ui.viewer.rotateMenu
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.animation.core.animateFloatAsState
@@ -334,6 +335,8 @@ private fun MainScaffold(
         if (albumSettings.created.any { it in real }) updateAlbums { it.copy(created = it.created.filterNot(real::contains)) }
     }
     var collectionsMenuOpen by remember { mutableStateOf(false) }
+    /** The photo being framed in Set as Wallpaper. */
+    var wallpaperItem by remember { mutableStateOf<MediaItem?>(null) }
     /** Items waiting for a new date from Adjust Date & Time. */
     var dateRequest by remember { mutableStateOf<List<MediaItem>?>(null) }
     /** Album name prompt: renaming [album], or making a new one when null. */
@@ -1335,6 +1338,7 @@ private fun MainScaffold(
                 onRotate = { item, degrees -> rotate(listOf(item), degrees) },
                 onExcludeFolder = { excludeFolders(listOf(it)) },
                 onAdjustDate = { dateRequest = listOf(it) },
+                onSetWallpaper = { wallpaperItem = it },
                 // Inside a folder album: make this photo its cover, like iOS's Make Key Photo.
                 onMakeCover = if (CollectionKeys.isFolder(source)) {
                     { item ->
@@ -1459,6 +1463,17 @@ private fun MainScaffold(
             },
             onDismiss = { albumNameRequest = null },
         )
+
+        wallpaperItem?.let { item ->
+            WallpaperScreen(
+                item = item,
+                onDone = { message ->
+                    wallpaperItem = null
+                    toast(message)
+                },
+                onCancel = { wallpaperItem = null },
+            )
+        }
 
         DateTimeDialog(
             original = dateRequest?.minOf { it.takenAt },
