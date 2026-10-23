@@ -48,6 +48,11 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.geometry.Offset
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
 import com.subhashh.lumen.ui.components.RenameDialog
@@ -205,6 +210,25 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
     }
     var menuOpen by remember { mutableStateOf(false) }
     var zoomLevel by rememberSaveable { mutableStateOf(ZoomLevel.All) }
+    // The Library opens with the tabs showing; scrolling up (back in time) folds them into the
+    // Years / Months / All control, scrolling down brings them back. Years and Months keep the
+    // control, since that's what they're for.
+    var zoomBar by rememberSaveable { mutableStateOf(false) }
+    val switchDistance = with(LocalDensity.current) { ZoomBarSwitchDistance.toPx() }
+    val zoomBarScroll = remember(switchDistance) {
+        object : NestedScrollConnection {
+            // Distance dragged in the current direction; a nudge shouldn't flip the bar.
+            var run = 0f
+
+            override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
+                if (source != NestedScrollSource.UserInput || consumed.y == 0f) return Offset.Zero
+                run = if (run == 0f || (run > 0f) == (consumed.y > 0f)) run + consumed.y else consumed.y
+                if (run > switchDistance) zoomBar = true
+                else if (run < -switchDistance) zoomBar = false
+                return Offset.Zero
+            }
+        }
+    }
     val monthsList = rememberLazyListState()
     val yearsList = rememberLazyListState()
     SideEffect { transition.fitCells = aspectRatioGrid }
@@ -368,7 +392,7 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
             when {
                 searching -> SearchScreen()
                 library == null -> Unit
-                tab == LumenTab.Library -> Box {
+                tab == LumenTab.Library -> Box(Modifier.nestedScroll(zoomBarScroll)) {
                     LibraryScreen(
                         title = selection?.let { selectionTitle(selectedItems) } ?: "Library",
                         selection = selection,
@@ -536,10 +560,15 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                 onSearch = { searching = true },
                 zoomLevel = zoomLevel.takeIf { tab == LumenTab.Library && !searching },
                 onZoomLevel = { zoomLevel = it },
+                showZoom = zoomBar || zoomLevel != ZoomLevel.All,
+                onShowTabs = {
+                    zoomBar = false
+                    zoomLevel = ZoomLevel.All
+                },
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .graphicsLayer { alpha = tabBarAlpha }
-                    .padding(bottom = navBottom + 12.dp),
+                    .padding(start = 16.dp, end = 16.dp, bottom = navBottom + 12.dp),
             )
         }
 
@@ -736,3 +765,6 @@ private fun fileMessage(past: String, verb: String, result: FileResult, album: S
         else -> "$past $count to $album; ${result.failed} failed"
     }
 }
+
+/** How far to scroll one way before the bottom bar switches between tabs and Years / Months / All. */
+private val ZoomBarSwitchDistance = 40.dp
