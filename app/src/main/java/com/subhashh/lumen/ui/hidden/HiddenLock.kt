@@ -8,30 +8,44 @@ import android.hardware.biometrics.BiometricPrompt
 import android.os.CancellationSignal
 
 /**
- * Gate for the Hidden section: fingerprint or face, with the screen-lock PIN/pattern as fallback.
- * Uses the platform prompt (no androidx.biometric / FragmentActivity needed on API 30+).
+ * The system prompts around Hidden's own lock (platform BiometricPrompt; no androidx.biometric /
+ * FragmentActivity needed on API 30+):
+ * - fingerprint/face as a shortcut in front of Lumen's PIN, pattern or password
+ * - the phone's screen lock, only to authorize resetting a forgotten Lumen lock
  */
 object HiddenLock {
 
-    private const val Authenticators = BIOMETRIC_STRONG or DEVICE_CREDENTIAL
+    private fun manager(activity: Activity) = activity.getSystemService(BiometricManager::class.java)
 
-    /** False when the phone has no screen lock, so Hidden can't actually be protected. */
-    fun canLock(activity: Activity): Boolean =
-        activity.getSystemService(BiometricManager::class.java)
-            ?.canAuthenticate(Authenticators) == BiometricManager.BIOMETRIC_SUCCESS
+    /** Fingerprint or face is enrolled and strong enough to unlock Hidden. */
+    fun biometricsAvailable(activity: Activity): Boolean =
+        manager(activity)?.canAuthenticate(BIOMETRIC_STRONG) == BiometricManager.BIOMETRIC_SUCCESS
 
-    fun unlock(activity: Activity, onUnlocked: () -> Unit) {
+    /** The phone has a screen lock that can vouch for a reset. */
+    fun deviceLockSet(activity: Activity): Boolean =
+        manager(activity)?.canAuthenticate(DEVICE_CREDENTIAL) == BiometricManager.BIOMETRIC_SUCCESS
+
+    /** Fingerprint/face only; [fallback] names the Lumen lock to fall back to ("Use PIN"). */
+    fun biometric(activity: Activity, fallback: String, onSuccess: () -> Unit, onFallback: () -> Unit) {
         val prompt = BiometricPrompt.Builder(activity)
             .setTitle("Unlock Hidden")
-            .setSubtitle("Hidden photos stay locked when you leave them")
-            .setAllowedAuthenticators(Authenticators)
+            .setAllowedAuthenticators(BIOMETRIC_STRONG)
+            .setNegativeButton(fallback, activity.mainExecutor) { _, _ -> onFallback() }
             .build()
-        prompt.authenticate(
-            CancellationSignal(),
-            activity.mainExecutor,
-            object : BiometricPrompt.AuthenticationCallback() {
-                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) = onUnlocked()
-            },
-        )
+        prompt.authenticate(CancellationSignal(), activity.mainExecutor, callback(onSuccess))
+    }
+
+    /** The phone's own screen lock (PIN/pattern/password or biometrics), to authorize a reset. */
+    fun deviceCredential(activity: Activity, onSuccess: () -> Unit) {
+        val prompt = BiometricPrompt.Builder(activity)
+            .setTitle("Reset Hidden lock")
+            .setSubtitle("Confirm it's you with your phone's screen lock")
+            .setAllowedAuthenticators(BIOMETRIC_STRONG or DEVICE_CREDENTIAL)
+            .build()
+        prompt.authenticate(CancellationSignal(), activity.mainExecutor, callback(onSuccess))
+    }
+
+    private fun callback(onSuccess: () -> Unit) = object : BiometricPrompt.AuthenticationCallback() {
+        override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) = onSuccess()
     }
 }

@@ -50,6 +50,8 @@ import com.subhashh.lumen.data.MediaThumbnail
 @Composable
 fun CollectionsScreen(
     utilities: List<MediaCollection>,
+    /** Hidden shows "Set Up" until it has a lock, then "Locked". */
+    hiddenLockSet: Boolean,
     folders: List<MediaCollection>,
     contentPadding: PaddingValues,
     onOpen: (key: String) -> Unit,
@@ -76,7 +78,7 @@ fun CollectionsScreen(
 
         fullWidth { SectionHeader("Utilities") }
         items(utilities, key = { it.key }) { collection ->
-            UtilityTile(collection, onClick = { onOpen(collection.key) })
+            UtilityTile(collection, hiddenLockSet, onClick = { onOpen(collection.key) })
         }
 
         fullWidth { SectionHeader("Albums", trailing = folders.size.toString()) }
@@ -111,7 +113,7 @@ private fun SectionHeader(title: String, trailing: String? = null) {
 }
 
 @Composable
-private fun UtilityTile(collection: MediaCollection, onClick: () -> Unit) {
+private fun UtilityTile(collection: MediaCollection, hiddenLockSet: Boolean, onClick: () -> Unit) {
     val onBackground = MaterialTheme.colorScheme.onBackground
     // Icon above the label so long names like "Recently Deleted" fit a half-width tile.
     Column(
@@ -138,7 +140,11 @@ private fun UtilityTile(collection: MediaCollection, onClick: () -> Unit) {
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                if (collection.count == MediaCollections.LockedCount) "Locked" else collection.count.toString(),
+                when {
+                    collection.count != MediaCollections.LockedCount -> collection.count.toString()
+                    hiddenLockSet -> "Locked"
+                    else -> "Set Up"
+                },
                 fontSize = 13.sp,
                 color = onBackground.copy(alpha = 0.55f),
             )

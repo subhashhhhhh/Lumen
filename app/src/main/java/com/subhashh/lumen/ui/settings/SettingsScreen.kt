@@ -63,6 +63,10 @@ fun SettingsScreen(
     onOpenLicenses: () -> Unit,
     onOpenExcluded: () -> Unit,
     onOpenHidden: () -> Unit,
+    hiddenLockSet: Boolean,
+    onChangeLock: () -> Unit,
+    biometricsOn: Boolean,
+    onToggleBiometrics: () -> Unit,
     excludedCount: Int,
     modifier: Modifier = Modifier,
 ) {
@@ -118,6 +122,19 @@ fun SettingsScreen(
             )
             Divider()
             SettingsRow(title = "Hidden", subtitle = "Hidden from every app, locked in Lumen", onClick = onOpenHidden)
+        }
+
+        Group("Hidden lock", footer = "Lumen's own lock for Hidden, separate from your phone's screen lock.") {
+            SettingsRow(title = if (hiddenLockSet) "Change Lock" else "Set Up Lock", onClick = onChangeLock)
+            if (hiddenLockSet) {
+                Divider()
+                SettingsRow(
+                    title = "Fingerprint or Face",
+                    subtitle = "Unlock Hidden faster",
+                    value = if (biometricsOn) "On" else "Off",
+                    onClick = onToggleBiometrics,
+                )
+            }
         }
 
         Group("About") {

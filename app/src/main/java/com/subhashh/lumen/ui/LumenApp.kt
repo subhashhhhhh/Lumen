@@ -49,6 +49,9 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.subhashh.lumen.ui.hidden.LockFlow
+import com.subhashh.lumen.ui.hidden.HiddenLockScreen
+import com.subhashh.lumen.data.HiddenLockStore
 import java.io.File
 import com.subhashh.lumen.ui.hidden.HiddenLock
 import com.subhashh.lumen.ui.components.Confirmation
@@ -199,6 +202,11 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
     /** Hidden opens only after biometric unlock and re-locks whenever it's left. */
     var hiddenUnlocked by remember { mutableStateOf(false) }
     var confirmation by remember { mutableStateOf<Confirmation?>(null) }
+    val appContext = LocalContext.current.applicationContext
+    val lockStore = remember { HiddenLockStore(appContext) }
+    /** Hidden's own lock screen, when up; and whether a lock exists yet (for "Set Up"). */
+    var lockFlow by remember { mutableStateOf<LockFlow?>(null) }
+    var lockSet by remember { mutableStateOf(lockStore.isSet) }
     var excludePicker by remember { mutableStateOf(false) }
     val trash by viewModel.trash.collectAsState()
     var tab by rememberSaveable { mutableStateOf(LumenTab.Library) }
@@ -345,18 +353,34 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
         missing
     }
     val openHidden: () -> Unit = open@{
-        val host = activity ?: return@open
         if (needsAllFiles()) return@open
-        val show = {
-            hiddenUnlocked = true
-            viewModel.loadHidden()
-            openCollection = CollectionKeys.Hidden
+        // First time: set up Lumen's own lock; afterwards: unlock with it.
+        lockFlow = if (lockStore.isSet) LockFlow.Unlock else LockFlow.Setup
+    }
+    val showHidden = {
+        hiddenUnlocked = true
+        viewModel.loadHidden()
+        tab = LumenTab.Collections
+        openCollection = CollectionKeys.Hidden
+    }
+    // Forgot the Lumen lock: the phone's own screen lock vouches for a reset.
+    val resetLock: () -> Unit = reset@{
+        val host = activity ?: return@reset
+        val reset = {
+            lockStore.clear()
+            lockSet = false
+            lockFlow = LockFlow.Setup
         }
-        if (HiddenLock.canLock(host)) {
-            HiddenLock.unlock(host, show)
+        if (HiddenLock.deviceLockSet(host)) {
+            HiddenLock.deviceCredential(host, reset)
         } else {
-            toast("Set a screen lock in system settings to protect Hidden")
-            show()
+            confirmation = Confirmation(
+                title = "Reset Hidden lock?",
+                message = "Your phone has no screen lock, so anyone holding it could do this. Hidden photos stay hidden; " +
+                    "you'll set a new lock next.",
+                confirm = "Reset",
+                destructive = true,
+            ) { reset() }
         }
     }
     val afterHiddenChange = { message: String ->
@@ -571,6 +595,23 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                         tab = LumenTab.Collections
                         openHidden()
                     },
+                    hiddenLockSet = lockSet,
+                    onChangeLock = { lockFlow = if (lockSet) LockFlow.Change else LockFlow.Setup },
+                    biometricsOn = lockSet && lockStore.biometrics,
+                    onToggleBiometrics = toggle@{
+                        val host = activity ?: return@toggle
+                        if (lockStore.biometrics) {
+                            lockStore.biometrics = false
+                            lockSet = lockStore.isSet // nudge recomposition of the row
+                        } else if (HiddenLock.biometricsAvailable(host)) {
+                            HiddenLock.biometric(host, "Cancel", onSuccess = {
+                                lockStore.biometrics = true
+                                lockSet = lockStore.isSet
+                            }, onFallback = {})
+                        } else {
+                            toast("Add a fingerprint or face in your phone's settings first")
+                        }
+                    },
                     excludedCount = excluded.size,
                 )
                 settingsPage == SettingsExcluded -> {
@@ -655,6 +696,7 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                 }
                 else -> CollectionsScreen(
                     utilities = utilities,
+                    hiddenLockSet = lockSet,
                     folders = folders,
                     contentPadding = PaddingValues(top = statusTop + 16.dp, bottom = navBottom + 96.dp),
                     onOpen = { key -> if (key == CollectionKeys.Hidden) openHidden() else openCollection = key },
@@ -922,6 +964,21 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
             newAlbumPath = MediaFiles::newAlbumPath,
             allowNewAlbum = false,
         )
+
+        lockFlow?.let { flow ->
+            HiddenLockScreen(
+                flow = flow,
+                store = lockStore,
+                onDone = {
+                    lockFlow = null
+                    lockSet = lockStore.isSet
+                    // Changing the lock from Settings doesn't open Hidden; setting up or unlocking does.
+                    if (flow != LockFlow.Change) showHidden() else toast("Hidden lock changed")
+                },
+                onCancel = { lockFlow = null },
+                onForgot = resetLock,
+            )
+        }
 
         ConfirmDialog(confirmation, onDismiss = { confirmation = null })
 
