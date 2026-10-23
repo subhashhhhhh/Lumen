@@ -24,6 +24,11 @@ class LumenPrefs(context: Context) {
         get() = prefs.getInt(KeyColumns, 5)
         set(value) = prefs.edit { putInt(KeyColumns, value) }
 
+    /** Search results' columns, separate from the Library's. */
+    var searchColumns: Int
+        get() = prefs.getInt(KeySearchColumns, 4)
+        set(value) = prefs.edit { putInt(KeySearchColumns, value) }
+
     /** Album columns, shared by Collections and Hidden's folder list. */
     var albumColumns: Int
         get() = prefs.getInt(KeyAlbumColumns, 2)
@@ -45,6 +50,7 @@ class LumenPrefs(context: Context) {
         const val KeyExcluded = "excluded_folders"
         const val KeyColumns = "grid_columns"
         const val KeyAlbumColumns = "album_columns"
+        const val KeySearchColumns = "search_columns"
         const val KeyFilter = "library_filter"
         const val KeyAspect = "aspect_ratio_grid"
     }

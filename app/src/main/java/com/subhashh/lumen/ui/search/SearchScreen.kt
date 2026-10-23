@@ -70,7 +70,7 @@ fun SearchScreen(
     onOpen: (index: Int) -> Unit,
     onOpenAlbum: (key: String) -> Unit,
     onSuggestion: (String) -> Unit,
-    /** Columns, shared with the Library; pinch changes them. */
+    /** Columns, saved separately from the Library's; pinch changes them. */
     columns: Int,
     onColumnsChange: (Int) -> Unit,
     modifier: Modifier = Modifier,

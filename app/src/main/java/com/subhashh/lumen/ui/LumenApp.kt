@@ -256,6 +256,7 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
         gridColumns = columns
         prefs.gridColumns = columns
     }
+    var searchColumns by remember { mutableIntStateOf(prefs.searchColumns) }
     var albumColumns by remember { mutableIntStateOf(prefs.albumColumns) }
     val onAlbumColumns = { columns: Int ->
         albumColumns = columns
@@ -699,8 +700,11 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                         openCollection = key
                     },
                     onSuggestion = { searchQuery = it },
-                    columns = gridColumns,
-                    onColumnsChange = onGridColumns,
+                    columns = searchColumns,
+                    onColumnsChange = {
+                        searchColumns = it
+                        prefs.searchColumns = it
+                    },
                 )
                 library == null -> Unit
                 settingsPage == SettingsLicenses -> LicensesScreen(
