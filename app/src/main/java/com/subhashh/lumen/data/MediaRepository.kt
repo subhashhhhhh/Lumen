@@ -34,7 +34,6 @@ class MediaRepository(private val context: Context) {
             MediaStore.MediaColumns.ORIENTATION,
             MediaStore.MediaColumns.DISPLAY_NAME,
             MediaStore.MediaColumns.SIZE,
-            MediaStore.Video.VideoColumns.COLOR_TRANSFER,
         )
         // MediaStore classifies TypeScript sources (.ts) as MPEG-TS video. Real transport streams
         // get a duration when scanned; source files never do, so drop mp2ts rows without one.
@@ -51,6 +50,7 @@ class MediaRepository(private val context: Context) {
             if (trashed) putInt(MediaStore.QUERY_ARG_MATCH_TRASHED, MediaStore.MATCH_ONLY)
         }
 
+        val hdrIds = hdrVideoIds()
         val items = ArrayList<MediaItem>()
         context.contentResolver.query(
             MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL),
@@ -74,7 +74,6 @@ class MediaRepository(private val context: Context) {
             val orientationCol = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.ORIENTATION)
             val nameCol = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DISPLAY_NAME)
             val sizeCol = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.SIZE)
-            val transferCol = cursor.getColumnIndexOrThrow(MediaStore.Video.VideoColumns.COLOR_TRANSFER)
 
             while (cursor.moveToNext()) {
                 val id = cursor.getLong(idCol)
@@ -105,16 +104,29 @@ class MediaRepository(private val context: Context) {
                     modified = cursor.getLong(modifiedCol),
                     name = cursor.getString(nameCol).orEmpty(),
                     size = cursor.getLong(sizeCol),
-                    // ST 2084 (PQ) or HLG, as MediaFormat numbers them.
-                    hdrVideo = isVideo && cursor.getInt(transferCol).let {
-                        it == MediaFormat.COLOR_TRANSFER_ST2084 || it == MediaFormat.COLOR_TRANSFER_HLG
-                    },
+                    hdrVideo = isVideo && id in hdrIds,
                 )
             }
         }
         items.sortWith(compareBy<MediaItem> { it.takenAt }.thenBy { it.id })
         items
     }
+
+    /**
+     * Ids of HDR videos (PQ or HLG transfer, as MediaFormat numbers them). Only the video table
+     * has the colour columns; asking the Files table for them throws.
+     */
+    private fun hdrVideoIds(): Set<Long> = runCatching {
+        val ids = HashSet<Long>()
+        context.contentResolver.query(
+            MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL),
+            arrayOf(MediaStore.Video.VideoColumns._ID),
+            "${MediaStore.Video.VideoColumns.COLOR_TRANSFER} IN (?, ?)",
+            arrayOf(MediaFormat.COLOR_TRANSFER_ST2084.toString(), MediaFormat.COLOR_TRANSFER_HLG.toString()),
+            null,
+        )?.use { c -> while (c.moveToNext()) ids += c.getLong(0) }
+        ids
+    }.getOrDefault(emptySet())
 
     /**
      * EXIF capture time (MediaStore's DATE_TAKEN) when the file has one, else the file's modified
