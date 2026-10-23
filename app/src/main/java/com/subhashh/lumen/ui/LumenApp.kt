@@ -260,6 +260,8 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
     BackHandler(enabled = selectionMenuOpen) { selectionMenuOpen = false }
     /** Items waiting for an album to be picked (Copy to Album). */
     var copyRequest by remember { mutableStateOf<List<MediaItem>?>(null) }
+    /** Set when the viewer should open straight into a slideshow of these ids. */
+    var slideshowOf by remember { mutableStateOf<Set<Long>?>(null) }
     val copyToAlbum: (List<MediaItem>, AlbumTarget) -> Unit = { items, target ->
         scope.launch {
             val result = MediaFiles.copy(context, items, target.relativePath)
@@ -521,7 +523,20 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
             backdrop = backdrop,
             open = selectionMenuOpen && selection != null && !viewerOpen,
             onDismiss = { selectionMenuOpen = false },
-            sections = listOf(listOf(MenuItem("Copy to Album…") { copyRequest = selectedItems })),
+            sections = listOf(
+                listOf(MenuItem("Copy to Album…") { copyRequest = selectedItems }),
+                listOf(
+                    MenuItem("Slideshow") {
+                        val key = selectableKey ?: return@MenuItem
+                        val ids = selectedItems.mapTo(HashSet()) { it.id }
+                        val first = selectableItems.indexOfFirst { it.id in ids }
+                        if (first < 0) return@MenuItem
+                        slideshowOf = ids
+                        selection = null
+                        openViewer(key, first)
+                    },
+                ),
+            ),
             origin = TransformOrigin(1f, 1f),
             modifier = Modifier
                 .align(Alignment.BottomEnd)
@@ -537,6 +552,7 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                 inTrash = source == CollectionKeys.RecentlyDeleted,
                 onClose = { exit ->
                     viewerSource = null
+                    slideshowOf = null
                     val item = list.getOrNull(exit.index)
                     val from = exit.photoRect
                     if (item != null && from != null) {
@@ -554,6 +570,7 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                 },
                 onMediaChanged = viewModel::refresh,
                 onCopyToAlbum = { copyRequest = listOf(it) },
+                slideshowOf = slideshowOf,
             )
         }
 

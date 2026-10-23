@@ -57,6 +57,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.DisposableEffect
@@ -107,6 +108,9 @@ import androidx.media3.common.MediaItem as PlayerMediaItem
 /** Fraction of the screen height a downward drag must cover to dismiss on release. */
 private const val DismissThreshold = 0.15f
 
+private const val SlideshowIntervalMs = 3_000L
+private const val SlideshowTransitionMs = 700
+
 /** Release speed that counts as a flick. */
 private val FlingVelocity = 400.dp // per second
 
@@ -122,6 +126,8 @@ fun ViewerScreen(
     /** Viewing Recently Deleted: offer restore and delete forever instead of share/favorite/trash. */
     inTrash: Boolean = false,
     onCopyToAlbum: (MediaItem) -> Unit = {},
+    /** Start a slideshow right away, limited to these ids (from a selection); null = don't. */
+    slideshowOf: Set<Long>? = null,
 ) {
     val context = LocalContext.current
     val pager = rememberPagerState(initialPage = initialIndex) { items.size }
@@ -149,6 +155,21 @@ fun ViewerScreen(
     val atRest by remember { derivedStateOf { motion.dismissX == 0f && motion.dismissY == 0f } }
     var locationRefresh by remember { mutableIntStateOf(0) }
     var moreOpen by remember { mutableStateOf(false) }
+    // Slideshow: hides the chrome and advances every few seconds; any tap stops it.
+    var slideshow by remember { mutableStateOf(slideshowOf != null) }
+    LaunchedEffect(slideshow) {
+        if (!slideshow) return@LaunchedEffect
+        chromeVisible = false
+        while (true) {
+            delay(SlideshowIntervalMs)
+            val next = (pager.currentPage + 1 until items.size)
+                .firstOrNull { slideshowOf == null || slideshowOf.isEmpty() || items[it].id in slideshowOf }
+            if (next == null) break
+            pager.animateScrollToPage(next, animationSpec = tween(SlideshowTransitionMs))
+        }
+        slideshow = false
+        chromeVisible = true
+    }
     val locationPermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { granted -> if (granted) locationRefresh++ }
@@ -295,7 +316,11 @@ fun ViewerScreen(
                     Modifier
                 }
                 val toggleChrome = {
-                    if (motion.infoOpen) motion.closeInfo() else chromeVisible = !chromeVisible
+                    when {
+                        slideshow -> slideshow = false
+                        motion.infoOpen -> motion.closeInfo()
+                        else -> chromeVisible = !chromeVisible
+                    }
                 }
                 if (item.isVideo) {
                     VideoPage(
@@ -405,7 +430,7 @@ fun ViewerScreen(
                 backdrop = backdrop,
                 open = moreOpen && chromeVisible,
                 onDismiss = { moreOpen = false },
-                sections = viewerMenu(context, current, onCopyToAlbum),
+                sections = viewerMenu(context, current, onCopyToAlbum, onSlideshow = { slideshow = true }),
                 origin = TransformOrigin(1f, 0f),
                 modifier = Modifier
                     .align(Alignment.TopEnd)
@@ -435,10 +460,12 @@ private fun viewerMenu(
     context: Context,
     item: MediaItem,
     onCopyToAlbum: (MediaItem) -> Unit,
+    onSlideshow: () -> Unit,
 ): List<List<MenuItem>> {
     val photo = !item.isVideo
     return listOf(
         listOf(MenuItem("Copy to Album…") { onCopyToAlbum(item) }),
+        listOf(MenuItem("Slideshow") { onSlideshow() }),
         listOfNotNull(
             MenuItem("Open with…") { MediaActions.openWith(context, item) },
             if (photo) MenuItem("Set as…") { MediaActions.setAs(context, item) } else null,
