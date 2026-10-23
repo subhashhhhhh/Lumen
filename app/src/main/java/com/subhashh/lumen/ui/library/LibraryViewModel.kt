@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.subhashh.lumen.data.ExcludedFolders
+import com.subhashh.lumen.data.HiddenMedia
 import com.subhashh.lumen.data.LumenPrefs
 import com.subhashh.lumen.data.MediaItem
 import com.subhashh.lumen.data.MediaRepository
@@ -44,6 +45,15 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
             _allItems.value = library.await()
             _trash.value = trash.await()
         }
+    }
+
+    private val _hidden = MutableStateFlow<List<MediaItem>?>(null)
+    /** Hidden photos and videos; null until scanned (only when the Hidden section opens). */
+    val hidden: StateFlow<List<MediaItem>?> = _hidden.asStateFlow()
+
+    /** Walks storage for hidden files (~2 s on a full phone), so only on demand. */
+    fun loadHidden() {
+        viewModelScope.launch { _hidden.value = HiddenMedia.scan() }
     }
 
     fun exclude(folders: Collection<String>) = setExcluded(_excluded.value + folders)

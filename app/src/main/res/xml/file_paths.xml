@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Hidden files have no MediaStore Uri; sharing them goes through this provider. -->
+<paths>
+    <external-path name="storage" path="." />
+</paths>

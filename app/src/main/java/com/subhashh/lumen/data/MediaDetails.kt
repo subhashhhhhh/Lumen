@@ -52,26 +52,36 @@ object MediaDetailsLoader {
         var width = 0
         var height = 0
         var orientation = 0
-        resolver.query(
-            ContentUris.withAppendedId(MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL), item.id),
-            arrayOf(
-                MediaStore.MediaColumns.DISPLAY_NAME,
-                MediaStore.MediaColumns.SIZE,
-                MediaStore.MediaColumns.WIDTH,
-                MediaStore.MediaColumns.HEIGHT,
-                MediaStore.MediaColumns.ORIENTATION,
-            ),
-            null,
-            null,
-            null,
-        )?.use { c ->
-            if (c.moveToFirst()) {
-                name = c.getString(0).orEmpty()
-                size = c.getLong(1)
-                width = c.getInt(2)
-                height = c.getInt(3)
-                orientation = c.getInt(4)
+        if (item.uri.scheme == "content") {
+            resolver.query(
+                ContentUris.withAppendedId(MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL), item.id),
+                arrayOf(
+                    MediaStore.MediaColumns.DISPLAY_NAME,
+                    MediaStore.MediaColumns.SIZE,
+                    MediaStore.MediaColumns.WIDTH,
+                    MediaStore.MediaColumns.HEIGHT,
+                    MediaStore.MediaColumns.ORIENTATION,
+                ),
+                null,
+                null,
+                null,
+            )?.use { c ->
+                if (c.moveToFirst()) {
+                    name = c.getString(0).orEmpty()
+                    size = c.getLong(1)
+                    width = c.getInt(2)
+                    height = c.getInt(3)
+                    orientation = c.getInt(4)
+                }
             }
+        } else {
+            // Hidden files aren't in MediaStore: read what we need from the file itself.
+            HiddenMedia.file(item)?.let { file ->
+                name = file.name
+                size = file.length()
+            }
+            width = item.width
+            height = item.height
         }
         // MediaStore reports stored dimensions; show them as the photo is displayed.
         if (orientation == 90 || orientation == 270) {
@@ -83,7 +93,8 @@ object MediaDetailsLoader {
             context,
             Manifest.permission.ACCESS_MEDIA_LOCATION,
         ) == PackageManager.PERMISSION_GRANTED
-        val sourceUri = if (canReadLocation) MediaStore.setRequireOriginal(item.uri) else item.uri
+        // Only MediaStore Uris carry redacted GPS; file Uris (hidden items) are read as-is.
+        val sourceUri = if (canReadLocation && item.uri.scheme == "content") MediaStore.setRequireOriginal(item.uri) else item.uri
 
         var camera: CameraInfo? = null
         var location: GeoPoint? = null

@@ -5,7 +5,9 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.IntentSender
+import android.net.Uri
 import android.provider.MediaStore
+import androidx.core.content.FileProvider
 import androidx.print.PrintHelper
 
 /**
@@ -19,15 +21,16 @@ object MediaActions {
 
     fun share(context: Context, items: List<MediaItem>) {
         if (items.isEmpty()) return
+        val uris = items.map { shareableUri(context, it) }
         val send = if (items.size == 1) {
             Intent(Intent.ACTION_SEND).apply {
                 type = items[0].mimeType
-                putExtra(Intent.EXTRA_STREAM, items[0].uri)
+                putExtra(Intent.EXTRA_STREAM, uris[0])
             }
         } else {
             Intent(Intent.ACTION_SEND_MULTIPLE).apply {
                 type = commonMimeType(items)
-                putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(items.map { it.uri }))
+                putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(uris))
             }
         }
         send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
@@ -94,6 +97,16 @@ object MediaActions {
 
     fun favoriteRequest(context: Context, items: List<MediaItem>, favorite: Boolean): IntentSender =
         MediaStore.createFavoriteRequest(context.contentResolver, items.map { it.uri }, favorite).intentSender
+
+    /** Hidden files are file:// Uris, which other apps can't open; hand them a provider Uri instead. */
+    private fun shareableUri(context: Context, item: MediaItem): Uri {
+        val file = HiddenMedia.file(item)
+        return if (item.uri.scheme == "file" && file != null) {
+            FileProvider.getUriForFile(context, "${context.packageName}.files", file)
+        } else {
+            item.uri
+        }
+    }
 
     // Any image type when all are photos, any video type when all are videos, else anything.
     private fun commonMimeType(items: List<MediaItem>): String = when {

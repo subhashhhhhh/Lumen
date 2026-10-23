@@ -246,7 +246,14 @@ private fun Thumbnail(
                     ImageRequest.Builder(context)
                         // Small cells: Android's thumbnail cache (fast). Big cells: the original,
                         // decoded at cell size, so screenshot text stays readable.
-                        .data(if (bucket <= ImageKeys.SystemThumbnailMaxPx) MediaThumbnail(item.uri) else item.uri)
+                        // Hidden files (file Uris) have no system thumbnail; decode them directly.
+                        .data(
+                            if (bucket <= ImageKeys.SystemThumbnailMaxPx && item.uri.scheme == "content") {
+                                MediaThumbnail(item.uri)
+                            } else {
+                                item.uri
+                            },
+                        )
                         .size(bucket, bucket)
                         .memoryCacheKey(ImageKeys.thumb(item, bucket))
                         // While a bigger size decodes after a pinch, keep showing the one we have.

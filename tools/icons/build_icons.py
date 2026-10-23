@@ -41,6 +41,9 @@ ICONS = [
     ("More", "more_vertical", "regular"),
     ("Add", "add", "regular"),
     ("NewAlbum", "folder_add", "regular"),
+    ("Lock", "lock_closed", "regular"),
+    ("Unhide", "eye", "regular"),
+    ("Hide", "eye_off", "regular"),
 ]
 
 src_dir, out = sys.argv[1], sys.argv[2]
