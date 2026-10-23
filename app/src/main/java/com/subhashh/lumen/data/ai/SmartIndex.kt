@@ -2,7 +2,13 @@ package com.subhashh.lumen.data.ai
 
 import android.content.Context
 import android.provider.MediaStore
+import androidx.work.BackoffPolicy
 import androidx.work.Constraints
+import androidx.work.WorkInfo
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
@@ -12,6 +18,7 @@ import androidx.work.workDataOf
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import java.time.Duration
 
 data class IndexProgress(val indexed: Int, val total: Int)
@@ -38,20 +45,34 @@ object SmartIndex {
         mutableProgress.value = IndexProgress(indexed, total)
     }
 
-    /** Makes sure both jobs are queued, if a model is installed. Cheap; safe to call often. */
+    /**
+     * Makes sure both jobs are queued, if a model is installed. Safe to call often (app start). A
+     * backlog job waiting out a back-off is replaced by a fresh one, so opening Lumen restarts a
+     * stalled index; a running one is left alone.
+     */
     fun schedule(context: Context) {
-        if (ModelDownloads.installed(context) == null) return
-        val work = WorkManager.getInstance(context)
-        work.enqueueUniqueWork(
-            Backlog,
-            ExistingWorkPolicy.KEEP,
-            OneTimeWorkRequestBuilder<IndexWorker>()
-                .setInputData(workDataOf(KeyMode to Backlog))
-                .setConstraints(Constraints.Builder().setRequiresCharging(true).setRequiresBatteryNotLow(true).build())
-                .build(),
-        )
-        watchForNew(context, ExistingWorkPolicy.KEEP)
+        val app = context.applicationContext
+        scope.launch {
+            if (ModelDownloads.installed(app) == null) return@launch
+            val work = WorkManager.getInstance(app)
+            val waiting = work.getWorkInfosForUniqueWorkFlow(Backlog).first()
+                .any { it.state == WorkInfo.State.ENQUEUED && it.runAttemptCount > 0 }
+            work.enqueueUniqueWork(
+                Backlog,
+                if (waiting) ExistingWorkPolicy.REPLACE else ExistingWorkPolicy.KEEP,
+                OneTimeWorkRequestBuilder<IndexWorker>()
+                    .setInputData(workDataOf(KeyMode to Backlog))
+                    .setConstraints(Constraints.Builder().setRequiresCharging(true).setRequiresBatteryNotLow(true).build())
+                    // Android stops a job after ~10 minutes; a long first index carries on a minute
+                    // later each time, rather than WorkManager's default doubling wait.
+                    .setBackoffCriteria(BackoffPolicy.LINEAR, Duration.ofMinutes(1))
+                    .build(),
+            )
+            watchForNew(app, ExistingWorkPolicy.KEEP)
+        }
     }
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     /** After a model download: start indexing the newest items right away, charging or not. */
     fun startNow(context: Context) {
