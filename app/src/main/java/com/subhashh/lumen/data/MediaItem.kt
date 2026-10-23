@@ -22,4 +22,6 @@ data class MediaItem(
     val height: Int,
     /** DATE_MODIFIED (seconds): changes whenever the file does (rotate, edit), so it versions every cached image of it. */
     val modified: Long,
+    /** File name, e.g. "IMG_20240312_101500.jpg"; search matches on it. */
+    val name: String = "",
 )

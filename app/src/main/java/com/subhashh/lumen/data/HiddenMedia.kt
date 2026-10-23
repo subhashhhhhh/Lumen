@@ -245,6 +245,7 @@ object HiddenMedia {
             width = width,
             height = height,
             modified = modified / 1000,
+            name = file.name,
         )
     }
 

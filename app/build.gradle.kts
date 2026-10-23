@@ -54,6 +54,7 @@ baselineProfile {
 }
 
 dependencies {
+    testImplementation(libs.junit)
     implementation(libs.androidx.profileinstaller)
     baselineProfile(project(":baselineprofile"))
     implementation(libs.androidx.core.ktx)

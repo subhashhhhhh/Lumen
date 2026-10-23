@@ -11,6 +11,8 @@ object CollectionKeys {
     const val RecentlyDeleted = "trash"
     /** Hidden files come from a storage scan, not MediaStore; the caller supplies them. */
     const val Hidden = "hidden"
+    /** The current search results; the caller supplies them. */
+    const val Search = "search"
     private const val HiddenFolderPrefix = "hidden:"
 
     /** One folder inside Hidden: its hidden files only. */
