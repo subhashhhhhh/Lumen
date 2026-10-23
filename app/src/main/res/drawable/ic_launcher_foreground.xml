@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A glowing orb of light: a wide soft halo, then a bright core shading from white to amber.
+     Kept inside the 66dp safe zone so every launcher mask shows all of it. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Halo -->
+    <path android:pathData="M54,22a32,32 0,1 1,0 64a32,32 0,1 1,0 -64z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="radial"
+                android:centerX="54"
+                android:centerY="54"
+                android:gradientRadius="32">
+                <item android:offset="0" android:color="#66FFD9A0" />
+                <item android:offset="0.55" android:color="#26FF9F6A" />
+                <item android:offset="1" android:color="#00FF7A59" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <!-- Core -->
+    <path android:pathData="M54,37a17,17 0,1 1,0 34a17,17 0,1 1,0 -34z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="radial"
+                android:centerX="49"
+                android:centerY="48"
+                android:gradientRadius="22">
+                <item android:offset="0" android:color="#FFFFFFFF" />
+                <item android:offset="0.45" android:color="#FFFFE7B0" />
+                <item android:offset="1" android:color="#FFFF9F0A" />
+            </gradient>
+        </aapt:attr>
+    </path>
+</vector>
