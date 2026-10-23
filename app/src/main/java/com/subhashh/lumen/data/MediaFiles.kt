@@ -255,7 +255,7 @@ object MediaFiles {
 
     /** The file's path, for file IO under All files access (MediaStore's _data column). */
     @Suppress("DEPRECATION")
-    private fun filePath(context: Context, item: MediaItem): String? =
+    fun filePath(context: Context, item: MediaItem): String? =
         context.contentResolver.query(item.uri, arrayOf(MediaStore.MediaColumns.DATA), null, null, null)
             ?.use { if (it.moveToFirst()) it.getString(0) else null }
 

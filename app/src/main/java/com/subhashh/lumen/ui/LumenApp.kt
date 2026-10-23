@@ -49,6 +49,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import java.io.File
 import com.subhashh.lumen.ui.hidden.HiddenLock
 import com.subhashh.lumen.ui.components.Confirmation
 import com.subhashh.lumen.ui.components.ConfirmDialog
@@ -324,13 +325,14 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
     var slideshowOf by remember { mutableStateOf<Set<Long>?>(null) }
     val toast = { message: String -> Toast.makeText(context, message, Toast.LENGTH_LONG).show() }
     val activity = LocalActivity.current
-    val openHidden: () -> Unit = open@{
-        val host = activity ?: return@open
-        if (!HiddenMedia.available()) {
+    /** Hidden content lives outside MediaStore; without All files access, explain and link to it. */
+    val needsAllFiles: () -> Boolean = {
+        val missing = !HiddenMedia.available()
+        if (missing) {
             confirmation = Confirmation(
-                title = "Hidden needs All files access",
-                message = "Android's media index skips hidden photos on purpose, so Lumen has to read storage " +
-                    "directly to show them. Nothing ever leaves your phone.",
+                title = "Hiding needs All files access",
+                message = "Android's media index skips hidden photos on purpose, so Lumen has to work with storage " +
+                    "directly to hide and show them. Nothing ever leaves your phone.",
                 confirm = "Open Settings",
             ) {
                 runCatching {
@@ -339,8 +341,12 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                     )
                 }
             }
-            return@open
         }
+        missing
+    }
+    val openHidden: () -> Unit = open@{
+        val host = activity ?: return@open
+        if (needsAllFiles()) return@open
         val show = {
             hiddenUnlocked = true
             viewModel.loadHidden()
@@ -381,6 +387,38 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                     "in Lumen and in every other app.",
                 confirm = "Unhide",
             ) { run() }
+        }
+    }
+    val hide: (List<MediaItem>) -> Unit = hide@{ items ->
+        if (needsAllFiles()) return@hide
+        scope.launch {
+            val paths = withContext(Dispatchers.IO) { items.mapNotNull { MediaFiles.filePath(context, it) } }
+            val n = HiddenMedia.hide(context, paths)
+            afterHiddenChange(if (n == items.size) "Hidden. Find it in Collections → Hidden" else "Hid $n of ${items.size}")
+        }
+    }
+    val hideFolders: (List<MediaItem>) -> Unit = hide@{ items ->
+        if (needsAllFiles()) return@hide
+        scope.launch {
+            val folders = withContext(Dispatchers.IO) {
+                items.mapNotNull { MediaFiles.filePath(context, it)?.let(::File)?.parentFile }.distinctBy { it.absolutePath }
+            }
+            if (folders.isEmpty()) return@launch
+            val paths = folders.mapTo(HashSet()) { it.absolutePath }
+            val root = Environment.getExternalStorageDirectory()
+            val affected = library.orEmpty().count { File(root, it.relativePath).absolutePath in paths }
+            val name = folders.singleOrNull()?.name
+            confirmation = Confirmation(
+                title = if (name != null) "Hide “$name”?" else "Hide ${folders.size} folders?",
+                message = "All $affected items in ${if (name != null) "it" else "them"} will be hidden from Lumen's library and " +
+                    "from every other app. They'll be in Collections → Hidden.",
+                confirm = "Hide",
+            ) {
+                scope.launch {
+                    val n = HiddenMedia.hideFolders(context, folders)
+                    afterHiddenChange(if (n == paths.size) "Hidden. Find it in Collections → Hidden" else "Couldn't hide some folders")
+                }
+            }
         }
     }
     val deleteHidden: (List<MediaItem>) -> Unit = { items ->
@@ -788,6 +826,10 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                     if (selectedItems.any(MediaFiles::canRotate)) rotateMenu { rotate(selectedItems, it) } else null,
                 ),
                 listOf(
+                    MenuItem("Hide") { hide(selectedItems) },
+                    MenuItem(if (selectedItems.map { it.relativePath }.distinct().size > 1) "Hide Folders" else "Hide Folder") {
+                        hideFolders(selectedItems)
+                    },
                     MenuItem(if (selectedItems.map { it.relativePath }.distinct().size > 1) "Exclude Folders" else "Exclude Folder") {
                         excludeFolders(selectedItems)
                     },
@@ -844,6 +886,8 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                 onRename = { renameItem = it },
                 onRotate = { item, degrees -> rotate(listOf(item), degrees) },
                 onExcludeFolder = { excludeFolders(listOf(it)) },
+                onHide = { hide(listOf(it)) },
+                onHideFolder = { hideFolders(listOf(it)) },
                 slideshowOf = slideshowOf,
             )
         }

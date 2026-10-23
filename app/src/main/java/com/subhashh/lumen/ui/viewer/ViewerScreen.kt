@@ -135,6 +135,8 @@ fun ViewerScreen(
     onRename: (MediaItem) -> Unit = {},
     onRotate: (MediaItem, degrees: Int) -> Unit = { _, _ -> },
     onExcludeFolder: (MediaItem) -> Unit = {},
+    onHide: (MediaItem) -> Unit = {},
+    onHideFolder: (MediaItem) -> Unit = {},
     /** Start a slideshow right away, limited to these ids (from a selection); null = don't. */
     slideshowOf: Set<Long>? = null,
 ) {
@@ -473,6 +475,8 @@ fun ViewerScreen(
                     onRename = onRename,
                     onRotate = onRotate,
                     onExcludeFolder = onExcludeFolder,
+                    onHide = onHide,
+                    onHideFolder = onHideFolder,
                     onSlideshow = { slideshow = true },
                 ),
                 origin = TransformOrigin(1f, 0f),
@@ -508,6 +512,8 @@ private fun viewerMenu(
     onRename: (MediaItem) -> Unit,
     onRotate: (MediaItem, degrees: Int) -> Unit,
     onExcludeFolder: (MediaItem) -> Unit,
+    onHide: (MediaItem) -> Unit,
+    onHideFolder: (MediaItem) -> Unit,
     onSlideshow: () -> Unit,
 ): List<List<MenuItem>> {
     val photo = !item.isVideo
@@ -521,7 +527,11 @@ private fun viewerMenu(
             if (MediaFiles.canRotate(item)) rotateMenu { degrees -> onRotate(item, degrees) } else null,
         ),
         listOf(MenuItem("Slideshow") { onSlideshow() }),
-        listOf(MenuItem("Exclude Folder") { onExcludeFolder(item) }),
+        listOf(
+            MenuItem("Hide") { onHide(item) },
+            MenuItem("Hide Folder") { onHideFolder(item) },
+            MenuItem("Exclude Folder") { onExcludeFolder(item) },
+        ),
         listOfNotNull(
             MenuItem("Open with…") { MediaActions.openWith(context, item) },
             if (photo) MenuItem("Set as…") { MediaActions.setAs(context, item) } else null,
