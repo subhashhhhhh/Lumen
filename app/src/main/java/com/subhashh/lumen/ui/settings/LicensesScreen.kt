@@ -22,6 +22,13 @@ private data class Credit(val name: String, val by: String, val license: String,
 
 private val Credits = listOf(
     Credit("Backdrop", "Kyant0", "Apache 2.0", "The liquid glass you see everywhere in Lumen", "https://github.com/Kyant0/backdrop"),
+    Credit(
+        "liquid_glass_easy",
+        "Ahmed Gamil",
+        "MIT",
+        "The motion of the glass selection pill in the tab bar",
+        "https://pub.dev/packages/liquid_glass_easy",
+    ),
     Credit("Telephoto", "Saket Narayan", "Apache 2.0", "Zooming and tiled loading of large photos", "https://github.com/saket/telephoto"),
     Credit("Coil", "Coil Contributors", "Apache 2.0", "Image loading", "https://github.com/coil-kt/coil"),
     Credit(

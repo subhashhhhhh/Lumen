@@ -44,7 +44,6 @@ import com.kyant.backdrop.Backdrop
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import com.kyant.backdrop.backdrops.layerBackdrop
-import com.kyant.backdrop.backdrops.rememberCombinedBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.subhashh.lumen.ui.icons.LumenIcons
 import com.subhashh.lumen.ui.library.ZoomLevel
@@ -210,14 +209,12 @@ private fun MorphingTabs(
     val tabGeometry = rememberPillGeometry(TabWidth)
     val tabBarGlass = rememberLayerBackdrop()
     val tabRow = rememberLayerBackdrop()
-    val tabLensBackdrop = rememberCombinedBackdrop(backdrop, tabBarGlass, tabRow)
 
     val zoomPill = rememberLiquidPillState(zoomLevel?.ordinal ?: ZoomLevel.All.ordinal)
     LaunchedEffect(zoomLevel) { zoomLevel?.let { zoomPill.moveTo(it.ordinal) } }
     val zoomGeometry = rememberPillGeometry(zoomItemWidth)
     val zoomBarGlass = rememberLayerBackdrop()
     val zoomRow = rememberLayerBackdrop()
-    val zoomLensBackdrop = rememberCombinedBackdrop(backdrop, zoomBarGlass, zoomRow)
 
     Box(Modifier.width(width).height(Bar)) {
         // Behind: the zoom control, emerging from under the shrinking capsule.
@@ -322,12 +319,15 @@ private fun MorphingTabs(
         // Lifted lenses, above both capsules and outside their clips. Only mid-switch, and only
         // for the control that's fully out.
         if (t < 0.01f) {
-            LiquidPillLens(tabPill, tabGeometry, tabLensBackdrop, offset = inset, Modifier.matchParentSize())
+            LiquidPillLens(
+                tabPill, tabGeometry, page = backdrop, bar = tabBarGlass, items = tabRow, fillColor = colors.selection,
+                offset = inset, modifier = Modifier.matchParentSize(),
+            )
         } else if (zoomLevel != null && t > 0.99f) {
             LiquidPillLens(
-                zoomPill, zoomGeometry, zoomLensBackdrop,
+                zoomPill, zoomGeometry, page = backdrop, bar = zoomBarGlass, items = zoomRow, fillColor = colors.selection,
                 offset = inset + Offset(with(density) { zoomX.toPx() }, 0f),
-                Modifier.matchParentSize(),
+                modifier = Modifier.matchParentSize(),
             )
         }
     }
@@ -376,4 +376,4 @@ private val TabSpacing = 2.dp
 /** Gap between the capsule's edge and the selection pill. */
 private val PillInset = 4.dp
 /** How much taller than the bar the pill stands while lifted. */
-private val PillLift = 10.dp
+private val PillLift = 12.dp
