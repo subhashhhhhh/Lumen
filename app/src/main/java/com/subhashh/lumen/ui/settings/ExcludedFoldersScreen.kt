@@ -38,13 +38,7 @@ fun ExcludedFoldersScreen(
     modifier: Modifier = Modifier,
 ) {
     val colors = groupColors()
-    Column(
-        modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(contentPadding)
-            .padding(horizontal = 16.dp),
-    ) {
+    SettingsPage(contentPadding, modifier) {
         LargeTitle("Excluded Folders")
         Text(
             "Lumen ignores these folders and everything inside them. The files stay where they are, " +

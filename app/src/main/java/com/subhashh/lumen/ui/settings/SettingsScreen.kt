@@ -17,6 +17,7 @@ import com.subhashh.lumen.ui.theme.LocalDarkTheme
 import com.subhashh.lumen.ui.theme.Appearance
 import com.subhashh.lumen.ui.theme.LocalAppearance
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -53,15 +54,6 @@ import androidx.core.net.toUri
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.subhashh.lumen.ui.icons.LumenIcons
 
-internal data class GroupColors(val card: Color, val text: Color, val secondary: Color, val divider: Color)
-
-@Composable
-internal fun groupColors(): GroupColors = if (LocalDarkTheme.current) {
-    GroupColors(Color(0xFF1C1C1E), Color.White, Color(0x99EBEBF5), Color(0x33EBEBF5))
-} else {
-    GroupColors(Color(0xFFF2F2F7), Color.Black, Color(0x993C3C43), Color(0x333C3C43))
-}
-
 @Composable
 fun SettingsScreen(
     contentPadding: PaddingValues,
@@ -83,102 +75,70 @@ fun SettingsScreen(
         onPauseOrDispose { }
     }
     val status = remember(refresh) { PermissionStatus.read(context) }
+    val prefs = remember { LumenPrefs(context) }
 
-    Column(
-        modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(contentPadding)
-            .padding(horizontal = 16.dp),
-    ) {
+    SettingsPage(contentPadding, modifier) {
         LargeTitle("Settings")
 
         val appearance = LocalAppearance.current
         Group("Appearance") {
-            Appearance.entries.forEachIndexed { i, option ->
-                if (i > 0) Divider()
-                CheckRow(option.label, checked = option == appearance.current) { appearance.onChange(option) }
-            }
-        }
-
-        Group("Permissions", footer = "Lumen works without these; they unlock the features named.") {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                SettingsRow(
-                    title = "Media management",
-                    subtitle = "Delete and favorite without a confirmation each time",
-                    value = if (status.manageMedia) "On" else "Off",
-                    onClick = { context.openSettings(Settings.ACTION_REQUEST_MANAGE_MEDIA) },
-                )
-                Divider()
-            }
-            SettingsRow(
-                title = "All files access",
-                subtitle = "Needed for hidden folders (.nomedia)",
-                value = if (status.allFiles) "On" else "Off",
-                onClick = { context.openSettings(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION) },
-            )
-            Divider()
-            SettingsRow(
-                title = "Location in photos",
-                subtitle = "Show where photos were taken",
-                value = if (status.mediaLocation) "On" else "Off",
-                onClick = { context.openSettings(Settings.ACTION_APPLICATION_DETAILS_SETTINGS) },
-            )
-        }
-
-        Group("Folders") {
-            SettingsRow(
-                title = "Excluded folders",
-                subtitle = "Folders Lumen ignores",
-                value = if (excludedCount == 0) "None" else excludedCount.toString(),
-                onClick = onOpenExcluded,
-            )
-            Divider()
-            SettingsRow(title = "Hidden", subtitle = "Hidden from every app, locked in Lumen", onClick = onOpenHidden)
-        }
-
-        val prefs = remember { LumenPrefs(context) }
-        var autoplay by remember { mutableStateOf(prefs.videoAutoplay) }
-        var loop by remember { mutableStateOf(prefs.videoLoop) }
-        Group("Videos") {
-            SettingsRow(
-                title = "Autoplay",
-                subtitle = "Start playing as soon as a video opens",
-                value = if (autoplay) "On" else "Off",
-                onClick = {
-                    autoplay = !autoplay
-                    prefs.videoAutoplay = autoplay
-                },
-            )
-            Divider()
-            SettingsRow(
-                title = "Loop",
-                subtitle = "Start over at the end instead of stopping",
-                value = if (loop) "On" else "Off",
-                onClick = {
-                    loop = !loop
-                    prefs.videoLoop = loop
-                },
+            PickerRow(
+                title = "Theme",
+                options = Appearance.entries.map { it.label },
+                selected = appearance.current.ordinal,
+                onSelect = { appearance.onChange(Appearance.entries[it]) },
+                icon = LumenIcons.DarkTheme,
+                iconColor = Indigo,
             )
         }
 
         var hdrMode by remember { mutableStateOf(prefs.hdrMode) }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            Group(
-                "Photos",
-                footer = "Ultra HDR photos (from phones like Pixel and Galaxy) can glow brighter than white. " +
-                    "Match Brightness keeps to your brightness setting; Full HDR turns the screen all the way up " +
-                    "while an HDR photo or video is shown, like Chrome.",
-            ) {
-                SettingsRow(
+        var autoplay by remember { mutableStateOf(prefs.videoAutoplay) }
+        var loop by remember { mutableStateOf(prefs.videoLoop) }
+        val hdrSupported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
+        Group(
+            "Photos & Videos",
+            footer = if (hdrSupported) {
+                "Ultra HDR photos can glow brighter than white. Match Brightness keeps to your brightness; " +
+                    "Full HDR turns the screen all the way up while an HDR photo or video is shown, like Chrome."
+            } else null,
+        ) {
+            if (hdrSupported) {
+                PickerRow(
                     title = "Ultra HDR",
-                    value = hdrMode.label,
-                    onClick = {
-                        hdrMode = HdrMode.entries[(hdrMode.ordinal + 1) % HdrMode.entries.size]
+                    options = HdrMode.entries.map { it.label },
+                    selected = hdrMode.ordinal,
+                    onSelect = {
+                        hdrMode = HdrMode.entries[it]
                         prefs.hdrMode = hdrMode
                     },
+                    icon = LumenIcons.Hdr,
+                    iconColor = Orange,
                 )
+                Divider()
             }
+            ToggleRow(
+                title = "Autoplay Videos",
+                checked = autoplay,
+                onCheckedChange = {
+                    autoplay = it
+                    prefs.videoAutoplay = it
+                },
+                icon = LumenIcons.Play,
+                iconColor = Blue,
+            )
+            Divider()
+            ToggleRow(
+                title = "Loop Videos",
+                subtitle = "Start over at the end",
+                checked = loop,
+                onCheckedChange = {
+                    loop = it
+                    prefs.videoLoop = it
+                },
+                icon = LumenIcons.Repeat,
+                iconColor = Teal,
+            )
         }
 
         var slideSeconds by remember { mutableStateOf(prefs.slideshowSeconds) }
@@ -186,62 +146,139 @@ fun SettingsScreen(
         var slideShuffle by remember { mutableStateOf(prefs.slideshowShuffle) }
         var slideRepeat by remember { mutableStateOf(prefs.slideshowRepeat) }
         Group("Slideshow") {
-            SettingsRow(
+            PickerRow(
                 title = "Each Photo For",
-                value = "$slideSeconds s",
-                onClick = {
-                    slideSeconds = SlideSeconds[(SlideSeconds.indexOf(slideSeconds) + 1).mod(SlideSeconds.size)]
+                options = SlideSeconds.map { "$it seconds" },
+                selected = SlideSeconds.indexOf(slideSeconds).coerceAtLeast(0),
+                onSelect = {
+                    slideSeconds = SlideSeconds[it]
                     prefs.slideshowSeconds = slideSeconds
                 },
+                icon = LumenIcons.Timer,
+                iconColor = Purple,
             )
             Divider()
-            SettingsRow(
+            PickerRow(
                 title = "Transition",
-                value = if (slideFade) "Fade" else "Slide",
-                onClick = {
-                    slideFade = !slideFade
+                options = listOf("Slide", "Fade"),
+                selected = if (slideFade) 1 else 0,
+                onSelect = {
+                    slideFade = it == 1
                     prefs.slideshowFade = slideFade
                 },
+                icon = LumenIcons.SlideTransition,
+                iconColor = Pink,
             )
             Divider()
-            SettingsRow(
+            ToggleRow(
                 title = "Shuffle",
-                value = if (slideShuffle) "On" else "Off",
-                onClick = {
-                    slideShuffle = !slideShuffle
-                    prefs.slideshowShuffle = slideShuffle
+                checked = slideShuffle,
+                onCheckedChange = {
+                    slideShuffle = it
+                    prefs.slideshowShuffle = it
                 },
+                icon = LumenIcons.Shuffle,
+                iconColor = Orange,
             )
             Divider()
-            SettingsRow(
+            ToggleRow(
                 title = "Repeat",
-                subtitle = "Start over at the end instead of stopping",
-                value = if (slideRepeat) "On" else "Off",
-                onClick = {
-                    slideRepeat = !slideRepeat
-                    prefs.slideshowRepeat = slideRepeat
+                subtitle = "Start over at the end",
+                checked = slideRepeat,
+                onCheckedChange = {
+                    slideRepeat = it
+                    prefs.slideshowRepeat = it
                 },
+                icon = LumenIcons.Repeat,
+                iconColor = Teal,
             )
         }
 
-        Group("Hidden lock", footer = "Lumen's own lock for Hidden, separate from your phone's screen lock.") {
-            SettingsRow(title = if (hiddenLockSet) "Change Lock" else "Set Up Lock", onClick = onChangeLock)
+        Group("Privacy", footer = "Hidden has its own lock, separate from your phone's screen lock.") {
+            SettingsRow(
+                title = "Hidden",
+                subtitle = "Hidden from every app, locked in Lumen",
+                onClick = onOpenHidden,
+                icon = LumenIcons.Hide,
+                iconColor = Indigo,
+            )
+            Divider()
+            SettingsRow(
+                title = "Excluded Folders",
+                subtitle = "Folders Lumen ignores",
+                value = if (excludedCount == 0) "None" else excludedCount.toString(),
+                onClick = onOpenExcluded,
+                icon = LumenIcons.FolderProhibited,
+                iconColor = Gray,
+            )
+            Divider()
+            SettingsRow(
+                title = if (hiddenLockSet) "Change Hidden Lock" else "Set Up Hidden Lock",
+                onClick = onChangeLock,
+                icon = LumenIcons.Lock,
+                iconColor = Blue,
+            )
             if (hiddenLockSet) {
                 Divider()
-                SettingsRow(
+                ToggleRow(
                     title = "Fingerprint or Face",
                     subtitle = "Unlock Hidden faster",
-                    value = if (biometricsOn) "On" else "Off",
-                    onClick = onToggleBiometrics,
+                    checked = biometricsOn,
+                    onCheckedChange = { onToggleBiometrics() },
+                    icon = LumenIcons.Fingerprint,
+                    iconColor = Red,
                 )
             }
         }
 
-        Group("About") {
-            SettingsRow(title = "Open-source licenses", onClick = onOpenLicenses)
+        Group("Permissions", footer = "Lumen works without these; they unlock the features named. Each opens Android's settings.") {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                SettingsRow(
+                    title = "Media Management",
+                    subtitle = "Delete and favorite without asking each time",
+                    value = if (status.manageMedia) "On" else "Off",
+                    onClick = { context.openSettings(Settings.ACTION_REQUEST_MANAGE_MEDIA) },
+                    icon = LumenIcons.Shield,
+                    iconColor = Green,
+                )
+                Divider()
+            }
+            SettingsRow(
+                title = "All Files Access",
+                subtitle = "Hidden folders, renaming albums, dates on videos",
+                value = if (status.allFiles) "On" else "Off",
+                onClick = { context.openSettings(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION) },
+                icon = LumenIcons.FolderOpen,
+                iconColor = Blue,
+            )
             Divider()
-            SettingsRow(title = "Version", value = context.versionName(), onClick = null)
+            SettingsRow(
+                title = "Location in Photos",
+                subtitle = "Show where photos were taken",
+                value = if (status.mediaLocation) "On" else "Off",
+                onClick = { context.openSettings(Settings.ACTION_APPLICATION_DETAILS_SETTINGS) },
+                icon = LumenIcons.Location,
+                iconColor = Green,
+            )
         }
+
+        Group("About") {
+            SettingsRow(
+                title = "Open-Source Licenses",
+                onClick = onOpenLicenses,
+                icon = LumenIcons.Document,
+                iconColor = Gray,
+            )
+            Divider()
+            SettingsRow(
+                title = "Version",
+                value = context.versionName(),
+                onClick = null,
+                icon = LumenIcons.Info,
+                iconColor = Gray,
+            )
+        }
+        Spacer(Modifier.height(24.dp))
     }
 }
 
@@ -269,103 +306,11 @@ private fun Context.openSettings(action: String) {
 private fun Context.versionName(): String =
     runCatching { packageManager.getPackageInfo(packageName, 0).versionName }.getOrNull().orEmpty()
 
-@Composable
-internal fun LargeTitle(text: String) {
-    Text(
-        text,
-        fontSize = 34.sp,
-        fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.onBackground,
-        modifier = Modifier.padding(start = 4.dp, bottom = 8.dp),
-    )
-}
-
-/** iOS-style grouped section: small caps header, rounded card, optional footer. */
-@Composable
-internal fun Group(title: String, footer: String? = null, content: @Composable ColumnScope.() -> Unit) {
-    val colors = groupColors()
-    Text(
-        title.uppercase(),
-        fontSize = 13.sp,
-        color = colors.secondary,
-        modifier = Modifier.padding(start = 16.dp, top = 20.dp, bottom = 6.dp),
-    )
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(colors.card),
-        content = content,
-    )
-    if (footer != null) {
-        Text(
-            footer,
-            fontSize = 13.sp,
-            color = colors.secondary,
-            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 6.dp),
-        )
-    }
-}
-
-@Composable
-internal fun SettingsRow(
-    title: String,
-    subtitle: String? = null,
-    value: String? = null,
-    onClick: (() -> Unit)?,
-) {
-    val colors = groupColors()
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .heightIn(min = 52.dp)
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(Modifier.weight(1f)) {
-            Text(title, fontSize = 16.sp, color = colors.text)
-            if (subtitle != null) Text(subtitle, fontSize = 13.sp, color = colors.secondary)
-        }
-        if (value != null) {
-            Spacer(Modifier.width(8.dp))
-            Text(value, fontSize = 16.sp, color = colors.secondary)
-        }
-        if (onClick != null) {
-            Spacer(Modifier.width(6.dp))
-            Icon(
-                LumenIcons.Back,
-                contentDescription = null,
-                tint = colors.secondary,
-                // The back chevron, turned around: there's no forward one in the icon set yet.
-                modifier = Modifier
-                    .size(16.dp)
-                    .graphicsLayer { rotationZ = 180f },
-            )
-        }
-    }
-}
-
-/** A row in a pick-one group: the chosen one gets a checkmark, like iOS. */
-@Composable
-private fun CheckRow(title: String, checked: Boolean, onClick: () -> Unit) {
-    val colors = groupColors()
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .heightIn(min = 52.dp)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(title, fontSize = 16.sp, color = colors.text, modifier = Modifier.weight(1f))
-        if (checked) {
-            Icon(LumenIcons.Check, contentDescription = "Selected", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
-        }
-    }
-}
-
-@Composable
-internal fun Divider() {
-    HorizontalDivider(color = groupColors().divider, modifier = Modifier.padding(start = 16.dp))
-}
+private val Indigo = Color(0xFF5E5CE6)
+private val Blue = Color(0xFF0A84FF)
+private val Teal = Color(0xFF30B0C7)
+private val Purple = Color(0xFFBF5AF2)
+private val Pink = Color(0xFFFF375F)
+private val Orange = Color(0xFFFF9F0A)
+private val Green = Color(0xFF30D158)
+private val Red = Color(0xFFFF453A)

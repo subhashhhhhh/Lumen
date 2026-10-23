@@ -60,13 +60,7 @@ private val Credits = listOf(
 fun LicensesScreen(contentPadding: PaddingValues, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val colors = groupColors()
-    Column(
-        modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(contentPadding)
-            .padding(horizontal = 16.dp),
-    ) {
+    SettingsPage(contentPadding, modifier) {
         LargeTitle("Licenses")
         Text(
             "Lumen is built on the work of these open-source projects. Tap one to visit it.",
