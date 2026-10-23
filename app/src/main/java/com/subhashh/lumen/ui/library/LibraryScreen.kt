@@ -281,6 +281,19 @@ internal fun Thumbnail(
                         .padding(4.dp),
                 )
             }
+            if (item.isFavorite && showDuration) {
+                // A small white heart, bottom-left, like iOS Photos.
+                Icon(
+                    LumenIcons.HeartFilled,
+                    contentDescription = "Favorite",
+                    tint = Color.White,
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(5.dp)
+                        .size(14.dp)
+                        .shadow(3.dp, CircleShape, clip = false),
+                )
+            }
         }
         if (selected != null) SelectionMark(selected, Modifier.align(Alignment.BottomEnd).padding(6.dp))
     }

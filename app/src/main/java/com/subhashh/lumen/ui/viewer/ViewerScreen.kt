@@ -263,6 +263,23 @@ fun ViewerScreen(
 
     val player = rememberViewerPlayer(current)
 
+    // The screen stays on while a video plays or a slideshow runs, then times out as usual.
+    var playing by remember(player) { mutableStateOf(player?.isPlaying == true) }
+    DisposableEffect(player) {
+        val listener = object : Player.Listener {
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                playing = isPlaying
+            }
+        }
+        player?.addListener(listener)
+        onDispose { player?.removeListener(listener) }
+    }
+    val view = LocalView.current
+    DisposableEffect(playing, slideshow) {
+        view.keepScreenOn = playing || slideshow
+        onDispose { view.keepScreenOn = false }
+    }
+
     val requestLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartIntentSenderForResult(),
     ) { result ->
