@@ -47,6 +47,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.subhashh.lumen.ui.settings.SettingsScreen
+import com.subhashh.lumen.ui.settings.LicensesScreen
 import com.subhashh.lumen.ui.theme.LocalGlassColors
 import com.subhashh.lumen.ui.library.ViewMenu
 import com.subhashh.lumen.data.LumenPrefs
@@ -156,6 +158,8 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
     var searching by rememberSaveable { mutableStateOf(false) }
     /** Collection open inside the Collections tab, if any. */
     var openCollection by rememberSaveable { mutableStateOf<String?>(null) }
+    /** Settings pages pushed on the Collections tab: "settings", then "licenses". */
+    var settingsPage by rememberSaveable { mutableStateOf<String?>(null) }
     /** Which collection the viewer pages through, and where it started. */
     var viewerSource by rememberSaveable { mutableStateOf<String?>(null) }
     var viewerStart by rememberSaveable { mutableIntStateOf(0) }
@@ -192,8 +196,11 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
 
     val viewerOpen = viewerSource != null
     val inCollection = tab == LumenTab.Collections && openCollection != null && !searching
+    val inSettings = tab == LumenTab.Collections && settingsPage != null && !searching
+    val popSettings = { settingsPage = if (settingsPage == SettingsLicenses) SettingsMain else null }
     BackHandler(enabled = searching && !viewerOpen) { searching = false }
     BackHandler(enabled = inCollection && !viewerOpen) { openCollection = null }
+    BackHandler(enabled = inSettings && !viewerOpen) { popSettings() }
 
     // Multi-select: null when not selecting. Lives here so the header, top controls and the
     // bottom action bar (all outside the grid) can share it.
@@ -265,6 +272,13 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                     transition = transition,
                     onOpen = { index -> openViewer(CollectionKeys.Library, index) },
                 )
+                settingsPage == SettingsLicenses -> LicensesScreen(
+                    contentPadding = PaddingValues(top = statusTop + 72.dp, bottom = navBottom + 96.dp),
+                )
+                settingsPage == SettingsMain -> SettingsScreen(
+                    contentPadding = PaddingValues(top = statusTop + 72.dp, bottom = navBottom + 96.dp),
+                    onOpenLicenses = { settingsPage = SettingsLicenses },
+                )
                 openCollection != null -> {
                     val key = openCollection!!
                     LibraryScreen(
@@ -321,12 +335,25 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
             )
         }
 
-        if (inCollection && !viewerOpen) {
+        if (tab == LumenTab.Collections && openCollection == null && settingsPage == null && !searching && !viewerOpen) {
+            GlassIconButton(
+                backdrop = backdrop,
+                icon = LumenIcons.Settings,
+                contentDescription = "Settings",
+                onClick = { settingsPage = SettingsMain },
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .statusBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+            )
+        }
+
+        if ((inCollection || inSettings) && !viewerOpen) {
             GlassIconButton(
                 backdrop = backdrop,
                 icon = LumenIcons.Back,
                 contentDescription = "Back",
-                onClick = { openCollection = null },
+                onClick = { if (inSettings) popSettings() else openCollection = null },
                 modifier = Modifier
                     .align(Alignment.TopStart)
                     .statusBarsPadding()
@@ -351,7 +378,10 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                 selected = tab.takeUnless { searching },
                 onSelect = { selected ->
                     // Tapping the current tab again pops back to its root, like iOS.
-                    if (selected == tab && !searching) openCollection = null
+                    if (selected == tab && !searching) {
+                        openCollection = null
+                        settingsPage = null
+                    }
                     tab = selected
                     searching = false
                 },
@@ -473,3 +503,6 @@ private fun selectionTitle(selected: List<MediaItem>): String {
     }
     return "$n $noun Selected"
 }
+
+private const val SettingsMain = "settings"
+private const val SettingsLicenses = "licenses"
