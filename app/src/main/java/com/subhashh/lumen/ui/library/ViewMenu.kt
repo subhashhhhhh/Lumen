@@ -33,12 +33,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kyant.backdrop.Backdrop
 import com.subhashh.lumen.data.LibraryFilter
+import com.subhashh.lumen.data.LibrarySort
 import com.subhashh.lumen.ui.components.glass
 import com.subhashh.lumen.ui.icons.LumenIcons
 import com.subhashh.lumen.ui.theme.LocalGlassColors
 
 /**
- * The Library's ≡ menu: filter and grid style. Grows out of the top-right button with a spring;
+ * The Library's ≡ menu: filter, sort and grid style. Grows out of the top-right button with a spring;
  * a tap anywhere outside, or on a choice, closes it. Drawn in-window (not a popup) so its glass
  * can refract the grid behind it.
  */
@@ -51,6 +52,9 @@ fun ViewMenu(
     onFilter: (LibraryFilter) -> Unit,
     aspectRatioGrid: Boolean,
     onAspectRatioGrid: (Boolean) -> Unit,
+    sort: LibrarySort,
+    descending: Boolean,
+    onSort: (LibrarySort, descending: Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     if (open) {
@@ -86,6 +90,26 @@ fun ViewMenu(
                     onFilter(option)
                     onDismiss()
                 }
+            }
+            HorizontalDivider(
+                color = colors.contentSecondary.copy(alpha = 0.2f),
+                modifier = Modifier.padding(vertical = 6.dp),
+            )
+            SectionLabel("Sort")
+            LibrarySort.entries.forEach { option ->
+                // Picking a new sort starts in its natural direction; picking the current one keeps it.
+                MenuRow(option.label, checked = option == sort) {
+                    onSort(option, if (option == sort) descending else option.defaultDescending)
+                    onDismiss()
+                }
+            }
+            MenuRow(sort.ascendingLabel, checked = !descending) {
+                onSort(sort, false)
+                onDismiss()
+            }
+            MenuRow(sort.descendingLabel, checked = descending) {
+                onSort(sort, true)
+                onDismiss()
             }
             HorizontalDivider(
                 color = colors.contentSecondary.copy(alpha = 0.2f),

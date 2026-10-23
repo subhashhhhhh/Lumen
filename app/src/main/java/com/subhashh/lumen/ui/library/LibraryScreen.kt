@@ -91,6 +91,10 @@ fun LibraryScreen(
     /** Columns, saved by the caller so the choice survives restarts. */
     columns: Int = ColumnSteps[DefaultColumnStep],
     onColumnsChange: (Int) -> Unit = {},
+    /** Open scrolled to the end (newest at the bottom, the default order) rather than the top. */
+    startAtEnd: Boolean = true,
+    /** The month under the title; meaningless when sorted by name or size. */
+    showMonth: Boolean = true,
 ) {
     val haptics = LocalHapticFeedback.current
     // Decode thumbnails for the cell size actually shown, so fewer, bigger cells stay sharp.
@@ -102,7 +106,7 @@ fun LibraryScreen(
     var scrolledToNewest by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(items.isNotEmpty()) {
         if (items.isNotEmpty() && !scrolledToNewest) {
-            gridState.scrollToItem(items.lastIndex)
+            gridState.scrollToItem(if (startAtEnd) items.lastIndex else 0)
             scrolledToNewest = true
         }
     }
@@ -179,7 +183,7 @@ fun LibraryScreen(
 
         LibraryHeader(
             title = title,
-            subtitle = visibleMonth,
+            subtitle = if (showMonth) visibleMonth else "",
             topPadding = titleTopPadding,
             modifier = Modifier.align(Alignment.TopStart),
         )

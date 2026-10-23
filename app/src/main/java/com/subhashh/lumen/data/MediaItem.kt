@@ -24,4 +24,6 @@ data class MediaItem(
     val modified: Long,
     /** File name, e.g. "IMG_20240312_101500.jpg"; search matches on it. */
     val name: String = "",
+    /** Bytes; 0 when unknown. For sorting by size. */
+    val size: Long = 0,
 )

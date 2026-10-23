@@ -32,6 +32,7 @@ class MediaRepository(private val context: Context) {
             MediaStore.MediaColumns.HEIGHT,
             MediaStore.MediaColumns.ORIENTATION,
             MediaStore.MediaColumns.DISPLAY_NAME,
+            MediaStore.MediaColumns.SIZE,
         )
         // MediaStore classifies TypeScript sources (.ts) as MPEG-TS video. Real transport streams
         // get a duration when scanned; source files never do, so drop mp2ts rows without one.
@@ -70,6 +71,7 @@ class MediaRepository(private val context: Context) {
             val heightCol = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.HEIGHT)
             val orientationCol = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.ORIENTATION)
             val nameCol = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DISPLAY_NAME)
+            val sizeCol = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.SIZE)
 
             while (cursor.moveToNext()) {
                 val id = cursor.getLong(idCol)
@@ -99,6 +101,7 @@ class MediaRepository(private val context: Context) {
                     height = if (rotated) cursor.getInt(widthCol) else cursor.getInt(heightCol),
                     modified = cursor.getLong(modifiedCol),
                     name = cursor.getString(nameCol).orEmpty(),
+                    size = cursor.getLong(sizeCol),
                 )
             }
         }

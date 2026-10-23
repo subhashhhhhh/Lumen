@@ -64,7 +64,18 @@ class LumenPrefs(context: Context) {
             putString(KeyCreated, value.created.joinToString("\n"))
         }
 
+    var librarySort: LibrarySort
+        get() = prefs.getString(KeySort, null)?.let { name -> LibrarySort.entries.firstOrNull { it.name == name } }
+            ?: LibrarySort.Date
+        set(value) = prefs.edit { putString(KeySort, value.name) }
+
+    var sortDescending: Boolean
+        get() = prefs.getBoolean(KeySortDescending, false)
+        set(value) = prefs.edit { putBoolean(KeySortDescending, value) }
+
     private companion object {
+        const val KeySort = "library_sort"
+        const val KeySortDescending = "library_sort_descending"
         const val KeyAlbumSort = "album_sort"
         const val KeyPinned = "pinned_albums"
         const val KeyCovers = "album_covers"
