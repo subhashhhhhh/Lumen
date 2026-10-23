@@ -114,6 +114,7 @@ private val Entries = listOf(
     SettingEntry("search-quality", "Search Quality", SettingsCategory.SmartSearch, "accurate fast ai model smart search"),
     SettingEntry("search-model", "Search Model", SettingsCategory.SmartSearch, "download remove update ai smart search"),
     SettingEntry("indexed", "Indexed", SettingsCategory.SmartSearch, "indexing progress smart search"),
+    SettingEntry("text-read", "Text Read", SettingsCategory.SmartSearch, "ocr words text in photos screenshots reading progress"),
     SettingEntry("wifi-only", "Download on Wi-Fi Only", SettingsCategory.SmartSearch, "mobile data cellular download"),
     SettingEntry("hf-token", "Hugging Face Token", SettingsCategory.SmartSearch, "huggingface token download speed"),
     SettingEntry("media-management", "Media Management", SettingsCategory.Permissions, "delete favorite trash permission confirm"),
@@ -762,6 +763,6 @@ internal val Blue = Color(0xFF0A84FF)
 internal val Teal = Color(0xFF30B0C7)
 internal val Purple = Color(0xFFBF5AF2)
 private val Pink = Color(0xFFFF375F)
-private val Orange = Color(0xFFFF9F0A)
+internal val Orange = Color(0xFFFF9F0A)
 internal val Green = Color(0xFF30D158)
 private val Red = Color(0xFFFF453A)

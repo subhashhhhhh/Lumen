@@ -41,8 +41,16 @@ object SmartIndex {
     private const val NewLimit = 30
     private const val KeyMode = "mode"
 
+    private val mutableTextProgress = MutableStateFlow<IndexProgress?>(null)
+    /** The same for reading text in photos ([TextIndexer]). */
+    val textProgress: StateFlow<IndexProgress?> = mutableTextProgress.asStateFlow()
+
     fun report(indexed: Int, total: Int) {
         mutableProgress.value = IndexProgress(indexed, total)
+    }
+
+    fun reportText(read: Int, total: Int) {
+        mutableTextProgress.value = IndexProgress(read, total)
     }
 
     /**
@@ -90,6 +98,7 @@ object SmartIndex {
             cancelUniqueWork(New)
         }
         mutableProgress.value = null
+        mutableTextProgress.value = null
     }
 
     /** A content-triggered job fires once; each run queues the next one behind itself. */
@@ -112,9 +121,12 @@ object SmartIndex {
         override suspend fun doWork(): Result {
             val model = ModelDownloads.installed(applicationContext) ?: return Result.success()
             val backlog = inputData.getString(KeyMode) == Backlog
-            val outcome = Indexer(applicationContext, model).run(limit = if (backlog) Int.MAX_VALUE else NewLimit)
+            val limit = if (backlog) Int.MAX_VALUE else NewLimit
+            var outcome = Indexer(applicationContext, model).run(limit)
             // Suggested searches follow what's in the library; refreshed once it's all indexed.
             if (outcome == Indexer.Outcome.Done) SearchSuggestions.refreshIfStale(applicationContext, model)
+            // Then the words in photos, once everything has its vectors.
+            if (outcome == Indexer.Outcome.Done) outcome = TextIndexer(applicationContext).run(limit)
             if (backlog) {
                 // Too warm: try again later (WorkManager backs off); otherwise finished.
                 return if (outcome == Indexer.Outcome.TooHot) Result.retry() else Result.success()

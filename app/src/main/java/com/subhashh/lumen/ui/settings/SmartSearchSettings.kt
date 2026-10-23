@@ -14,6 +14,7 @@ import com.subhashh.lumen.data.ai.EmbeddingStore
 import com.subhashh.lumen.data.ai.IndexProgress
 import com.subhashh.lumen.data.ai.Indexer
 import com.subhashh.lumen.data.ai.SmartIndex
+import com.subhashh.lumen.data.ai.TextStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import androidx.compose.runtime.remember
@@ -50,6 +51,7 @@ internal fun SmartSearchGroup(
     val chosen = ModelCatalog.byId(chosenId)
     var removed by remember { mutableIntStateOf(0) }
     val installed = remember(refresh, state, removed, chosenId) { ModelDownloads.installed(context) }
+    val readerMissing = remember(refresh, state, removed) { !OcrModel.installed(context) }
     val live by SmartIndex.progress.collectAsState()
     val counted by produceState<IndexProgress?>(null, refresh, installed) {
         val model = installed
@@ -58,6 +60,13 @@ internal fun SmartSearchGroup(
         }
     }
     val progress = if (installed == null) null else live ?: counted
+    val liveText by SmartIndex.textProgress.collectAsState()
+    val countedText by produceState<IndexProgress?>(null, refresh, installed, readerMissing) {
+        value = if (installed == null || readerMissing) null else withContext(Dispatchers.IO) {
+            IndexProgress(TextStore.of(context).count(), Indexer.eligible(context).count { !it.isVideo })
+        }
+    }
+    val textProgress = if (installed == null || readerMissing) null else liveText ?: countedText
     var tokenRemoved by remember { mutableIntStateOf(0) }
     val hasToken = remember(refresh, tokenRemoved) { HfTokenStore(context).token != null }
     var wifiOnly by remember { mutableStateOf(prefs.modelWifiOnly) }
@@ -75,7 +84,6 @@ internal fun SmartSearchGroup(
     }
 
     val size = megabytes(chosen.bytes + OcrModel.bytes)
-    val readerMissing = remember(refresh, state, removed) { !OcrModel.installed(context) }
     val remaining = remember(state, refresh, removed, chosenId) { ModelDownloads.remainingBytes(context) }
     val update = if (remaining < chosen.bytes + OcrModel.bytes) "Update available · ${megabytes(remaining)}" to "Update"
         else "Not downloaded · $size" to "Download"
@@ -159,6 +167,20 @@ internal fun SmartSearchGroup(
                     onClick = null,
                     icon = LumenIcons.Image,
                     iconColor = Green,
+                )
+            }
+        }
+        if (textProgress != null) {
+            Divider()
+            val complete = textProgress.indexed >= textProgress.total
+            Anchor("text-read", highlight) {
+                SettingsRow(
+                    title = "Text Read",
+                    subtitle = if (complete) "Words in photos are searchable" else "Photos, after Indexed is done",
+                    value = if (complete) "All ${"%,d".format(textProgress.total)}" else "%,d of %,d".format(textProgress.indexed, textProgress.total),
+                    onClick = null,
+                    icon = LumenIcons.Search,
+                    iconColor = Orange,
                 )
             }
         }

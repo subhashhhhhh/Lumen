@@ -2,6 +2,7 @@ package com.subhashh.lumen.data.ai
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.ImageDecoder
 import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.media.MediaMetadataRetriever
@@ -23,6 +24,23 @@ object MediaFrames {
     private const val EverySecondUpTo = 120_000L
     /** Mean absolute difference of 16×16 grey thumbnails (0–255) below which a frame is "the same". */
     private const val SameFrame = 6
+
+    /**
+     * A photo at up to [maxSide] on its long side, for reading its text: thumbnails are too
+     * small for chat-sized letters. Software pixels, first frame of an animation.
+     */
+    fun forReading(context: Context, item: MediaItem, maxSide: Int): Bitmap =
+        ImageDecoder.decodeBitmap(ImageDecoder.createSource(context.contentResolver, item.uri)) { decoder, info, _ ->
+            val long = maxOf(info.size.width, info.size.height)
+            if (long > maxSide) {
+                val scale = maxSide.toFloat() / long
+                decoder.setTargetSize(
+                    maxOf(1, (info.size.width * scale).toInt()),
+                    maxOf(1, (info.size.height * scale).toInt()),
+                )
+            }
+            decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
+        }
 
     /** A photo's one still: Android's cached thumbnail. */
     fun thumbnail(context: Context, item: MediaItem): Bitmap =
