@@ -54,6 +54,27 @@ private val Credits = listOf(
         "https://github.com/microsoft/fluentui-system-icons",
     ),
     Credit("GeoNames", "GeoNames", "CC BY 4.0", "Offline place names for photo locations", "https://www.geonames.org"),
+    Credit(
+        "SigLIP 2",
+        "Google",
+        "Apache 2.0",
+        "Smart Search, Accurate: the model that understands what's in photos",
+        "https://huggingface.co/google/siglip2-base-patch16-224",
+    ),
+    Credit(
+        "OpenCLIP ViT-B/32 (LAION-2B) and CLIP's tokenizer",
+        "LAION, OpenCLIP authors, OpenAI",
+        "MIT",
+        "Smart Search, Fast",
+        "https://github.com/mlfoundations/open_clip",
+    ),
+    Credit(
+        "Immich",
+        "Immich contributors",
+        "AGPL-3.0 (models: their original licenses)",
+        "The ONNX exports Lumen's search models are converted from; no Immich code is used",
+        "https://huggingface.co/immich-app",
+    ),
 )
 
 @Composable

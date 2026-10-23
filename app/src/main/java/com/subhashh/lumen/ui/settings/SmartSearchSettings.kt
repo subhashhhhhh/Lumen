@@ -17,6 +17,7 @@ import com.subhashh.lumen.data.LumenPrefs
 import com.subhashh.lumen.data.ai.DownloadNotification.megabytes
 import com.subhashh.lumen.data.ai.DownloadState
 import com.subhashh.lumen.data.ai.HfTokenStore
+import com.subhashh.lumen.data.ai.ModelCatalog
 import com.subhashh.lumen.data.ai.ModelDownloads
 import com.subhashh.lumen.ui.components.Confirmation
 import com.subhashh.lumen.ui.icons.LumenIcons
@@ -34,10 +35,11 @@ internal fun SmartSearchGroup(
     onEnterToken: () -> Unit,
 ) {
     val context = LocalContext.current
-    val model = ModelDownloads.model
     val state by ModelDownloads.state.collectAsState()
+    var chosenId by remember { mutableStateOf(prefs.searchModel) }
+    val chosen = ModelCatalog.byId(chosenId)
     var removed by remember { mutableIntStateOf(0) }
-    val installed = remember(refresh, state, removed) { model.installed(context) }
+    val installed = remember(refresh, state, removed, chosenId) { ModelDownloads.installed(context) }
     var tokenRemoved by remember { mutableIntStateOf(0) }
     val hasToken = remember(refresh, tokenRemoved) { HfTokenStore(context).token != null }
     var wifiOnly by remember { mutableStateOf(prefs.modelWifiOnly) }
@@ -54,22 +56,46 @@ internal fun SmartSearchGroup(
         }
     }
 
-    val size = megabytes(model.bytes)
+    val size = megabytes(chosen.bytes)
     val (status, action) = when (val s = state) {
         is DownloadState.Running -> "Downloading · ${megabytes(s.done)} of ${megabytes(s.total)}" to "Cancel"
         DownloadState.Waiting -> (if (wifiOnly) "Waiting for Wi-Fi…" else "Waiting for a connection…") to "Cancel"
         is DownloadState.Failed -> "Couldn't download: ${s.message}" to "Retry"
-        DownloadState.Idle -> if (installed) "Ready · $size on this phone" to "Remove" else "Not downloaded · $size" to "Download"
+        DownloadState.Idle -> when (installed) {
+            chosen -> "Ready · $size on this phone" to "Remove"
+            null -> "Not downloaded · $size" to "Download"
+            // Switching tiers: the current one keeps working until the new one is in.
+            else -> "Using ${installed.label} · ${chosen.label} is $size" to "Download"
+        }
     }
+    val busy = state is DownloadState.Running || state is DownloadState.Waiting
 
     Group(
         "Smart Search",
-        footer = "Find photos by what's in them, like “cat asleep on a sofa”, in many languages. " +
-            "The search model (Google's SigLIP 2) downloads once from Hugging Face; your photos " +
-            "and searches never leave this phone.",
+        footer = "Find photos by what's in them, like “cat asleep on a sofa”. Accurate finds more " +
+            "and understands many languages; Fast is smaller and quicker to set up, in English. " +
+            "The search model downloads once from Hugging Face; your photos and searches never " +
+            "leave this phone.",
     ) {
+        PickerRow(
+            title = "Search Quality",
+            options = ModelCatalog.all.map { "${it.label} · ${megabytes(it.bytes)}" },
+            selected = ModelCatalog.all.indexOf(chosen),
+            onSelect = {
+                val next = ModelCatalog.all[it]
+                if (next != chosen) {
+                    // A half-finished download was for the other tier; its parts stay to resume.
+                    if (busy) ModelDownloads.cancel(context)
+                    chosenId = next.id
+                    prefs.searchModel = next.id
+                }
+            },
+            icon = LumenIcons.Search,
+            iconColor = Purple,
+        )
+        Divider()
         SettingsRow(
-            title = "${model.title} Model",
+            title = "Search Model",
             subtitle = status,
             value = action,
             onClick = {
@@ -90,7 +116,7 @@ internal fun SmartSearchGroup(
                     else -> download()
                 }
             },
-            icon = LumenIcons.Search,
+            icon = LumenIcons.Import,
             iconColor = Indigo,
         )
         Divider()
@@ -101,7 +127,7 @@ internal fun SmartSearchGroup(
                 wifiOnly = it
                 prefs.modelWifiOnly = it
             },
-            icon = LumenIcons.Import,
+            icon = LumenIcons.Settings,
             iconColor = Blue,
         )
         Divider()

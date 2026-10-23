@@ -11,7 +11,8 @@ data class ModelFile(val name: String, val bytes: Long, val sha256: String)
  */
 data class AiModel(
     val id: String,
-    val title: String,
+    /** What users see: the tier, never the model's name. */
+    val label: String,
     val repo: String,
     val commit: String,
     val files: List<ModelFile>,
@@ -27,17 +28,17 @@ data class AiModel(
         files.all { File(dir(context), it.name).length() == it.bytes }
 }
 
+/**
+ * Smart Search's quality tiers. Chosen in the Search Lab on the owner's photos; EmbeddingGemma 2,
+ * MobileCLIP2 and heavier models (PE-Core, SigLIP 2 So400m, Qwen3-VL-Embedding) were tested or
+ * researched and left out. Conversions: tools/models/. Hosting: huggingface.co/subhashhhhhh.
+ */
 object ModelCatalog {
-    /**
-     * Google's SigLIP 2 B/16 (Apache 2.0), converted for phones: fp32 image encoder, int8 text
-     * encoder, packed tokenizer. Chosen in the Search Lab over CLIP, MobileCLIP2 and
-     * EmbeddingGemma 2. Conversion: tools/models/.
-     */
-    val Siglip2 = AiModel(
+    /** Google's SigLIP 2 B/16 (Apache 2.0): fp32 image encoder, int8 text, packed tokenizer. */
+    val Accurate = AiModel(
         id = "siglip2-b16",
-        title = "SigLIP 2",
-        // TODO: the owner's Hugging Face repo and the commit the files were uploaded in.
-        repo = "OWNER/lumen-siglip2-b16",
+        label = "Accurate",
+        repo = "subhashhhhhh/lumen-siglip2-b16",
         commit = "main",
         files = listOf(
             ModelFile("visual.onnx", 371_674_292, "fee10c729875dd203d94f396ac3d664e301d39c977ef6d92e7f467a2a716f0b0"),
@@ -45,4 +46,22 @@ object ModelCatalog {
             ModelFile("gemma_bpe.bin", 7_134_060, "e9163029a76e66dadb07afd9373531a24687e25d7a027f65d13a2977331f53c2"),
         ),
     )
+
+    /** OpenCLIP ViT-B/32 LAION-2B (MIT), int8: about 8x faster to index, English only. */
+    val Fast = AiModel(
+        id = "clip-vit-b32",
+        label = "Fast",
+        repo = "subhashhhhhh/lumen-clip-vit-b32",
+        commit = "main",
+        files = listOf(
+            ModelFile("visual_int8.onnx", 95_777_877, "17755a1228aee44f4274eadac14a600a5e45ab9f6325b6ad070b5d0d75e05073"),
+            ModelFile("textual_int8.onnx", 140_296_927, "e1631f9b00b2a14e5b268a9c73000b1eec3c79bd7d4876ce10fe4f0de1a03b1e"),
+            ModelFile("vocab.json", 862_328, "5047b556ce86ccaf6aa22b3ffccfc52d391ea4accdab9c2f2407da5b742d4363"),
+            ModelFile("merges.txt", 524_619, "9fd691f7c8039210e0fced15865466c65820d09b63988b0174bfe25de299051a"),
+        ),
+    )
+
+    val all = listOf(Accurate, Fast)
+
+    fun byId(id: String?) = all.firstOrNull { it.id == id } ?: Accurate
 }

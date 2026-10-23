@@ -22,11 +22,11 @@ class ModelDownloadJob : JobService() {
     private var transfer: Job? = null
 
     override fun onStartJob(params: JobParameters): Boolean {
-        val model = ModelDownloads.model
-        notify(params, DownloadNotification.build(this, model, done = model.bytes - ModelDownloads.remainingBytes(this), total = model.bytes))
+                val model = ModelDownloads.model(this)
+        notify(params, DownloadNotification.build(this, done = model.bytes - ModelDownloads.remainingBytes(this), total = model.bytes))
         transfer = scope.launch {
             val retry = ModelDownloads.run(this@ModelDownloadJob) { done, total ->
-                notify(params, DownloadNotification.build(this@ModelDownloadJob, model, done, total))
+                notify(params, DownloadNotification.build(this@ModelDownloadJob, done, total))
                 updateTransferredNetworkBytes(params, done, 0)
             }
             jobFinished(params, retry == true)

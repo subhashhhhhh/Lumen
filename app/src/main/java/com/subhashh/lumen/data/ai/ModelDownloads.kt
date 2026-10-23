@@ -16,6 +16,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import com.subhashh.lumen.data.LumenPrefs
 import java.io.File
 
 sealed interface DownloadState {
@@ -35,8 +36,12 @@ object ModelDownloads {
     private val mutableState = MutableStateFlow<DownloadState>(DownloadState.Idle)
     val state: StateFlow<DownloadState> = mutableState.asStateFlow()
 
-    /** The model being downloaded; one at a time. */
-    val model = ModelCatalog.Siglip2
+    /** The tier chosen in Settings: the one downloads fetch. */
+    fun model(context: Context) = ModelCatalog.byId(LumenPrefs(context).searchModel)
+
+    /** The tier whose files are on the phone, if any (normally at most one). */
+    fun installed(context: Context): AiModel? =
+        model(context).takeIf { it.installed(context) } ?: ModelCatalog.all.firstOrNull { it.installed(context) }
 
     /** Must be called while Lumen is on screen: Android only accepts user-initiated jobs then. */
     fun start(context: Context, wifiOnly: Boolean) {
@@ -79,17 +84,20 @@ object ModelDownloads {
         mutableState.value = DownloadState.Idle
     }
 
-    /** Removes the model and any half-downloaded parts. */
+    /** Removes every tier's files and any half-downloaded parts. */
     fun delete(context: Context) {
         cancel(context)
-        model.dir(context).deleteRecursively()
+        ModelCatalog.all.forEach { it.dir(context).deleteRecursively() }
     }
 
     /** Bytes still to fetch, counting partial files already on disk. */
-    fun remainingBytes(context: Context): Long = model.files.sumOf { file ->
+    fun remainingBytes(context: Context): Long {
+        val model = model(context)
+        return model.files.sumOf { file ->
         val dir = model.dir(context)
         if (File(dir, file.name).length() == file.bytes) 0L
         else file.bytes - File(dir, file.name + ".part").length().coerceAtMost(file.bytes)
+        }
     }
 
     /**
@@ -97,6 +105,7 @@ object ModelDownloads {
      * propagates, leaving `.part` files to resume from.
      */
     suspend fun run(context: Context, onProgress: (done: Long, total: Long) -> Unit): Boolean? {
+        val model = model(context)
         val downloader = ModelDownloader(model, model.dir(context), HfTokenStore(context).token)
         var lastPercent = -1L
         return try {
@@ -109,6 +118,8 @@ object ModelDownloads {
                     onProgress(done, total)
                 }
             }
+            // Switching tiers: the old one goes once the new one is complete.
+            ModelCatalog.all.filter { it != model }.forEach { it.dir(context).deleteRecursively() }
             mutableState.value = DownloadState.Idle
             null
         } catch (e: CancellationException) {

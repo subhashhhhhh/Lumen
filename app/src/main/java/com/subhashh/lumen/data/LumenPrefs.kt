@@ -133,6 +133,11 @@ class LumenPrefs(context: Context) {
         set(value) = prefs.edit { putString(KeySections, value.name) }
 
     /** The phone's screen curves over its sides: keep edge controls off the curve. */
+    /** Smart Search's tier (an AiModel id); null means the default, Accurate. */
+    var searchModel: String?
+        get() = prefs.getString(KeySearchModel, null)
+        set(value) = prefs.edit { putString(KeySearchModel, value) }
+
     /** Smart Search model download waits for an unmetered network. */
     var modelWifiOnly: Boolean
         get() = prefs.getBoolean(KeyModelWifiOnly, true)
@@ -163,6 +168,7 @@ class LumenPrefs(context: Context) {
         const val KeyAppLockMinutes = "app_lock_minutes"
         const val KeyCurvedEdge = "curved_edge"
         const val KeyModelWifiOnly = "model_wifi_only"
+        const val KeySearchModel = "search_model"
         const val KeySections = "section_mode"
         const val KeyReduceMotion = "reduce_motion"
         const val KeyHdr = "hdr_photos"
