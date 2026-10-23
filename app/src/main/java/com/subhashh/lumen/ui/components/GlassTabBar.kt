@@ -192,8 +192,9 @@ private fun MorphingTabs(
     val tabsWidth = TabWidth * LumenTab.entries.size + TabSpacing * (LumenTab.entries.size - 1) + 8.dp
     val zoomWidth = zoomItemWidth * ZoomLevel.entries.size + TabSpacing * (ZoomLevel.entries.size - 1) + 8.dp
     val capsuleWidth = lerp(tabsWidth, Bar, t)
-    val zoomX = lerp(0.dp, Bar + Gap, p)
-    val zoomCapsuleWidth = lerp(Bar, zoomWidth, p)
+    // Emerges as a circle centred under the tab circle, then slides out to its own spot.
+    val zoomX = lerp((Bar - ZoomBar) / 2, Bar + Gap, p)
+    val zoomCapsuleWidth = lerp(ZoomBar, zoomWidth, p)
     val width = if (zoomLevel != null && t > 0f) maxOf(capsuleWidth, zoomX + zoomCapsuleWidth) else capsuleWidth
     val shape = RoundedCornerShape(50)
 
@@ -206,13 +207,13 @@ private fun MorphingTabs(
     LaunchedEffect(selected) { selected?.let { tabPill.moveTo(it.ordinal) } }
     // Fades out while nothing is selected (search is open).
     val tabPillVisible by animateFloatAsState(if (selected == null) 0f else 1f, label = "tabPillVisible")
-    val tabGeometry = rememberPillGeometry(TabWidth)
+    val tabGeometry = rememberPillGeometry(TabWidth, Bar)
     val tabBarGlass = rememberLayerBackdrop()
     val tabRow = rememberLayerBackdrop()
 
     val zoomPill = rememberLiquidPillState(zoomLevel?.ordinal ?: ZoomLevel.All.ordinal)
     LaunchedEffect(zoomLevel) { zoomLevel?.let { zoomPill.moveTo(it.ordinal) } }
-    val zoomGeometry = rememberPillGeometry(zoomItemWidth)
+    val zoomGeometry = rememberPillGeometry(zoomItemWidth, ZoomBar)
     val zoomBarGlass = rememberLayerBackdrop()
     val zoomRow = rememberLayerBackdrop()
 
@@ -221,9 +222,10 @@ private fun MorphingTabs(
         if (zoomLevel != null && t > 0.001f) {
             Box(
                 Modifier
+                    .align(Alignment.CenterStart)
                     .offset(x = zoomX)
                     .width(zoomCapsuleWidth)
-                    .height(Bar)
+                    .height(ZoomBar)
                     .graphicsLayer { alpha = ((t - 0.05f) / 0.4f).coerceIn(0f, 1f) }
                     .glass(backdrop, shape = shape, exportedBackdrop = zoomBarGlass)
                     .clip(shape),
@@ -326,21 +328,21 @@ private fun MorphingTabs(
         } else if (zoomLevel != null && t > 0.99f) {
             LiquidPillLens(
                 zoomPill, zoomGeometry, page = backdrop, bar = zoomBarGlass, items = zoomRow, fillColor = colors.selection,
-                offset = inset + Offset(with(density) { zoomX.toPx() }, 0f),
+                offset = inset + with(density) { Offset(zoomX.toPx(), ((Bar - ZoomBar) / 2).toPx()) },
                 modifier = Modifier.matchParentSize(),
             )
         }
     }
 }
 
-/** A pill one [itemWidth] item wide resting inside the bar, lifting [PillLift] taller than it. */
+/** A pill one [itemWidth] item wide resting inside a [barHeight] bar, lifting [PillLift] taller than it. */
 @Composable
-private fun rememberPillGeometry(itemWidth: Dp): LiquidPillGeometry {
+private fun rememberPillGeometry(itemWidth: Dp, barHeight: Dp): LiquidPillGeometry {
     val density = LocalDensity.current
-    return remember(itemWidth, density) {
+    return remember(itemWidth, barHeight, density) {
         with(density) {
-            val rest = Size(itemWidth.toPx(), (Bar - PillInset * 2).toPx())
-            val liftedHeight = (Bar + PillLift).toPx()
+            val rest = Size(itemWidth.toPx(), (barHeight - PillInset * 2).toPx())
+            val liftedHeight = (barHeight + PillLift).toPx()
             val step = (itemWidth + TabSpacing).toPx()
             LiquidPillGeometry(
                 restSize = rest,
@@ -371,6 +373,8 @@ private val TabWidth = 88.dp
 private val ZoomWidth = 78.dp
 /** Bar height, and the circle's diameter. */
 private val Bar = 66.dp
+/** Years / Months / All: a little shorter than the tabs, centred beside the circle. */
+private val ZoomBar = 60.dp
 private val Gap = 12.dp
 private val TabSpacing = 2.dp
 /** Gap between the capsule's edge and the selection pill. */
