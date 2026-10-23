@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.ImageDecoder
+import android.media.MediaMetadataRetriever
 import android.media.ThumbnailUtils
 import android.util.Size
 import coil3.ImageLoader
@@ -38,8 +39,9 @@ class GridThumbnailFetcher(
 ) : Fetcher {
 
     override suspend fun fetch(): FetchResult = withContext(Dispatchers.IO) {
-        // One entry per file version and size: a rotate or edit changes the version.
-        val key = "v1:${data.item.id}@${data.item.modified}:${data.sizePx}"
+        // One entry per file version and size: a rotate or edit changes the version. Videos are
+        // v2: first frames now, where v1 had Android's mid-video pick.
+        val key = "${if (data.item.isVideo) "v2" else "v1"}:${data.item.id}@${data.item.modified}:${data.sizePx}"
         cache.openSnapshot(key)?.use { snapshot ->
             BitmapFactory.decodeFile(snapshot.data.toFile().path)?.let { cached ->
                 return@withContext ImageFetchResult(cached.asImage(), isSampled = true, dataSource = DataSource.DISK)
@@ -84,14 +86,34 @@ class GridThumbnailFetcher(
             val size = Size(sizePx, sizePx)
             val isFile = item.uri.scheme == "file"
             return when {
+                // The first frame, which is what playback starts on, so opening a video from the
+                // grid doesn't jump to a different picture. Android's own pick is often mid-video.
+                item.isVideo -> firstFrame(context, item, sizePx)
+                    ?: if (isFile) ThumbnailUtils.createVideoThumbnail(File(item.uri.path!!), size, null)
+                    else context.contentResolver.loadThumbnail(item.uri, size, null)
                 // Hidden files aren't in MediaStore: no system thumbnails.
-                isFile && item.isVideo -> ThumbnailUtils.createVideoThumbnail(File(item.uri.path!!), size, null)
                 isFile -> decodeOriginal(ImageDecoder.createSource(File(item.uri.path!!)), sizePx)
-                // Video frames come from the system at any size; small cells don't need the original.
-                item.isVideo || sizePx <= SystemThumbnailMaxPx -> context.contentResolver.loadThumbnail(item.uri, size, null)
+                // Small cells don't need the original: Android's thumbnail cache is sharp enough.
+                sizePx <= SystemThumbnailMaxPx -> context.contentResolver.loadThumbnail(item.uri, size, null)
                 else -> decodeOriginal(ImageDecoder.createSource(context.contentResolver, item.uri), sizePx)
             }
         }
+
+        /**
+         * Frame 0, scaled so its shorter side covers a [sizePx] square. The box is square and as
+         * big as the longer side needs, so the shape comes out right whichever way the video is
+         * rotated. Null if the video can't be read; the caller falls back to Android's thumbnail.
+         */
+        fun firstFrame(context: Context, item: MediaItem, sizePx: Int): Bitmap? = runCatching {
+            MediaMetadataRetriever().use { retriever ->
+                if (item.uri.scheme == "file") retriever.setDataSource(item.uri.path) else retriever.setDataSource(context, item.uri)
+                fun int(key: Int) = retriever.extractMetadata(key)?.toIntOrNull() ?: 0
+                val w = int(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)
+                val h = int(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)
+                val box = if (w > 0 && h > 0) (sizePx.toLong() * maxOf(w, h) / minOf(w, h)).toInt() else sizePx
+                retriever.getScaledFrameAtTime(0, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, box, box)
+            }
+        }.getOrNull()
 
         /** Decodes just big enough for the shorter side to fill a [sizePx] square crop. EXIF rotation applied. */
         fun decodeOriginal(source: ImageDecoder.Source, sizePx: Int): Bitmap =
