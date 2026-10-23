@@ -643,8 +643,8 @@ private fun MainScaffold(
             val name = folders.singleOrNull()?.folder?.name
             confirmation = Confirmation(
                 title = if (name != null) "Unhide “$name”?" else "Unhide ${folders.size} folders?",
-                message = "These are hidden as whole folders, so all $affected items in them become visible again, " +
-                    "in Lumen and in every other app.",
+                message = "These are hidden as whole folders, so all $affected items in them show up again " +
+                    "in Lumen's library and in other gallery apps.",
                 confirm = "Unhide",
             ) { run() }
         }
@@ -671,7 +671,8 @@ private fun MainScaffold(
             confirmation = Confirmation(
                 title = if (name != null) "Hide “$name”?" else "Hide ${folders.size} folders?",
                 message = "All $affected items in ${if (name != null) "it" else "them"} will be hidden from Lumen's library and " +
-                    "from every other app. They'll be in Collections → Hidden.",
+                    "from apps that use Android's media index, like Google Photos. File managers, and galleries that " +
+                    "look at storage directly, can still see them. They'll be in Collections → Hidden.",
                 confirm = "Hide",
             ) {
                 scope.launch {

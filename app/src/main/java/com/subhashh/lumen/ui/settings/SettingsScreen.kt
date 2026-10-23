@@ -270,7 +270,7 @@ fun SettingsScreen(
             Divider()
             SettingsRow(
                 title = "Hidden",
-                subtitle = "Hidden from every app, locked in Lumen",
+                subtitle = "Out of your library and most apps, locked in Lumen",
                 onClick = onOpenHidden,
                 icon = LumenIcons.Hide,
                 iconColor = Indigo,
