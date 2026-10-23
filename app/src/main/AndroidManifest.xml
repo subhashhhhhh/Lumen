@@ -83,6 +83,13 @@
             </intent-filter>
         </activity>
 
+        <!-- ONNX Runtime 1.29+ starts Microsoft telemetry from this provider at app launch. Lumen
+             pins 1.28 (none); this removes it too, should the version ever move. -->
+        <provider
+            android:name="ai.onnxruntime.TelemetryInitializer"
+            android:authorities="${applicationId}.onnxruntime_telemetry_initializer"
+            tools:node="remove" />
+
         <service
             android:name=".data.ai.ModelDownloadJob"
             android:exported="false"

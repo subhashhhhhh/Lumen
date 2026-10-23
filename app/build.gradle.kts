@@ -103,9 +103,9 @@ dependencies {
     // Liquid glass — Kyant0/backdrop, Apache 2.0.
     implementation(libs.backdrop)
 
-    // Search Lab runtimes. Not in release: the chosen one moves to `implementation` later.
-    debugImplementation(libs.onnxruntime.android)
+    // Smart Search: runs the search models on the phone's CPU.
+    implementation(libs.onnxruntime.android)
+    // Search Lab only (EmbeddingGemma 2); not in release.
     debugImplementation(libs.litertlm.android)
-    "profileImplementation"(libs.onnxruntime.android)
     "profileImplementation"(libs.litertlm.android)
 }
