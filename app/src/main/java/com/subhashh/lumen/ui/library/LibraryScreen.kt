@@ -23,6 +23,17 @@ import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.subhashh.lumen.ui.selection.dragToSelect
+import com.subhashh.lumen.ui.icons.LumenIcons
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.clip
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.material3.Icon
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.size
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -72,6 +83,9 @@ fun LibraryScreen(
     contentPadding: PaddingValues,
     transition: PhotoTransition,
     onOpen: (index: Int) -> Unit,
+    /** Selected ids while selecting; null when not in selection mode. */
+    selection: Set<Long>?,
+    onSelectionChange: (Set<Long>?) -> Unit,
     modifier: Modifier = Modifier,
     /** Extra space above the title, e.g. for an album's back button. */
     titleTopPadding: Dp = 16.dp,
@@ -102,6 +116,14 @@ fun LibraryScreen(
         }
     }
 
+    val density = LocalDensity.current
+    val edgeTop = with(density) { contentPadding.calculateTopPadding().toPx() }
+    val edgeBottom = with(density) { contentPadding.calculateBottomPadding().toPx() }
+    val currentSelection by rememberUpdatedState(selection)
+    // The release of a long-press reaches the cell's tap handler before the drag handler ends
+    // the gesture; without this it would count as a tap and undo the selection it just made.
+    val longPressActive = remember { booleanArrayOf(false) }
+
     Box(modifier.fillMaxSize()) {
         LazyVerticalGrid(
             columns = GridCells.Fixed(columns),
@@ -124,14 +146,36 @@ fun LibraryScreen(
                             haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
                         }
                     },
+                )
+                .dragToSelect(
+                    gridState = gridState,
+                    ids = { items.map { it.id } },
+                    selection = { currentSelection.orEmpty() },
+                    onSelectionChange = onSelectionChange,
+                    onStart = {
+                        longPressActive[0] = true
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                    },
+                    onEnd = { longPressActive[0] = false },
+                    edgeTop = edgeTop,
+                    edgeBottom = edgeBottom,
                 ),
         ) {
             itemsIndexed(items, key = { _, item -> item.id }) { index, item ->
                 Thumbnail(
                     item = item,
                     bucket = thumbBucket,
-                    showDuration = columns <= 5,
-                    onClick = { onOpen(index) },
+                    showDuration = columns <= 5 && selection == null,
+                    selected = selection?.let { item.id in it },
+                    onClick = click@{
+                        if (longPressActive[0]) return@click
+                        val current = selection
+                        if (current == null) {
+                            onOpen(index)
+                        } else {
+                            onSelectionChange(if (item.id in current) current - item.id else current + item.id)
+                        }
+                    },
                     modifier = Modifier.transitionCell(transition, item.id),
                 )
             }
@@ -159,41 +203,88 @@ private fun Thumbnail(
     item: MediaItem,
     bucket: Int,
     showDuration: Boolean,
+    /** null when not selecting. */
+    selected: Boolean?,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    // Selected cells shrink a little inside their slot, like iOS.
+    val scale by animateFloatAsState(
+        if (selected == true) 0.86f else 1f,
+        spring(dampingRatio = 0.7f, stiffness = 700f),
+        label = "selectScale",
+    )
     Box(
         modifier
             .aspectRatio(1f)
-            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
             .clickable(onClick = onClick),
     ) {
-        AsyncImage(
-            model = remember(item.uri, bucket) {
-                ImageRequest.Builder(context)
-                    // Small cells: Android's thumbnail cache (fast). Big cells: the original,
-                    // decoded at cell size, so screenshot text stays readable.
-                    .data(if (bucket <= ImageKeys.SystemThumbnailMaxPx) MediaThumbnail(item.uri) else item.uri)
-                    .size(bucket, bucket)
-                    .memoryCacheKey(ImageKeys.thumb(item.id, bucket))
-                    // While a bigger size decodes after a pinch, keep showing the one we have.
-                    .placeholderMemoryCacheKey(bestPlaceholderKey(SingletonImageLoader.get(context), item.id))
-                    .build()
-            },
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize(),
-        )
-        if (item.isVideo && showDuration) {
-            Text(
-                text = formatDuration(item.durationMs),
-                style = OverlayText,
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(4.dp),
+        Box(
+            Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                }
+                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)),
+        ) {
+            AsyncImage(
+                model = remember(item.uri, bucket) {
+                    ImageRequest.Builder(context)
+                        // Small cells: Android's thumbnail cache (fast). Big cells: the original,
+                        // decoded at cell size, so screenshot text stays readable.
+                        .data(if (bucket <= ImageKeys.SystemThumbnailMaxPx) MediaThumbnail(item.uri) else item.uri)
+                        .size(bucket, bucket)
+                        .memoryCacheKey(ImageKeys.thumb(item.id, bucket))
+                        // While a bigger size decodes after a pinch, keep showing the one we have.
+                        .placeholderMemoryCacheKey(bestPlaceholderKey(SingletonImageLoader.get(context), item.id))
+                        .build()
+                },
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+            if (item.isVideo && showDuration) {
+                Text(
+                    text = formatDuration(item.durationMs),
+                    style = OverlayText,
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(4.dp),
+                )
+            }
+        }
+        if (selected != null) SelectionMark(selected, Modifier.align(Alignment.BottomEnd).padding(6.dp))
+    }
+}
+
+/** iOS-style marker: an empty ring when selectable, a filled check when selected. */
+@Composable
+private fun SelectionMark(selected: Boolean, modifier: Modifier = Modifier) {
+    if (selected) {
+        Box(
+            modifier
+                .size(22.dp)
+                .clip(CircleShape)
+                .background(Color.White),
+        ) {
+            Icon(
+                LumenIcons.Selected,
+                contentDescription = "Selected",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.fillMaxSize(),
             )
         }
+    } else {
+        Icon(
+            LumenIcons.Unselected,
+            contentDescription = null,
+            tint = Color.White,
+            modifier = modifier
+                .size(22.dp)
+                .shadow(2.dp, CircleShape, clip = false),
+        )
     }
 }
 

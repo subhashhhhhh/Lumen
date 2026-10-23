@@ -47,6 +47,18 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.subhashh.lumen.ui.selection.SelectionTopControls
+import com.subhashh.lumen.ui.selection.SelectionActionBar
+import com.subhashh.lumen.data.MediaItem
+import com.subhashh.lumen.data.MediaActions
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.AnimatedVisibility
+import androidx.activity.result.IntentSenderRequest
+import android.app.Activity
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -161,6 +173,33 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
     BackHandler(enabled = searching && !viewerOpen) { searching = false }
     BackHandler(enabled = inCollection && !viewerOpen) { openCollection = null }
 
+    // Multi-select: null when not selecting. Lives here so the header, top controls and the
+    // bottom action bar (all outside the grid) can share it.
+    var selection by remember { mutableStateOf<Set<Long>?>(null) }
+    val selectableKey = when {
+        searching -> null
+        tab == LumenTab.Library -> CollectionKeys.Library
+        else -> openCollection
+    }
+    val selectableItems = selectableKey?.let(itemsOf).orEmpty()
+    // Leaving the screen ends selection; refreshes drop ids that no longer exist.
+    LaunchedEffect(selectableKey) { selection = null }
+    LaunchedEffect(selectableItems) {
+        val ids = selectableItems.mapTo(HashSet()) { it.id }
+        selection = selection?.filterTo(HashSet()) { it in ids }
+    }
+    BackHandler(enabled = selection != null && !viewerOpen) { selection = null }
+    val selectionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartIntentSenderForResult(),
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            viewModel.refresh()
+            selection = null
+        }
+    }
+    val selectedItems = selection?.let { ids -> selectableItems.filter { it.id in ids } }.orEmpty()
+    val context = LocalContext.current
+
     val statusTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val gridPadding = PaddingValues(top = statusTop + 96.dp, bottom = navBottom + 96.dp)
@@ -193,7 +232,9 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                 searching -> SearchScreen()
                 library == null -> Unit
                 tab == LumenTab.Library -> LibraryScreen(
-                    title = "Library",
+                    title = selection?.let { selectionTitle(selectedItems) } ?: "Library",
+                    selection = selection,
+                    onSelectionChange = { selection = it },
                     items = library.orEmpty(),
                     gridState = libraryGrid,
                     contentPadding = gridPadding,
@@ -203,7 +244,10 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                 openCollection != null -> {
                     val key = openCollection!!
                     LibraryScreen(
-                        title = (utilities + folders).firstOrNull { it.key == key }?.title.orEmpty(),
+                        title = selection?.let { selectionTitle(selectedItems) }
+                            ?: (utilities + folders).firstOrNull { it.key == key }?.title.orEmpty(),
+                        selection = selection,
+                        onSelectionChange = { selection = it },
                         items = itemsOf(key),
                         gridState = collectionGrid,
                         contentPadding = PaddingValues(top = statusTop + 152.dp, bottom = navBottom + 96.dp),
@@ -219,6 +263,22 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                     onOpen = { openCollection = it },
                 )
             }
+        }
+
+        if (selection != null && !viewerOpen) {
+            SelectionTopControls(
+                backdrop = backdrop,
+                allSelected = selectedItems.size == selectableItems.size && selectableItems.isNotEmpty(),
+                onToggleAll = {
+                    selection = if (selectedItems.size == selectableItems.size) emptySet()
+                    else selectableItems.mapTo(HashSet()) { it.id }
+                },
+                onCancel = { selection = null },
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .statusBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+            )
         }
 
         if (inCollection && !viewerOpen) {
@@ -238,7 +298,7 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
         // shaders right as a photo flies home.
         // Hidden (alpha 0, so the GPU skips its blur entirely) from the instant a photo starts
         // opening until one flies back home, where it fades in again.
-        val tabBarHidden = viewerOpen || transition.opening
+        val tabBarHidden = viewerOpen || transition.opening || selection != null
         val tabBarAlpha by animateFloatAsState(
             targetValue = if (tabBarHidden) 0f else 1f,
             animationSpec = if (tabBarHidden) snap() else tween(durationMillis = 220),
@@ -261,6 +321,31 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                     .align(Alignment.BottomCenter)
                     .graphicsLayer { alpha = tabBarAlpha }
                     .padding(bottom = navBottom + 12.dp),
+            )
+        }
+
+        AnimatedVisibility(
+            visible = selection != null && !viewerOpen,
+            enter = fadeIn(tween(180)) + slideInVertically(tween(220)) { it / 2 },
+            exit = fadeOut(tween(150)) + slideOutVertically(tween(180)) { it / 2 },
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = navBottom + 12.dp),
+        ) {
+            val launch = { sender: android.content.IntentSender ->
+                selectionLauncher.launch(IntentSenderRequest.Builder(sender).build())
+            }
+            val allFavorite = selectedItems.isNotEmpty() && selectedItems.all { it.isFavorite }
+            SelectionActionBar(
+                backdrop = backdrop,
+                hasSelection = selectedItems.isNotEmpty(),
+                inTrash = selectableKey == CollectionKeys.RecentlyDeleted,
+                allFavorite = allFavorite,
+                onShare = { MediaActions.share(context, selectedItems) },
+                onFavorite = { launch(MediaActions.favoriteRequest(context, selectedItems, favorite = !allFavorite)) },
+                onDelete = { launch(MediaActions.trashRequest(context, selectedItems)) },
+                onRestore = { launch(MediaActions.restoreRequest(context, selectedItems)) },
+                onDeleteForever = { launch(MediaActions.deleteForeverRequest(context, selectedItems)) },
             )
         }
 
@@ -315,4 +400,16 @@ private fun PermissionScreen(onGrant: () -> Unit) {
         Spacer(Modifier.height(24.dp))
         Button(onClick = onGrant) { Text("Allow access") }
     }
+}
+
+/** "3 Photos Selected", "1 Video Selected", "5 Items Selected", or "Select Items" when empty. */
+private fun selectionTitle(selected: List<MediaItem>): String {
+    val n = selected.size
+    if (n == 0) return "Select Items"
+    val noun = when {
+        selected.all { !it.isVideo } -> if (n == 1) "Photo" else "Photos"
+        selected.all { it.isVideo } -> if (n == 1) "Video" else "Videos"
+        else -> if (n == 1) "Item" else "Items"
+    }
+    return "$n $noun Selected"
 }

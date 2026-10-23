@@ -2,7 +2,8 @@
 Generate ui/icons/LumenIcons.kt from Fluent UI System Icons SVGs (MIT, Microsoft).
 
 Only the icons Lumen uses are converted, so the app doesn't ship a whole icon library.
-Usage: python3 build_icons.py <dir with ic_fluent_*_24_{regular,filled}.svg> <output .kt>
+Usage: python3 build_icons.py tools/icons/svg app/src/main/java/com/subhashh/lumen/ui/icons/LumenIcons.kt
+The SVGs are kept in tools/icons/svg (MIT) so the icon set can be regenerated offline.
 """
 import re
 import sys
@@ -31,6 +32,12 @@ ICONS = [
     ("Camera", "camera", "regular"),
     ("Image", "image", "regular"),
     ("Location", "location", "regular"),
+    ("Selected", "checkmark_circle", "filled"),
+    ("Unselected", "circle", "regular"),
+    ("Close", "dismiss", "regular"),
+    ("Filter", "filter", "regular"),
+    ("Settings", "settings", "regular"),
+    ("Check", "checkmark", "regular"),
 ]
 
 src_dir, out = sys.argv[1], sys.argv[2]
