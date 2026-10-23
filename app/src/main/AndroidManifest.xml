@@ -90,6 +90,12 @@
             android:authorities="${applicationId}.onnxruntime_telemetry_initializer"
             tools:node="remove" />
 
+        <!-- Smart Search's one-time GPU check, in its own process: a GPU driver that can't run
+             the model aborts the process, and this way that's not Lumen's. -->
+        <service
+            android:name=".data.ai.GpuCheckService"
+            android:exported="false"
+            android:process=":gpucheck" />
         <service
             android:name=".data.ai.ModelDownloadJob"
             android:exported="false"

@@ -122,6 +122,9 @@ object ModelDownloads {
                     onProgress(done, total)
                 }
             }
+            // Files a newer version no longer uses (Accurate's ONNX image model, before LiteRT).
+            val wanted = model.files.mapTo(HashSet()) { it.name }
+            model.dir(context).listFiles()?.filter { it.name !in wanted }?.forEach { it.deleteRecursively() }
             // Switching tiers: the old one (and its index) goes once the new one is complete.
             ModelCatalog.all.filter { it != model }.forEach {
                 it.dir(context).deleteRecursively()

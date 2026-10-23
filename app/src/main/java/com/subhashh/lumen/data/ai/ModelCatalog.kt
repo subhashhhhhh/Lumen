@@ -36,14 +36,14 @@ data class AiModel(
  * researched and left out. Conversions: tools/models/. Hosting: huggingface.co/subhashhhhhh.
  */
 object ModelCatalog {
-    /** Google's SigLIP 2 B/16 (Apache 2.0): fp32 image encoder, int8 text, packed tokenizer. */
+    /** Google's SigLIP 2 B/16 (Apache 2.0): fp32 image encoder (LiteRT, GPU-ready), int8 text, packed tokenizer. */
     val Accurate = AiModel(
         id = "siglip2-b16",
         label = "Accurate",
         repo = "subhashhhhhh/lumen-siglip2-b16",
-        commit = "3b8370763a260d8acf13e91b96073606c9bdbd11",
+        commit = "4b62b4b89ca725a72cde54dc75bb6bb3a4994c63",
         files = listOf(
-            ModelFile("visual.onnx", 371_674_292, "fee10c729875dd203d94f396ac3d664e301d39c977ef6d92e7f467a2a716f0b0"),
+            ModelFile("visual.tflite", 369_330_540, "b358184561275f176135257853e9927dd5fa0ca6e9cd3f52c63572d5a9740951"),
             ModelFile("textual_int8.onnx", 283_187_112, "6fdbedc85c54262bcbf380cfb048f03e10cf07237333fe4ca1e204a8f954d608"),
             ModelFile("gemma_bpe.bin", 7_134_060, "e9163029a76e66dadb07afd9373531a24687e25d7a027f65d13a2977331f53c2"),
         ),

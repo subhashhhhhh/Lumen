@@ -51,7 +51,9 @@ class Indexer(private val context: Context, private val model: AiModel) {
         fun tooHot() = power.currentThermalStatus >= PowerManager.THERMAL_STATUS_MODERATE
         var budget = limit
 
-        OnnxEmbedder(model.dir(context), model.spec, threads = Threads).use { embedder ->
+        val gpu = GpuCheck.useGpu(context, model)
+        Log.i(Tag, "Indexing with ${model.id} on the ${if (gpu) "GPU" else "CPU"}")
+        OnnxEmbedder(model.dir(context), model.spec, threads = Threads, gpu = gpu).use { embedder ->
             for (item in photos) {
                 if (budget-- <= 0) return@coroutineScope Outcome.Partial
                 ensureActive()

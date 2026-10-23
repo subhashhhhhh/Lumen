@@ -22,7 +22,7 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
         debug {
             applicationIdSuffix = ".debug"
@@ -103,15 +103,14 @@ dependencies {
     // Liquid glass — Kyant0/backdrop, Apache 2.0.
     implementation(libs.backdrop)
 
-    // Smart Search: runs the search models on the phone's CPU.
+    // Smart Search: ONNX Runtime for the text models and Fast's image model (CPU); LiteRT for
+    // Accurate's image model, on the GPU where it works. Excluded from LiteRT: Google Play's
+    // AI-pack model delivery (proprietary; LiteRT only calls it for models shipped via Play).
     implementation(libs.onnxruntime.android)
-    // Search Lab only (EmbeddingGemma 2; SigLIP 2 on the GPU); not in release.
+    implementation(libs.litert) { exclude(group = "com.google.android.play") }
+    implementation(libs.litert.gpu) { exclude(group = "com.google.android.play") }
+    // Search Lab only (EmbeddingGemma 2); not in release.
     debugImplementation(libs.litertlm.android)
     "profileImplementation"(libs.litertlm.android)
-    // Excluded: Google Play's AI-pack model delivery. Proprietary, and LiteRT never calls it unless
-    // an app ships models through Play; Lumen doesn't.
-    debugImplementation(libs.litert) { exclude(group = "com.google.android.play") }
-    debugImplementation(libs.litert.gpu) { exclude(group = "com.google.android.play") }
-    "profileImplementation"(libs.litert) { exclude(group = "com.google.android.play") }
-    "profileImplementation"(libs.litert.gpu) { exclude(group = "com.google.android.play") }
+
 }

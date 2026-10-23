@@ -62,6 +62,8 @@ fun SearchScreen(
     query: String,
     /** null while the index is being built. */
     results: List<MediaItem>?,
+    /** Smart Search is still working on this query; its matches will follow these. */
+    lookingInside: Boolean,
     albums: List<MediaCollection>,
     suggestions: List<String>,
     gridState: LazyGridState,
@@ -124,11 +126,13 @@ fun SearchScreen(
         if (results != null) {
             item(span = { GridItemSpan(maxLineSpan) }) {
                 SectionTitle(
-                    when (photos.size) {
-                        0 -> "No photos or videos"
-                        1 -> "1 Result"
+                    when {
+                        lookingInside && photos.isEmpty() -> "Looking inside photos…"
+                        photos.isEmpty() -> "No photos or videos"
+                        photos.size == 1 -> "1 Result"
                         else -> "${photos.size} Results"
                     },
+                    detail = if (lookingInside && photos.isNotEmpty()) "Looking inside photos…" else null,
                 )
             }
         }
@@ -146,7 +150,7 @@ fun SearchScreen(
                 modifier = Modifier.transitionCell(transition, item.id),
             )
         }
-        if (results != null && photos.isEmpty() && albums.isEmpty()) {
+        if (results != null && photos.isEmpty() && albums.isEmpty() && !lookingInside) {
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Text(
                     "Try describing what's in the photo, like “cat on a sofa” (with Smart Search in " +
@@ -162,14 +166,17 @@ fun SearchScreen(
 }
 
 @Composable
-private fun SectionTitle(text: String) {
-    Text(
-        text,
-        fontSize = 20.sp,
-        fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.onBackground,
-        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 8.dp),
-    )
+private fun SectionTitle(text: String, detail: String? = null) {
+    Row(
+        Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 8.dp),
+        verticalAlignment = Alignment.Bottom,
+    ) {
+        Text(text, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
+        if (detail != null) {
+            Spacer(Modifier.width(8.dp))
+            Text(detail, fontSize = 15.sp, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
+        }
+    }
 }
 
 /** Starting points while nothing is typed: tap one to search for it. */

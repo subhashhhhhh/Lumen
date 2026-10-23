@@ -23,6 +23,8 @@ import com.subhashh.lumen.data.vault.VaultFetcher
 class LumenApplication : Application(), SingletonImageLoader.Factory {
     override fun onCreate() {
         super.onCreate()
+        // Smart Search's GPU check runs in its own process; it needs none of the app's setup.
+        if (getProcessName() != packageName) return
         AppLock.install(this)
         // Keeps Smart Search's background indexing queued (no-op until a model is downloaded).
         SmartIndex.schedule(this)

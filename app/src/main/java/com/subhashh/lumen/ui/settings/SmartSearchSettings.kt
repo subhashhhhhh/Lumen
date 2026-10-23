@@ -78,7 +78,11 @@ internal fun SmartSearchGroup(
         is DownloadState.Failed -> "Couldn't download: ${s.message}" to "Retry"
         DownloadState.Idle -> when (installed) {
             chosen -> "Ready · $size on this phone" to "Remove"
-            null -> "Not downloaded · $size" to "Download"
+            // Part of it is here already: a newer version changed some files (Accurate's image model).
+            null -> remember(state, refresh) { ModelDownloads.remainingBytes(context) }.let { remaining ->
+                if (remaining < chosen.bytes) "Update available · ${megabytes(remaining)}" to "Update"
+                else "Not downloaded · $size" to "Download"
+            }
             // Switching tiers: the current one keeps working until the new one is in.
             else -> "Using ${installed.label} · ${chosen.label} is $size" to "Download"
         }

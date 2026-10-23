@@ -381,16 +381,22 @@ private fun MainScaffold(
         val index = searchIndex ?: return@produceState
         value = withContext(Dispatchers.Default) { index.search(searchQuery) }
     }
+    // Opening Search loads Smart Search's text model and vectors while the user types.
+    LaunchedEffect(searching) { if (searching) SmartSearch.prepare(context) }
     // Smart Search: by what's in the photos, once a model is downloaded and photos are indexed.
     // A short pause after typing, so the text model runs once per word, not once per letter.
-    val smartHits by produceState<List<SmartHit>?>(null, searchQuery) {
+    // Paired with the query it answers, so the screen can tell when it's still working.
+    val smart by produceState<Pair<String, List<SmartHit>?>?>(null, searchQuery) {
         if (searchQuery.isBlank()) {
             value = null
             return@produceState
         }
         delay(250)
-        value = SmartSearch.search(context, searchQuery.trim())
+        value = searchQuery to SmartSearch.search(context, searchQuery.trim())
     }
+    val smartHits = smart?.second
+    val smartPending = searchQuery.isNotBlank() && smart?.first != searchQuery &&
+        remember(searching) { com.subhashh.lumen.data.ai.ModelDownloads.installed(context) != null }
     // Exact name, folder and date matches first, then Smart Search's, best first.
     val searchResults = remember(keywordResults, smartHits, library) {
         val keyword = keywordResults ?: return@remember null
@@ -986,6 +992,7 @@ private fun MainScaffold(
                 searching -> SearchScreen(
                     query = searchQuery,
                     results = searchResults,
+                    lookingInside = smartPending,
                     albums = searchAlbums,
                     suggestions = searchSuggestions,
                     gridState = searchGrid,
