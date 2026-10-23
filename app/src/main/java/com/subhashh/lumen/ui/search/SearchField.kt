@@ -34,18 +34,28 @@ import com.subhashh.lumen.ui.components.pressable
 import com.subhashh.lumen.ui.icons.LumenIcons
 import com.subhashh.lumen.ui.theme.LocalGlassColors
 
-/** The glass search capsule over the results. Focuses (keyboard up) as soon as it appears. */
+/**
+ * The glass search capsule over the results. With [autoFocus] it takes focus (keyboard up) as
+ * it appears, then calls [onAutoFocused]; coming back from the viewer it stays put.
+ */
 @Composable
 fun SearchField(
     backdrop: Backdrop,
     query: String,
     onQueryChange: (String) -> Unit,
+    autoFocus: Boolean,
+    onAutoFocused: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalGlassColors.current
     val focus = remember { FocusRequester() }
     val keyboard = LocalSoftwareKeyboardController.current
-    LaunchedEffect(Unit) { focus.requestFocus() }
+    LaunchedEffect(autoFocus) {
+        if (autoFocus) {
+            focus.requestFocus()
+            onAutoFocused()
+        }
+    }
     val shape = RoundedCornerShape(50)
     Row(
         modifier

@@ -223,6 +223,8 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
     var tab by rememberSaveable { mutableStateOf(LumenTab.Library) }
     var searching by rememberSaveable { mutableStateOf(false) }
     var searchQuery by rememberSaveable { mutableStateOf("") }
+    /** Keyboard up when search is opened, but not when the field returns after the viewer. */
+    var focusSearch by remember { mutableStateOf(false) }
     /** Collection open inside the Collections tab, if any. */
     var openCollection by rememberSaveable { mutableStateOf<String?>(null) }
     /** Settings pages pushed on the Collections tab: "settings", then "licenses". */
@@ -869,6 +871,8 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                 backdrop = backdrop,
                 query = searchQuery,
                 onQueryChange = { searchQuery = it },
+                autoFocus = focusSearch,
+                onAutoFocused = { focusSearch = false },
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .statusBarsPadding()
@@ -957,7 +961,10 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                     searching = false
                 },
                 searchSelected = searching,
-                onSearch = { searching = true },
+                onSearch = {
+                    if (!searching) focusSearch = true
+                    searching = true
+                },
                 zoomLevel = zoomLevel.takeIf { tab == LumenTab.Library && !searching },
                 onZoomLevel = { zoomLevel = it },
                 showZoom = zoomBar || zoomLevel != ZoomLevel.All,
