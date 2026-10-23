@@ -46,6 +46,8 @@ fun SelectionActionBar(
     /** Hidden section: Share, Unhide, Delete (permanent). */
     inHidden: Boolean,
     allFavorite: Boolean,
+    /** False for whole albums. */
+    showFavorite: Boolean,
     onShare: () -> Unit,
     onFavorite: () -> Unit,
     onDelete: () -> Unit,
@@ -92,7 +94,7 @@ fun SelectionActionBar(
                 backdrop, LumenIcons.Share, "Share", guard(onShare),
                 tint = if (hasSelection) colors.content else idle,
             )
-            GlassIconButton(
+            if (showFavorite) GlassIconButton(
                 backdrop,
                 if (allFavorite) LumenIcons.HeartFilled else LumenIcons.Heart,
                 if (allFavorite) "Unfavorite" else "Favorite",

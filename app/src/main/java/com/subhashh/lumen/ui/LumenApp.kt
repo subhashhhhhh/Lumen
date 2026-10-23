@@ -248,6 +248,11 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
         gridColumns = columns
         prefs.gridColumns = columns
     }
+    var albumColumns by remember { mutableIntStateOf(prefs.albumColumns) }
+    val onAlbumColumns = { columns: Int ->
+        albumColumns = columns
+        prefs.albumColumns = columns
+    }
     var menuOpen by remember { mutableStateOf(false) }
     var zoomLevel by rememberSaveable { mutableStateOf(ZoomLevel.All) }
     // The Library opens with the tabs showing; scrolling up (back in time) folds them into the
@@ -319,6 +324,12 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
     // Multi-select: null when not selecting. Lives here so the header, top controls and the
     // bottom action bar (all outside the grid) can share it.
     var selection by remember { mutableStateOf<Set<Long>?>(null) }
+    /** Album multi-select on Collections and Hidden's folder list: selected album keys. */
+    var albumSelection by remember { mutableStateOf<Set<String>?>(null) }
+    val endSelection = {
+        selection = null
+        albumSelection = null
+    }
     val selectableKey = when {
         searching -> null
         tab == LumenTab.Library && zoomLevel == ZoomLevel.All -> CollectionKeys.Library
@@ -328,22 +339,49 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
         else -> openCollection
     }
     val selectableItems = selectableKey?.let(itemsOf).orEmpty()
+    // Which album list is on screen, if any: Collections' albums or Hidden's folders.
+    val albumScope = when {
+        searching || settingsPage != null -> null
+        tab == LumenTab.Collections && openCollection == null -> AlbumsScope
+        openCollection == CollectionKeys.Hidden && hiddenUnlocked -> CollectionKeys.Hidden
+        else -> null
+    }
+    val albumKeys = when (albumScope) {
+        AlbumsScope -> folders.map { it.key }
+        CollectionKeys.Hidden -> hiddenFolderList.orEmpty().map { it.collection.key }
+        else -> emptyList()
+    }
+    LaunchedEffect(albumScope) { albumSelection = null }
+    LaunchedEffect(albumKeys) {
+        val keys = albumKeys.toHashSet()
+        albumSelection = albumSelection?.filterTo(HashSet()) { it in keys }
+    }
+    val selecting = selection != null || albumSelection != null
+    /** Where the selection is: a grid's key, or the album list's scope. */
+    val selectionScope = if (albumSelection != null) albumScope else selectableKey
     // Leaving the screen ends selection; refreshes drop ids that no longer exist.
     LaunchedEffect(selectableKey) { selection = null }
     LaunchedEffect(selectableItems) {
         val ids = selectableItems.mapTo(HashSet()) { it.id }
         selection = selection?.filterTo(HashSet()) { it in ids }
     }
-    BackHandler(enabled = selection != null && !viewerOpen) { selection = null }
+    BackHandler(enabled = selecting && !viewerOpen) { endSelection() }
     val selectionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartIntentSenderForResult(),
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             viewModel.refresh()
-            selection = null
+            endSelection()
         }
     }
-    val selectedItems = selection?.let { ids -> selectableItems.filter { it.id in ids } }.orEmpty()
+    val selectedItems = remember(selection, selectableItems, albumSelection, library, hidden) {
+        val albums = albumSelection
+        when {
+            albums == null -> selection?.let { ids -> selectableItems.filter { it.id in ids } }.orEmpty()
+            albumScope == CollectionKeys.Hidden -> hidden.orEmpty().filter { CollectionKeys.hiddenFolder(it.bucketId) in albums }
+            else -> library.orEmpty().filter { CollectionKeys.folder(it.bucketId) in albums }
+        }
+    }
     BackHandler(enabled = menuOpen) { menuOpen = false }
     var selectionMenuOpen by remember { mutableStateOf(false) }
     BackHandler(enabled = selectionMenuOpen) { selectionMenuOpen = false }
@@ -404,7 +442,7 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
     val afterHiddenChange = { message: String ->
         viewModel.refresh()
         viewModel.loadHidden()
-        selection = null
+        endSelection()
         toast(message)
     }
     val unhide: (List<MediaItem>) -> Unit = unhide@{ items ->
@@ -497,7 +535,7 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
     val excludeFolders: (List<MediaItem>) -> Unit = { items ->
         val folders = items.map { it.relativePath }.distinct()
         viewModel.exclude(folders)
-        selection = null
+        endSelection()
         val name = folders.singleOrNull()?.trimEnd('/')?.substringAfterLast('/')
         toast(
             (if (name != null) "Excluded “$name”." else "Excluded ${folders.size} folders.") +
@@ -527,7 +565,7 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
     /** Refresh and leave selection; [message] only when there's something worth saying. */
     val finish = { message: String? ->
         viewModel.refresh()
-        selection = null
+        endSelection()
         if (message != null) toast(message)
     }
 
@@ -697,6 +735,11 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                 openCollection == CollectionKeys.Hidden -> HiddenScreen(
                     folders = hiddenFolderList,
                     gridState = hiddenGrid,
+                    title = albumSelection?.let { albumSelectionTitle(it.size, "Folder") } ?: "Hidden",
+                    columns = albumColumns,
+                    onColumnsChange = onAlbumColumns,
+                    selection = albumSelection,
+                    onSelectionChange = { albumSelection = it },
                     contentPadding = PaddingValues(top = statusTop + 72.dp, bottom = navBottom + 96.dp),
                     onOpen = { openCollection = it },
                 )
@@ -720,6 +763,11 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                     )
                 }
                 else -> CollectionsScreen(
+                    title = albumSelection?.let { albumSelectionTitle(it.size, "Album") } ?: "Collections",
+                    columns = albumColumns,
+                    onColumnsChange = onAlbumColumns,
+                    selection = albumSelection,
+                    onSelectionChange = { albumSelection = it },
                     utilities = utilities,
                     hiddenLockSet = lockSet,
                     folders = folders,
@@ -730,15 +778,21 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
             }
         }
 
-        if (selection != null && !viewerOpen) {
+        if (selecting && !viewerOpen) {
+            val albums = albumSelection
             SelectionTopControls(
                 backdrop = backdrop,
-                allSelected = selectedItems.size == selectableItems.size && selectableItems.isNotEmpty(),
+                allSelected = if (albums != null) albums.size == albumKeys.size && albumKeys.isNotEmpty()
+                else selectedItems.size == selectableItems.size && selectableItems.isNotEmpty(),
                 onToggleAll = {
-                    selection = if (selectedItems.size == selectableItems.size) emptySet()
-                    else selectableItems.mapTo(HashSet()) { it.id }
+                    if (albums != null) {
+                        albumSelection = if (albums.size == albumKeys.size) emptySet() else albumKeys.toHashSet()
+                    } else {
+                        selection = if (selectedItems.size == selectableItems.size) emptySet()
+                        else selectableItems.mapTo(HashSet()) { it.id }
+                    }
                 },
-                onCancel = { selection = null },
+                onCancel = { endSelection() },
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .statusBarsPadding()
@@ -771,7 +825,7 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
             }
         }
 
-        if (tab == LumenTab.Collections && openCollection == null && settingsPage == null && !searching && !viewerOpen) {
+        if (tab == LumenTab.Collections && openCollection == null && settingsPage == null && !searching && !viewerOpen && !selecting) {
             GlassIconButton(
                 backdrop = backdrop,
                 icon = LumenIcons.Settings,
@@ -807,7 +861,7 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
         // shaders right as a photo flies home.
         // Hidden (alpha 0, so the GPU skips its blur entirely) from the instant a photo starts
         // opening until one flies back home, where it fades in again.
-        val tabBarHidden = viewerOpen || transition.opening || selection != null
+        val tabBarHidden = viewerOpen || transition.opening || selecting
         val tabBarAlpha by animateFloatAsState(
             targetValue = if (tabBarHidden) 0f else 1f,
             animationSpec = if (tabBarHidden) snap() else tween(durationMillis = 220),
@@ -863,7 +917,7 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
         )
 
         AnimatedVisibility(
-            visible = selection != null && !viewerOpen,
+            visible = selecting && !viewerOpen,
             enter = fadeIn(tween(180)) + slideInVertically(tween(220)) { it / 2 },
             exit = fadeOut(tween(150)) + slideOutVertically(tween(180)) { it / 2 },
             modifier = Modifier
@@ -877,15 +931,17 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
             SelectionActionBar(
                 backdrop = backdrop,
                 hasSelection = selectedItems.isNotEmpty(),
-                inTrash = selectableKey == CollectionKeys.RecentlyDeleted,
-                inHidden = CollectionKeys.isHidden(selectableKey),
+                inTrash = selectionScope == CollectionKeys.RecentlyDeleted,
+                inHidden = CollectionKeys.isHidden(selectionScope),
+                // Favoriting whole albums isn't a thing.
+                showFavorite = albumSelection == null,
                 allFavorite = allFavorite,
                 onShare = { MediaActions.share(context, selectedItems) },
                 onFavorite = { launch(MediaActions.favoriteRequest(context, selectedItems, favorite = !allFavorite)) },
                 onDelete = { launch(MediaActions.trashRequest(context, selectedItems)) },
                 onRestore = { launch(MediaActions.restoreRequest(context, selectedItems)) },
                 onDeleteForever = {
-                    if (CollectionKeys.isHidden(selectableKey)) deleteHidden(selectedItems)
+                    if (CollectionKeys.isHidden(selectionScope)) deleteHidden(selectedItems)
                     else launch(MediaActions.deleteForeverRequest(context, selectedItems))
                 },
                 onUnhide = { unhide(selectedItems) },
@@ -895,9 +951,23 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
 
         GlassMenu(
             backdrop = backdrop,
-            open = selectionMenuOpen && selection != null && !viewerOpen,
+            open = selectionMenuOpen && selecting && !viewerOpen,
             onDismiss = { selectionMenuOpen = false },
-            sections = listOf(
+            sections = if (albumSelection != null) {
+                // Whole albums: move or copy their contents, or hide / exclude the folders.
+                listOf(
+                    listOf(
+                        MenuItem("Move to Album…") { albumRequest = AlbumRequest(move = true, items = selectedItems) },
+                        MenuItem("Copy to Album…") { albumRequest = AlbumRequest(move = false, items = selectedItems) },
+                    ),
+                    listOf(
+                        MenuItem(if (albumSelection.orEmpty().size > 1) "Hide Folders" else "Hide Folder") { hideFolders(selectedItems) },
+                        MenuItem(if (albumSelection.orEmpty().size > 1) "Exclude Folders" else "Exclude Folder") {
+                            excludeFolders(selectedItems)
+                        },
+                    ),
+                )
+            } else listOf(
                 listOf(
                     MenuItem("Move to Album…") { albumRequest = AlbumRequest(move = true, items = selectedItems) },
                     MenuItem("Copy to Album…") { albumRequest = AlbumRequest(move = false, items = selectedItems) },
@@ -921,7 +991,7 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                         val first = selectableItems.indexOfFirst { it.id in ids }
                         if (first < 0) return@MenuItem
                         slideshowOf = ids
-                        selection = null
+                        endSelection()
                         openViewer(key, first)
                     },
                 ),
@@ -1056,6 +1126,13 @@ private fun PermissionScreen(onGrant: () -> Unit) {
     }
 }
 
+/** "2 Albums Selected", "1 Folder Selected", or "Select Albums" when empty. */
+private fun albumSelectionTitle(n: Int, noun: String): String = when (n) {
+    0 -> "Select ${noun}s"
+    1 -> "1 $noun Selected"
+    else -> "$n ${noun}s Selected"
+}
+
 /** "3 Photos Selected", "1 Video Selected", "5 Items Selected", or "Select Items" when empty. */
 private fun selectionTitle(selected: List<MediaItem>): String {
     val n = selected.size
@@ -1067,6 +1144,9 @@ private fun selectionTitle(selected: List<MediaItem>): String {
     }
     return "$n $noun Selected"
 }
+
+/** [albumScope] for Collections' album list. */
+private const val AlbumsScope = "albums"
 
 private const val SettingsMain = "settings"
 private const val SettingsLicenses = "licenses"

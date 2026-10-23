@@ -4,6 +4,18 @@ import com.subhashh.lumen.ui.icons.LumenIcons
 import com.subhashh.lumen.ui.images.version
 import com.subhashh.lumen.ui.components.pressable
 import com.subhashh.lumen.ui.images.ImageKeys
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.lazy.grid.LazyGridState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
+import com.subhashh.lumen.ui.components.pinchColumns
+import com.subhashh.lumen.ui.library.SelectionMark
+import com.subhashh.lumen.ui.selection.dragToSelect
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,7 +34,6 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridScope
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -50,6 +61,8 @@ import com.subhashh.lumen.data.MediaThumbnail
 
 @Composable
 fun CollectionsScreen(
+    /** "Collections", or the selection count while selecting. */
+    title: String,
     utilities: List<MediaCollection>,
     /** Hidden shows "Set Up" until it has a lock, then "Locked". */
     hiddenLockSet: Boolean,
@@ -57,38 +70,138 @@ fun CollectionsScreen(
     gridState: LazyGridState,
     contentPadding: PaddingValues,
     onOpen: (key: String) -> Unit,
+    /** Album columns; utilities stay two across. */
+    columns: Int,
+    onColumnsChange: (Int) -> Unit,
+    /** Selected album keys while selecting; null when not in selection mode. */
+    selection: Set<String>?,
+    onSelectionChange: (Set<String>?) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Grid order: title, Utilities header, utilities block, Albums header, then the albums.
+    val gestures = rememberAlbumGridGestures(
+        gridState = gridState,
+        keys = { List<String?>(4) { null } + folders.map { it.key } },
+        columns = columns,
+        onColumnsChange = onColumnsChange,
+        selection = selection,
+        onSelectionChange = onSelectionChange,
+        contentPadding = contentPadding,
+    )
     LazyVerticalGrid(
-        columns = GridCells.Fixed(2),
+        columns = GridCells.Fixed(columns),
         state = gridState,
         contentPadding = contentPadding,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
         modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = 16.dp)
+            // Inside the padding: drag-select matches touch points against item offsets.
+            .then(gestures.modifier),
     ) {
-        fullWidth {
-            Text(
-                "Collections",
-                fontSize = 34.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier.padding(start = 4.dp, bottom = 4.dp),
-            )
-        }
+        fullWidth { ScreenTitle(title) }
 
         fullWidth { SectionHeader("Utilities") }
-        items(utilities, key = { it.key }) { collection ->
-            UtilityTile(collection, hiddenLockSet, onClick = { onOpen(collection.key) })
+        fullWidth {
+            // Two across whatever the album columns, so labels like "Recently Deleted" fit.
+            // Not selectable: dimmed while selecting albums.
+            Column(
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.graphicsLayer { alpha = if (selection != null) 0.4f else 1f },
+            ) {
+                utilities.chunked(2).forEach { row ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        row.forEach { collection ->
+                            UtilityTile(
+                                collection,
+                                hiddenLockSet,
+                                onClick = { if (selection == null) onOpen(collection.key) },
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                        if (row.size == 1) Spacer(Modifier.weight(1f))
+                    }
+                }
+            }
         }
 
         fullWidth { SectionHeader("Albums", trailing = folders.size.toString()) }
         items(folders, key = { it.key }) { collection ->
-            AlbumCard(collection, onClick = { onOpen(collection.key) })
+            AlbumCard(
+                collection,
+                selected = selection?.let { collection.key in it },
+                onClick = { gestures.click(collection.key) { onOpen(collection.key) } },
+            )
         }
     }
+}
+
+/** Grid densities for album grids, from most zoomed in to most zoomed out. */
+private val AlbumColumnSteps = listOf(1, 2, 3, 4, 5)
+
+internal class AlbumGridGestures(
+    val modifier: Modifier,
+    /** Opens the album, or toggles it while selecting. */
+    val click: (key: String, open: () -> Unit) -> Unit,
+)
+
+/**
+ * Pinch to change columns, and long-press (then drag) to select albums, as in the Library.
+ * [keys] lists every grid cell in order, null for cells that aren't albums.
+ */
+@Composable
+internal fun rememberAlbumGridGestures(
+    gridState: LazyGridState,
+    keys: () -> List<String?>,
+    columns: Int,
+    onColumnsChange: (Int) -> Unit,
+    selection: Set<String>?,
+    onSelectionChange: (Set<String>?) -> Unit,
+    contentPadding: PaddingValues,
+): AlbumGridGestures {
+    val haptics = LocalHapticFeedback.current
+    val density = LocalDensity.current
+    val currentSelection by rememberUpdatedState(selection)
+    val currentKeys by rememberUpdatedState(keys)
+    // A long-press's release reaches the card's tap handler first; it mustn't count as a tap.
+    val longPressActive = remember { booleanArrayOf(false) }
+    val modifier = Modifier
+        .pinchColumns(AlbumColumnSteps, columns, onColumnsChange)
+        .dragToSelect(
+            gridState = gridState,
+            ids = { currentKeys() },
+            selection = { currentSelection.orEmpty() },
+            onSelectionChange = onSelectionChange,
+            onStart = {
+                longPressActive[0] = true
+                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+            },
+            onEnd = { longPressActive[0] = false },
+            edgeTop = with(density) { contentPadding.calculateTopPadding().toPx() },
+            edgeBottom = with(density) { contentPadding.calculateBottomPadding().toPx() },
+        )
+    return AlbumGridGestures(modifier) { key, open ->
+        val current = currentSelection
+        when {
+            longPressActive[0] -> Unit
+            current == null -> open()
+            else -> onSelectionChange(if (key in current) current - key else current + key)
+        }
+    }
+}
+
+@Composable
+internal fun ScreenTitle(title: String) {
+    Text(
+        title,
+        fontSize = 34.sp,
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.onBackground,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier.padding(start = 4.dp, bottom = 4.dp),
+    )
 }
 
 private fun LazyGridScope.fullWidth(content: @Composable () -> Unit) =
@@ -116,11 +229,11 @@ private fun SectionHeader(title: String, trailing: String? = null) {
 }
 
 @Composable
-private fun UtilityTile(collection: MediaCollection, hiddenLockSet: Boolean, onClick: () -> Unit) {
+private fun UtilityTile(collection: MediaCollection, hiddenLockSet: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val onBackground = MaterialTheme.colorScheme.onBackground
     // Icon above the label so long names like "Recently Deleted" fit a half-width tile.
     Column(
-        Modifier
+        modifier
             .pressable(onClick, pressedScale = 0.96f)
             .clip(RoundedCornerShape(16.dp))
             .background(onBackground.copy(alpha = 0.07f))
@@ -165,23 +278,41 @@ private fun utilityIcon(key: String): ImageVector = when (key) {
 }
 
 @Composable
-internal fun AlbumCard(collection: MediaCollection, onClick: () -> Unit, subtitle: String = collection.count.toString()) {
+internal fun AlbumCard(
+    collection: MediaCollection,
+    onClick: () -> Unit,
+    subtitle: String = collection.count.toString(),
+    /** null when not selecting. */
+    selected: Boolean? = null,
+) {
     val onBackground = MaterialTheme.colorScheme.onBackground
+    // Selected covers shrink a little inside their slot, like photos in the grid.
+    val scale by animateFloatAsState(
+        if (selected == true) 0.9f else 1f,
+        spring(dampingRatio = 0.7f, stiffness = 700f),
+        label = "selectScale",
+    )
     Column(Modifier.pressable(onClick, pressedScale = 0.96f)) {
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .aspectRatio(1f)
-                .clip(RoundedCornerShape(12.dp))
-                .background(onBackground.copy(alpha = 0.07f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            val cover = collection.cover
-            if (cover != null) {
-                Cover(cover)
-            } else {
-                Icon(LumenIcons.Folder, contentDescription = null, tint = onBackground.copy(alpha = 0.3f))
+        Box(Modifier.fillMaxWidth().aspectRatio(1f)) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        scaleX = scale
+                        scaleY = scale
+                    }
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(onBackground.copy(alpha = 0.07f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                val cover = collection.cover
+                if (cover != null) {
+                    Cover(cover)
+                } else {
+                    Icon(LumenIcons.Folder, contentDescription = null, tint = onBackground.copy(alpha = 0.3f))
+                }
             }
+            if (selected != null) SelectionMark(selected, Modifier.align(Alignment.BottomEnd).padding(8.dp))
         }
         Spacer(Modifier.height(6.dp))
         Text(

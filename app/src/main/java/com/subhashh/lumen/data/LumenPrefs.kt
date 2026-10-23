@@ -23,6 +23,11 @@ class LumenPrefs(context: Context) {
         get() = prefs.getInt(KeyColumns, 5)
         set(value) = prefs.edit { putInt(KeyColumns, value) }
 
+    /** Album columns, shared by Collections and Hidden's folder list. */
+    var albumColumns: Int
+        get() = prefs.getInt(KeyAlbumColumns, 2)
+        set(value) = prefs.edit { putInt(KeyAlbumColumns, value) }
+
     /** Folders Lumen ignores (relative paths, subfolders included). */
     var excludedFolders: Set<String>
         get() = prefs.getStringSet(KeyExcluded, emptySet()).orEmpty().toSet()
@@ -31,6 +36,7 @@ class LumenPrefs(context: Context) {
     private companion object {
         const val KeyExcluded = "excluded_folders"
         const val KeyColumns = "grid_columns"
+        const val KeyAlbumColumns = "album_columns"
         const val KeyFilter = "library_filter"
         const val KeyAspect = "aspect_ratio_grid"
     }

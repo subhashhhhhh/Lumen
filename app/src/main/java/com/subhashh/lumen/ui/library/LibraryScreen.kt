@@ -4,9 +4,6 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,6 +21,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import com.subhashh.lumen.ui.selection.dragToSelect
+import com.subhashh.lumen.ui.components.pinchColumns
 import com.subhashh.lumen.ui.images.version
 import com.subhashh.lumen.ui.icons.LumenIcons
 import androidx.compose.ui.graphics.graphicsLayer
@@ -47,8 +45,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
-import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import com.subhashh.lumen.ui.images.bestPlaceholderKey
@@ -96,11 +92,6 @@ fun LibraryScreen(
     columns: Int = ColumnSteps[DefaultColumnStep],
     onColumnsChange: (Int) -> Unit = {},
 ) {
-    // Nearest step, in case the saved value isn't one of today's steps.
-    val step = ColumnSteps.indices.minBy { kotlin.math.abs(ColumnSteps[it] - columns) }
-    // The pinch handler is set up once; it must read the current step, not the first one.
-    val currentStep by rememberUpdatedState(step)
-    val currentOnColumnsChange by rememberUpdatedState(onColumnsChange)
     val haptics = LocalHapticFeedback.current
     // Decode thumbnails for the cell size actually shown, so fewer, bigger cells stay sharp.
     val cellPx = with(LocalDensity.current) { LocalConfiguration.current.screenWidthDp.dp.roundToPx() } / columns
@@ -142,20 +133,7 @@ fun LibraryScreen(
             verticalArrangement = Arrangement.spacedBy(2.dp),
             modifier = Modifier
                 .fillMaxSize()
-                .pinchToChangeColumns(
-                    onZoomIn = {
-                        if (currentStep > 0) {
-                            currentOnColumnsChange(ColumnSteps[currentStep - 1])
-                            haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
-                        }
-                    },
-                    onZoomOut = {
-                        if (currentStep < ColumnSteps.lastIndex) {
-                            currentOnColumnsChange(ColumnSteps[currentStep + 1])
-                            haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
-                        }
-                    },
-                )
+                .pinchColumns(ColumnSteps, columns, onColumnsChange)
                 .dragToSelect(
                     gridState = gridState,
                     ids = { items.map { it.id } },
@@ -280,7 +258,7 @@ private fun Thumbnail(
 
 /** iOS-style marker: an empty ring when selectable, a filled check when selected. */
 @Composable
-private fun SelectionMark(selected: Boolean, modifier: Modifier = Modifier) {
+internal fun SelectionMark(selected: Boolean, modifier: Modifier = Modifier) {
     if (selected) {
         Box(
             modifier
@@ -325,34 +303,6 @@ internal fun LibraryHeader(title: String, subtitle: String, topPadding: Dp, modi
         }
     }
 }
-
-/**
- * Two-finger pinch changes grid density, like iOS Photos. One-finger drags pass through to the
- * grid; once a second finger lands we consume events before the grid sees them, so it doesn't scroll.
- */
-private fun Modifier.pinchToChangeColumns(onZoomIn: () -> Unit, onZoomOut: () -> Unit) =
-    pointerInput(Unit) {
-        awaitEachGesture {
-            awaitFirstDown(requireUnconsumed = false)
-            // One column step per 1.25× of pinch, so a small pinch moves one step and a big
-            // one can move several in the same gesture.
-            var zoom = 1f
-            do {
-                val event = awaitPointerEvent(PointerEventPass.Initial)
-                if (event.changes.count { it.pressed } >= 2) {
-                    zoom *= event.calculateZoom()
-                    event.changes.forEach { it.consume() }
-                    if (zoom > PinchStep) {
-                        onZoomIn(); zoom = 1f
-                    } else if (zoom < 1f / PinchStep) {
-                        onZoomOut(); zoom = 1f
-                    }
-                }
-            } while (event.changes.any { it.pressed })
-        }
-    }
-
-private const val PinchStep = 1.25f
 
 private val HeaderScrim = arrayOf(
     0.00f to Color.Black.copy(alpha = 0.70f),

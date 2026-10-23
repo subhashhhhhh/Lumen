@@ -21,7 +21,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -30,6 +29,8 @@ import com.subhashh.lumen.data.HiddenMedia
 import com.subhashh.lumen.data.MediaCollection
 import com.subhashh.lumen.data.MediaItem
 import com.subhashh.lumen.ui.collections.AlbumCard
+import com.subhashh.lumen.ui.collections.ScreenTitle
+import com.subhashh.lumen.ui.collections.rememberAlbumGridGestures
 
 /** A folder in Hidden: hidden as a whole, or a normal folder holding some hidden files. */
 @Immutable
@@ -63,9 +64,26 @@ fun HiddenScreen(
     gridState: LazyGridState,
     contentPadding: PaddingValues,
     onOpen: (key: String) -> Unit,
+    /** "Hidden", or the selection count while selecting. */
+    title: String,
+    columns: Int,
+    onColumnsChange: (Int) -> Unit,
+    /** Selected folder keys while selecting; null when not in selection mode. */
+    selection: Set<String>?,
+    onSelectionChange: (Set<String>?) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = MaterialTheme.colorScheme
+    // Grid order: title, then the folders.
+    val gestures = rememberAlbumGridGestures(
+        gridState = gridState,
+        keys = { listOf<String?>(null) + folders.orEmpty().map { it.collection.key } },
+        columns = columns,
+        onColumnsChange = onColumnsChange,
+        selection = selection,
+        onSelectionChange = onSelectionChange,
+        contentPadding = contentPadding,
+    )
     when {
         folders == null -> Column(
             modifier.fillMaxSize(),
@@ -85,29 +103,23 @@ fun HiddenScreen(
             )
         }
         else -> LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
+            columns = GridCells.Fixed(columns),
             state = gridState,
             contentPadding = contentPadding,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = modifier
                 .fillMaxSize()
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = 16.dp)
+                .then(gestures.modifier),
         ) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                Text(
-                    "Hidden",
-                    fontSize = 34.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = colors.onBackground,
-                    modifier = Modifier.padding(start = 4.dp, bottom = 4.dp),
-                )
-            }
+            item(span = { GridItemSpan(maxLineSpan) }) { ScreenTitle(title) }
             items(folders, key = { it.collection.key }) { folder ->
                 val n = folder.collection.count
                 AlbumCard(
                     collection = folder.collection,
-                    onClick = { onOpen(folder.collection.key) },
+                    selected = selection?.let { folder.collection.key in it },
+                    onClick = { gestures.click(folder.collection.key) { onOpen(folder.collection.key) } },
                     subtitle = if (folder.wholeFolder) "Hidden folder · $n" else "$n hidden ${if (n == 1) "file" else "files"}",
                 )
             }

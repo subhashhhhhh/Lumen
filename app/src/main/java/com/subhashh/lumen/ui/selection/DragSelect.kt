@@ -18,15 +18,15 @@ import kotlin.math.min
  * from there, Google Photos-style. Long-pressing an already selected cell drags to deselect
  * instead. Near the top or bottom edge the grid scrolls on its own so a range can span screens.
  *
- * @param ids item ids in grid order
+ * @param ids item ids in grid order; null for cells that can't be selected (headers, tiles)
  * @param edgeTop / [edgeBottom] distance from the grid's edges, px, where auto-scroll kicks in
  *   (covers the header and the bottom bar, which sit over the grid)
  */
-fun Modifier.dragToSelect(
+fun <T : Any> Modifier.dragToSelect(
     gridState: LazyGridState,
-    ids: () -> List<Long>,
-    selection: () -> Set<Long>,
-    onSelectionChange: (Set<Long>) -> Unit,
+    ids: () -> List<T?>,
+    selection: () -> Set<T>,
+    onSelectionChange: (Set<T>) -> Unit,
     onStart: () -> Unit,
     /** Gesture over (lift or cancel). Children see the lift first, so they can tell a long-press's release from a tap. */
     onEnd: () -> Unit,
@@ -36,7 +36,7 @@ fun Modifier.dragToSelect(
     coroutineScope {
         var anchor = -1
         var current = -1
-        var base = emptySet<Long>()
+        var base = emptySet<T>()
         var removing = false
         var pointer = Offset.Zero
         var dragging = false
