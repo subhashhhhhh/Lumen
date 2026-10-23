@@ -26,6 +26,9 @@ android {
         }
         debug {
             applicationIdSuffix = ".debug"
+            // Only the owner's phone runs these; skipping x86/armv7 keeps the Search Lab's
+            // native runtimes from adding ~150 MB.
+            ndk { abiFilters += "arm64-v8a" }
         }
         // Release-optimized (R8, not debuggable) but debug-signed, for judging smoothness on the
         // phone: Compose debug builds run several times slower. Same app id as debug, so it
@@ -35,7 +38,15 @@ android {
             signingConfig = signingConfigs.getByName("debug")
             applicationIdSuffix = ".debug"
             matchingFallbacks += listOf("release")
+            proguardFiles("lab-rules.pro")
+            ndk { abiFilters += "arm64-v8a" }
         }
+    }
+
+    // Search Lab (model head-to-head), in debug and profile builds only; never in release.
+    sourceSets {
+        getByName("debug").kotlin.directories.add("src/lab/java")
+        getByName("profile").kotlin.directories.add("src/lab/java")
     }
 
     compileOptions {
@@ -89,4 +100,10 @@ dependencies {
 
     // Liquid glass — Kyant0/backdrop, Apache 2.0.
     implementation(libs.backdrop)
+
+    // Search Lab runtimes. Not in release: the chosen one moves to `implementation` later.
+    debugImplementation(libs.onnxruntime.android)
+    debugImplementation(libs.litertlm.android)
+    "profileImplementation"(libs.onnxruntime.android)
+    "profileImplementation"(libs.litertlm.android)
 }

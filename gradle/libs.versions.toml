@@ -20,8 +20,12 @@ uiautomator = "2.4.0"
 testExtJunit = "1.3.0"
 profileinstaller = "1.4.1"
 print = "1.1.0"
+onnxruntime = "1.31.0"
+litertlm = "0.18.1"
 
 [libraries]
+onnxruntime-android = { module = "com.microsoft.onnxruntime:onnxruntime-android", version.ref = "onnxruntime" }
+litertlm-android = { module = "com.google.ai.edge.litertlm:litertlm-android", version.ref = "litertlm" }
 androidx-test-runner = { module = "androidx.test:runner", version.ref = "testRunner" }
 org-json = { module = "org.json:json", version.ref = "orgJson" }
 junit = { module = "junit:junit", version.ref = "junit" }
