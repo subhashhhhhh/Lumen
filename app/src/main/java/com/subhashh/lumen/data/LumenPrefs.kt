@@ -147,7 +147,13 @@ class LumenPrefs(context: Context) {
         get() = prefs.getInt(KeyAppLockMinutes, 1)
         set(value) = prefs.edit { putInt(KeyAppLockMinutes, value) }
 
+    /** Settings → Privacy → Encrypt Hidden: hidden items live in the encrypted vault. */
+    var encryptHidden: Boolean
+        get() = prefs.getBoolean(KeyEncryptHidden, false)
+        set(value) = prefs.edit { putBoolean(KeyEncryptHidden, value) }
+
     private companion object {
+        const val KeyEncryptHidden = "encrypt_hidden"
         const val KeyAppLock = "app_lock"
         const val KeyAppLockMinutes = "app_lock_minutes"
         const val KeyCurvedEdge = "curved_edge"

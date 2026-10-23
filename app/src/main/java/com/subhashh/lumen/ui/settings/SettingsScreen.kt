@@ -69,6 +69,8 @@ fun SettingsScreen(
     excludedCount: Int,
     appLockOn: Boolean,
     onToggleAppLock: (Boolean) -> Unit,
+    encryptHidden: Boolean,
+    onToggleEncryptHidden: (Boolean) -> Unit,
     onExport: () -> Unit,
     onImport: () -> Unit,
     onImportFavorites: () -> Unit,
@@ -274,6 +276,15 @@ fun SettingsScreen(
                 onClick = onOpenHidden,
                 icon = LumenIcons.Hide,
                 iconColor = Indigo,
+            )
+            Divider()
+            ToggleRow(
+                title = "Encrypt Hidden",
+                subtitle = "So no other app or file manager can see them",
+                checked = encryptHidden,
+                onCheckedChange = onToggleEncryptHidden,
+                icon = LumenIcons.Shield,
+                iconColor = Green,
             )
             Divider()
             SettingsRow(

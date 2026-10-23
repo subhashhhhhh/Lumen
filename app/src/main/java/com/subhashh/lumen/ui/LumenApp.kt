@@ -86,6 +86,9 @@ import com.subhashh.lumen.ui.components.RenameDialog
 import com.subhashh.lumen.ui.components.DateTimeDialog
 import com.subhashh.lumen.data.MediaDates
 import com.subhashh.lumen.data.vault.Vault
+import com.subhashh.lumen.data.vault.VaultMigration
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.fillMaxWidth
 import com.subhashh.lumen.data.SettingsBackup
 import com.subhashh.lumen.data.ImageExport
 import com.subhashh.lumen.ui.settings.ResizeDialog
@@ -593,6 +596,11 @@ private fun MainScaffold(
         // First time: set up Lumen's own lock; afterwards: unlock with it.
         lockFlow = if (lockStore.isSet) LockFlow.Unlock else LockFlow.Setup
     }
+    var encryptHidden by remember { mutableStateOf(LumenPrefs(appContext).encryptHidden) }
+    /** Turning Encrypt Hidden on (true) or off (false), waiting for the lock to be confirmed. */
+    var pendingEncryption by remember { mutableStateOf<Boolean?>(null) }
+    /** Moving files into or out of the vault: what's happening and how far along, or null. */
+    var vaultProgress by remember { mutableStateOf<VaultProgress?>(null) }
     /** The lock as last typed, kept only until Hidden opens: the vault's recovery path needs it. */
     var enteredSecret by remember { mutableStateOf<String?>(null) }
     val showHidden = {
@@ -668,6 +676,15 @@ private fun MainScaffold(
     }
     val hide: (List<MediaItem>) -> Unit = hide@{ items ->
         if (needsAllFiles()) return@hide
+        // Encrypt Hidden on: straight into the vault, which opens from the Keystore for this.
+        if (encryptHidden && Vault.open(appContext)) {
+            scope.launch {
+                val n = VaultMigration.hideIntoVault(context, items) { MediaFiles.filePath(context, it) }
+                if (!hiddenUnlocked) Vault.close()
+                afterHiddenChange(if (n == items.size) "Hidden and encrypted. Find it in Collections → Hidden" else "Hid $n of ${items.size}")
+            }
+            return@hide
+        }
         scope.launch {
             val paths = withContext(Dispatchers.IO) { items.mapNotNull { MediaFiles.filePath(context, it) } }
             val n = HiddenMedia.hide(context, paths)
@@ -685,18 +702,74 @@ private fun MainScaffold(
             val root = Environment.getExternalStorageDirectory()
             val affected = library.orEmpty().count { File(root, it.relativePath).absolutePath in paths }
             val name = folders.singleOrNull()?.name
+            val encrypt = encryptHidden
             confirmation = Confirmation(
                 title = if (name != null) "Hide “$name”?" else "Hide ${folders.size} folders?",
-                message = "All $affected items in ${if (name != null) "it" else "them"} will be hidden from Lumen's library and " +
-                    "from apps that use Android's media index, like Google Photos. File managers, and galleries that " +
-                    "look at storage directly, can still see them. They'll be in Collections → Hidden.",
+                message = if (encrypt) {
+                    "All $affected items in ${if (name != null) "it" else "them"} will be encrypted into Lumen's vault: " +
+                        "no other app can see them. They'll be in Collections → Hidden."
+                } else {
+                    "All $affected items in ${if (name != null) "it" else "them"} will be hidden from Lumen's library and " +
+                        "from apps that use Android's media index, like Google Photos. File managers, and galleries that " +
+                        "look at storage directly, can still see them. They'll be in Collections → Hidden."
+                },
                 confirm = "Hide",
             ) {
+                if (encrypt && Vault.open(appContext)) {
+                    scope.launch {
+                        val inFolders = library.orEmpty().filter { File(root, it.relativePath).absolutePath in paths }
+                        val n = VaultMigration.hideIntoVault(context, inFolders) { MediaFiles.filePath(context, it) }
+                        if (!hiddenUnlocked) Vault.close()
+                        afterHiddenChange(if (n == inFolders.size) "Hidden and encrypted" else "Hid $n of ${inFolders.size}")
+                    }
+                    return@Confirmation
+                }
                 scope.launch {
                     val n = HiddenMedia.hideFolders(context, folders)
                     afterHiddenChange(if (n == paths.size) "Hidden. Find it in Collections → Hidden" else "Couldn't hide some folders")
                 }
             }
+        }
+    }
+    /**
+     * Encrypt Hidden switched on or off, once the lock is confirmed: moves everything into or out of
+     * the vault with a progress screen. [secret] makes the vault's recovery key (or opens an
+     * existing vault from an earlier install).
+     */
+    val runEncryption: (on: Boolean, secret: String?) -> Unit = { on, secret ->
+        scope.launch {
+            val opened = when {
+                Vault.open(appContext, secret) -> true
+                on && secret != null && !Vault.exists(appContext) -> {
+                    withContext(Dispatchers.Default) { Vault.create(appContext, secret) }
+                    true
+                }
+                else -> false
+            }
+            if (!opened) {
+                toast("This vault was made with a different Lumen lock; enter that one to open it")
+                return@launch
+            }
+            vaultProgress = VaultProgress(if (on) "Encrypting" else "Decrypting", 0, 0)
+            val result = if (on) {
+                VaultMigration.encryptAll(context, excluded) { done, total -> vaultProgress = VaultProgress("Encrypting", done, total) }
+            } else {
+                VaultMigration.decryptAll(context) { done, total -> vaultProgress = VaultProgress("Decrypting", done, total) }
+            }
+            vaultProgress = null
+            // On even with some failures: those files stay hidden the old way, nothing is lost.
+            prefs.encryptHidden = on
+            encryptHidden = on
+            if (!hiddenUnlocked) Vault.close()
+            viewModel.loadHidden()
+            viewModel.refresh()
+            toast(
+                when {
+                    result.failed > 0 -> "${result.moved} done, ${result.failed} couldn't be ${if (on) "encrypted" else "decrypted"} and stayed as they were"
+                    on -> if (result.moved == 0) "Encrypt Hidden is on" else "Encrypted ${result.moved} hidden items"
+                    else -> "Decrypted ${result.moved} items; they're hidden the usual way again"
+                },
+            )
         }
     }
     /** Share from Hidden: encrypted items go out as decrypted copies in Lumen's private cache. */
@@ -936,6 +1009,38 @@ private fun MainScaffold(
                         }
                     },
                     excludedCount = excluded.size,
+                    encryptHidden = encryptHidden,
+                    onToggleEncryptHidden = toggle@{ on ->
+                        if (!lockStore.isSet) {
+                            toast("Set up a Lumen lock first (Privacy → Set Up Lumen Lock)")
+                            return@toggle
+                        }
+                        if (needsAllFiles()) return@toggle
+                        confirmation = if (on) {
+                            Confirmation(
+                                title = "Encrypt Hidden?",
+                                message = (hidden?.filterNot(Vault::isVault)?.size?.let { "$it hidden items move" } ?: "Everything in Hidden moves") +
+                                    " into an encrypted vault that no other app or file manager can read (excluded folders stay as they are). " +
+                                    "It stays on your storage, so it survives uninstalling Lumen; your Lumen lock opens it again.\n\n" +
+                                    "If you uninstall Lumen and forget your lock, these files can't be recovered by anyone. " +
+                                    "A password is safer than a short PIN.",
+                                confirm = "Encrypt",
+                            ) {
+                                pendingEncryption = true
+                                lockFlow = LockFlow.Confirm
+                            }
+                        } else {
+                            Confirmation(
+                                title = "Stop encrypting Hidden?",
+                                message = "Everything in the vault is decrypted back to where it was, hidden the usual way: " +
+                                    "out of your library, but visible to file managers and some galleries.",
+                                confirm = "Decrypt",
+                            ) {
+                                pendingEncryption = false
+                                lockFlow = LockFlow.Confirm
+                            }
+                        }
+                    },
                     appLockOn = appLockOn,
                     onToggleAppLock = { on ->
                         if (on && !lockStore.isSet) {
@@ -1563,6 +1668,12 @@ private fun MainScaffold(
                     biometrics = lockStore.biometrics
                     // Changing the lock from Settings doesn't open Hidden; setting up or unlocking does.
                     when {
+                        pendingEncryption != null -> {
+                            val on = pendingEncryption!!
+                            pendingEncryption = null
+                            runEncryption(on, enteredSecret)
+                            enteredSecret = null
+                        }
                         setupForAppLock -> {
                             setupForAppLock = false
                             if (lockStore.isSet) {
@@ -1576,7 +1687,11 @@ private fun MainScaffold(
                         else -> toast("Lumen lock changed")
                     }
                 },
-                onCancel = { lockFlow = null },
+                onCancel = {
+                    lockFlow = null
+                    pendingEncryption = null
+                    enteredSecret = null
+                },
                 onForgot = resetLock,
             )
         }
@@ -1686,6 +1801,8 @@ private fun MainScaffold(
             onDismiss = { resizeRequest = null },
         )
 
+        vaultProgress?.let { VaultProgressScreen(it) }
+
         DateTimeDialog(
             original = dateRequest?.minOf { it.takenAt },
             count = dateRequest?.size ?: 0,
@@ -1787,3 +1904,39 @@ private val ScrollMonth = java.text.SimpleDateFormat("MMMM yyyy", java.util.Loca
 
 /** How far to scroll one way before the bottom bar switches between tabs and Years / Months / All. */
 private val ZoomBarSwitchDistance = 40.dp
+
+/** Moving files into or out of the vault: "Encrypting", 12 of 810. */
+private data class VaultProgress(val verb: String, val done: Int, val total: Int)
+
+/** Covers everything while files move: leaving mid-way is safe, but tapping around isn't useful. */
+@Composable
+private fun VaultProgressScreen(progress: VaultProgress) {
+    BackHandler { }
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background.copy(alpha = 0.92f))
+            .clickable(remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null) {},
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {
+            androidx.compose.material3.LinearProgressIndicator(
+                progress = { if (progress.total == 0) 0f else progress.done.toFloat() / progress.total },
+                modifier = Modifier.fillMaxWidth(0.7f),
+            )
+            Spacer(Modifier.height(16.dp))
+            Text(
+                if (progress.total == 0) "${progress.verb}…" else "${progress.verb} ${progress.done} of ${progress.total}",
+                color = MaterialTheme.colorScheme.onBackground,
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                "Each file is checked before its original is removed.",
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
+            )
+        }
+    }
+}

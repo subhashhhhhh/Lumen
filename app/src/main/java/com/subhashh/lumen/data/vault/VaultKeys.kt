@@ -20,9 +20,15 @@ import javax.crypto.spec.SecretKeySpec
  *  - in the recovery file next to the vault ([VaultKeyFile]), sealed by the user's Lumen lock:
  *    opens it after a reinstall, when the Keystore copy is gone with the old install.
  */
-class VaultKeys(private val context: Context, private val vaultDir: File) {
+class VaultKeys(
+    private val context: Context,
+    private val vaultDir: File,
+    prefsName: String = "vault_keys",
+    /** Keystore alias; tests pass their own so they never touch the real vault's key. */
+    private val alias: String = "lumen_vault",
+) {
 
-    private val prefs = context.getSharedPreferences("vault_keys", Context.MODE_PRIVATE)
+    private val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
     private val recoveryFile get() = File(vaultDir, RecoveryName)
 
     /** A vault already exists here (from this install or an earlier one). */
@@ -70,11 +76,11 @@ class VaultKeys(private val context: Context, private val vaultDir: File) {
     /** Lumen's Keystore key: never leaves the phone's secure hardware, gone if Lumen is uninstalled. */
     private fun deviceKey(create: Boolean): SecretKey? {
         val store = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
-        (store.getKey(Alias, null) as? SecretKey)?.let { return it }
+        (store.getKey(alias, null) as? SecretKey)?.let { return it }
         if (!create) return null
         return KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore").apply {
             init(
-                KeyGenParameterSpec.Builder(Alias, KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
+                KeyGenParameterSpec.Builder(alias, KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
                     .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
                     .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
                     .setKeySize(256)
@@ -94,7 +100,6 @@ class VaultKeys(private val context: Context, private val vaultDir: File) {
 
     companion object {
         const val RecoveryName = "vault.key"
-        private const val Alias = "lumen_vault"
         private const val KeyDeviceCopy = "device_copy"
     }
 }

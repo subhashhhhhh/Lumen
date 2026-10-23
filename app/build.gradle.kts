@@ -9,6 +9,7 @@ android {
     compileSdk = 37
 
     defaultConfig {
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         applicationId = "com.subhashh.lumen"
         // Android 11: All files access (hidden folders) and MediaStore trash.
         minSdk = 30
@@ -55,6 +56,8 @@ baselineProfile {
 
 dependencies {
     testImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.androidx.test.runner)
     // Android's org.json is a stub in local tests; the real one stands in.
     testImplementation(libs.org.json)
     implementation(libs.androidx.profileinstaller)

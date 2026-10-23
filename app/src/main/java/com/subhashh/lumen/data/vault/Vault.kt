@@ -29,7 +29,11 @@ object Vault {
     const val Scheme = "lumenvault"
     private const val Extension = ".lumenvault"
 
-    fun dir(): File = File(Environment.getExternalStorageDirectory(), ".LumenVault")
+    fun dir(): File = testDir ?: File(Environment.getExternalStorageDirectory(), ".LumenVault")
+
+    /** Tests only: a throwaway vault folder and keys, never the real ones. */
+    internal var testDir: File? = null
+    internal var keysFactory: (Context, File) -> VaultKeys = { context, dir -> VaultKeys(context, dir) }
 
     /** The master key while the vault is open (Hidden unlocked); null otherwise. */
     @Volatile
@@ -40,7 +44,7 @@ object Vault {
 
     val isOpen: Boolean get() = key != null
 
-    private fun keys(context: Context) = VaultKeys(context, dir())
+    private fun keys(context: Context) = keysFactory(context, dir())
 
     /** A vault exists on this phone's storage (maybe from an earlier install). */
     fun exists(context: Context) = keys(context).exists
