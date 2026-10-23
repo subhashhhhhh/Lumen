@@ -81,14 +81,30 @@ class PhotoTransition {
         cells[id] = coordinates
     }
 
-    fun cellRect(id: Long): Rect? {
-        val c = cells[id]?.takeIf { it.isAttached } ?: return null
-        return Rect(c.positionInRoot(), c.size.toSize())
+    /**
+     * Grid cells show whole photos letterboxed (aspect-ratio grid) instead of square crops; the
+     * flight then starts from and lands on the visible photo, not the whole cell.
+     */
+    var fitCells = false
+
+    /** Where [item]'s photo is drawn in its grid cell, in root coordinates. */
+    fun cellRect(item: MediaItem): Rect? {
+        val c = cells[item.id]?.takeIf { it.isAttached } ?: return null
+        val cell = Rect(c.positionInRoot(), c.size.toSize())
+        if (!fitCells || item.width <= 0 || item.height <= 0) return cell
+        val aspect = item.width.toFloat() / item.height
+        return if (aspect >= 1f) {
+            val h = cell.width / aspect
+            Rect(cell.left, cell.center.y - h / 2f, cell.right, cell.center.y + h / 2f)
+        } else {
+            val w = cell.height * aspect
+            Rect(cell.center.x - w / 2f, cell.top, cell.center.x + w / 2f, cell.bottom)
+        }
     }
 
     /** Grow from the item's grid cell to [target]. Suspends until the photo is full screen. */
     suspend fun open(item: MediaItem, target: Rect, background: Color) {
-        start(item, from = cellRect(item.id), full = target, background = background, backgroundStart = 1f)
+        start(item, from = cellRect(item), full = target, background = background, backgroundStart = 1f)
         opening = true
         centerX = thumb.center.x
         centerY = thumb.center.y
@@ -114,7 +130,7 @@ class PhotoTransition {
 
     suspend fun land(velocity: Velocity) {
         val current = item ?: return
-        cellRect(current.id)?.let {
+        cellRect(current)?.let {
             thumb = it
             landless = false
         }

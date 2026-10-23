@@ -47,6 +47,11 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.subhashh.lumen.ui.theme.LocalGlassColors
+import com.subhashh.lumen.ui.library.ViewMenu
+import com.subhashh.lumen.data.LumenPrefs
+import com.subhashh.lumen.data.LibraryFilter
+import androidx.compose.runtime.SideEffect
 import com.subhashh.lumen.ui.selection.SelectionTopControls
 import com.subhashh.lumen.ui.selection.SelectionActionBar
 import com.subhashh.lumen.data.MediaItem
@@ -164,9 +169,26 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
     var screenSize by remember { mutableStateOf(IntSize.Zero) }
     val viewerBackground = MaterialTheme.colorScheme.background
 
+    val context = LocalContext.current
+    val prefs = remember { LumenPrefs(context) }
+    var filter by remember { mutableStateOf(prefs.libraryFilter) }
+    var aspectRatioGrid by remember { mutableStateOf(prefs.aspectRatioGrid) }
+    var menuOpen by remember { mutableStateOf(false) }
+    SideEffect { transition.fitCells = aspectRatioGrid }
+
     val utilities = remember(library, trash) { MediaCollections.utilities(library.orEmpty(), trash) }
     val folders = remember(library) { MediaCollections.folders(library.orEmpty()) }
-    val itemsOf = { key: String -> CollectionKeys.items(key, library.orEmpty(), trash) }
+    // The Library tab is filtered by the ≡ menu; the viewer and selection page through the same list.
+    val libraryItems = remember(library, filter) {
+        library.orEmpty().let { all -> if (filter == LibraryFilter.All) all else all.filter(filter::matches) }
+    }
+    val itemsOf = { key: String ->
+        if (key == CollectionKeys.Library) libraryItems else CollectionKeys.items(key, library.orEmpty(), trash)
+    }
+    // A new filter starts at its newest item, like opening the Library.
+    LaunchedEffect(filter) {
+        if (libraryItems.isNotEmpty()) libraryGrid.scrollToItem(libraryItems.lastIndex)
+    }
 
     val viewerOpen = viewerSource != null
     val inCollection = tab == LumenTab.Collections && openCollection != null && !searching
@@ -198,7 +220,7 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
         }
     }
     val selectedItems = selection?.let { ids -> selectableItems.filter { it.id in ids } }.orEmpty()
-    val context = LocalContext.current
+    BackHandler(enabled = menuOpen) { menuOpen = false }
 
     val statusTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
@@ -235,7 +257,9 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                     title = selection?.let { selectionTitle(selectedItems) } ?: "Library",
                     selection = selection,
                     onSelectionChange = { selection = it },
-                    items = library.orEmpty(),
+                    aspectRatioGrid = aspectRatioGrid,
+                    emptyText = filter.emptyText,
+                    items = libraryItems,
                     gridState = libraryGrid,
                     contentPadding = gridPadding,
                     transition = transition,
@@ -248,6 +272,7 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                             ?: (utilities + folders).firstOrNull { it.key == key }?.title.orEmpty(),
                         selection = selection,
                         onSelectionChange = { selection = it },
+                        aspectRatioGrid = aspectRatioGrid,
                         items = itemsOf(key),
                         gridState = collectionGrid,
                         contentPadding = PaddingValues(top = statusTop + 152.dp, bottom = navBottom + 96.dp),
@@ -274,6 +299,21 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                     else selectableItems.mapTo(HashSet()) { it.id }
                 },
                 onCancel = { selection = null },
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .statusBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+            )
+        }
+
+        if (tab == LumenTab.Library && !searching && selection == null && !viewerOpen) {
+            GlassIconButton(
+                backdrop = backdrop,
+                icon = LumenIcons.Filter,
+                contentDescription = "View options",
+                onClick = { menuOpen = !menuOpen },
+                // Blue while a filter is on, like iOS, so a filtered library is never a surprise.
+                tint = if (filter != LibraryFilter.All) MaterialTheme.colorScheme.primary else LocalGlassColors.current.content,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .statusBarsPadding()
@@ -323,6 +363,26 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                     .padding(bottom = navBottom + 12.dp),
             )
         }
+
+        ViewMenu(
+            backdrop = backdrop,
+            open = menuOpen && tab == LumenTab.Library && !viewerOpen,
+            onDismiss = { menuOpen = false },
+            filter = filter,
+            onFilter = {
+                filter = it
+                prefs.libraryFilter = it
+            },
+            aspectRatioGrid = aspectRatioGrid,
+            onAspectRatioGrid = {
+                aspectRatioGrid = it
+                prefs.aspectRatioGrid = it
+            },
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .statusBarsPadding()
+                .padding(top = 64.dp, end = 16.dp),
+        )
 
         AnimatedVisibility(
             visible = selection != null && !viewerOpen,

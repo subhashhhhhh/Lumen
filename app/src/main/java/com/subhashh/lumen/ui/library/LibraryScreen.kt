@@ -89,6 +89,9 @@ fun LibraryScreen(
     modifier: Modifier = Modifier,
     /** Extra space above the title, e.g. for an album's back button. */
     titleTopPadding: Dp = 16.dp,
+    /** Whole photos letterboxed in their cells instead of square crops. */
+    aspectRatioGrid: Boolean = false,
+    emptyText: String = "No photos or videos",
 ) {
     var step by rememberSaveable { mutableIntStateOf(DefaultColumnStep) }
     val haptics = LocalHapticFeedback.current
@@ -165,6 +168,7 @@ fun LibraryScreen(
                 Thumbnail(
                     item = item,
                     bucket = thumbBucket,
+                    fit = aspectRatioGrid,
                     showDuration = columns <= 5 && selection == null,
                     selected = selection?.let { item.id in it },
                     onClick = click@{
@@ -183,7 +187,7 @@ fun LibraryScreen(
 
         if (items.isEmpty()) {
             Text(
-                "No photos or videos",
+                emptyText,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                 modifier = Modifier.align(Alignment.Center),
             )
@@ -202,6 +206,7 @@ fun LibraryScreen(
 private fun Thumbnail(
     item: MediaItem,
     bucket: Int,
+    fit: Boolean,
     showDuration: Boolean,
     /** null when not selecting. */
     selected: Boolean?,
@@ -227,7 +232,8 @@ private fun Thumbnail(
                     scaleX = scale
                     scaleY = scale
                 }
-                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)),
+                // Letterboxed cells stay clear around the photo; square crops get a loading tint.
+                .then(if (fit) Modifier else Modifier.background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))),
         ) {
             AsyncImage(
                 model = remember(item.uri, bucket) {
@@ -242,7 +248,7 @@ private fun Thumbnail(
                         .build()
                 },
                 contentDescription = null,
-                contentScale = ContentScale.Crop,
+                contentScale = if (fit) ContentScale.Fit else ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
             )
             if (item.isVideo && showDuration) {

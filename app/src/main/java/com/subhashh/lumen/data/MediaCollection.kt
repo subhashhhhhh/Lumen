@@ -27,7 +27,7 @@ object CollectionKeys {
     }
 }
 
-private val MediaItem.isScreenshot: Boolean
+internal val MediaItem.isScreenshot: Boolean
     get() = relativePath.contains("screenshot", ignoreCase = true)
 
 @Immutable

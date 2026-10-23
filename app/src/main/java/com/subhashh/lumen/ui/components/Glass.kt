@@ -4,6 +4,7 @@ import android.os.Build
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -25,9 +26,15 @@ fun Modifier.glass(
     blurRadius: Dp = 4.dp,
     refractionHeight: Dp = 16.dp,
     refractionAmount: Dp = 32.dp,
+    /** Override for surfaces that carry text (menus): more opaque than the default. */
+    tint: Color? = null,
 ): Modifier {
     val colors = LocalGlassColors.current
-    val tint = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) colors.tint else colors.fallbackTint
+    val surface = when {
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.S -> colors.fallbackTint
+        tint != null -> tint
+        else -> colors.tint
+    }
     return drawBackdrop(
         backdrop = backdrop,
         shape = { shape },
@@ -36,6 +43,6 @@ fun Modifier.glass(
             blur(blurRadius.toPx())
             lens(refractionHeight.toPx(), refractionAmount.toPx())
         },
-        onDrawSurface = { drawRect(tint) },
+        onDrawSurface = { drawRect(surface) },
     )
 }
