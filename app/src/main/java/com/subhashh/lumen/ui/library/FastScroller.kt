@@ -67,7 +67,16 @@ fun FastScroller(
     topInset: Dp,
     bottomInset: Dp,
     modifier: Modifier = Modifier,
+    /**
+     * Settings → Library → Curved Edge Display: curved-edge phones (Motorola Edge, Galaxy Edge)
+     * ignore touches that start on the curve, so the handle moves inward, gets a wider grab
+     * area and stays up longer.
+     */
+    curvedEdge: Boolean = false,
 ) {
+    val hideDelay = if (curvedEdge) 2500L else 1500L
+    val touchWidth = if (curvedEdge) 56.dp else 36.dp
+    val edgeClearance = if (curvedEdge) 14.dp else 4.dp
     // Not worth a handle for a couple of screens.
     if (itemCount < MinItems) return
     val haptics = LocalHapticFeedback.current
@@ -91,7 +100,7 @@ fun FastScroller(
         if (active) {
             shown = true
         } else {
-            delay(HideDelayMs)
+            delay(hideDelay)
             shown = false
         }
     }
@@ -137,12 +146,10 @@ fun FastScroller(
                     spring(dampingRatio = 0.7f, stiffness = 600f),
                     label = "handleWidth",
                 )
-                // A wide, invisible touch target around a slim visible handle, kept off the screen's
-                // edge: curved-edge phones (Motorola Edge, Galaxy Edge) ignore touches that start
-                // on the curve, so a handle hugging the edge can't be grabbed there.
+                // A wide, invisible touch target around a slim visible handle.
                 Box(
                     Modifier
-                        .width(TouchWidth)
+                        .width(touchWidth)
                         .height(HandleHeight)
                         .pointerInput(itemCount) {
                             detectVerticalDragGestures(
@@ -164,7 +171,7 @@ fun FastScroller(
                 ) {
                     Box(
                         Modifier
-                            .padding(end = EdgeClearance)
+                            .padding(end = edgeClearance)
                             .size(width = handleWidth, height = HandleHeight - 8.dp)
                             .shadow(4.dp, CircleShape)
                             .background(Color.White.copy(alpha = 0.92f), CircleShape),
@@ -176,7 +183,4 @@ fun FastScroller(
 }
 
 private const val MinItems = 150
-private const val HideDelayMs = 2500L
 private val HandleHeight = 52.dp
-private val TouchWidth = 56.dp
-private val EdgeClearance = 14.dp

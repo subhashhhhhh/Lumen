@@ -132,7 +132,13 @@ class LumenPrefs(context: Context) {
             ?: SectionMode.Months
         set(value) = prefs.edit { putString(KeySections, value.name) }
 
+    /** The phone's screen curves over its sides: keep edge controls off the curve. */
+    var curvedEdge: Boolean
+        get() = prefs.getBoolean(KeyCurvedEdge, false)
+        set(value) = prefs.edit { putBoolean(KeyCurvedEdge, value) }
+
     private companion object {
+        const val KeyCurvedEdge = "curved_edge"
         const val KeySections = "section_mode"
         const val KeyReduceMotion = "reduce_motion"
         const val KeyHdr = "hdr_photos"

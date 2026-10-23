@@ -100,6 +100,8 @@ fun LibraryScreen(
     scrollLabel: (MediaItem) -> String = { MonthFormat.format(Date(it.takenAt)) },
     /** Date headers mixed into the grid; none when null. Callers scrolling the grid use its [GridSections.gridIndexOf]. */
     sections: GridSections? = null,
+    /** Settings → Library → Curved Edge Display. */
+    curvedEdge: Boolean = false,
 ) {
     val grid = sections ?: remember(items) { GridSections.of(items, SectionMode.None) }
     val entries = grid.entries
@@ -214,6 +216,7 @@ fun LibraryScreen(
             topInset = contentPadding.calculateTopPadding(),
             bottomInset = contentPadding.calculateBottomPadding(),
             modifier = Modifier.align(Alignment.TopEnd),
+            curvedEdge = curvedEdge,
         )
 
         LibraryHeader(

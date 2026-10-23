@@ -392,7 +392,11 @@ private fun MainScaffold(
     }
     // Date headers (Settings → Library), only when the grid is in date order.
     var sectionMode by remember { mutableStateOf(prefs.sectionMode) }
-    LaunchedEffect(settingsPage) { sectionMode = prefs.sectionMode }
+    var curvedEdge by remember { mutableStateOf(prefs.curvedEdge) }
+    LaunchedEffect(settingsPage) {
+        sectionMode = prefs.sectionMode
+        curvedEdge = prefs.curvedEdge
+    }
     val gridSectionMode = if (sort == LibrarySort.Date) sectionMode else SectionMode.None
     val librarySections = remember(libraryItems, gridSectionMode) { GridSections.of(libraryItems, gridSectionMode) }
     /** The open album's photos and their headers, shared by its grid and the viewer's close flight. */
@@ -934,6 +938,7 @@ private fun MainScaffold(
                         showMonth = sort == LibrarySort.Date,
                         scrollLabel = scrollLabel,
                         sections = librarySections,
+                        curvedEdge = curvedEdge,
                         items = libraryItems,
                         gridState = libraryGrid,
                         contentPadding = gridPadding,
@@ -1003,6 +1008,7 @@ private fun MainScaffold(
                         onColumnsChange = onGridColumns,
                         items = openItems ?: itemsOf(key),
                         sections = collectionSections,
+                        curvedEdge = curvedEdge,
                         startAtEnd = chronological || key == CollectionKeys.RecentlyDeleted,
                         showMonth = sort == LibrarySort.Date || key == CollectionKeys.RecentlyDeleted,
                         scrollLabel = if (key == CollectionKeys.RecentlyDeleted) { item -> ScrollMonth.format(java.util.Date(item.takenAt)) } else scrollLabel,

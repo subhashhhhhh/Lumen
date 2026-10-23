@@ -120,6 +120,19 @@ fun SettingsScreen(
                 icon = LumenIcons.Library,
                 iconColor = Blue,
             )
+            Divider()
+            var curvedEdge by remember { mutableStateOf(prefs.curvedEdge) }
+            ToggleRow(
+                title = "Curved Edge Display",
+                subtitle = "Keep the fast-scroll handle off the curve, where touches are ignored",
+                checked = curvedEdge,
+                onCheckedChange = {
+                    curvedEdge = it
+                    prefs.curvedEdge = it
+                },
+                icon = LumenIcons.Screenshot,
+                iconColor = Gray,
+            )
         }
 
         var hdrMode by remember { mutableStateOf(prefs.hdrMode) }
