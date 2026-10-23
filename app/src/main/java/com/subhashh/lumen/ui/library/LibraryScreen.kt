@@ -60,7 +60,7 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.subhashh.lumen.data.MediaItem
 import com.subhashh.lumen.ui.images.ImageKeys
-import com.subhashh.lumen.data.MediaThumbnail
+import com.subhashh.lumen.data.GridThumbnail
 import com.subhashh.lumen.ui.transition.PhotoTransition
 import com.subhashh.lumen.ui.transition.transitionCell
 import java.text.SimpleDateFormat
@@ -68,7 +68,7 @@ import java.util.Date
 import java.util.Locale
 
 /** Grid densities, from most zoomed in to most zoomed out. */
-private val ColumnSteps = listOf(1, 2, 3, 4, 5, 6, 8)
+internal val ColumnSteps = listOf(1, 2, 3, 4, 5, 6, 8)
 private const val DefaultColumnStep = 4 // 5 columns
 
 @Composable
@@ -222,16 +222,9 @@ internal fun Thumbnail(
             AsyncImage(
                 model = remember(item.version, bucket) {
                     ImageRequest.Builder(context)
-                        // Small cells: Android's thumbnail cache (fast). Big cells: the original,
-                        // decoded at cell size, so screenshot text stays readable.
-                        // Hidden files (file Uris) have no system thumbnail; decode them directly.
-                        .data(
-                            if (bucket <= ImageKeys.SystemThumbnailMaxPx && item.uri.scheme == "content") {
-                                MediaThumbnail(item.uri)
-                            } else {
-                                item.uri
-                            },
-                        )
+                        // Saved on disk after the first time (see GridThumbnail), so a relaunch
+                        // doesn't decode originals again.
+                        .data(GridThumbnail(item, bucket))
                         .size(bucket, bucket)
                         .memoryCacheKey(ImageKeys.thumb(item, bucket))
                         // While a bigger size decodes after a pinch, keep showing the one we have.

@@ -47,6 +47,8 @@ import com.subhashh.lumen.ui.components.pressable
 import com.subhashh.lumen.ui.icons.LumenIcons
 import com.subhashh.lumen.ui.images.ImageKeys
 import com.subhashh.lumen.ui.library.Thumbnail
+import com.subhashh.lumen.ui.library.ColumnSteps
+import com.subhashh.lumen.ui.components.pinchColumns
 import com.subhashh.lumen.ui.transition.PhotoTransition
 import com.subhashh.lumen.ui.transition.transitionCell
 
@@ -68,6 +70,9 @@ fun SearchScreen(
     onOpen: (index: Int) -> Unit,
     onOpenAlbum: (key: String) -> Unit,
     onSuggestion: (String) -> Unit,
+    /** Columns, shared with the Library; pinch changes them. */
+    columns: Int,
+    onColumnsChange: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = MaterialTheme.colorScheme
@@ -81,7 +86,6 @@ fun SearchScreen(
             }
         }
     }
-    val columns = 4
     val cellPx = with(LocalDensity.current) { LocalConfiguration.current.screenWidthDp.dp.roundToPx() } / columns
     val bucket = ImageKeys.thumbBucket(cellPx)
 
@@ -98,7 +102,8 @@ fun SearchScreen(
         verticalArrangement = Arrangement.spacedBy(2.dp),
         modifier = modifier
             .fillMaxSize()
-            .nestedScroll(hideKeyboard),
+            .nestedScroll(hideKeyboard)
+            .pinchColumns(ColumnSteps, columns, onColumnsChange),
     ) {
         if (albums.isNotEmpty()) {
             item(span = { GridItemSpan(maxLineSpan) }) { SectionTitle("Albums") }
@@ -130,7 +135,7 @@ fun SearchScreen(
                 item = item,
                 bucket = bucket,
                 fit = false,
-                showDuration = true,
+                showDuration = columns <= 5,
                 selected = null,
                 onClick = {
                     keyboard?.hide()
