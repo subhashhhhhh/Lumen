@@ -7,13 +7,14 @@ import java.io.File
 
 /**
  * The last Hidden scan, saved so Hidden opens with its folders already there while a fresh scan
- * runs behind them. One line per file: path, type, modified millis, width, height.
+ * runs behind them. One line per file: path, type, modified millis, width, height, duration.
  *
  * In no-backup storage: it lists hidden paths, which must never end up in a cloud backup.
  */
 object HiddenIndex {
 
-    private fun file(context: Context) = File(context.noBackupFilesDir, "hidden_index.tsv")
+    // v2: sizes now have EXIF rotation applied, so v1's sideways sizes are never reused.
+    private fun file(context: Context) = File(context.noBackupFilesDir, "hidden_index_v2.tsv")
 
     /** The saved list, or null when there's none (or it can't be read). */
     suspend fun load(context: Context): List<MediaItem>? = withContext(Dispatchers.IO) {
@@ -22,13 +23,14 @@ object HiddenIndex {
             if (!index.exists()) return@runCatching null
             index.readLines().mapNotNull { line ->
                 val parts = line.split('\t')
-                if (parts.size != 5) return@mapNotNull null
+                if (parts.size != 6) return@mapNotNull null
                 HiddenMedia.item(
                     File(parts[0]),
                     type = parts[1],
                     modified = parts[2].toLongOrNull() ?: return@mapNotNull null,
                     width = parts[3].toIntOrNull() ?: 0,
                     height = parts[4].toIntOrNull() ?: 0,
+                    durationMs = parts[5].toLongOrNull() ?: 0,
                 )
             }
         }.getOrNull()
@@ -37,12 +39,13 @@ object HiddenIndex {
     suspend fun save(context: Context, items: List<MediaItem>) = withContext(Dispatchers.IO) {
         runCatching {
             val text = items.joinToString("\n") { item ->
-                "${item.uri.path}\t${item.mimeType}\t${item.takenAt}\t${item.width}\t${item.height}"
+                "${item.uri.path}\t${item.mimeType}\t${item.takenAt}\t${item.width}\t${item.height}\t${item.durationMs}"
             }
             // Write then rename, so a crash mid-write never leaves half an index.
             val temp = File(context.noBackupFilesDir, "hidden_index.tmp")
             temp.writeText(text)
             temp.renameTo(file(context))
+            File(context.noBackupFilesDir, "hidden_index.tsv").delete()
         }
     }
 }

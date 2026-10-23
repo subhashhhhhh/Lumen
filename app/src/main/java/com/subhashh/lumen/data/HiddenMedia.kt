@@ -2,6 +2,8 @@ package com.subhashh.lumen.data
 
 import android.content.Context
 import android.graphics.BitmapFactory
+import android.media.ExifInterface
+import android.media.MediaMetadataRetriever
 import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Environment
@@ -78,15 +80,50 @@ object HiddenMedia {
     }
 
     /**
-     * [items] with photo dimensions read from their headers (the open/close zoom needs the shape).
-     * A separate pass so the Hidden grid can show the moment [scan] returns.
+     * [items] with display dimensions (EXIF rotation applied, as MediaStore reports them) and,
+     * for videos, durations. The open/close zoom needs the true shape: camera photos are often
+     * stored sideways with a rotate tag. A separate pass so the Hidden grid can show the moment
+     * [scan] returns.
      */
     suspend fun withSizes(items: List<MediaItem>): List<MediaItem> = withContext(Dispatchers.IO) {
         items.map { item ->
-            if (item.isVideo || item.width > 0) return@map item
-            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-            BitmapFactory.decodeFile(item.uri.path, bounds)
-            item.copy(width = bounds.outWidth.coerceAtLeast(0), height = bounds.outHeight.coerceAtLeast(0))
+            if (item.width > 0) return@map item
+            val path = item.uri.path ?: return@map item
+            runCatching { if (item.isVideo) videoInfo(item, path) else photoInfo(item, path) }.getOrDefault(item)
+        }
+    }
+
+    private fun photoInfo(item: MediaItem, path: String): MediaItem {
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(path, bounds)
+        val w = bounds.outWidth.coerceAtLeast(0)
+        val h = bounds.outHeight.coerceAtLeast(0)
+        val orientation = runCatching {
+            ExifInterface(path).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+        }.getOrDefault(ExifInterface.ORIENTATION_NORMAL)
+        // 90° and 270°, plain or mirrored.
+        val sideways = orientation in setOf(
+            ExifInterface.ORIENTATION_ROTATE_90, ExifInterface.ORIENTATION_ROTATE_270,
+            ExifInterface.ORIENTATION_TRANSPOSE, ExifInterface.ORIENTATION_TRANSVERSE,
+        )
+        return item.copy(width = if (sideways) h else w, height = if (sideways) w else h)
+    }
+
+    private fun videoInfo(item: MediaItem, path: String): MediaItem {
+        val retriever = MediaMetadataRetriever()
+        return try {
+            retriever.setDataSource(path)
+            fun int(key: Int) = retriever.extractMetadata(key)?.toIntOrNull() ?: 0
+            val w = int(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)
+            val h = int(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)
+            val sideways = int(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION) % 180 == 90
+            item.copy(
+                width = if (sideways) h else w,
+                height = if (sideways) w else h,
+                durationMs = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0,
+            )
+        } finally {
+            retriever.release()
         }
     }
 
@@ -190,7 +227,7 @@ object HiddenMedia {
     fun typeOf(file: File): String? = Types[file.extension.lowercase()]
 
     /** The item for a hidden [file]; [modified] in millis, sizes 0 when not read yet. */
-    fun item(file: File, type: String, modified: Long, width: Int = 0, height: Int = 0): MediaItem {
+    fun item(file: File, type: String, modified: Long, width: Int = 0, height: Int = 0, durationMs: Long = 0): MediaItem {
         val root = Environment.getExternalStorageDirectory()
         val folder = file.parentFile ?: root
         return MediaItem(
@@ -200,7 +237,7 @@ object HiddenMedia {
             mimeType = type,
             isVideo = type.startsWith("video/"),
             takenAt = modified,
-            durationMs = 0,
+            durationMs = durationMs,
             isFavorite = false,
             relativePath = folder.relativeTo(root).path.let { if (it.isEmpty()) "" else "$it/" },
             bucketId = folder.absolutePath.hashCode().toLong(),
