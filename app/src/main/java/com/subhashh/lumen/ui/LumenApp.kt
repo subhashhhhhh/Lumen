@@ -47,6 +47,11 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
+import com.subhashh.lumen.ui.components.RenameDialog
+import android.provider.MediaStore
+import android.os.Environment
 import com.subhashh.lumen.ui.components.MenuItem
 import com.subhashh.lumen.ui.components.GlassMenu
 import com.subhashh.lumen.ui.albums.AlbumTarget
@@ -258,17 +263,68 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
     BackHandler(enabled = menuOpen) { menuOpen = false }
     var selectionMenuOpen by remember { mutableStateOf(false) }
     BackHandler(enabled = selectionMenuOpen) { selectionMenuOpen = false }
-    /** Items waiting for an album to be picked (Copy to Album). */
-    var copyRequest by remember { mutableStateOf<List<MediaItem>?>(null) }
     /** Set when the viewer should open straight into a slideshow of these ids. */
     var slideshowOf by remember { mutableStateOf<Set<Long>?>(null) }
-    val copyToAlbum: (List<MediaItem>, AlbumTarget) -> Unit = { items, target ->
-        scope.launch {
-            val result = MediaFiles.copy(context, items, target.relativePath)
-            viewModel.refresh()
-            selection = null
-            Toast.makeText(context, copyMessage(result, target.title), Toast.LENGTH_LONG).show()
+    val toast = { message: String -> Toast.makeText(context, message, Toast.LENGTH_LONG).show() }
+
+    // Changing files Lumen didn't create: with All files access go straight ahead; otherwise ask
+    // MediaStore for write access first (one dialog per batch, none with Media management on).
+    var pendingWrite by remember { mutableStateOf<(() -> Unit)?>(null) }
+    val writeLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartIntentSenderForResult(),
+    ) { result ->
+        val action = pendingWrite
+        pendingWrite = null
+        if (result.resultCode == Activity.RESULT_OK) action?.invoke()
+    }
+    val withWriteAccess: (List<MediaItem>, () -> Unit) -> Unit = { items, action ->
+        if (Environment.isExternalStorageManager()) {
+            action()
+        } else {
+            pendingWrite = action
+            val request = MediaStore.createWriteRequest(context.contentResolver, items.map { it.uri })
+            writeLauncher.launch(IntentSenderRequest.Builder(request.intentSender).build())
         }
+    }
+    val finish = { message: String ->
+        viewModel.refresh()
+        selection = null
+        toast(message)
+    }
+
+    /** Items waiting for an album to be picked, and whether to move or copy them. */
+    var albumRequest by remember { mutableStateOf<AlbumRequest?>(null) }
+    val toAlbum: (AlbumRequest, AlbumTarget) -> Unit = { request, target ->
+        if (request.move) {
+            withWriteAccess(request.items) {
+                scope.launch {
+                    val result = MediaFiles.move(context, request.items, target.relativePath)
+                    finish(fileMessage("Moved", "move", result, target.title))
+                }
+            }
+        } else {
+            scope.launch {
+                val result = MediaFiles.copy(context, request.items, target.relativePath)
+                finish(fileMessage("Copied", "copy", result, target.title))
+            }
+        }
+    }
+    val rotate: (List<MediaItem>) -> Unit = { items ->
+        val jpegs = items.filter(MediaFiles::canRotate)
+        if (jpegs.isNotEmpty()) {
+            withWriteAccess(jpegs) {
+                scope.launch {
+                    val result = MediaFiles.rotate(context, jpegs)
+                    finish(if (result.failed == 0) "Rotated" else "Couldn't rotate ${result.failed} of ${jpegs.size}")
+                }
+            }
+        }
+    }
+    /** The item being renamed and its current file name (null while loading / closed). */
+    var renameItem by remember { mutableStateOf<MediaItem?>(null) }
+    var renameName by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(renameItem) {
+        renameName = renameItem?.let { item -> withContext(Dispatchers.IO) { MediaFiles.displayName(context, item) } }
     }
 
     val statusTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
@@ -524,7 +580,13 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
             open = selectionMenuOpen && selection != null && !viewerOpen,
             onDismiss = { selectionMenuOpen = false },
             sections = listOf(
-                listOf(MenuItem("Copy to Album…") { copyRequest = selectedItems }),
+                listOf(
+                    MenuItem("Move to Album…") { albumRequest = AlbumRequest(move = true, items = selectedItems) },
+                    MenuItem("Copy to Album…") { albumRequest = AlbumRequest(move = false, items = selectedItems) },
+                ),
+                listOfNotNull(
+                    if (selectedItems.any(MediaFiles::canRotate)) MenuItem("Rotate") { rotate(selectedItems) } else null,
+                ),
                 listOf(
                     MenuItem("Slideshow") {
                         val key = selectableKey ?: return@MenuItem
@@ -569,21 +631,41 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                     }
                 },
                 onMediaChanged = viewModel::refresh,
-                onCopyToAlbum = { copyRequest = listOf(it) },
+                onCopyToAlbum = { albumRequest = AlbumRequest(move = false, items = listOf(it)) },
+                onMoveToAlbum = { albumRequest = AlbumRequest(move = true, items = listOf(it)) },
+                onRename = { renameItem = it },
+                onRotate = { rotate(listOf(it)) },
                 slideshowOf = slideshowOf,
             )
         }
 
         AlbumPicker(
-            open = copyRequest != null,
-            title = "Copy to Album",
+            open = albumRequest != null,
+            title = if (albumRequest?.move == true) "Move to Album" else "Copy to Album",
             albums = folders,
             onPick = { target ->
-                copyRequest?.let { copyToAlbum(it, target) }
-                copyRequest = null
+                albumRequest?.let { toAlbum(it, target) }
+                albumRequest = null
             },
-            onDismiss = { copyRequest = null },
+            onDismiss = { albumRequest = null },
             newAlbumPath = MediaFiles::newAlbumPath,
+        )
+
+        RenameDialog(
+            currentName = renameName,
+            onRename = { newName ->
+                val item = renameItem
+                renameItem = null
+                if (item != null) {
+                    withWriteAccess(listOf(item)) {
+                        scope.launch {
+                            val ok = MediaFiles.rename(context, item, newName)
+                            finish(if (ok) "Renamed to $newName" else "Couldn't rename: that name may already be taken")
+                        }
+                    }
+                }
+            },
+            onDismiss = { renameItem = null },
         )
 
         PhotoTransitionOverlay(transition)
@@ -626,14 +708,17 @@ private fun selectionTitle(selected: List<MediaItem>): String {
 private const val SettingsMain = "settings"
 private const val SettingsLicenses = "licenses"
 
-/** One line after a copy: what happened, and why anything didn't. */
-private fun copyMessage(result: FileResult, album: String): String {
-    val copied = if (result.done == 1) "1 item" else "${result.done} items"
+private data class AlbumRequest(val move: Boolean, val items: List<MediaItem>)
+
+/** One line after a copy or move: what happened, and why anything didn't. */
+private fun fileMessage(past: String, verb: String, result: FileResult, album: String): String {
+    val count = if (result.done == 1) "1 item" else "${result.done} items"
     return when {
-        result.failed == 0 -> "Copied $copied to $album"
+        result.failed == 0 && result.done == 0 -> "Already in $album"
+        result.failed == 0 -> "$past $count to $album"
         result.needsAllFilesAccess ->
-            "Couldn't copy into $album: that folder needs All files access (Settings → Permissions)"
-        result.done == 0 -> "Couldn't copy to $album"
-        else -> "Copied $copied to $album; ${result.failed} failed"
+            "Couldn't $verb into $album: that folder needs All files access (Settings → Permissions)"
+        result.done == 0 -> "Couldn't $verb to $album"
+        else -> "$past $count to $album; ${result.failed} failed"
     }
 }

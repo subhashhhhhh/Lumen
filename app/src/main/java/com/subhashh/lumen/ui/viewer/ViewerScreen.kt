@@ -57,6 +57,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.subhashh.lumen.data.MediaFiles
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
@@ -126,6 +127,9 @@ fun ViewerScreen(
     /** Viewing Recently Deleted: offer restore and delete forever instead of share/favorite/trash. */
     inTrash: Boolean = false,
     onCopyToAlbum: (MediaItem) -> Unit = {},
+    onMoveToAlbum: (MediaItem) -> Unit = {},
+    onRename: (MediaItem) -> Unit = {},
+    onRotate: (MediaItem) -> Unit = {},
     /** Start a slideshow right away, limited to these ids (from a selection); null = don't. */
     slideshowOf: Set<Long>? = null,
 ) {
@@ -430,7 +434,15 @@ fun ViewerScreen(
                 backdrop = backdrop,
                 open = moreOpen && chromeVisible,
                 onDismiss = { moreOpen = false },
-                sections = viewerMenu(context, current, onCopyToAlbum, onSlideshow = { slideshow = true }),
+                sections = viewerMenu(
+                    context = context,
+                    item = current,
+                    onCopyToAlbum = onCopyToAlbum,
+                    onMoveToAlbum = onMoveToAlbum,
+                    onRename = onRename,
+                    onRotate = onRotate,
+                    onSlideshow = { slideshow = true },
+                ),
                 origin = TransformOrigin(1f, 0f),
                 modifier = Modifier
                     .align(Alignment.TopEnd)
@@ -460,11 +472,21 @@ private fun viewerMenu(
     context: Context,
     item: MediaItem,
     onCopyToAlbum: (MediaItem) -> Unit,
+    onMoveToAlbum: (MediaItem) -> Unit,
+    onRename: (MediaItem) -> Unit,
+    onRotate: (MediaItem) -> Unit,
     onSlideshow: () -> Unit,
 ): List<List<MenuItem>> {
     val photo = !item.isVideo
     return listOf(
-        listOf(MenuItem("Copy to Album…") { onCopyToAlbum(item) }),
+        listOf(
+            MenuItem("Move to Album…") { onMoveToAlbum(item) },
+            MenuItem("Copy to Album…") { onCopyToAlbum(item) },
+        ),
+        listOfNotNull(
+            MenuItem("Rename…") { onRename(item) },
+            if (MediaFiles.canRotate(item)) MenuItem("Rotate") { onRotate(item) } else null,
+        ),
         listOf(MenuItem("Slideshow") { onSlideshow() }),
         listOfNotNull(
             MenuItem("Open with…") { MediaActions.openWith(context, item) },
