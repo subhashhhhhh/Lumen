@@ -87,6 +87,7 @@ import com.subhashh.lumen.ui.components.DateTimeDialog
 import com.subhashh.lumen.data.MediaDates
 import com.subhashh.lumen.data.vault.Vault
 import com.subhashh.lumen.data.vault.VaultMigration
+import com.subhashh.lumen.ui.hidden.VaultProgressScreen
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.fillMaxWidth
 import com.subhashh.lumen.data.SettingsBackup
@@ -750,11 +751,11 @@ private fun MainScaffold(
                 toast("This vault was made with a different Lumen lock; enter that one to open it")
                 return@launch
             }
-            vaultProgress = VaultProgress(if (on) "Encrypting" else "Decrypting", 0, 0)
+            vaultProgress = VaultProgress(encrypting = on, progress = null)
             val result = if (on) {
-                VaultMigration.encryptAll(context, excluded) { done, total -> vaultProgress = VaultProgress("Encrypting", done, total) }
+                VaultMigration.encryptAll(context, excluded) { vaultProgress = VaultProgress(encrypting = true, progress = it) }
             } else {
-                VaultMigration.decryptAll(context) { done, total -> vaultProgress = VaultProgress("Decrypting", done, total) }
+                VaultMigration.decryptAll(context) { vaultProgress = VaultProgress(encrypting = false, progress = it) }
             }
             vaultProgress = null
             // On even with some failures: those files stay hidden the old way, nothing is lost.
@@ -1801,7 +1802,7 @@ private fun MainScaffold(
             onDismiss = { resizeRequest = null },
         )
 
-        vaultProgress?.let { VaultProgressScreen(it) }
+        vaultProgress?.let { VaultProgressScreen(it.encrypting, it.progress) }
 
         DateTimeDialog(
             original = dateRequest?.minOf { it.takenAt },
@@ -1905,38 +1906,5 @@ private val ScrollMonth = java.text.SimpleDateFormat("MMMM yyyy", java.util.Loca
 /** How far to scroll one way before the bottom bar switches between tabs and Years / Months / All. */
 private val ZoomBarSwitchDistance = 40.dp
 
-/** Moving files into or out of the vault: "Encrypting", 12 of 810. */
-private data class VaultProgress(val verb: String, val done: Int, val total: Int)
-
-/** Covers everything while files move: leaving mid-way is safe, but tapping around isn't useful. */
-@Composable
-private fun VaultProgressScreen(progress: VaultProgress) {
-    BackHandler { }
-    Box(
-        Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background.copy(alpha = 0.92f))
-            .clickable(remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null) {},
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {
-            androidx.compose.material3.LinearProgressIndicator(
-                progress = { if (progress.total == 0) 0f else progress.done.toFloat() / progress.total },
-                modifier = Modifier.fillMaxWidth(0.7f),
-            )
-            Spacer(Modifier.height(16.dp))
-            Text(
-                if (progress.total == 0) "${progress.verb}…" else "${progress.verb} ${progress.done} of ${progress.total}",
-                color = MaterialTheme.colorScheme.onBackground,
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Spacer(Modifier.height(6.dp))
-            Text(
-                "Each file is checked before its original is removed.",
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
-                style = MaterialTheme.typography.bodyMedium,
-                textAlign = TextAlign.Center,
-            )
-        }
-    }
-}
+/** Moving files into or out of the vault, and how far along (null while it gets ready). */
+private data class VaultProgress(val encrypting: Boolean, val progress: VaultMigration.Progress?)
