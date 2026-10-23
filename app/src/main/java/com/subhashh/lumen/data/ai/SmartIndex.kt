@@ -19,6 +19,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.time.Duration
 
 data class IndexProgress(val indexed: Int, val total: Int)
@@ -122,11 +124,14 @@ object SmartIndex {
             val model = ModelDownloads.installed(applicationContext) ?: return Result.success()
             val backlog = inputData.getString(KeyMode) == Backlog
             val limit = if (backlog) Int.MAX_VALUE else NewLimit
-            var outcome = Indexer(applicationContext, model).run(limit)
-            // Suggested searches follow what's in the library; refreshed once it's all indexed.
-            if (outcome == Indexer.Outcome.Done) SearchSuggestions.refreshIfStale(applicationContext, model)
-            // Then the words in photos, once everything has its vectors.
-            if (outcome == Indexer.Outcome.Done) outcome = TextIndexer(applicationContext).run(limit)
+            // One pass at a time: both jobs would otherwise work through the same items side by
+            // side, each at half speed. The backlog waits its turn; a new-items job finding the
+            // backlog running leaves new items to it.
+            val outcome = when {
+                backlog -> passes.withLock { pass(model, limit) }
+                passes.tryLock() -> try { pass(model, limit) } finally { passes.unlock() }
+                else -> Indexer.Outcome.Partial
+            }
             if (backlog) {
                 // Too warm: try again later (WorkManager backs off); otherwise finished.
                 return if (outcome == Indexer.Outcome.TooHot) Result.retry() else Result.success()
@@ -136,5 +141,16 @@ object SmartIndex {
             if (outcome != Indexer.Outcome.Done) schedule(applicationContext)
             return Result.success()
         }
+
+        private suspend fun pass(model: AiModel, limit: Int): Indexer.Outcome {
+            val outcome = Indexer(applicationContext, model).run(limit)
+            if (outcome != Indexer.Outcome.Done) return outcome
+            // Suggested searches follow what's in the library; refreshed once it's all indexed.
+            SearchSuggestions.refreshIfStale(applicationContext, model)
+            // Then the words in photos, once everything has its vectors.
+            return TextIndexer(applicationContext).run(limit)
+        }
     }
+
+    private val passes = Mutex()
 }
