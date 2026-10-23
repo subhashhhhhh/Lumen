@@ -86,8 +86,12 @@ object MediaDetailsLoader {
                 }
             }
         } else {
-            // Hidden files aren't in MediaStore: read what we need from the file itself.
-            HiddenMedia.file(item)?.let { file ->
+            // Hidden files aren't in MediaStore: read what we need from the file itself; vault
+            // items carry it in their encrypted header.
+            if (com.subhashh.lumen.data.vault.Vault.isVault(item)) {
+                name = item.name
+                size = item.size
+            } else HiddenMedia.file(item)?.let { file ->
                 name = file.name
                 size = file.length()
             }

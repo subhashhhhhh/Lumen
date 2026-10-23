@@ -1,5 +1,7 @@
 package com.subhashh.lumen.ui.viewer
 
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import com.subhashh.lumen.data.vault.VaultDataSource
 import com.subhashh.lumen.ui.theme.LocalMotion
 import android.view.WindowManager
 import com.subhashh.lumen.data.HdrMode
@@ -872,7 +874,11 @@ private fun rememberViewerPlayer(current: MediaItem?): Player? {
         if (current?.isVideo == true) {
             // Read per video, so a change in Settings applies to the next one.
             val prefs = LumenPrefs(context)
-            val active = p ?: ExoPlayer.Builder(context).build().also { player = it }
+            val active = p ?: ExoPlayer.Builder(context)
+                // Vault videos decrypt as they play; everything else reads as usual.
+                .setMediaSourceFactory(DefaultMediaSourceFactory(VaultDataSource.Factory(context)))
+                .build()
+                .also { player = it }
             active.repeatMode = if (prefs.videoLoop) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
             active.volume = if (prefs.videoMuted) 0f else 1f
             active.setMediaItem(PlayerMediaItem.fromUri(current.uri))

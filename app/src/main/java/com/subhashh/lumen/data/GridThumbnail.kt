@@ -52,7 +52,7 @@ class GridThumbnailFetcher(
                 return@withContext ImageFetchResult(cached.asImage(), isSampled = true, dataSource = DataSource.DISK)
             }
         }
-        val bitmap = if (data.item.mimeType == "image/avif") {
+        val bitmap = if (data.item.mimeType == "image/avif" || com.subhashh.lumen.data.vault.Vault.isVault(data.item)) {
             decodeWithLoader(data.item, data.sizePx)
         } else {
             create(options.context, data.item, data.sizePx)

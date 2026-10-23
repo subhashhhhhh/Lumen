@@ -16,6 +16,7 @@ import coil3.video.VideoFrameDecoder
 import com.subhashh.lumen.data.GridThumbnailFetcher
 import com.subhashh.lumen.data.MediaThumbnailFetcher
 import com.subhashh.lumen.ui.AppLock
+import com.subhashh.lumen.data.vault.VaultFetcher
 
 /** App-wide image loader, shared by the main app and the viewer other apps open. */
 class LumenApplication : Application(), SingletonImageLoader.Factory {
@@ -30,6 +31,9 @@ class LumenApplication : Application(), SingletonImageLoader.Factory {
             .imageDecoderEnabled(true)
             .components {
                 add(MediaThumbnailFetcher.Factory())
+                // Encrypted Hidden items: decrypted in memory, only while the vault is open.
+                add(VaultFetcher.Factory())
+                add(VaultFetcher.UriFactory())
                 add(GridThumbnailFetcher.Factory(context))
                 add(VideoFrameDecoder.Factory())
                 // AVIF through bundled libavif + dav1d, not the phone's codec: on some phones

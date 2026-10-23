@@ -103,6 +103,7 @@ object Vault {
             runCatching { Details.parse(VaultCrypto.readHeader(k, f)).toItem(f) }.getOrNull()
                 ?.also { synchronized(listed) { listed[cacheKey] = it } }
         }.sortedWith(compareBy<MediaItem> { it.takenAt }.thenBy { it.id })
+            .also(VaultIndex::update)
     }
 
     /**
