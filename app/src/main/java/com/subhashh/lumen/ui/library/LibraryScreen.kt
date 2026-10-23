@@ -95,6 +95,8 @@ fun LibraryScreen(
     startAtEnd: Boolean = true,
     /** The month under the title; meaningless when sorted by name or size. */
     showMonth: Boolean = true,
+    /** What the fast-scroll handle says for an item: its month by default. */
+    scrollLabel: (MediaItem) -> String = { MonthFormat.format(Date(it.takenAt)) },
 ) {
     val haptics = LocalHapticFeedback.current
     // Decode thumbnails for the cell size actually shown, so fewer, bigger cells stay sharp.
@@ -180,6 +182,15 @@ fun LibraryScreen(
                 modifier = Modifier.align(Alignment.Center),
             )
         }
+
+        FastScroller(
+            gridState = gridState,
+            itemCount = items.size,
+            label = { index -> items.getOrNull(index)?.let(scrollLabel).orEmpty() },
+            topInset = contentPadding.calculateTopPadding(),
+            bottomInset = contentPadding.calculateBottomPadding(),
+            modifier = Modifier.align(Alignment.TopEnd),
+        )
 
         LibraryHeader(
             title = title,

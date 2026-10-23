@@ -268,6 +268,14 @@ private fun MainScaffold(
     var aspectRatioGrid by remember { mutableStateOf(prefs.aspectRatioGrid) }
     var sort by remember { mutableStateOf(prefs.librarySort) }
     var sortDescending by remember { mutableStateOf(prefs.sortDescending) }
+    /** The fast-scroll label in the current sort: month, first letter, or size. */
+    val scrollLabel: (MediaItem) -> String = remember(sort) {
+        when (sort) {
+            LibrarySort.Date -> { item -> ScrollMonth.format(java.util.Date(item.takenAt)) }
+            LibrarySort.Name -> { item -> item.name.firstOrNull()?.uppercaseChar()?.toString() ?: "#" }
+            LibrarySort.Size -> { item -> android.text.format.Formatter.formatShortFileSize(context, item.size) }
+        }
+    }
     /** Oldest first by date: the order Years / Months and "newest at the bottom" are built on. */
     val chronological = sort == LibrarySort.Date && !sortDescending
     var gridColumns by remember { mutableIntStateOf(prefs.gridColumns) }
@@ -830,6 +838,7 @@ private fun MainScaffold(
                         emptyText = filter.emptyText,
                         startAtEnd = chronological,
                         showMonth = sort == LibrarySort.Date,
+                        scrollLabel = scrollLabel,
                         items = libraryItems,
                         gridState = libraryGrid,
                         contentPadding = gridPadding,
@@ -900,6 +909,7 @@ private fun MainScaffold(
                         items = itemsOf(key),
                         startAtEnd = chronological || key == CollectionKeys.RecentlyDeleted,
                         showMonth = sort == LibrarySort.Date || key == CollectionKeys.RecentlyDeleted,
+                        scrollLabel = if (key == CollectionKeys.RecentlyDeleted) { item -> ScrollMonth.format(java.util.Date(item.takenAt)) } else scrollLabel,
                         gridState = collectionGrid,
                         contentPadding = PaddingValues(top = statusTop + 152.dp, bottom = navBottom + 96.dp),
                         titleTopPadding = 64.dp,
@@ -1512,6 +1522,8 @@ private fun fileMessage(past: String, verb: String, result: FileResult, album: S
         else -> "$past $count to $album; ${result.failed} failed"
     }
 }
+
+private val ScrollMonth = java.text.SimpleDateFormat("MMMM yyyy", java.util.Locale.getDefault())
 
 /** How far to scroll one way before the bottom bar switches between tabs and Years / Months / All. */
 private val ZoomBarSwitchDistance = 40.dp
