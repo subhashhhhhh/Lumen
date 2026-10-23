@@ -100,6 +100,8 @@ import android.widget.Toast
 import com.subhashh.lumen.ui.library.periods
 import com.subhashh.lumen.ui.library.ZoomLevel
 import com.subhashh.lumen.ui.library.TimelineScreen
+import com.subhashh.lumen.ui.library.GridSections
+import com.subhashh.lumen.ui.library.SectionMode
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.scaleIn
@@ -388,11 +390,23 @@ private fun MainScaffold(
             }
         }
     }
+    // Date headers (Settings → Library), only when the grid is in date order.
+    var sectionMode by remember { mutableStateOf(prefs.sectionMode) }
+    LaunchedEffect(settingsPage) { sectionMode = prefs.sectionMode }
+    val gridSectionMode = if (sort == LibrarySort.Date) sectionMode else SectionMode.None
+    val librarySections = remember(libraryItems, gridSectionMode) { GridSections.of(libraryItems, gridSectionMode) }
+    /** The open album's photos and their headers, shared by its grid and the viewer's close flight. */
+    val openItems = remember(openCollection, library, trash, hidden, hiddenUnlocked, sort, sortDescending) {
+        openCollection?.takeIf { it != CollectionKeys.Hidden }?.let(itemsOf)
+    }
+    val collectionSections = remember(openItems, gridSectionMode, openCollection) {
+        openItems?.let { GridSections.of(it, if (openCollection == CollectionKeys.RecentlyDeleted) SectionMode.None else gridSectionMode) }
+    }
     val months = remember(libraryItems) { periods(libraryItems, byYear = false) }
     val years = remember(libraryItems) { periods(libraryItems, byYear = true) }
     // A new filter starts at its newest item, like opening the Library.
     LaunchedEffect(filter, sort, sortDescending) {
-        if (libraryItems.isNotEmpty()) libraryGrid.scrollToItem(if (chronological) libraryItems.lastIndex else 0)
+        if (libraryItems.isNotEmpty()) libraryGrid.scrollToItem(if (chronological) librarySections.entries.lastIndex else 0)
     }
     // Years / Months only make sense oldest-first by date; any other order goes back to All.
     LaunchedEffect(chronological) {
@@ -919,6 +933,7 @@ private fun MainScaffold(
                         startAtEnd = chronological,
                         showMonth = sort == LibrarySort.Date,
                         scrollLabel = scrollLabel,
+                        sections = librarySections,
                         items = libraryItems,
                         gridState = libraryGrid,
                         contentPadding = gridPadding,
@@ -950,7 +965,7 @@ private fun MainScaffold(
                                         if (first >= 0) scope.launch { monthsList.scrollToItem(first) }
                                     } else {
                                         zoomLevel = ZoomLevel.All
-                                        scope.launch { libraryGrid.scrollToItem(period.firstIndex) }
+                                        scope.launch { libraryGrid.scrollToItem(librarySections.gridIndexOf(period.firstIndex)) }
                                     }
                                 },
                             )
@@ -986,7 +1001,8 @@ private fun MainScaffold(
                         aspectRatioGrid = aspectRatioGrid,
                         columns = gridColumns,
                         onColumnsChange = onGridColumns,
-                        items = itemsOf(key),
+                        items = openItems ?: itemsOf(key),
+                        sections = collectionSections,
                         startAtEnd = chronological || key == CollectionKeys.RecentlyDeleted,
                         showMonth = sort == LibrarySort.Date || key == CollectionKeys.RecentlyDeleted,
                         scrollLabel = if (key == CollectionKeys.RecentlyDeleted) { item -> ScrollMonth.format(java.util.Date(item.takenAt)) } else scrollLabel,
@@ -1397,8 +1413,14 @@ private fun MainScaffold(
                         transition.beginClose(item, from, exit.background, exit.backgroundAlpha)
                         scope.launch {
                             // Bring the photo's cell into view first, like iOS, then land in it.
-                            if (grid.layoutInfo.visibleItemsInfo.none { it.index == exit.index }) {
-                                grid.scrollToItem(exit.index)
+                            // Grids with date headers count them too.
+                            val gridIndex = when (source) {
+                                CollectionKeys.Library -> librarySections.gridIndexOf(exit.index)
+                                CollectionKeys.Search -> exit.index
+                                else -> collectionSections?.gridIndexOf(exit.index) ?: exit.index
+                            }
+                            if (grid.layoutInfo.visibleItemsInfo.none { it.index == gridIndex }) {
+                                grid.scrollToItem(gridIndex)
                             }
                             withFrameNanos { }
                             transition.land(exit.velocity)

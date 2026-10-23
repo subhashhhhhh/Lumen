@@ -1,5 +1,6 @@
 package com.subhashh.lumen.ui.settings
 
+import com.subhashh.lumen.ui.library.SectionMode
 import com.subhashh.lumen.ui.theme.LocalMotion
 import com.subhashh.lumen.data.HdrMode
 import androidx.compose.runtime.mutableStateOf
@@ -102,6 +103,21 @@ fun SettingsScreen(
                 checked = motion.reduce,
                 onCheckedChange = motion.onChange,
                 icon = LumenIcons.Accessibility,
+                iconColor = Blue,
+            )
+        }
+
+        var sections by remember { mutableStateOf(prefs.sectionMode) }
+        Group("Library", footer = "Headers show when photos are sorted by date.") {
+            PickerRow(
+                title = "Date Headers",
+                options = SectionMode.entries.map { it.label },
+                selected = sections.ordinal,
+                onSelect = {
+                    sections = SectionMode.entries[it]
+                    prefs.sectionMode = sections
+                },
+                icon = LumenIcons.Library,
                 iconColor = Blue,
             )
         }

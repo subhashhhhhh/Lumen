@@ -16,7 +16,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.LazyGridState
-import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -98,7 +98,11 @@ fun LibraryScreen(
     showMonth: Boolean = true,
     /** What the fast-scroll handle says for an item: its month by default. */
     scrollLabel: (MediaItem) -> String = { MonthFormat.format(Date(it.takenAt)) },
+    /** Date headers mixed into the grid; none when null. Callers scrolling the grid use its [GridSections.gridIndexOf]. */
+    sections: GridSections? = null,
 ) {
+    val grid = sections ?: remember(items) { GridSections.of(items, SectionMode.None) }
+    val entries = grid.entries
     val haptics = LocalHapticFeedback.current
     // Decode thumbnails for the cell size actually shown, so fewer, bigger cells stay sharp.
     val cellPx = with(LocalDensity.current) { LocalConfiguration.current.screenWidthDp.dp.roundToPx() } / columns
@@ -109,17 +113,17 @@ fun LibraryScreen(
     var scrolledToNewest by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(items.isNotEmpty()) {
         if (items.isNotEmpty() && !scrolledToNewest) {
-            gridState.scrollToItem(if (startAtEnd) items.lastIndex else 0)
+            gridState.scrollToItem(if (startAtEnd) entries.lastIndex else 0)
             scrolledToNewest = true
         }
     }
 
-    val visibleMonth by remember(items) {
+    val visibleMonth by remember(grid) {
         derivedStateOf {
             val info = gridState.layoutInfo.visibleItemsInfo
             if (info.isEmpty()) return@derivedStateOf ""
             val middle = info[info.size / 2].index
-            items.getOrNull(middle)?.let { MonthFormat.format(Date(it.takenAt)) }.orEmpty()
+            grid.itemAt(middle)?.let { MonthFormat.format(Date(it.takenAt)) }.orEmpty()
         }
     }
 
@@ -143,7 +147,8 @@ fun LibraryScreen(
                 .pinchColumns(ColumnSteps, columns, onColumnsChange)
                 .dragToSelect(
                     gridState = gridState,
-                    ids = { items.map { it.id } },
+                    // Headers have no id: a range drag skips them.
+                    ids = { entries.map { (it as? GridEntry.Cell)?.item?.id } },
                     selection = { currentSelection.orEmpty() },
                     onSelectionChange = onSelectionChange,
                     onStart = {
@@ -155,7 +160,25 @@ fun LibraryScreen(
                     edgeBottom = edgeBottom,
                 ),
         ) {
-            itemsIndexed(items, key = { _, item -> item.id }) { index, item ->
+            items(
+                count = entries.size,
+                key = { i ->
+                    when (val entry = entries[i]) {
+                        is GridEntry.Header -> "h${entry.key}"
+                        is GridEntry.Cell -> entry.item.id
+                    }
+                },
+                span = { i -> if (entries[i] is GridEntry.Header) GridItemSpan(maxLineSpan) else GridItemSpan(1) },
+                contentType = { i -> if (entries[i] is GridEntry.Header) 0 else 1 },
+            ) { i ->
+                val entry = entries[i]
+                if (entry is GridEntry.Header) {
+                    SectionHeader(entry.label)
+                    return@items
+                }
+                val cell = entry as GridEntry.Cell
+                val item = cell.item
+                val index = cell.itemIndex
                 Thumbnail(
                     item = item,
                     bucket = thumbBucket,
@@ -186,8 +209,8 @@ fun LibraryScreen(
 
         FastScroller(
             gridState = gridState,
-            itemCount = items.size,
-            label = { index -> items.getOrNull(index)?.let(scrollLabel).orEmpty() },
+            itemCount = entries.size,
+            label = { index -> grid.itemAt(index)?.let(scrollLabel).orEmpty() },
             topInset = contentPadding.calculateTopPadding(),
             bottomInset = contentPadding.calculateBottomPadding(),
             modifier = Modifier.align(Alignment.TopEnd),
@@ -200,6 +223,18 @@ fun LibraryScreen(
             modifier = Modifier.align(Alignment.TopStart),
         )
     }
+}
+
+/** A date header across the grid: "October 2026", "Yesterday". */
+@Composable
+private fun SectionHeader(label: String) {
+    Text(
+        label,
+        color = MaterialTheme.colorScheme.onBackground,
+        fontSize = 17.sp,
+        fontWeight = FontWeight.SemiBold,
+        modifier = Modifier.padding(start = 14.dp, end = 14.dp, top = 18.dp, bottom = 8.dp),
+    )
 }
 
 @Composable

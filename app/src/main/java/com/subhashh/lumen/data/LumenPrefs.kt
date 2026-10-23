@@ -1,5 +1,6 @@
 package com.subhashh.lumen.data
 
+import com.subhashh.lumen.ui.library.SectionMode
 import android.content.Context
 import androidx.core.content.edit
 import com.subhashh.lumen.ui.theme.Appearance
@@ -125,7 +126,14 @@ class LumenPrefs(context: Context) {
         get() = if (prefs.contains(KeyReduceMotion)) prefs.getBoolean(KeyReduceMotion, false) else null
         set(value) = prefs.edit { if (value == null) remove(KeyReduceMotion) else putBoolean(KeyReduceMotion, value) }
 
+    /** Date headers in photo grids (Settings → Library). */
+    var sectionMode: SectionMode
+        get() = prefs.getString(KeySections, null)?.let { name -> SectionMode.entries.firstOrNull { it.name == name } }
+            ?: SectionMode.Months
+        set(value) = prefs.edit { putString(KeySections, value.name) }
+
     private companion object {
+        const val KeySections = "section_mode"
         const val KeyReduceMotion = "reduce_motion"
         const val KeyHdr = "hdr_photos"
         const val KeyHdrMode = "hdr_mode"
