@@ -16,16 +16,11 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import com.subhashh.lumen.ui.components.pinchColumns
 import com.subhashh.lumen.ui.library.SelectionMark
 import com.subhashh.lumen.ui.selection.dragToSelect
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.layout
-import androidx.compose.ui.unit.Dp
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.material3.HorizontalDivider
+import com.subhashh.lumen.ui.settings.groupColors
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -113,19 +108,13 @@ fun CollectionsScreen(
 
         fullWidth { SectionHeader("Utilities") }
         fullWidth {
-            // One sideways row of cover cards, edge to edge. Not selectable: dimmed while
-            // selecting albums.
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                contentPadding = PaddingValues(horizontal = ScreenGutter),
-                modifier = Modifier
-                    .bleed(ScreenGutter)
-                    .graphicsLayer { alpha = if (selection != null) 0.4f else 1f },
-            ) {
-                items(utilities, key = { it.key }) { collection ->
-                    UtilityCard(collection, hiddenLockSet, onClick = { if (selection == null) onOpen(collection.key) })
-                }
-            }
+            // Not selectable: dimmed while selecting albums.
+            UtilityGroup(
+                utilities,
+                hiddenLockSet,
+                onOpen = { if (selection == null) onOpen(it) },
+                modifier = Modifier.graphicsLayer { alpha = if (selection != null) 0.4f else 1f },
+            )
         }
 
         fullWidth { SectionHeader("Albums", trailing = folders.size.toString()) }
@@ -231,93 +220,83 @@ private fun SectionHeader(title: String, trailing: String? = null) {
 }
 
 /**
- * A utility as a cover card: its newest photo with a dark fade, white icon, name and count.
- * Without a cover (Hidden, an empty Favorites) it's a soft gradient with a big faint icon, so
- * Hidden never shows anything of what's in it.
+ * Utilities as one iOS-style grouped list: a colored badge with a white glyph, the name, the
+ * count and a chevron per row. Compact, and nothing like the album grid below it.
  */
 @Composable
-private fun UtilityCard(collection: MediaCollection, hiddenLockSet: Boolean, onClick: () -> Unit) {
-    val onBackground = MaterialTheme.colorScheme.onBackground
-    val icon = utilityIcon(collection.key)
-    val cover = collection.cover
-    Box(
-        Modifier
-            .pressable(onClick, pressedScale = 0.96f)
-            .width(UtilityCardWidth)
-            .aspectRatio(0.8f)
+private fun UtilityGroup(
+    utilities: List<MediaCollection>,
+    hiddenLockSet: Boolean,
+    onOpen: (key: String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = groupColors()
+    Column(
+        modifier
+            .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(
-                Brush.linearGradient(listOf(onBackground.copy(alpha = 0.16f), onBackground.copy(alpha = 0.05f))),
-            ),
+            .background(colors.card),
     ) {
-        if (cover != null) {
-            Cover(cover)
-            Box(Modifier.matchParentSize().background(Brush.verticalGradient(*CardScrim)))
-        } else {
-            Icon(
-                icon,
-                contentDescription = null,
-                tint = Color.White.copy(alpha = 0.12f),
-                modifier = Modifier
-                    .size(96.dp)
-                    .align(Alignment.Center)
-                    .offset(x = 24.dp, y = (-8).dp),
-            )
-        }
-        Icon(
-            icon,
-            contentDescription = null,
-            tint = Color.White,
-            modifier = Modifier
-                .padding(12.dp)
-                .size(22.dp)
-                .shadow(6.dp, CircleShape, clip = false, ambientColor = Color.Black, spotColor = Color.Black),
-        )
-        Column(
-            Modifier
-                .align(Alignment.BottomStart)
-                .padding(12.dp),
-        ) {
-            Text(
-                collection.title,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = Color.White,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                when {
-                    collection.count != MediaCollections.LockedCount -> collection.count.toString()
-                    hiddenLockSet -> "Locked"
-                    else -> "Set Up"
-                },
-                fontSize = 13.sp,
-                color = Color.White.copy(alpha = 0.75f),
-            )
+        utilities.forEachIndexed { i, collection ->
+            if (i > 0) HorizontalDivider(color = colors.divider, modifier = Modifier.padding(start = 60.dp))
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .clickable { onOpen(collection.key) }
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    Modifier
+                        .size(32.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(utilityColor(collection.key)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(utilityIcon(collection.key), contentDescription = null, tint = Color.White, modifier = Modifier.size(19.dp))
+                }
+                Spacer(Modifier.width(14.dp))
+                Text(
+                    collection.title,
+                    fontSize = 16.sp,
+                    color = colors.text,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    when {
+                        collection.count != MediaCollections.LockedCount -> collection.count.toString()
+                        hiddenLockSet -> "Locked"
+                        else -> "Set Up"
+                    },
+                    fontSize = 16.sp,
+                    color = colors.secondary,
+                )
+                Spacer(Modifier.width(6.dp))
+                Icon(
+                    LumenIcons.Back,
+                    contentDescription = null,
+                    tint = colors.secondary,
+                    // The back chevron turned around, as in Settings.
+                    modifier = Modifier
+                        .size(16.dp)
+                        .graphicsLayer { rotationZ = 180f },
+                )
+            }
         }
     }
 }
 
-/** Lays [this] out [gutter] wider on each side than offered, for a row that runs to the screen edges. */
-private fun Modifier.bleed(gutter: Dp) = layout { measurable, constraints ->
-    val extra = gutter.roundToPx()
-    val placeable = measurable.measure(
-        constraints.copy(minWidth = constraints.minWidth + extra * 2, maxWidth = constraints.maxWidth + extra * 2),
-    )
-    layout(constraints.maxWidth, placeable.height) { placeable.place(-extra, 0) }
+/** iOS system colors, one per utility, so each row is recognisable at a glance. */
+private fun utilityColor(key: String): Color = when (key) {
+    CollectionKeys.Favorites -> Color(0xFFFF375F)
+    CollectionKeys.Videos -> Color(0xFF0A84FF)
+    CollectionKeys.Screenshots -> Color(0xFF30B0C7)
+    CollectionKeys.RecentlyDeleted -> Color(0xFF8E8E93)
+    CollectionKeys.Hidden -> Color(0xFF5E5CE6)
+    else -> Color(0xFF8E8E93)
 }
-
-private val ScreenGutter = 16.dp
-private val UtilityCardWidth = 132.dp
-
-/** Clear over the photo's top, dark under the name and count. */
-private val CardScrim = arrayOf(
-    0.00f to Color.Black.copy(alpha = 0.25f),
-    0.30f to Color.Transparent,
-    0.55f to Color.Transparent,
-    1.00f to Color.Black.copy(alpha = 0.65f),
-)
 
 private fun utilityIcon(key: String): ImageVector = when (key) {
     CollectionKeys.Favorites -> LumenIcons.HeartFilled
