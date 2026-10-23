@@ -40,6 +40,8 @@ internal fun SmartSearchGroup(
     refresh: Int,
     onConfirm: (Confirmation) -> Unit,
     onEnterToken: () -> Unit,
+    /** A setting searched for in Settings, to bring into view and flash. */
+    highlight: String? = null,
 ) {
     val context = LocalContext.current
     val state by ModelDownloads.state.collectAsState()
@@ -90,102 +92,112 @@ internal fun SmartSearchGroup(
     val busy = state is DownloadState.Running || state is DownloadState.Waiting
 
     Group(
-        "Smart Search",
+        "Search Model",
         footer = "Find photos by what's in them, like “cat asleep on a sofa”. Accurate finds more " +
             "and understands many languages; Fast is smaller and quicker to set up, in English. " +
             "The search model downloads once from Hugging Face; your photos and searches never " +
             "leave this phone.",
     ) {
-        PickerRow(
-            title = "Search Quality",
-            options = ModelCatalog.all.map { "${it.label} · ${megabytes(it.bytes)}" },
-            selected = ModelCatalog.all.indexOf(chosen),
-            onSelect = {
-                val next = ModelCatalog.all[it]
-                if (next != chosen) {
-                    // A half-finished download was for the other tier; its parts stay to resume.
-                    if (busy) ModelDownloads.cancel(context)
-                    chosenId = next.id
-                    prefs.searchModel = next.id
-                }
-            },
-            icon = LumenIcons.Search,
-            iconColor = Purple,
-        )
-        Divider()
-        SettingsRow(
-            title = "Search Model",
-            subtitle = status,
-            value = action,
-            onClick = {
-                when (action) {
-                    "Cancel" -> ModelDownloads.cancel(context)
-                    "Remove" -> onConfirm(
-                        Confirmation(
-                            title = "Remove the Search Model?",
-                            message = "Smart Search stops working until you download it again ($size).",
-                            confirm = "Remove",
-                            destructive = true,
-                            onConfirm = {
-                                ModelDownloads.delete(context)
-                                removed++
-                            },
-                        ),
-                    )
-                    else -> download()
-                }
-            },
-            icon = LumenIcons.Import,
-            iconColor = Indigo,
-        )
-        if (progress != null) {
-            Divider()
-            val complete = progress.indexed >= progress.total
-            SettingsRow(
-                title = "Indexed",
-                subtitle = if (complete) "New photos and videos are added as they arrive" else "Continues while your phone charges",
-                value = if (complete) "All ${"%,d".format(progress.total)}" else "%,d of %,d".format(progress.indexed, progress.total),
-                onClick = null,
-                icon = LumenIcons.Image,
-                iconColor = Green,
+        Anchor("search-quality", highlight) {
+            PickerRow(
+                title = "Search Quality",
+                options = ModelCatalog.all.map { "${it.label} · ${megabytes(it.bytes)}" },
+                selected = ModelCatalog.all.indexOf(chosen),
+                onSelect = {
+                    val next = ModelCatalog.all[it]
+                    if (next != chosen) {
+                        // A half-finished download was for the other tier; its parts stay to resume.
+                        if (busy) ModelDownloads.cancel(context)
+                        chosenId = next.id
+                        prefs.searchModel = next.id
+                    }
+                },
+                icon = LumenIcons.Search,
+                iconColor = Purple,
             )
         }
         Divider()
-        ToggleRow(
-            title = "Download on Wi-Fi Only",
-            checked = wifiOnly,
-            onCheckedChange = {
-                wifiOnly = it
-                prefs.modelWifiOnly = it
-            },
-            icon = LumenIcons.Settings,
-            iconColor = Blue,
-        )
+        Anchor("search-model", highlight) {
+            SettingsRow(
+                title = "Search Model",
+                subtitle = status,
+                value = action,
+                onClick = {
+                    when (action) {
+                        "Cancel" -> ModelDownloads.cancel(context)
+                        "Remove" -> onConfirm(
+                            Confirmation(
+                                title = "Remove the Search Model?",
+                                message = "Smart Search stops working until you download it again ($size).",
+                                confirm = "Remove",
+                                destructive = true,
+                                onConfirm = {
+                                    ModelDownloads.delete(context)
+                                    removed++
+                                },
+                            ),
+                        )
+                        else -> download()
+                    }
+                },
+                icon = LumenIcons.Import,
+                iconColor = Indigo,
+            )
+        }
+        if (progress != null) {
+            Divider()
+            val complete = progress.indexed >= progress.total
+            Anchor("indexed", highlight) {
+                SettingsRow(
+                    title = "Indexed",
+                    subtitle = if (complete) "New photos and videos are added as they arrive" else "Continues while your phone charges",
+                    value = if (complete) "All ${"%,d".format(progress.total)}" else "%,d of %,d".format(progress.indexed, progress.total),
+                    onClick = null,
+                    icon = LumenIcons.Image,
+                    iconColor = Green,
+                )
+            }
+        }
         Divider()
-        SettingsRow(
-            title = "Hugging Face Token",
-            subtitle = "Optional; can make downloads faster",
-            value = if (hasToken) "Saved" else "None",
-            onClick = {
-                if (hasToken) {
-                    onConfirm(
-                        Confirmation(
-                            title = "Remove Your Token?",
-                            message = "Downloads will go without it. It's stored encrypted on this phone only.",
-                            confirm = "Remove",
-                            destructive = true,
-                            onConfirm = {
-                                HfTokenStore(context).token = null
-                                tokenRemoved++
-                            },
-                        ),
-                    )
-                } else {
-                    onEnterToken()
-                }
-            },
-            icon = LumenIcons.Lock,
-            iconColor = Color(0xFFFF9F0A),
-        )
+        Anchor("wifi-only", highlight) {
+            ToggleRow(
+                title = "Download on Wi-Fi Only",
+                checked = wifiOnly,
+                onCheckedChange = {
+                    wifiOnly = it
+                    prefs.modelWifiOnly = it
+                },
+                icon = LumenIcons.Settings,
+                iconColor = Blue,
+            )
+        }
+        Divider()
+        Anchor("hf-token", highlight) {
+            SettingsRow(
+                title = "Hugging Face Token",
+                subtitle = "Optional; can make downloads faster",
+                value = if (hasToken) "Saved" else "None",
+                onClick = {
+                    if (hasToken) {
+                        onConfirm(
+                            Confirmation(
+                                title = "Remove Your Token?",
+                                message = "Downloads will go without it. It's stored encrypted on this phone only.",
+                                confirm = "Remove",
+                                destructive = true,
+                                onConfirm = {
+                                    HfTokenStore(context).token = null
+                                    tokenRemoved++
+                                },
+                            ),
+                        )
+                    } else {
+                        onEnterToken()
+                    }
+                },
+                icon = LumenIcons.Lock,
+                iconColor = Color(0xFFFF9F0A),
+            )
+        }
     }
 }

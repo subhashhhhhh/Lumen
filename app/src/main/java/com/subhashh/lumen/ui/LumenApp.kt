@@ -116,6 +116,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.AnimatedContent
 import com.subhashh.lumen.ui.settings.SettingsScreen
+import com.subhashh.lumen.ui.settings.SettingsCategory
 import com.subhashh.lumen.ui.settings.LicensesScreen
 import com.subhashh.lumen.ui.theme.LocalGlassColors
 import com.subhashh.lumen.ui.library.ViewMenu
@@ -269,6 +270,8 @@ private fun MainScaffold(
     var openCollection by rememberSaveable { mutableStateOf<String?>(null) }
     /** Settings pages pushed on the Collections tab: "settings", then "licenses". */
     var settingsPage by rememberSaveable { mutableStateOf<String?>(null) }
+    /** A setting found with Settings' search, to bring into view on its page. */
+    var settingsHighlight by remember { mutableStateOf<String?>(null) }
     /** Which collection the viewer pages through, and where it started. */
     var viewerSource by rememberSaveable { mutableStateOf<String?>(null) }
     var viewerStart by rememberSaveable { mutableIntStateOf(0) }
@@ -494,8 +497,15 @@ private fun MainScaffold(
     val inCollection = tab == LumenTab.Collections && openCollection != null && !searching
     // Settings opens from either tab and covers it; Back returns to where it was opened.
     val inSettings = settingsPage != null && !searching
+    // Back goes up one level: a sub-page to its category, a category to Settings, Settings out.
     val popSettings = {
-        settingsPage = if (settingsPage == SettingsLicenses || settingsPage == SettingsExcluded) SettingsMain else null
+        settingsHighlight = null
+        settingsPage = when {
+            settingsPage == SettingsLicenses -> settingsCategoryPage(SettingsCategory.About)
+            settingsPage == SettingsExcluded -> settingsCategoryPage(SettingsCategory.Library)
+            settingsPage?.startsWith(SettingsCategoryPrefix) == true -> SettingsMain
+            else -> null
+        }
     }
     BackHandler(enabled = searching && !viewerOpen) { searching = false }
     BackHandler(enabled = inCollection && !viewerOpen) {
@@ -1040,7 +1050,13 @@ private fun MainScaffold(
                 settingsPage == SettingsLicenses -> LicensesScreen(
                     contentPadding = PaddingValues(top = statusTop + 72.dp, bottom = navBottom + 96.dp),
                 )
-                settingsPage == SettingsMain -> SettingsScreen(
+                settingsPage == SettingsMain || settingsPage?.startsWith(SettingsCategoryPrefix) == true -> SettingsScreen(
+                    category = SettingsCategory.of(settingsPage?.removePrefix(SettingsCategoryPrefix)),
+                    highlight = settingsHighlight,
+                    onOpenCategory = { category, highlight ->
+                        settingsHighlight = highlight
+                        settingsPage = settingsCategoryPage(category)
+                    },
                     contentPadding = PaddingValues(top = statusTop + 72.dp, bottom = navBottom + 96.dp),
                     onOpenLicenses = { settingsPage = SettingsLicenses },
                     onConfirm = { confirmation = it },
@@ -1960,6 +1976,8 @@ private fun selectionTitle(selected: List<MediaItem>): String {
 private const val AlbumsScope = "albums"
 
 private const val SettingsMain = "settings"
+private const val SettingsCategoryPrefix = "settings/"
+private fun settingsCategoryPage(category: SettingsCategory) = SettingsCategoryPrefix + category.key
 private const val SettingsLicenses = "licenses"
 private const val SettingsExcluded = "excluded"
 
