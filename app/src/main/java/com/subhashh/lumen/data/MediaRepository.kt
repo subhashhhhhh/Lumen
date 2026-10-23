@@ -95,6 +95,7 @@ class MediaRepository(private val context: Context) {
                     bucketName = cursor.getString(bucketNameCol) ?: "Internal storage",
                     width = if (rotated) cursor.getInt(heightCol) else cursor.getInt(widthCol),
                     height = if (rotated) cursor.getInt(widthCol) else cursor.getInt(heightCol),
+                    modified = cursor.getLong(modifiedCol),
                 )
             }
         }

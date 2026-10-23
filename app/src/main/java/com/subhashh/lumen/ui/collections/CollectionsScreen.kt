@@ -1,6 +1,7 @@
 package com.subhashh.lumen.ui.collections
 
 import com.subhashh.lumen.ui.icons.LumenIcons
+import com.subhashh.lumen.ui.images.version
 import com.subhashh.lumen.ui.components.pressable
 import com.subhashh.lumen.ui.images.ImageKeys
 import androidx.compose.foundation.background
@@ -191,10 +192,10 @@ private fun Cover(item: MediaItem) {
     val context = LocalContext.current
     AsyncImage(
         // Own cache key: covers are larger than grid thumbnails, so they must not reuse those bitmaps.
-        model = remember(item.uri) {
+        model = remember(item.version) {
             ImageRequest.Builder(context)
                 .data(MediaThumbnail(item.uri))
-                .memoryCacheKey(ImageKeys.cover(item.id))
+                .memoryCacheKey(ImageKeys.cover(item))
                 .build()
         },
         contentDescription = null,

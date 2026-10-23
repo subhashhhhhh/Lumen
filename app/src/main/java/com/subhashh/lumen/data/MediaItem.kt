@@ -20,4 +20,6 @@ data class MediaItem(
     /** Display dimensions (EXIF rotation applied); 0 when unknown. */
     val width: Int,
     val height: Int,
+    /** DATE_MODIFIED (seconds): changes whenever the file does (rotate, edit), so it versions every cached image of it. */
+    val modified: Long,
 )

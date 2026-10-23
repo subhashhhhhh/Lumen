@@ -32,6 +32,7 @@ import kotlinx.coroutines.launch
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.subhashh.lumen.data.MediaItem
+import com.subhashh.lumen.ui.images.version
 import coil3.SingletonImageLoader
 import com.subhashh.lumen.ui.images.ImageKeys
 import com.subhashh.lumen.ui.images.bestPlaceholderKey
@@ -221,7 +222,7 @@ fun PhotoTransitionOverlay(transition: PhotoTransition) {
             .drawBehind { drawRect(transition.backgroundColor(), alpha = transition.backgroundAlpha()) },
     ) {
         AsyncImage(
-            model = remember(item.id) {
+            model = remember(item.version) {
                 val size = transition.targetSize()
                 ImageRequest.Builder(context)
                     .data(item.uri)
@@ -229,8 +230,8 @@ fun PhotoTransitionOverlay(transition: PhotoTransition) {
                     // viewer and the close flight reuse it under the same key. A fixed size
                     // matters: otherwise Coil sizes it from the first (cell-sized) frame.
                     .size(size.width, size.height)
-                    .memoryCacheKey(ImageKeys.screen(item.id))
-                    .placeholderMemoryCacheKey(bestPlaceholderKey(SingletonImageLoader.get(context), item.id))
+                    .memoryCacheKey(ImageKeys.screen(item))
+                    .placeholderMemoryCacheKey(bestPlaceholderKey(SingletonImageLoader.get(context), item))
                     .build()
             },
             contentDescription = null,

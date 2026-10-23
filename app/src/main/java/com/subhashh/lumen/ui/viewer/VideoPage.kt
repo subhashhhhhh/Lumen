@@ -22,6 +22,8 @@ import androidx.media3.ui.compose.SURFACE_TYPE_TEXTURE_VIEW
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.subhashh.lumen.data.MediaItem
+import com.subhashh.lumen.ui.images.versioned
+import com.subhashh.lumen.ui.images.version
 import coil3.SingletonImageLoader
 import com.subhashh.lumen.ui.images.bestPlaceholderKey
 
@@ -95,12 +97,13 @@ private fun VideoSize.displayAspect(): Float? {
 private fun StillFrame(item: MediaItem) {
     val context = LocalContext.current
     AsyncImage(
-        model = remember(item.uri) {
+        model = remember(item.version) {
             ImageRequest.Builder(context)
                 .data(item.uri)
+                .versioned(item)
                 // Sharp from the first frame when the open transition already decoded it at
                 // screen size; neighbors not decoded yet start from the grid thumbnail.
-                .placeholderMemoryCacheKey(bestPlaceholderKey(SingletonImageLoader.get(context), item.id))
+                .placeholderMemoryCacheKey(bestPlaceholderKey(SingletonImageLoader.get(context), item))
                 .build()
         },
         contentDescription = null,

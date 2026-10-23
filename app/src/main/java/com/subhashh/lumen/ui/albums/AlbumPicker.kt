@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.subhashh.lumen.data.MediaCollection
+import com.subhashh.lumen.ui.images.version
 import com.subhashh.lumen.data.MediaThumbnail
 import com.subhashh.lumen.ui.components.pressable
 import com.subhashh.lumen.ui.icons.LumenIcons
@@ -234,11 +235,11 @@ private fun AlbumRow(album: MediaCollection, colors: PickerColors, onClick: () -
         ) {
             album.cover?.let { cover ->
                 AsyncImage(
-                    model = remember(cover.id) {
+                    model = remember(cover.version) {
                         ImageRequest.Builder(context)
                             .data(MediaThumbnail(cover.uri))
                             .size(ImageKeys.ThumbBuckets.first(), ImageKeys.ThumbBuckets.first())
-                            .memoryCacheKey(ImageKeys.thumb(cover.id, ImageKeys.ThumbBuckets.first()))
+                            .memoryCacheKey(ImageKeys.thumb(cover, ImageKeys.ThumbBuckets.first()))
                             .build()
                     },
                     contentDescription = null,

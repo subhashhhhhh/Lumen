@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.subhashh.lumen.data.MediaItem
+import com.subhashh.lumen.ui.images.version
 import com.subhashh.lumen.ui.components.pressable
 import com.subhashh.lumen.ui.images.ImageKeys
 import java.time.Instant
@@ -156,11 +157,11 @@ private fun PeriodCard(period: Period, height: Dp, onClick: () -> Unit) {
             .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)),
     ) {
         AsyncImage(
-            model = remember(period.cover.id, heightPx) {
+            model = remember(period.cover.version, heightPx) {
                 ImageRequest.Builder(context)
                     .data(period.cover.uri)
                     .size(widthPx, heightPx)
-                    .memoryCacheKey(ImageKeys.card(period.cover.id, heightPx))
+                    .memoryCacheKey(ImageKeys.card(period.cover, heightPx))
                     .build()
             },
             contentDescription = null,

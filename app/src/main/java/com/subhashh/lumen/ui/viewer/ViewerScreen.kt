@@ -213,7 +213,7 @@ fun ViewerScreen(
             val loader = SingletonImageLoader.get(context)
             for (i in pager.settledPage - 1..pager.settledPage + 1) {
                 val item = items.getOrNull(i) ?: continue
-                val key = ImageKeys.screen(item.id)
+                val key = ImageKeys.screen(item)
                 if (loader.memoryCache?.get(MemoryCache.Key(key)) != null) continue
                 val target = fullScreenRect(item, width, height)
                 loader.enqueue(

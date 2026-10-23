@@ -24,6 +24,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import com.subhashh.lumen.ui.selection.dragToSelect
+import com.subhashh.lumen.ui.images.version
 import com.subhashh.lumen.ui.icons.LumenIcons
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.shadow
@@ -236,15 +237,15 @@ private fun Thumbnail(
                 .then(if (fit) Modifier else Modifier.background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))),
         ) {
             AsyncImage(
-                model = remember(item.uri, bucket) {
+                model = remember(item.version, bucket) {
                     ImageRequest.Builder(context)
                         // Small cells: Android's thumbnail cache (fast). Big cells: the original,
                         // decoded at cell size, so screenshot text stays readable.
                         .data(if (bucket <= ImageKeys.SystemThumbnailMaxPx) MediaThumbnail(item.uri) else item.uri)
                         .size(bucket, bucket)
-                        .memoryCacheKey(ImageKeys.thumb(item.id, bucket))
+                        .memoryCacheKey(ImageKeys.thumb(item, bucket))
                         // While a bigger size decodes after a pinch, keep showing the one we have.
-                        .placeholderMemoryCacheKey(bestPlaceholderKey(SingletonImageLoader.get(context), item.id))
+                        .placeholderMemoryCacheKey(bestPlaceholderKey(SingletonImageLoader.get(context), item))
                         .build()
                 },
                 contentDescription = null,
