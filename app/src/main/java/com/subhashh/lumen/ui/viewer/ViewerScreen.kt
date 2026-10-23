@@ -146,6 +146,7 @@ fun ViewerScreen(
     external: Boolean = false,
     /** Viewing a folder album: ⋯ offers Make Album Cover. */
     onMakeCover: ((MediaItem) -> Unit)? = null,
+    onAdjustDate: (MediaItem) -> Unit = {},
 ) {
     val context = LocalContext.current
     val pager = rememberPagerState(initialPage = initialIndex) { items.size }
@@ -499,6 +500,7 @@ fun ViewerScreen(
                     onHideFolder = onHideFolder,
                     onSlideshow = { slideshow = true },
                     onMakeCover = onMakeCover,
+                    onAdjustDate = onAdjustDate,
                 ),
                 origin = TransformOrigin(1f, 0f),
                 modifier = Modifier
@@ -537,6 +539,7 @@ private fun viewerMenu(
     onHideFolder: (MediaItem) -> Unit,
     onSlideshow: () -> Unit,
     onMakeCover: ((MediaItem) -> Unit)?,
+    onAdjustDate: (MediaItem) -> Unit,
 ): List<List<MenuItem>> {
     val photo = !item.isVideo
     return listOf(
@@ -546,6 +549,7 @@ private fun viewerMenu(
         ),
         listOfNotNull(
             MenuItem("Rename…") { onRename(item) },
+            MenuItem("Adjust Date & Time…") { onAdjustDate(item) },
             if (MediaFiles.canRotate(item)) rotateMenu { degrees -> onRotate(item, degrees) } else null,
         ),
         listOfNotNull(

@@ -82,6 +82,8 @@ import androidx.compose.ui.geometry.Offset
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
 import com.subhashh.lumen.ui.components.RenameDialog
+import com.subhashh.lumen.ui.components.DateTimeDialog
+import com.subhashh.lumen.data.MediaDates
 import android.provider.MediaStore
 import android.os.Environment
 import com.subhashh.lumen.ui.components.MenuItem
@@ -332,6 +334,8 @@ private fun MainScaffold(
         if (albumSettings.created.any { it in real }) updateAlbums { it.copy(created = it.created.filterNot(real::contains)) }
     }
     var collectionsMenuOpen by remember { mutableStateOf(false) }
+    /** Items waiting for a new date from Adjust Date & Time. */
+    var dateRequest by remember { mutableStateOf<List<MediaItem>?>(null) }
     /** Album name prompt: renaming [album], or making a new one when null. */
     var albumNameRequest by remember { mutableStateOf<AlbumNameRequest?>(null) }
     // The Library tab is filtered by the ≡ menu; the viewer and selection page through the same list.
@@ -1271,6 +1275,7 @@ private fun MainScaffold(
                 ),
                 listOfNotNull(
                     if (selectedItems.any(MediaFiles::canRotate)) rotateMenu { rotate(selectedItems, it) } else null,
+                    MenuItem("Adjust Date & Time…") { dateRequest = selectedItems },
                 ),
                 listOf(MenuItem("Hide") { hide(selectedItems) }),
                 listOf(
@@ -1329,6 +1334,7 @@ private fun MainScaffold(
                 onRename = { renameItem = it },
                 onRotate = { item, degrees -> rotate(listOf(item), degrees) },
                 onExcludeFolder = { excludeFolders(listOf(it)) },
+                onAdjustDate = { dateRequest = listOf(it) },
                 // Inside a folder album: make this photo its cover, like iOS's Make Key Photo.
                 onMakeCover = if (CollectionKeys.isFolder(source)) {
                     { item ->
@@ -1452,6 +1458,34 @@ private fun MainScaffold(
                 }
             },
             onDismiss = { albumNameRequest = null },
+        )
+
+        DateTimeDialog(
+            original = dateRequest?.minOf { it.takenAt },
+            count = dateRequest?.size ?: 0,
+            onAdjust = { newTime ->
+                val items = dateRequest.orEmpty()
+                dateRequest = null
+                if (items.isNotEmpty()) {
+                    // Everything moves by the same amount, so the earliest lands where it was set.
+                    val delta = newTime - items.minOf { it.takenAt }
+                    val run = {
+                        scope.launch {
+                            val result = MediaDates.shift(context, items, delta)
+                            finish(
+                                when {
+                                    result.failed == 0 -> if (items.size == 1) "Date changed" else "Dates changed"
+                                    result.needsAllFilesAccess ->
+                                        "Changed ${result.done} of ${items.size}: videos and GIFs need All files access (Settings → Permissions)"
+                                    else -> "Changed ${result.done} of ${items.size}: HEIC and AVIF photos can't store a new date"
+                                },
+                            )
+                        }
+                    }
+                    if (Environment.isExternalStorageManager()) run() else withWriteAccess(items) { run() }
+                }
+            },
+            onDismiss = { dateRequest = null },
         )
 
         PhotoTransitionOverlay(transition)
