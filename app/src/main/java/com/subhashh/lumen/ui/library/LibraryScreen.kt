@@ -235,6 +235,22 @@ internal fun Thumbnail(
                 contentScale = if (fit) ContentScale.Fit else ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
             )
+            if (item.mimeType == "image/gif") {
+                // GIFs play in their cells, like Fossify and Aves: decoded at cell size over the
+                // cached still, which stays visible until the first frame is ready.
+                AsyncImage(
+                    model = remember(item.version, bucket) {
+                        ImageRequest.Builder(context)
+                            .data(item.uri)
+                            .size(bucket, bucket)
+                            .memoryCacheKey("anim:${item.version}:$bucket")
+                            .build()
+                    },
+                    contentDescription = null,
+                    contentScale = if (fit) ContentScale.Fit else ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
             if (showDuration && (item.isVideo || item.mimeType == "image/gif")) {
                 Text(
                     // GIFs play in the viewer; say so, as iOS does.
