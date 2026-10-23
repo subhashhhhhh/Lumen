@@ -137,7 +137,9 @@ fun FastScroller(
                     spring(dampingRatio = 0.7f, stiffness = 600f),
                     label = "handleWidth",
                 )
-                // A wide, invisible touch target around a slim visible handle.
+                // A wide, invisible touch target around a slim visible handle, kept off the screen's
+                // edge: curved-edge phones (Motorola Edge, Galaxy Edge) ignore touches that start
+                // on the curve, so a handle hugging the edge can't be grabbed there.
                 Box(
                     Modifier
                         .width(TouchWidth)
@@ -162,7 +164,7 @@ fun FastScroller(
                 ) {
                     Box(
                         Modifier
-                            .padding(end = 4.dp)
+                            .padding(end = EdgeClearance)
                             .size(width = handleWidth, height = HandleHeight - 8.dp)
                             .shadow(4.dp, CircleShape)
                             .background(Color.White.copy(alpha = 0.92f), CircleShape),
@@ -174,6 +176,7 @@ fun FastScroller(
 }
 
 private const val MinItems = 150
-private const val HideDelayMs = 1500L
+private const val HideDelayMs = 2500L
 private val HandleHeight = 52.dp
-private val TouchWidth = 36.dp
+private val TouchWidth = 56.dp
+private val EdgeClearance = 14.dp
