@@ -66,6 +66,8 @@ fun SettingsScreen(
     biometricsOn: Boolean,
     onToggleBiometrics: () -> Unit,
     excludedCount: Int,
+    onExport: () -> Unit,
+    onImport: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -270,6 +272,24 @@ fun SettingsScreen(
                 onClick = { context.openSettings(Settings.ACTION_APPLICATION_DETAILS_SETTINGS) },
                 icon = LumenIcons.Location,
                 iconColor = Green,
+            )
+        }
+
+        Group("Backup", footer = "The Hidden lock is never included, so a backup can't unlock Hidden.") {
+            SettingsRow(
+                title = "Export Settings…",
+                subtitle = "Settings, album arrangement and favorites",
+                onClick = onExport,
+                icon = LumenIcons.Export,
+                iconColor = Green,
+            )
+            Divider()
+            SettingsRow(
+                title = "Import Settings…",
+                subtitle = "From a Lumen backup file",
+                onClick = onImport,
+                icon = LumenIcons.Import,
+                iconColor = Blue,
             )
         }
 

@@ -85,6 +85,7 @@ import kotlinx.coroutines.Dispatchers
 import com.subhashh.lumen.ui.components.RenameDialog
 import com.subhashh.lumen.ui.components.DateTimeDialog
 import com.subhashh.lumen.data.MediaDates
+import com.subhashh.lumen.data.SettingsBackup
 import android.provider.MediaStore
 import android.os.Environment
 import com.subhashh.lumen.ui.components.MenuItem
@@ -489,6 +490,35 @@ private fun MainScaffold(
     var slideshowOf by remember { mutableStateOf<Set<Long>?>(null) }
     val toast = { message: String -> Toast.makeText(context, message, Toast.LENGTH_LONG).show() }
     val activity = LocalActivity.current
+    // Settings → Backup. Importing replaces every setting, so the screen restarts afterwards to
+    // pick them all up; any favorites to restore are asked for first.
+    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        if (uri != null) scope.launch {
+            val ok = SettingsBackup.export(context, library.orEmpty().filter { it.isFavorite }, uri)
+            toast(if (ok) "Settings exported" else "Couldn't save the backup")
+        }
+    }
+    val restoreFavoritesLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) {
+        activity?.recreate()
+    }
+    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) scope.launch {
+            val imported = SettingsBackup.import(context, uri)
+            if (imported == null) {
+                toast("That isn't a Lumen backup")
+                return@launch
+            }
+            toast("Settings restored")
+            val toFavorite = library.orEmpty().filter { !it.isFavorite && (it.relativePath + it.name) in imported.favoritePaths }
+            if (toFavorite.isEmpty()) {
+                activity?.recreate()
+            } else {
+                restoreFavoritesLauncher.launch(
+                    IntentSenderRequest.Builder(MediaActions.favoriteRequest(context, toFavorite, favorite = true)).build(),
+                )
+            }
+        }
+    }
     /** Hidden content lives outside MediaStore; without All files access, explain and link to it. */
     val needsAllFiles: () -> Boolean = {
         val missing = !HiddenMedia.available()
@@ -821,6 +851,17 @@ private fun MainScaffold(
                         }
                     },
                     excludedCount = excluded.size,
+                    onExport = {
+                        exportLauncher.launch("Lumen settings ${java.time.LocalDate.now()}.json")
+                    },
+                    onImport = {
+                        confirmation = Confirmation(
+                            title = "Import settings?",
+                            message = "Your current settings, album arrangement and exclusions are replaced by the backup's. " +
+                                "Favorites in it are added to yours.",
+                            confirm = "Import",
+                        ) { importLauncher.launch(arrayOf("application/json", "application/octet-stream", "text/plain")) }
+                    },
                 )
                 settingsPage == SettingsExcluded -> {
                     val all = allItems.orEmpty()
