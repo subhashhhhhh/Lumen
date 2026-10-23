@@ -139,6 +139,8 @@ import com.subhashh.lumen.ui.components.LumenTab
 import com.subhashh.lumen.ui.library.LibraryScreen
 import com.subhashh.lumen.ui.library.LibraryViewModel
 import com.subhashh.lumen.ui.search.SearchScreen
+import com.subhashh.lumen.ui.search.SearchField
+import com.subhashh.lumen.data.SearchIndex
 
 private val MediaPermissions = when {
     Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE -> arrayOf(
@@ -220,6 +222,7 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
     val trash by viewModel.trash.collectAsState()
     var tab by rememberSaveable { mutableStateOf(LumenTab.Library) }
     var searching by rememberSaveable { mutableStateOf(false) }
+    var searchQuery by rememberSaveable { mutableStateOf("") }
     /** Collection open inside the Collections tab, if any. */
     var openCollection by rememberSaveable { mutableStateOf<String?>(null) }
     /** Settings pages pushed on the Collections tab: "settings", then "licenses". */
@@ -285,9 +288,35 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
     val libraryItems = remember(library, filter) {
         library.orEmpty().let { all -> if (filter == LibraryFilter.All) all else all.filter(filter::matches) }
     }
+    // Search: an index rebuilt off the main thread whenever the library changes, queried on
+    // every keystroke (a few ms). The previous results stay up while the next ones compute.
+    val searchIndex by produceState<SearchIndex?>(null, library) {
+        value = library?.let { withContext(Dispatchers.Default) { SearchIndex.build(it) } }
+    }
+    val searchResults by produceState<List<MediaItem>?>(null, searchIndex, searchQuery) {
+        val index = searchIndex ?: return@produceState
+        value = withContext(Dispatchers.Default) { index.search(searchQuery) }
+    }
+    val searchAlbums = remember(folders, searchQuery) {
+        val terms = SearchIndex.terms(searchQuery)
+        if (terms.isEmpty()) emptyList()
+        else folders.filter { album ->
+            val words = SearchIndex.terms(album.title)
+            terms.all { term -> words.any { SearchIndex.matchScore(term, it) > 0 } }
+        }
+    }
+    val searchSuggestions = remember(library, folders) {
+        val years = library.orEmpty().asReversed().asSequence()
+            .map { java.util.Calendar.getInstance().apply { timeInMillis = it.takenAt }.get(java.util.Calendar.YEAR).toString() }
+            .distinct().take(2).toList()
+        listOf("Videos", "Screenshots", "Favorites") + years + folders.take(3).map { it.title }
+    }
+    val searchGrid = rememberLazyGridState()
+    LaunchedEffect(searchQuery) { searchGrid.scrollToItem(0) }
     val itemsOf = { key: String ->
         when (key) {
             CollectionKeys.Library -> libraryItems
+            CollectionKeys.Search -> searchResults.orEmpty()
             CollectionKeys.Hidden -> if (hiddenUnlocked) hidden.orEmpty() else emptyList()
             else -> CollectionKeys.hiddenFolderId(key)?.let { id ->
                 if (hiddenUnlocked) hidden.orEmpty().filter { it.bucketId == id } else emptyList()
@@ -650,7 +679,23 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                 .background(MaterialTheme.colorScheme.background),
         ) {
             when {
-                searching -> SearchScreen()
+                searching -> SearchScreen(
+                    query = searchQuery,
+                    results = searchResults,
+                    albums = searchAlbums,
+                    suggestions = searchSuggestions,
+                    gridState = searchGrid,
+                    contentPadding = PaddingValues(top = statusTop + 72.dp, bottom = navBottom + 96.dp),
+                    transition = transition,
+                    onOpen = { index -> openViewer(CollectionKeys.Search, index) },
+                    onOpenAlbum = { key ->
+                        searching = false
+                        settingsPage = null
+                        tab = LumenTab.Collections
+                        openCollection = key
+                    },
+                    onSuggestion = { searchQuery = it },
+                )
                 library == null -> Unit
                 settingsPage == SettingsLicenses -> LicensesScreen(
                     contentPadding = PaddingValues(top = statusTop + 72.dp, bottom = navBottom + 96.dp),
@@ -814,6 +859,18 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                 onCancel = { endSelection() },
                 modifier = Modifier
                     .align(Alignment.TopEnd)
+                    .statusBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+            )
+        }
+
+        if (searching && !viewerOpen) {
+            SearchField(
+                backdrop = backdrop,
+                query = searchQuery,
+                onQueryChange = { searchQuery = it },
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
                     .statusBarsPadding()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
             )
@@ -1029,8 +1086,12 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
         )
 
         viewerSource?.let { source ->
-            val list = remember(source, library, trash) { itemsOf(source) }
-            val grid = if (source == CollectionKeys.Library) libraryGrid else collectionGrid
+            val list = remember(source, library, trash, searchResults) { itemsOf(source) }
+            val grid = when (source) {
+                CollectionKeys.Library -> libraryGrid
+                CollectionKeys.Search -> searchGrid
+                else -> collectionGrid
+            }
             ViewerScreen(
                 items = list,
                 initialIndex = viewerStart.coerceAtMost(list.lastIndex.coerceAtLeast(0)),

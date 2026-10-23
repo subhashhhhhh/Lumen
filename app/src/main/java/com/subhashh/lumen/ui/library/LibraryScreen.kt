@@ -187,7 +187,7 @@ fun LibraryScreen(
 }
 
 @Composable
-private fun Thumbnail(
+internal fun Thumbnail(
     item: MediaItem,
     bucket: Int,
     fit: Boolean,
