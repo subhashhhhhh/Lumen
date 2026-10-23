@@ -1005,7 +1005,8 @@ private fun MainScaffold(
         // shaders right as a photo flies home.
         // Hidden (alpha 0, so the GPU skips its blur entirely) from the instant a photo starts
         // opening until one flies back home, where it fades in again.
-        val tabBarHidden = viewerOpen || transition.opening || selecting
+        // Settings is a pushed page, like iOS: no tab bar under it.
+        val tabBarHidden = viewerOpen || transition.opening || selecting || inSettings
         val tabBarAlpha by animateFloatAsState(
             targetValue = if (tabBarHidden) 0f else 1f,
             animationSpec = if (tabBarHidden) snap() else tween(durationMillis = 220),
