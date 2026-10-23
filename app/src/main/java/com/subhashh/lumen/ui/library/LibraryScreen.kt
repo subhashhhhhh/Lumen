@@ -235,9 +235,10 @@ internal fun Thumbnail(
                 contentScale = if (fit) ContentScale.Fit else ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
             )
-            if (item.isVideo && showDuration) {
+            if (showDuration && (item.isVideo || item.mimeType == "image/gif")) {
                 Text(
-                    text = formatDuration(item.durationMs),
+                    // GIFs play in the viewer; say so, as iOS does.
+                    text = if (item.isVideo) formatDuration(item.durationMs) else "GIF",
                     style = OverlayText,
                     modifier = Modifier
                         .align(Alignment.BottomEnd)

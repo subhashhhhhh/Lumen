@@ -5,6 +5,7 @@ import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import coil3.imageDecoderEnabled
+import coil3.gif.AnimatedImageDecoder
 import coil3.svg.SvgDecoder
 import coil3.video.VideoFrameDecoder
 import com.subhashh.lumen.data.GridThumbnailFetcher
@@ -21,6 +22,9 @@ class LumenApplication : Application(), SingletonImageLoader.Factory {
                 add(GridThumbnailFetcher.Factory(context))
                 add(VideoFrameDecoder.Factory())
                 add(SvgDecoder.Factory())
+                // Animated GIF, WebP, AVIF and HEIF play in the viewer. Grid cells stay still:
+                // they come from GridThumbnail's cached stills, not through this decoder.
+                add(AnimatedImageDecoder.Factory())
             }
             .build()
 }
