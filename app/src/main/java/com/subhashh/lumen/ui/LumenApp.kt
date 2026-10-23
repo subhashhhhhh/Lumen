@@ -384,6 +384,15 @@ private fun MainScaffold(
         val index = searchIndex ?: return@produceState
         value = withContext(Dispatchers.Default) { index.search(searchQuery) }
     }
+    // Words read in photos (Settings → Smart Search → Text Read): exact, so right after the
+    // name and date matches. A full-text lookup, a few ms, so no typing pause.
+    val textMatches by produceState<List<Long>?>(null, searchQuery) {
+        val query = searchQuery.trim()
+        value = if (query.length < 2) null else withContext(Dispatchers.IO) {
+            if (!com.subhashh.lumen.data.ai.OcrModel.installed(context)) null
+            else com.subhashh.lumen.data.ai.TextStore.of(context).search(query)
+        }
+    }
     // Opening Search loads Smart Search's text model and vectors while the user types.
     LaunchedEffect(searching) { if (searching) SmartSearch.prepare(context) }
     // Smart Search: by what's in the photos, once a model is downloaded and photos are indexed.
@@ -400,14 +409,17 @@ private fun MainScaffold(
     val smartHits = smart?.second
     val smartPending = searchQuery.isNotBlank() && smart?.first != searchQuery &&
         remember(searching) { com.subhashh.lumen.data.ai.ModelDownloads.installed(context) != null }
-    // Exact name, folder and date matches first, then Smart Search's, best first.
-    val searchResults = remember(keywordResults, smartHits, library) {
+    // Exact name, folder and date matches first, then photos with the words in them (newest
+    // first), then Smart Search's, best first.
+    val searchResults = remember(keywordResults, textMatches, smartHits, library) {
         val keyword = keywordResults ?: return@remember null
+        val text = textMatches.orEmpty()
         val hits = smartHits.orEmpty()
-        if (hits.isEmpty()) return@remember keyword
+        if (text.isEmpty() && hits.isEmpty()) return@remember keyword
         val byId = library.orEmpty().associateBy { it.id }
         val seen = keyword.mapTo(HashSet()) { it.id }
-        keyword + hits.mapNotNull { hit -> byId[hit.mediaId]?.takeIf { it.id !in seen } }
+        val withText = text.mapNotNull { byId[it] }.filter { seen.add(it.id) }.sortedByDescending { it.takenAt }
+        keyword + withText + hits.mapNotNull { hit -> byId[hit.mediaId]?.takeIf { seen.add(it.id) } }
     }
     val searchAlbums = remember(folders, searchQuery) {
         val terms = SearchIndex.terms(searchQuery)
