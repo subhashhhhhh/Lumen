@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import com.subhashh.lumen.ui.viewer.ViewerScreen
+import com.subhashh.lumen.ui.viewer.rotateMenu
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
@@ -197,6 +198,11 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
     val prefs = remember { LumenPrefs(context) }
     var filter by remember { mutableStateOf(prefs.libraryFilter) }
     var aspectRatioGrid by remember { mutableStateOf(prefs.aspectRatioGrid) }
+    var gridColumns by remember { mutableIntStateOf(prefs.gridColumns) }
+    val onGridColumns = { columns: Int ->
+        gridColumns = columns
+        prefs.gridColumns = columns
+    }
     var menuOpen by remember { mutableStateOf(false) }
     var zoomLevel by rememberSaveable { mutableStateOf(ZoomLevel.All) }
     val monthsList = rememberLazyListState()
@@ -286,10 +292,11 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
             writeLauncher.launch(IntentSenderRequest.Builder(request.intentSender).build())
         }
     }
-    val finish = { message: String ->
+    /** Refresh and leave selection; [message] only when there's something worth saying. */
+    val finish = { message: String? ->
         viewModel.refresh()
         selection = null
-        toast(message)
+        if (message != null) toast(message)
     }
 
     /** Items waiting for an album to be picked, and whether to move or copy them. */
@@ -309,13 +316,16 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
             }
         }
     }
-    val rotate: (List<MediaItem>) -> Unit = { items ->
-        val jpegs = items.filter(MediaFiles::canRotate)
-        if (jpegs.isNotEmpty()) {
-            withWriteAccess(jpegs) {
+    val rotate: (List<MediaItem>, Int) -> Unit = { items, degrees ->
+        val rotatable = items.filter(MediaFiles::canRotate)
+        if (rotatable.isNotEmpty()) {
+            withWriteAccess(rotatable) {
                 scope.launch {
-                    val result = MediaFiles.rotate(context, jpegs)
-                    finish(if (result.failed == 0) "Rotated" else "Couldn't rotate ${result.failed} of ${jpegs.size}")
+                    // Videos are remuxed, which takes a moment for long ones.
+                    if (rotatable.any { it.isVideo }) toast("Rotating…")
+                    val result = MediaFiles.rotate(context, rotatable, degrees)
+                    // Success shows itself (the photo turns); only a failure needs a message.
+                    finish(if (result.failed == 0) null else "Couldn't rotate ${result.failed} of ${rotatable.size}")
                 }
             }
         }
@@ -364,6 +374,8 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                         selection = selection,
                         onSelectionChange = { selection = it },
                         aspectRatioGrid = aspectRatioGrid,
+                        columns = gridColumns,
+                        onColumnsChange = onGridColumns,
                         emptyText = filter.emptyText,
                         items = libraryItems,
                         gridState = libraryGrid,
@@ -420,6 +432,8 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                         selection = selection,
                         onSelectionChange = { selection = it },
                         aspectRatioGrid = aspectRatioGrid,
+                        columns = gridColumns,
+                        onColumnsChange = onGridColumns,
                         items = itemsOf(key),
                         gridState = collectionGrid,
                         contentPadding = PaddingValues(top = statusTop + 152.dp, bottom = navBottom + 96.dp),
@@ -585,7 +599,7 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                     MenuItem("Copy to Album…") { albumRequest = AlbumRequest(move = false, items = selectedItems) },
                 ),
                 listOfNotNull(
-                    if (selectedItems.any(MediaFiles::canRotate)) MenuItem("Rotate") { rotate(selectedItems) } else null,
+                    if (selectedItems.any(MediaFiles::canRotate)) rotateMenu { rotate(selectedItems, it) } else null,
                 ),
                 listOf(
                     MenuItem("Slideshow") {
@@ -634,7 +648,7 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                 onCopyToAlbum = { albumRequest = AlbumRequest(move = false, items = listOf(it)) },
                 onMoveToAlbum = { albumRequest = AlbumRequest(move = true, items = listOf(it)) },
                 onRename = { renameItem = it },
-                onRotate = { rotate(listOf(it)) },
+                onRotate = { item, degrees -> rotate(listOf(item), degrees) },
                 slideshowOf = slideshowOf,
             )
         }

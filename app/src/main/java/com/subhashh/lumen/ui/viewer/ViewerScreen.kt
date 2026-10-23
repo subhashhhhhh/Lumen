@@ -129,7 +129,7 @@ fun ViewerScreen(
     onCopyToAlbum: (MediaItem) -> Unit = {},
     onMoveToAlbum: (MediaItem) -> Unit = {},
     onRename: (MediaItem) -> Unit = {},
-    onRotate: (MediaItem) -> Unit = {},
+    onRotate: (MediaItem, degrees: Int) -> Unit = { _, _ -> },
     /** Start a slideshow right away, limited to these ids (from a selection); null = don't. */
     slideshowOf: Set<Long>? = null,
 ) {
@@ -474,7 +474,7 @@ private fun viewerMenu(
     onCopyToAlbum: (MediaItem) -> Unit,
     onMoveToAlbum: (MediaItem) -> Unit,
     onRename: (MediaItem) -> Unit,
-    onRotate: (MediaItem) -> Unit,
+    onRotate: (MediaItem, degrees: Int) -> Unit,
     onSlideshow: () -> Unit,
 ): List<List<MenuItem>> {
     val photo = !item.isVideo
@@ -485,7 +485,7 @@ private fun viewerMenu(
         ),
         listOfNotNull(
             MenuItem("Rename…") { onRename(item) },
-            if (MediaFiles.canRotate(item)) MenuItem("Rotate") { onRotate(item) } else null,
+            if (MediaFiles.canRotate(item)) rotateMenu { degrees -> onRotate(item, degrees) } else null,
         ),
         listOf(MenuItem("Slideshow") { onSlideshow() }),
         listOfNotNull(
@@ -498,6 +498,16 @@ private fun viewerMenu(
         ),
     )
 }
+
+/** "Rotate ›" with Left / Right / 180° inside, shared by the viewer and selection menus. */
+fun rotateMenu(onRotate: (degrees: Int) -> Unit) = MenuItem(
+    label = "Rotate",
+    submenu = listOf(
+        MenuItem("Rotate Left") { onRotate(270) },
+        MenuItem("Rotate Right") { onRotate(90) },
+        MenuItem("Rotate 180°") { onRotate(180) },
+    ),
+)
 
 /** How the viewer was left, so the grid can fly the photo back into place. */
 data class ViewerExit(

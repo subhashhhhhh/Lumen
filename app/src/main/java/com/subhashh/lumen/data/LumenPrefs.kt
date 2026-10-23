@@ -18,7 +18,13 @@ class LumenPrefs(context: Context) {
         get() = prefs.getBoolean(KeyAspect, false)
         set(value) = prefs.edit { putBoolean(KeyAspect, value) }
 
+    /** Grid columns, shared by the Library and albums. */
+    var gridColumns: Int
+        get() = prefs.getInt(KeyColumns, 5)
+        set(value) = prefs.edit { putInt(KeyColumns, value) }
+
     private companion object {
+        const val KeyColumns = "grid_columns"
         const val KeyFilter = "library_filter"
         const val KeyAspect = "aspect_ratio_grid"
     }

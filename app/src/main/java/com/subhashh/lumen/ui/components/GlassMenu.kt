@@ -20,6 +20,19 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.subhashh.lumen.ui.theme.GlassColors
+import com.subhashh.lumen.ui.icons.LumenIcons
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.material3.Icon
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Row
+import androidx.compose.animation.animateContentSize
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -35,12 +48,15 @@ import com.subhashh.lumen.ui.theme.LocalGlassColors
 data class MenuItem(
     val label: String,
     val destructive: Boolean = false,
-    val onClick: () -> Unit,
+    /** Choosing this item shows these instead (with a back row), like an iOS nested menu. */
+    val submenu: List<MenuItem>? = null,
+    val onClick: () -> Unit = {},
 )
 
 /**
  * A glass action menu that grows out of the button that opened it ([origin] is that corner).
- * Sections are separated by dividers; choosing an item closes the menu first. Drawn in-window,
+ * Sections are separated by dividers; choosing an item closes the menu first, unless it has a
+ * [MenuItem.submenu], which replaces the menu's contents in place. Drawn in-window,
  * not as a popup, so its glass can refract what's behind it; a tap outside dismisses.
  */
 @Composable
@@ -67,6 +83,8 @@ fun GlassMenu(
         modifier = modifier,
     ) {
         val colors = LocalGlassColors.current
+        var submenu by remember { mutableStateOf<MenuItem?>(null) }
+        LaunchedEffect(open) { if (!open) submenu = null }
         Column(
             Modifier
                 .width(240.dp)
@@ -76,35 +94,74 @@ fun GlassMenu(
                     blurRadius = 16.dp,
                     tint = colors.fallbackTint.copy(alpha = 0.82f),
                 )
+                .animateContentSize(spring(dampingRatio = 0.85f, stiffness = 600f))
                 .padding(vertical = 6.dp),
         ) {
-            sections.filter { it.isNotEmpty() }.forEachIndexed { index, section ->
-                if (index > 0) {
-                    HorizontalDivider(
-                        color = colors.contentSecondary.copy(alpha = 0.2f),
-                        modifier = Modifier.padding(vertical = 4.dp),
-                    )
+            val parent = submenu
+            if (parent != null) {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(46.dp)
+                        .clickable { submenu = null }
+                        .padding(horizontal = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(LumenIcons.Back, null, tint = colors.content, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(parent.label, color = colors.content, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                 }
-                section.forEach { item ->
-                    Box(
-                        Modifier
-                            .fillMaxWidth()
-                            .height(46.dp)
-                            .clickable {
+                HorizontalDivider(color = colors.contentSecondary.copy(alpha = 0.2f), modifier = Modifier.padding(vertical = 4.dp))
+                parent.submenu.orEmpty().forEach { item -> MenuRow(item, colors) { onDismiss(); item.onClick() } }
+            } else {
+                sections.filter { it.isNotEmpty() }.forEachIndexed { index, section ->
+                    if (index > 0) {
+                        HorizontalDivider(
+                            color = colors.contentSecondary.copy(alpha = 0.2f),
+                            modifier = Modifier.padding(vertical = 4.dp),
+                        )
+                    }
+                    section.forEach { item ->
+                        MenuRow(item, colors) {
+                            if (item.submenu != null) {
+                                submenu = item
+                            } else {
                                 onDismiss()
                                 item.onClick()
                             }
-                            .padding(horizontal = 18.dp),
-                        contentAlignment = Alignment.CenterStart,
-                    ) {
-                        Text(
-                            item.label,
-                            color = if (item.destructive) Color(0xFFFF453A) else colors.content,
-                            fontSize = 16.sp,
-                        )
+                        }
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun MenuRow(item: MenuItem, colors: GlassColors, onClick: () -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .height(46.dp)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 18.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            item.label,
+            color = if (item.destructive) Color(0xFFFF453A) else colors.content,
+            fontSize = 16.sp,
+            modifier = Modifier.weight(1f),
+        )
+        if (item.submenu != null) {
+            Icon(
+                LumenIcons.Back,
+                null,
+                tint = colors.contentSecondary,
+                modifier = Modifier
+                    .size(14.dp)
+                    .graphicsLayer { rotationZ = 180f },
+            )
         }
     }
 }

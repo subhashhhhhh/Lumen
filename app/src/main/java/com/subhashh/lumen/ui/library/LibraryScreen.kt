@@ -38,7 +38,6 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -93,10 +92,16 @@ fun LibraryScreen(
     /** Whole photos letterboxed in their cells instead of square crops. */
     aspectRatioGrid: Boolean = false,
     emptyText: String = "No photos or videos",
+    /** Columns, saved by the caller so the choice survives restarts. */
+    columns: Int = ColumnSteps[DefaultColumnStep],
+    onColumnsChange: (Int) -> Unit = {},
 ) {
-    var step by rememberSaveable { mutableIntStateOf(DefaultColumnStep) }
+    // Nearest step, in case the saved value isn't one of today's steps.
+    val step = ColumnSteps.indices.minBy { kotlin.math.abs(ColumnSteps[it] - columns) }
+    // The pinch handler is set up once; it must read the current step, not the first one.
+    val currentStep by rememberUpdatedState(step)
+    val currentOnColumnsChange by rememberUpdatedState(onColumnsChange)
     val haptics = LocalHapticFeedback.current
-    val columns = ColumnSteps[step]
     // Decode thumbnails for the cell size actually shown, so fewer, bigger cells stay sharp.
     val cellPx = with(LocalDensity.current) { LocalConfiguration.current.screenWidthDp.dp.roundToPx() } / columns
     val thumbBucket = ImageKeys.thumbBucket(cellPx)
@@ -139,14 +144,14 @@ fun LibraryScreen(
                 .fillMaxSize()
                 .pinchToChangeColumns(
                     onZoomIn = {
-                        if (step > 0) {
-                            step--
+                        if (currentStep > 0) {
+                            currentOnColumnsChange(ColumnSteps[currentStep - 1])
                             haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
                         }
                     },
                     onZoomOut = {
-                        if (step < ColumnSteps.lastIndex) {
-                            step++
+                        if (currentStep < ColumnSteps.lastIndex) {
+                            currentOnColumnsChange(ColumnSteps[currentStep + 1])
                             haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
                         }
                     },

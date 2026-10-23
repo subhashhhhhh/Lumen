@@ -2,16 +2,26 @@ package com.subhashh.lumen.data
 
 import android.content.ContentValues
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Matrix
+import android.media.MediaCodec
+import android.media.MediaExtractor
+import android.media.MediaFormat
+import android.media.MediaMetadataRetriever
+import android.media.MediaMuxer
 import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Environment
 import android.provider.MediaStore
 import androidx.exifinterface.media.ExifInterface
+import java.io.ByteArrayOutputStream
+import java.io.File
+import java.nio.ByteBuffer
+import kotlin.coroutines.resume
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
-import java.io.File
-import kotlin.coroutines.resume
 
 /** Outcome of a batch file operation, for a one-line message to the user. */
 data class FileResult(val done: Int, val failed: Int, val needsAllFilesAccess: Boolean)
@@ -94,31 +104,137 @@ object MediaFiles {
         }
     }
 
-    /** Rotation is lossless: only the EXIF orientation flag changes, so it's offered for JPEGs only. */
-    fun canRotate(item: MediaItem) = !item.isVideo && item.mimeType == "image/jpeg"
+    /**
+     * Rotation without quality loss: JPEG via its EXIF orientation flag; PNG and WebP by re-saving
+     * the rotated pixels losslessly; MP4 video by rewriting the container's rotation flag (streams
+     * copied, not re-encoded). HEIC/AVIF/GIF can't be written back reliably, so they aren't offered.
+     */
+    fun canRotate(item: MediaItem) = rotationKind(item) != null
 
-    /** Turns each JPEG [degrees] clockwise by rewriting its EXIF orientation, never re-encoding pixels. */
-    suspend fun rotate(context: Context, items: List<MediaItem>, degrees: Int = 90): FileResult =
+    private enum class RotationKind { ExifFlag, Reencode, VideoFlag }
+
+    private fun rotationKind(item: MediaItem): RotationKind? = when (item.mimeType) {
+        "image/jpeg" -> RotationKind.ExifFlag
+        "image/png", "image/webp" -> RotationKind.Reencode
+        "video/mp4", "video/3gpp", "video/quicktime" -> RotationKind.VideoFlag
+        else -> null
+    }
+
+    /** Turns each item [degrees] clockwise (90, 180 or 270). */
+    suspend fun rotate(context: Context, items: List<MediaItem>, degrees: Int): FileResult =
         withContext(Dispatchers.IO) {
             var done = 0
             var failed = 0
-            for (item in items.filter(::canRotate)) {
+            for (item in items) {
+                val kind = rotationKind(item) ?: continue
                 val ok = runCatching {
-                    val path = filePath(context, item)
-                    if (Environment.isExternalStorageManager() && path != null) {
-                        ExifInterface(path).apply { rotate(degrees) }.saveAttributes()
-                    } else {
-                        context.contentResolver.openFileDescriptor(item.uri, "rw").use { pfd ->
-                            ExifInterface(pfd!!.fileDescriptor).apply { rotate(degrees) }.saveAttributes()
-                        }
+                    when (kind) {
+                        RotationKind.ExifFlag -> rotateExif(context, item, degrees)
+                        RotationKind.Reencode -> rotatePixels(context, item, degrees)
+                        RotationKind.VideoFlag -> rotateVideo(context, item, degrees)
                     }
-                    // Re-index so MediaStore picks up the new orientation and modified time.
-                    path?.let { scan(context, File(it)) }
+                    // Re-index so MediaStore picks up the new orientation, size and modified time.
+                    filePath(context, item)?.let { scan(context, File(it)) }
                 }.isSuccess
                 if (ok) done++ else failed++
             }
             FileResult(done, failed, needsAllFilesAccess = false)
         }
+
+    private fun rotateExif(context: Context, item: MediaItem, degrees: Int) {
+        context.contentResolver.openFileDescriptor(item.uri, "rw").use { pfd ->
+            val exif = ExifInterface(pfd!!.fileDescriptor)
+            // Many files carry 0 ("undefined"), which ExifInterface.rotate() leaves untouched:
+            // the file was rewritten but the photo never turned. Treat it as upright instead.
+            val current = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+            exif.setAttribute(ExifInterface.TAG_ORIENTATION, rotatedOrientation(current, degrees).toString())
+            exif.saveAttributes()
+        }
+    }
+
+    /** EXIF orientation after turning [degrees] clockwise, keeping any mirroring. */
+    private fun rotatedOrientation(current: Int, degrees: Int): Int {
+        val upright = listOf(
+            ExifInterface.ORIENTATION_NORMAL, ExifInterface.ORIENTATION_ROTATE_90,
+            ExifInterface.ORIENTATION_ROTATE_180, ExifInterface.ORIENTATION_ROTATE_270,
+        )
+        val mirrored = listOf(
+            ExifInterface.ORIENTATION_FLIP_HORIZONTAL, ExifInterface.ORIENTATION_TRANSPOSE,
+            ExifInterface.ORIENTATION_FLIP_VERTICAL, ExifInterface.ORIENTATION_TRANSVERSE,
+        )
+        val steps = ((degrees / 90) % 4 + 4) % 4
+        return when (current) {
+            in mirrored -> mirrored[(mirrored.indexOf(current) + steps) % 4]
+            in upright -> upright[(upright.indexOf(current) + steps) % 4]
+            else -> upright[steps] // undefined (0) counts as upright
+        }
+    }
+
+    private fun rotatePixels(context: Context, item: MediaItem, degrees: Int) {
+        val resolver = context.contentResolver
+        val source = resolver.openInputStream(item.uri).use { BitmapFactory.decodeStream(it) }
+            ?: error("can't decode")
+        val rotated = Bitmap.createBitmap(
+            source, 0, 0, source.width, source.height, Matrix().apply { postRotate(degrees.toFloat()) }, true,
+        )
+        // Encode fully before touching the file, so a failure can't leave it truncated.
+        val bytes = ByteArrayOutputStream().use { out ->
+            val format = if (item.mimeType == "image/png") Bitmap.CompressFormat.PNG else Bitmap.CompressFormat.WEBP_LOSSLESS
+            check(rotated.compress(format, 100, out))
+            out.toByteArray()
+        }
+        resolver.openOutputStream(item.uri, "rwt").use { it!!.write(bytes) }
+        source.recycle()
+        rotated.recycle()
+    }
+
+    /**
+     * Copies every audio/video track into a new MP4 with a new rotation flag, then writes it back
+     * over the original. Samples are copied as-is: no re-encode, no quality loss.
+     */
+    private fun rotateVideo(context: Context, item: MediaItem, degrees: Int) {
+        val resolver = context.contentResolver
+        val current = MediaMetadataRetriever().use { r ->
+            r.setDataSource(context, item.uri)
+            r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)?.toIntOrNull() ?: 0
+        }
+        val temp = File.createTempFile("rotate", ".mp4", context.cacheDir)
+        try {
+            val extractor = MediaExtractor()
+            resolver.openFileDescriptor(item.uri, "r").use { pfd -> extractor.setDataSource(pfd!!.fileDescriptor) }
+            val muxer = MediaMuxer(temp.absolutePath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
+            muxer.setOrientationHint((current + degrees) % 360)
+            val trackMap = HashMap<Int, Int>()
+            var bufferSize = 1 shl 20
+            for (i in 0 until extractor.trackCount) {
+                val format = extractor.getTrackFormat(i)
+                val mime = format.getString(MediaFormat.KEY_MIME).orEmpty()
+                if (!mime.startsWith("video/") && !mime.startsWith("audio/")) continue
+                extractor.selectTrack(i)
+                trackMap[i] = muxer.addTrack(format)
+                if (format.containsKey(MediaFormat.KEY_MAX_INPUT_SIZE)) {
+                    bufferSize = maxOf(bufferSize, format.getInteger(MediaFormat.KEY_MAX_INPUT_SIZE))
+                }
+            }
+            check(trackMap.isNotEmpty())
+            muxer.start()
+            val buffer = ByteBuffer.allocate(bufferSize)
+            val info = MediaCodec.BufferInfo()
+            while (true) {
+                val size = extractor.readSampleData(buffer, 0)
+                if (size < 0) break
+                info.set(0, size, extractor.sampleTime, extractor.sampleFlags)
+                muxer.writeSampleData(trackMap.getValue(extractor.sampleTrackIndex), buffer, info)
+                extractor.advance()
+            }
+            muxer.stop()
+            muxer.release()
+            extractor.release()
+            resolver.openOutputStream(item.uri, "rwt").use { out -> temp.inputStream().use { it.copyTo(out!!) } }
+        } finally {
+            temp.delete()
+        }
+    }
 
     private suspend fun moveViaFile(context: Context, item: MediaItem, relativePath: String): Boolean {
         val source = filePath(context, item)?.let(::File) ?: return false
