@@ -23,7 +23,7 @@ class TextIndexer(private val context: Context) {
         store.remove(known.keys - library.mapTo(HashSet()) { it.id })
         val todo = library.filter { known[it.id] != it.modified }.sortedByDescending { it.takenAt }
         var finished = library.size - todo.size
-        SmartIndex.reportText(finished, library.size)
+        SmartIndex.reportText(context, finished, library.size)
         if (todo.isEmpty()) return Indexer.Outcome.Done
 
         val power = context.getSystemService(PowerManager::class.java)
@@ -38,7 +38,7 @@ class TextIndexer(private val context: Context) {
                     try { reader.read(bitmap) } finally { bitmap.recycle() }
                 }.onFailure { Log.w(Tag, "Couldn't read ${item.name}", it) }.getOrDefault(emptyList())
                 store.put(item.id, item.modified, lines.joinToString("\n"))
-                SmartIndex.reportText(++finished, library.size)
+                SmartIndex.reportText(context, ++finished, library.size)
                 Log.d(Tag, "${item.name.take(40)}: ${lines.size} lines, ${SystemClock.elapsedRealtime() - started} ms")
             }
         }

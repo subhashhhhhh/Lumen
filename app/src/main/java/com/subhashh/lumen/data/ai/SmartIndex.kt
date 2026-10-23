@@ -47,12 +47,14 @@ object SmartIndex {
     /** The same for reading text in photos ([TextIndexer]). */
     val textProgress: StateFlow<IndexProgress?> = mutableTextProgress.asStateFlow()
 
-    fun report(indexed: Int, total: Int) {
+    fun report(context: Context, indexed: Int, total: Int) {
         mutableProgress.value = IndexProgress(indexed, total)
+        IndexNotification.update(context, IndexNotification.Pass.Vectors, indexed, total)
     }
 
-    fun reportText(read: Int, total: Int) {
+    fun reportText(context: Context, read: Int, total: Int) {
         mutableTextProgress.value = IndexProgress(read, total)
+        IndexNotification.update(context, IndexNotification.Pass.Text, read, total)
     }
 
     /**
@@ -101,6 +103,7 @@ object SmartIndex {
         }
         mutableProgress.value = null
         mutableTextProgress.value = null
+        IndexNotification.cancel(context)
     }
 
     /** A content-triggered job fires once; each run queues the next one behind itself. */

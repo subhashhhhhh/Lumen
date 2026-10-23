@@ -43,7 +43,7 @@ class Indexer(private val context: Context, private val model: AiModel) {
         val todo = library.filter { known[it.id] != it.modified }.sortedByDescending { it.takenAt }
         val (videos, photos) = todo.partition { it.isVideo }
         var finished = library.size - todo.size
-        SmartIndex.report(finished, library.size)
+        SmartIndex.report(context, finished, library.size)
         if (todo.isEmpty()) return@coroutineScope Outcome.Done
 
         val power = context.getSystemService(PowerManager::class.java)
@@ -61,7 +61,7 @@ class Indexer(private val context: Context, private val model: AiModel) {
                 val vector = runCatching { embedder.embedImage(MediaFrames.thumbnail(context, item)) }
                     .onFailure { Log.w(Tag, "Couldn't index ${item.name}", it) }.getOrNull()
                 store.put(item.id, item.modified, listOfNotNull(vector?.let { 0L to it }))
-                SmartIndex.report(++finished, library.size)
+                SmartIndex.report(context, ++finished, library.size)
             }
 
             val batch = videos.take(budget.coerceAtLeast(0))
@@ -102,7 +102,7 @@ class Indexer(private val context: Context, private val model: AiModel) {
                         }
                         is Queued.End -> {
                             store.put(message.item.id, message.item.modified, frames)
-                            SmartIndex.report(++finished, library.size)
+                            SmartIndex.report(context, ++finished, library.size)
                             Log.d(Tag, "${message.item.name.take(40)}: ${message.item.durationMs / 1000}s video, " +
                                 "${frames.size} frames kept, ${SystemClock.elapsedRealtime() - started} ms")
                             frames = ArrayList()
