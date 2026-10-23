@@ -11,6 +11,10 @@
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
     <!-- Android 14+ "Select photos" partial access -->
     <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
+    <!-- "Media management" (Android 12+): trash, favorite, move and rename without a system
+         confirmation each time. The user grants it in system settings; without this
+         declaration the toggle there is greyed out. -->
+    <uses-permission android:name="android.permission.MANAGE_MEDIA" />
     <!-- Unredacted GPS in EXIF (info panel, places) -->
     <uses-permission android:name="android.permission.ACCESS_MEDIA_LOCATION" />
     <!-- "All files access": hidden (.nomedia) folders, which MediaStore doesn't index.
