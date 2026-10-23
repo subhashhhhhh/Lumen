@@ -6,8 +6,8 @@ import com.subhashh.lumen.ui.theme.Appearance
 
 /**
  * Settings → Photos → Ultra HDR. Match Brightness lets highlights glow within what the screen
- * allows at your brightness; Full HDR asks for all the headroom the photo wants, which can raise
- * the whole screen's brightness (Android 15+), like Chrome.
+ * allows at your brightness; Full HDR turns the screen all the way up while an HDR photo or
+ * video is shown, like Chrome.
  */
 enum class HdrMode(val label: String) { Off("Off"), MatchBrightness("Match Brightness"), Full("Full HDR") }
 

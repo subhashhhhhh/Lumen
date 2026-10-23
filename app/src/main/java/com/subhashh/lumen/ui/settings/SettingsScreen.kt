@@ -167,7 +167,8 @@ fun SettingsScreen(
             Group(
                 "Photos",
                 footer = "Ultra HDR photos (from phones like Pixel and Galaxy) can glow brighter than white. " +
-                    "Match Brightness keeps to your brightness setting; Full HDR can turn the screen up for them, like Chrome.",
+                    "Match Brightness keeps to your brightness setting; Full HDR turns the screen all the way up " +
+                    "while an HDR photo or video is shown, like Chrome.",
             ) {
                 SettingsRow(
                     title = "Ultra HDR",

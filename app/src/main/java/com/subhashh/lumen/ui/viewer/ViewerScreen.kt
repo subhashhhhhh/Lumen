@@ -1,5 +1,6 @@
 package com.subhashh.lumen.ui.viewer
 
+import android.view.WindowManager
 import com.subhashh.lumen.data.HdrMode
 import android.os.Build
 import android.content.pm.ActivityInfo
@@ -228,21 +229,24 @@ fun ViewerScreen(
         hdrMode = LumenPrefs(context).hdrMode
         hdrRatio = if (current != null && hdrMode != HdrMode.Off) UltraHdr.fullHdrRatio(context, current) else null
     }
-    DisposableEffect(hdrRatio, hdrMode, activity) {
+    // Full HDR turns the screen all the way up while an HDR photo or video is shown, like
+    // Chrome: HDR needs brightness to work with. (desiredHdrHeadroom can only lower Android's
+    // default, never raise the panel.) Your own brightness comes back as soon as it's gone.
+    val fullBrightness = hdrMode == HdrMode.Full && (hdrRatio != null || current?.hdrVideo == true)
+    DisposableEffect(hdrRatio, fullBrightness, activity) {
         val window = activity?.window
-        val hdr = hdrRatio != null
         if (window != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            window.colorMode = if (hdr) ActivityInfo.COLOR_MODE_HDR else ActivityInfo.COLOR_MODE_DEFAULT
-            // Full HDR: ask for everything the photo wants, even if Android has to brighten
-            // the screen to give it. 0 = Android's default, which keeps to the brightness setting.
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
-                window.desiredHdrHeadroom = if (hdr && hdrMode == HdrMode.Full) hdrRatio!!.coerceIn(1f, 10_000f) else 0f
-            }
+            window.colorMode = if (hdrRatio != null) ActivityInfo.COLOR_MODE_HDR else ActivityInfo.COLOR_MODE_DEFAULT
+        }
+        window?.attributes = window?.attributes?.apply {
+            screenBrightness = if (fullBrightness) 1f else WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
         }
         onDispose {
             if (window != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
                 window.colorMode = ActivityInfo.COLOR_MODE_DEFAULT
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) window.desiredHdrHeadroom = 0f
+            }
+            window?.attributes = window?.attributes?.apply {
+                screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
             }
         }
     }
