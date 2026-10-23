@@ -86,6 +86,7 @@ import com.subhashh.lumen.ui.components.RenameDialog
 import com.subhashh.lumen.ui.components.DateTimeDialog
 import com.subhashh.lumen.data.MediaDates
 import com.subhashh.lumen.data.SettingsBackup
+import com.subhashh.lumen.data.FavoritesImport
 import android.provider.MediaStore
 import android.os.Environment
 import com.subhashh.lumen.ui.components.MenuItem
@@ -490,6 +491,27 @@ private fun MainScaffold(
     var slideshowOf by remember { mutableStateOf<Set<Long>?>(null) }
     val toast = { message: String -> Toast.makeText(context, message, Toast.LENGTH_LONG).show() }
     val activity = LocalActivity.current
+    // Settings → Backup → Import Favorites: Fossify's .txt or Aves's .json, matched to files here.
+    val favoritesLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) scope.launch {
+            val found = FavoritesImport.read(context, uri, library.orEmpty())
+            if (found == null) {
+                toast("That isn't a Fossify or Aves favorites file")
+                return@launch
+            }
+            val toMark = found.matched.filterNot { it.isFavorite }
+            when {
+                found.matched.isEmpty() -> toast("None of its ${found.listed} favorites are on this phone")
+                toMark.isEmpty() -> toast("All ${found.matched.size} are already favorites")
+                else -> {
+                    toast("Found ${found.matched.size} of ${found.listed}; marking ${toMark.size} as favorites")
+                    selectionLauncher.launch(
+                        IntentSenderRequest.Builder(MediaActions.favoriteRequest(context, toMark, favorite = true)).build(),
+                    )
+                }
+            }
+        }
+    }
     // Settings → Backup. Importing replaces every setting, so the screen restarts afterwards to
     // pick them all up; any favorites to restore are asked for first.
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
@@ -849,6 +871,9 @@ private fun MainScaffold(
                     excludedCount = excluded.size,
                     onExport = {
                         exportLauncher.launch("Lumen settings ${java.time.LocalDate.now()}.json")
+                    },
+                    onImportFavorites = {
+                        favoritesLauncher.launch(arrayOf("text/plain", "application/json", "application/octet-stream"))
                     },
                     onImport = {
                         confirmation = Confirmation(

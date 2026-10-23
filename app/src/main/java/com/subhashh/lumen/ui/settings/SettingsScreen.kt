@@ -68,6 +68,7 @@ fun SettingsScreen(
     excludedCount: Int,
     onExport: () -> Unit,
     onImport: () -> Unit,
+    onImportFavorites: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -290,6 +291,14 @@ fun SettingsScreen(
                 onClick = onImport,
                 icon = LumenIcons.Import,
                 iconColor = Blue,
+            )
+            Divider()
+            SettingsRow(
+                title = "Import Favorites…",
+                subtitle = "From Fossify Gallery (.txt) or Aves (.json)",
+                onClick = onImportFavorites,
+                icon = LumenIcons.HeartFilled,
+                iconColor = Pink,
             )
         }
 
