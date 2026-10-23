@@ -121,6 +121,7 @@ fun ViewerScreen(
     onMediaChanged: () -> Unit,
     /** Viewing Recently Deleted: offer restore and delete forever instead of share/favorite/trash. */
     inTrash: Boolean = false,
+    onCopyToAlbum: (MediaItem) -> Unit = {},
 ) {
     val context = LocalContext.current
     val pager = rememberPagerState(initialPage = initialIndex) { items.size }
@@ -404,7 +405,7 @@ fun ViewerScreen(
                 backdrop = backdrop,
                 open = moreOpen && chromeVisible,
                 onDismiss = { moreOpen = false },
-                sections = viewerMenu(context, current),
+                sections = viewerMenu(context, current, onCopyToAlbum),
                 origin = TransformOrigin(1f, 0f),
                 modifier = Modifier
                     .align(Alignment.TopEnd)
@@ -430,9 +431,14 @@ fun ViewerScreen(
 }
 
 /** The viewer's ⋯ menu for [item]. Photo-only actions are left out for videos. */
-private fun viewerMenu(context: Context, item: MediaItem): List<List<MenuItem>> {
+private fun viewerMenu(
+    context: Context,
+    item: MediaItem,
+    onCopyToAlbum: (MediaItem) -> Unit,
+): List<List<MenuItem>> {
     val photo = !item.isVideo
     return listOf(
+        listOf(MenuItem("Copy to Album…") { onCopyToAlbum(item) }),
         listOfNotNull(
             MenuItem("Open with…") { MediaActions.openWith(context, item) },
             if (photo) MenuItem("Set as…") { MediaActions.setAs(context, item) } else null,

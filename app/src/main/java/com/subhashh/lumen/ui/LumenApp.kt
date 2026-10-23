@@ -47,6 +47,14 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.subhashh.lumen.ui.components.MenuItem
+import com.subhashh.lumen.ui.components.GlassMenu
+import com.subhashh.lumen.ui.albums.AlbumTarget
+import com.subhashh.lumen.ui.albums.AlbumPicker
+import com.subhashh.lumen.data.MediaFiles
+import com.subhashh.lumen.data.FileResult
+import androidx.compose.ui.graphics.TransformOrigin
+import android.widget.Toast
 import com.subhashh.lumen.ui.library.periods
 import com.subhashh.lumen.ui.library.ZoomLevel
 import com.subhashh.lumen.ui.library.TimelineScreen
@@ -248,6 +256,18 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
     }
     val selectedItems = selection?.let { ids -> selectableItems.filter { it.id in ids } }.orEmpty()
     BackHandler(enabled = menuOpen) { menuOpen = false }
+    var selectionMenuOpen by remember { mutableStateOf(false) }
+    BackHandler(enabled = selectionMenuOpen) { selectionMenuOpen = false }
+    /** Items waiting for an album to be picked (Copy to Album). */
+    var copyRequest by remember { mutableStateOf<List<MediaItem>?>(null) }
+    val copyToAlbum: (List<MediaItem>, AlbumTarget) -> Unit = { items, target ->
+        scope.launch {
+            val result = MediaFiles.copy(context, items, target.relativePath)
+            viewModel.refresh()
+            selection = null
+            Toast.makeText(context, copyMessage(result, target.title), Toast.LENGTH_LONG).show()
+        }
+    }
 
     val statusTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
@@ -493,8 +513,20 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                 onDelete = { launch(MediaActions.trashRequest(context, selectedItems)) },
                 onRestore = { launch(MediaActions.restoreRequest(context, selectedItems)) },
                 onDeleteForever = { launch(MediaActions.deleteForeverRequest(context, selectedItems)) },
+                onMore = { selectionMenuOpen = !selectionMenuOpen },
             )
         }
+
+        GlassMenu(
+            backdrop = backdrop,
+            open = selectionMenuOpen && selection != null && !viewerOpen,
+            onDismiss = { selectionMenuOpen = false },
+            sections = listOf(listOf(MenuItem("Copy to Album…") { copyRequest = selectedItems })),
+            origin = TransformOrigin(1f, 1f),
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(bottom = navBottom + 12.dp + 48.dp + 12.dp, end = 16.dp),
+        )
 
         viewerSource?.let { source ->
             val list = remember(source, library, trash) { itemsOf(source) }
@@ -521,8 +553,21 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                     }
                 },
                 onMediaChanged = viewModel::refresh,
+                onCopyToAlbum = { copyRequest = listOf(it) },
             )
         }
+
+        AlbumPicker(
+            open = copyRequest != null,
+            title = "Copy to Album",
+            albums = folders,
+            onPick = { target ->
+                copyRequest?.let { copyToAlbum(it, target) }
+                copyRequest = null
+            },
+            onDismiss = { copyRequest = null },
+            newAlbumPath = MediaFiles::newAlbumPath,
+        )
 
         PhotoTransitionOverlay(transition)
     }
@@ -563,3 +608,15 @@ private fun selectionTitle(selected: List<MediaItem>): String {
 
 private const val SettingsMain = "settings"
 private const val SettingsLicenses = "licenses"
+
+/** One line after a copy: what happened, and why anything didn't. */
+private fun copyMessage(result: FileResult, album: String): String {
+    val copied = if (result.done == 1) "1 item" else "${result.done} items"
+    return when {
+        result.failed == 0 -> "Copied $copied to $album"
+        result.needsAllFilesAccess ->
+            "Couldn't copy into $album: that folder needs All files access (Settings → Permissions)"
+        result.done == 0 -> "Couldn't copy to $album"
+        else -> "Copied $copied to $album; ${result.failed} failed"
+    }
+}

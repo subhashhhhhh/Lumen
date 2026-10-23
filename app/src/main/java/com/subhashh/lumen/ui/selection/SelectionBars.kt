@@ -49,6 +49,7 @@ fun SelectionActionBar(
     onDelete: () -> Unit,
     onRestore: () -> Unit,
     onDeleteForever: () -> Unit,
+    onMore: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalGlassColors.current
@@ -88,6 +89,10 @@ fun SelectionActionBar(
             )
             GlassIconButton(
                 backdrop, LumenIcons.Delete, "Delete", guard(onDelete),
+                tint = if (hasSelection) colors.content else idle,
+            )
+            GlassIconButton(
+                backdrop, LumenIcons.More, "More", guard(onMore),
                 tint = if (hasSelection) colors.content else idle,
             )
         }
