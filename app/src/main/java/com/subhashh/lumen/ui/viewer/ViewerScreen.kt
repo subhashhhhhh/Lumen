@@ -5,6 +5,9 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import com.subhashh.lumen.ui.icons.LumenIcons
 import com.subhashh.lumen.ui.components.pressable
 import android.app.Activity
+import android.content.Context
+import com.subhashh.lumen.ui.components.GlassMenu
+import com.subhashh.lumen.ui.components.MenuItem
 import coil3.SingletonImageLoader
 import coil3.memory.MemoryCache
 import coil3.request.ImageRequest
@@ -144,6 +147,7 @@ fun ViewerScreen(
     // Composition only cares whether the photo is displaced, not by how much.
     val atRest by remember { derivedStateOf { motion.dismissX == 0f && motion.dismissY == 0f } }
     var locationRefresh by remember { mutableIntStateOf(0) }
+    var moreOpen by remember { mutableStateOf(false) }
     val locationPermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { granted -> if (granted) locationRefresh++ }
@@ -245,6 +249,7 @@ fun ViewerScreen(
         LaunchedEffect(items.isEmpty()) { if (items.isEmpty()) close(Velocity.Zero) }
         BackHandler { close(Velocity.Zero) }
         BackHandler(enabled = motion.infoOpen) { motion.closeInfo() }
+        BackHandler(enabled = moreOpen) { moreOpen = false }
 
         Box(
             Modifier
@@ -321,6 +326,8 @@ fun ViewerScreen(
                     backdrop = backdrop,
                     item = current,
                     onBack = { close(Velocity.Zero) },
+                    // Recently Deleted items only get restore / delete forever.
+                    onMore = if (inTrash) null else ({ moreOpen = !moreOpen }),
                     modifier = Modifier.align(Alignment.TopCenter),
                 )
                 Column(
@@ -392,6 +399,20 @@ fun ViewerScreen(
             }
         }
 
+        if (current != null) {
+            GlassMenu(
+                backdrop = backdrop,
+                open = moreOpen && chromeVisible,
+                onDismiss = { moreOpen = false },
+                sections = viewerMenu(context, current),
+                origin = TransformOrigin(1f, 0f),
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .statusBarsPadding()
+                    .padding(top = 64.dp, end = 16.dp),
+            )
+        }
+
         if (current != null && sheetVisible) {
             DetailsSheet(
                 item = current,
@@ -406,6 +427,21 @@ fun ViewerScreen(
             )
         }
     }
+}
+
+/** The viewer's ⋯ menu for [item]. Photo-only actions are left out for videos. */
+private fun viewerMenu(context: Context, item: MediaItem): List<List<MenuItem>> {
+    val photo = !item.isVideo
+    return listOf(
+        listOfNotNull(
+            MenuItem("Open with…") { MediaActions.openWith(context, item) },
+            if (photo) MenuItem("Set as…") { MediaActions.setAs(context, item) } else null,
+            MenuItem("Copy to clipboard") { MediaActions.copyToClipboard(context, item) },
+        ),
+        listOfNotNull(
+            if (photo) MenuItem("Print") { MediaActions.print(context, item) } else null,
+        ),
+    )
 }
 
 /** How the viewer was left, so the grid can fly the photo back into place. */
@@ -438,6 +474,7 @@ private fun TopBar(
     backdrop: Backdrop,
     item: MediaItem,
     onBack: () -> Unit,
+    onMore: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalGlassColors.current
@@ -454,6 +491,15 @@ private fun TopBar(
             onClick = onBack,
             modifier = Modifier.align(Alignment.CenterStart),
         )
+        if (onMore != null) {
+            GlassIconButton(
+                backdrop = backdrop,
+                icon = LumenIcons.More,
+                contentDescription = "More",
+                onClick = onMore,
+                modifier = Modifier.align(Alignment.CenterEnd),
+            )
+        }
         // Plain text like iOS, not a glass capsule. A soft glow in the background color keeps it
         // readable where a tall photo runs up behind it.
         val glow = Shadow(color = MaterialTheme.colorScheme.background.copy(alpha = 0.7f), blurRadius = 10f)

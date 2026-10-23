@@ -38,6 +38,9 @@ ICONS = [
     ("Filter", "filter", "regular"),
     ("Settings", "settings", "regular"),
     ("Check", "checkmark", "regular"),
+    ("More", "more_vertical", "regular"),
+    ("Add", "add", "regular"),
+    ("NewAlbum", "folder_add", "regular"),
 ]
 
 src_dir, out = sys.argv[1], sys.argv[2]

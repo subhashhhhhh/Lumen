@@ -1,9 +1,12 @@
 package com.subhashh.lumen.data
 
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.IntentSender
 import android.provider.MediaStore
+import androidx.print.PrintHelper
 
 /**
  * Write operations go through MediaStore requests, which show a system confirmation dialog
@@ -29,6 +32,37 @@ object MediaActions {
         }
         send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         context.startActivity(Intent.createChooser(send, null))
+    }
+
+    /** Lets the user pick another app to open the file in (an editor, another viewer...). */
+    fun openWith(context: Context, item: MediaItem) {
+        val view = Intent(Intent.ACTION_VIEW)
+            .setDataAndType(item.uri, item.mimeType)
+            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        context.startActivity(Intent.createChooser(view, null))
+    }
+
+    /** "Set as" wallpaper, contact photo and so on: whatever the installed apps offer. */
+    fun setAs(context: Context, item: MediaItem) {
+        val attach = Intent(Intent.ACTION_ATTACH_DATA)
+            .setDataAndType(item.uri, item.mimeType)
+            .putExtra("mimeType", item.mimeType)
+            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        context.startActivity(Intent.createChooser(attach, null))
+    }
+
+    /** Copies the photo itself (not a path) so it can be pasted into a chat or a document. */
+    fun copyToClipboard(context: Context, item: MediaItem) {
+        val clipboard = context.getSystemService(ClipboardManager::class.java) ?: return
+        clipboard.setPrimaryClip(ClipData.newUri(context.contentResolver, "Photo", item.uri))
+    }
+
+    /** Android's own print flow (printer, PDF, copies); scaled to fit the page. */
+    fun print(context: Context, item: MediaItem) {
+        runCatching {
+            PrintHelper(context).apply { scaleMode = PrintHelper.SCALE_MODE_FIT }
+                .printBitmap(item.uri.lastPathSegment ?: "Photo", item.uri)
+        }
     }
 
     /** Hands the location to whatever maps app the user has; nothing is sent anywhere by Lumen. */
