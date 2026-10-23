@@ -231,6 +231,9 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
     // Hoisted so grids keep their position across tab switches and while the viewer is open.
     val libraryGrid = rememberLazyGridState()
     val collectionGrid = key(openCollection) { rememberLazyGridState() }
+    // Collections and Hidden's folder list keep their place while a folder is open.
+    val collectionsGrid = rememberLazyGridState()
+    val hiddenGrid = rememberLazyGridState()
     val scope = rememberCoroutineScope()
     val transition = remember { PhotoTransition() }
     var screenSize by remember { mutableStateOf(IntSize.Zero) }
@@ -693,6 +696,7 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                 }
                 openCollection == CollectionKeys.Hidden -> HiddenScreen(
                     folders = hiddenFolderList,
+                    gridState = hiddenGrid,
                     contentPadding = PaddingValues(top = statusTop + 72.dp, bottom = navBottom + 96.dp),
                     onOpen = { openCollection = it },
                 )
@@ -719,6 +723,7 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                     utilities = utilities,
                     hiddenLockSet = lockSet,
                     folders = folders,
+                    gridState = collectionsGrid,
                     contentPadding = PaddingValues(top = statusTop + 16.dp, bottom = navBottom + 96.dp),
                     onOpen = { key -> if (key == CollectionKeys.Hidden) openHidden() else openCollection = key },
                 )
