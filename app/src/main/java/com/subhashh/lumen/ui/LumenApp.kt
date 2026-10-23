@@ -242,6 +242,8 @@ private fun MainScaffold(
     /** Hidden's own lock screen, when up; and whether a lock exists yet (for "Set Up"). */
     var lockFlow by remember { mutableStateOf<LockFlow?>(null) }
     var lockSet by remember { mutableStateOf(lockStore.isSet) }
+    /** Mirrors lockStore.biometrics so the Settings toggle redraws the moment it changes. */
+    var biometrics by remember { mutableStateOf(lockStore.biometrics) }
     var excludePicker by remember { mutableStateOf(false) }
     val trash by viewModel.trash.collectAsState()
     var tab by rememberSaveable { mutableStateOf(LumenTab.Library) }
@@ -599,6 +601,7 @@ private fun MainScaffold(
         val reset = {
             lockStore.clear()
             lockSet = false
+            biometrics = false
             lockFlow = LockFlow.Setup
         }
         if (HiddenLock.deviceLockSet(host)) {
@@ -875,16 +878,17 @@ private fun MainScaffold(
                     },
                     hiddenLockSet = lockSet,
                     onChangeLock = { lockFlow = if (lockSet) LockFlow.Change else LockFlow.Setup },
-                    biometricsOn = lockSet && lockStore.biometrics,
+                    biometricsOn = lockSet && biometrics,
                     onToggleBiometrics = toggle@{
                         val host = activity ?: return@toggle
-                        if (lockStore.biometrics) {
+                        if (biometrics) {
                             lockStore.biometrics = false
-                            lockSet = lockStore.isSet // nudge recomposition of the row
+                            biometrics = false
                         } else if (HiddenLock.biometricsAvailable(host)) {
+                            // Turning it on proves the fingerprint or face works first.
                             HiddenLock.biometric(host, "Cancel", onSuccess = {
                                 lockStore.biometrics = true
-                                lockSet = lockStore.isSet
+                                biometrics = true
                             }, onFallback = {})
                         } else {
                             toast("Add a fingerprint or face in your phone's settings first")
@@ -1494,6 +1498,7 @@ private fun MainScaffold(
                 onDone = {
                     lockFlow = null
                     lockSet = lockStore.isSet
+                    biometrics = lockStore.biometrics
                     // Changing the lock from Settings doesn't open Hidden; setting up or unlocking does.
                     if (flow != LockFlow.Change) showHidden() else toast("Hidden lock changed")
                 },
