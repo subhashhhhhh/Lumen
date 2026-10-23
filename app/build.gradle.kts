@@ -105,7 +105,13 @@ dependencies {
 
     // Smart Search: runs the search models on the phone's CPU.
     implementation(libs.onnxruntime.android)
-    // Search Lab only (EmbeddingGemma 2); not in release.
+    // Search Lab only (EmbeddingGemma 2; SigLIP 2 on the GPU); not in release.
     debugImplementation(libs.litertlm.android)
     "profileImplementation"(libs.litertlm.android)
+    // Excluded: Google Play's AI-pack model delivery. Proprietary, and LiteRT never calls it unless
+    // an app ships models through Play; Lumen doesn't.
+    debugImplementation(libs.litert) { exclude(group = "com.google.android.play") }
+    debugImplementation(libs.litert.gpu) { exclude(group = "com.google.android.play") }
+    "profileImplementation"(libs.litert) { exclude(group = "com.google.android.play") }
+    "profileImplementation"(libs.litert.gpu) { exclude(group = "com.google.android.play") }
 }

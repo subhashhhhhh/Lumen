@@ -86,7 +86,7 @@ class OnnxEmbedder(dir: File, private val spec: OnnxSpec, threads: Int) : Embedd
     }
 
     /** Resize (crop or squash), then CHW floats normalized with the model's mean and std. */
-    private fun pixels(original: Bitmap): FloatArray {
+    internal fun pixels(original: Bitmap): FloatArray {
         // Thumbnails can come back as hardware bitmaps, which can't be read pixel by pixel.
         val source = if (original.config == Bitmap.Config.HARDWARE) original.copy(Bitmap.Config.ARGB_8888, false) else original
         val size = spec.size
