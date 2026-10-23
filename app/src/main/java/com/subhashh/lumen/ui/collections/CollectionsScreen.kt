@@ -61,7 +61,7 @@ import com.subhashh.lumen.data.CollectionKeys
 import com.subhashh.lumen.data.MediaCollection
 import com.subhashh.lumen.data.MediaCollections
 import com.subhashh.lumen.data.MediaItem
-import com.subhashh.lumen.data.MediaThumbnail
+import com.subhashh.lumen.data.GridThumbnail
 
 @Composable
 fun CollectionsScreen(
@@ -288,6 +288,8 @@ private fun UtilityGroup(
     }
 }
 
+private const val CoverPx = 512
+
 /** iOS system colors, one per utility, so each row is recognisable at a glance. */
 private fun utilityColor(key: String): Color = when (key) {
     CollectionKeys.Favorites -> Color(0xFFFF375F)
@@ -370,8 +372,9 @@ private fun Cover(item: MediaItem) {
         // Own cache key: covers are larger than grid thumbnails, so they must not reuse those bitmaps.
         model = remember(item.version) {
             ImageRequest.Builder(context)
-                // Hidden files have no system thumbnail (file Uri); decode them directly.
-                .data(if (item.uri.scheme == "content") MediaThumbnail(item.uri) else item.uri)
+                // Saved on disk like grid thumbnails, at one size for every cover.
+                .data(GridThumbnail(item, CoverPx))
+                .size(CoverPx, CoverPx)
                 .memoryCacheKey(ImageKeys.cover(item))
                 .build()
         },

@@ -43,6 +43,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import com.subhashh.lumen.data.CollectionKeys
 import com.subhashh.lumen.data.MediaThumbnailFetcher
+import com.subhashh.lumen.data.GridThumbnailFetcher
 import com.subhashh.lumen.data.MediaCollections
 import com.subhashh.lumen.ui.components.GlassIconButton
 import androidx.compose.material3.Button
@@ -168,6 +169,7 @@ fun LumenApp() {
             .imageDecoderEnabled(true)
             .components {
                 add(MediaThumbnailFetcher.Factory())
+                add(GridThumbnailFetcher.Factory(context))
                 add(VideoFrameDecoder.Factory())
                 add(SvgDecoder.Factory())
             }
@@ -697,6 +699,8 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                         openCollection = key
                     },
                     onSuggestion = { searchQuery = it },
+                    columns = gridColumns,
+                    onColumnsChange = onGridColumns,
                 )
                 library == null -> Unit
                 settingsPage == SettingsLicenses -> LicensesScreen(
