@@ -9,6 +9,7 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.kyant.backdrop.Backdrop
+import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
@@ -28,6 +29,8 @@ fun Modifier.glass(
     refractionAmount: Dp = 32.dp,
     /** Override for surfaces that carry text (menus): more opaque than the default. */
     tint: Color? = null,
+    /** Records this surface's glass, for a lens drawn above it to refract. */
+    exportedBackdrop: LayerBackdrop? = null,
 ): Modifier {
     val colors = LocalGlassColors.current
     val surface = when {
@@ -43,6 +46,7 @@ fun Modifier.glass(
             blur(blurRadius.toPx())
             lens(refractionHeight.toPx(), refractionAmount.toPx())
         },
+        exportedBackdrop = exportedBackdrop,
         onDrawSurface = { drawRect(surface) },
     )
 }

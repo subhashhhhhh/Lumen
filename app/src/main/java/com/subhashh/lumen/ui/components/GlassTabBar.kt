@@ -1,7 +1,6 @@
 package com.subhashh.lumen.ui.components
 
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
@@ -42,10 +41,14 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kyant.backdrop.Backdrop
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberCombinedBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.subhashh.lumen.ui.icons.LumenIcons
 import com.subhashh.lumen.ui.library.ZoomLevel
 import com.subhashh.lumen.ui.theme.LocalGlassColors
-import kotlin.math.abs
 
 enum class LumenTab(val label: String, val icon: ImageVector, val selectedIcon: ImageVector) {
     Library("Library", LumenIcons.Library, LumenIcons.LibraryFilled),
@@ -195,6 +198,27 @@ private fun MorphingTabs(
     val width = if (zoomLevel != null && t > 0f) maxOf(capsuleWidth, zoomX + zoomCapsuleWidth) else capsuleWidth
     val shape = RoundedCornerShape(50)
 
+    val density = LocalDensity.current
+    val colors = LocalGlassColors.current
+    val haptics = LocalHapticFeedback.current
+    val inset = with(density) { Offset(PillInset.toPx(), PillInset.toPx()) }
+
+    val tabPill = rememberLiquidPillState(selected?.ordinal ?: 0)
+    LaunchedEffect(selected) { selected?.let { tabPill.moveTo(it.ordinal) } }
+    // Fades out while nothing is selected (search is open).
+    val tabPillVisible by animateFloatAsState(if (selected == null) 0f else 1f, label = "tabPillVisible")
+    val tabGeometry = rememberPillGeometry(TabWidth)
+    val tabBarGlass = rememberLayerBackdrop()
+    val tabRow = rememberLayerBackdrop()
+    val tabLensBackdrop = rememberCombinedBackdrop(backdrop, tabBarGlass, tabRow)
+
+    val zoomPill = rememberLiquidPillState(zoomLevel?.ordinal ?: ZoomLevel.All.ordinal)
+    LaunchedEffect(zoomLevel) { zoomLevel?.let { zoomPill.moveTo(it.ordinal) } }
+    val zoomGeometry = rememberPillGeometry(zoomItemWidth)
+    val zoomBarGlass = rememberLayerBackdrop()
+    val zoomRow = rememberLayerBackdrop()
+    val zoomLensBackdrop = rememberCombinedBackdrop(backdrop, zoomBarGlass, zoomRow)
+
     Box(Modifier.width(width).height(Bar)) {
         // Behind: the zoom control, emerging from under the shrinking capsule.
         if (zoomLevel != null && t > 0.001f) {
@@ -204,7 +228,7 @@ private fun MorphingTabs(
                     .width(zoomCapsuleWidth)
                     .height(Bar)
                     .graphicsLayer { alpha = ((t - 0.05f) / 0.4f).coerceIn(0f, 1f) }
-                    .glass(backdrop, shape = shape)
+                    .glass(backdrop, shape = shape, exportedBackdrop = zoomBarGlass)
                     .clip(shape),
             ) {
                 Box(
@@ -212,11 +236,22 @@ private fun MorphingTabs(
                         .wrapContentWidth(Alignment.Start, unbounded = true)
                         .width(zoomWidth)
                         .fillMaxHeight()
-                        .padding(4.dp),
+                        .padding(PillInset)
+                        .liquidPillDrag(
+                            state = zoomPill,
+                            count = ZoomLevel.entries.size,
+                            stepPx = { zoomGeometry.stepPx },
+                            enabled = { enabled && morph > 0.5f },
+                            onCross = { haptics.performHapticFeedback(HapticFeedbackType.SegmentTick) },
+                            onSelect = { onZoomLevel(ZoomLevel.entries[it]) },
+                        ),
                     contentAlignment = Alignment.CenterStart,
                 ) {
-                    SlidingPill(index = zoomLevel.ordinal, itemWidth = zoomItemWidth, modifier = Modifier.matchParentSize())
-                    Row(horizontalArrangement = Arrangement.spacedBy(TabSpacing)) {
+                    LiquidPillFill(zoomPill, zoomGeometry, colors.selection, visible = { 1f }, Modifier.matchParentSize())
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(TabSpacing),
+                        modifier = Modifier.layerBackdrop(zoomRow),
+                    ) {
                         ZoomLevel.entries.forEach { level ->
                             ZoomItem(
                                 label = level.label,
@@ -237,7 +272,7 @@ private fun MorphingTabs(
                 .width(capsuleWidth)
                 .height(Bar)
                 .pressable(onClick = onShowTabs, enabled = enabled && t > 0.5f, pressedScale = 0.92f)
-                .glass(backdrop, shape = shape)
+                .glass(backdrop, shape = shape, exportedBackdrop = tabBarGlass)
                 .clip(shape),
         ) {
             Box(
@@ -245,12 +280,23 @@ private fun MorphingTabs(
                     .wrapContentWidth(Alignment.Start, unbounded = true)
                     .width(tabsWidth)
                     .fillMaxHeight()
-                    .padding(4.dp)
-                    .graphicsLayer { alpha = (1f - t * 2f).coerceIn(0f, 1f) },
+                    .padding(PillInset)
+                    .graphicsLayer { alpha = (1f - t * 2f).coerceIn(0f, 1f) }
+                    .liquidPillDrag(
+                        state = tabPill,
+                        count = LumenTab.entries.size,
+                        stepPx = { tabGeometry.stepPx },
+                        enabled = { enabled && selected != null && morph < 0.5f },
+                        onCross = { haptics.performHapticFeedback(HapticFeedbackType.SegmentTick) },
+                        onSelect = { onSelect(LumenTab.entries[it]) },
+                    ),
                 contentAlignment = Alignment.CenterStart,
             ) {
-                SlidingPill(index = selected?.ordinal, itemWidth = TabWidth, modifier = Modifier.matchParentSize())
-                Row(horizontalArrangement = Arrangement.spacedBy(TabSpacing)) {
+                LiquidPillFill(tabPill, tabGeometry, colors.selection, visible = { tabPillVisible }, Modifier.matchParentSize())
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(TabSpacing),
+                    modifier = Modifier.layerBackdrop(tabRow),
+                ) {
                     LumenTab.entries.forEach { tab ->
                         TabItem(
                             enabled = enabled && t < 0.5f,
@@ -270,6 +316,37 @@ private fun MorphingTabs(
                 modifier = Modifier
                     .align(Alignment.Center)
                     .graphicsLayer { alpha = ((t - 0.5f) * 2f).coerceIn(0f, 1f) },
+            )
+        }
+
+        // Lifted lenses, above both capsules and outside their clips. Only mid-switch, and only
+        // for the control that's fully out.
+        if (t < 0.01f) {
+            LiquidPillLens(tabPill, tabGeometry, tabLensBackdrop, offset = inset, Modifier.matchParentSize())
+        } else if (zoomLevel != null && t > 0.99f) {
+            LiquidPillLens(
+                zoomPill, zoomGeometry, zoomLensBackdrop,
+                offset = inset + Offset(with(density) { zoomX.toPx() }, 0f),
+                Modifier.matchParentSize(),
+            )
+        }
+    }
+}
+
+/** A pill one [itemWidth] item wide resting inside the bar, lifting [PillLift] taller than it. */
+@Composable
+private fun rememberPillGeometry(itemWidth: Dp): LiquidPillGeometry {
+    val density = LocalDensity.current
+    return remember(itemWidth, density) {
+        with(density) {
+            val rest = Size(itemWidth.toPx(), (Bar - PillInset * 2).toPx())
+            val liftedHeight = (Bar + PillLift).toPx()
+            val step = (itemWidth + TabSpacing).toPx()
+            LiquidPillGeometry(
+                restSize = rest,
+                liftedSize = Size(rest.width * liftedHeight / rest.height, liftedHeight),
+                center = { position -> Offset(position * step + rest.width / 2f, rest.height / 2f) },
+                stepPx = step,
             )
         }
     }
@@ -297,38 +374,7 @@ private val ZoomWidth = 78.dp
 private val Bar = 60.dp
 private val Gap = 12.dp
 private val TabSpacing = 2.dp
-
-/**
- * One highlight that slides between items, iOS 26-style, instead of each item fading its own:
- * a spring carries it across and it stretches with its speed, like a droplet, settling back to
- * its shape as it arrives. Fades out when nothing is selected (search is open).
- */
-@Composable
-private fun SlidingPill(index: Int?, itemWidth: Dp, modifier: Modifier = Modifier) {
-    val colors = LocalGlassColors.current
-    val step = with(LocalDensity.current) { (itemWidth + TabSpacing).toPx() }
-    val position = remember { Animatable((index ?: 0) * step) }
-    val alpha by animateFloatAsState(if (index == null) 0f else 1f, label = "pillAlpha")
-    LaunchedEffect(index, step) {
-        if (index != null) position.animateTo(index * step, PillSpring)
-    }
-    Box(modifier) {
-        Box(
-            Modifier
-                .graphicsLayer {
-                    translationX = position.value
-                    // Stretch along the direction of travel with speed, up to +30%.
-                    val stretch = (abs(position.velocity) / 4000f).coerceAtMost(0.3f)
-                    scaleX = 1f + stretch
-                    scaleY = 1f - stretch * 0.25f
-                    this.alpha = alpha
-                }
-                .width(itemWidth)
-                .fillMaxHeight()
-                .clip(CircleShape)
-                .background(colors.selection),
-        )
-    }
-}
-
-private val PillSpring = spring<Float>(dampingRatio = 0.72f, stiffness = 420f)
+/** Gap between the capsule's edge and the selection pill. */
+private val PillInset = 4.dp
+/** How much taller than the bar the pill stands while lifted. */
+private val PillLift = 10.dp
