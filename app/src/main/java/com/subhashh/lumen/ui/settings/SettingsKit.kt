@@ -152,13 +152,18 @@ internal fun LargeTitle(text: String) {
 @Composable
 internal fun Group(title: String, footer: String? = null, content: @Composable ColumnScope.() -> Unit) {
     val colors = groupColors()
-    Text(
-        title.uppercase(),
-        fontSize = 13.sp,
-        fontWeight = FontWeight.SemiBold,
-        color = colors.secondary,
-        modifier = Modifier.padding(start = 16.dp, top = 24.dp, bottom = 8.dp),
-    )
+    if (title.isBlank()) {
+        // Untitled groups (Settings' main list) are just separated, like iOS: no header line.
+        Spacer(Modifier.height(18.dp))
+    } else {
+        Text(
+            title.uppercase(),
+            fontSize = 13.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = colors.secondary,
+            modifier = Modifier.padding(start = 16.dp, top = 24.dp, bottom = 8.dp),
+        )
+    }
     Column(
         Modifier
             .fillMaxWidth()

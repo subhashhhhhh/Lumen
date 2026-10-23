@@ -289,7 +289,7 @@ private fun SearchBox(query: String, onQueryChange: (String) -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
-            .padding(bottom = 20.dp)
+            .padding(bottom = 6.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(colors.card)
             .padding(horizontal = 12.dp, vertical = 10.dp),
