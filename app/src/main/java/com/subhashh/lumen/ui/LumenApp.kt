@@ -105,6 +105,7 @@ import com.subhashh.lumen.ui.theme.LocalGlassColors
 import com.subhashh.lumen.ui.library.ViewMenu
 import com.subhashh.lumen.data.LumenPrefs
 import com.subhashh.lumen.data.LibraryFilter
+import com.subhashh.lumen.data.LibrarySort
 import androidx.compose.runtime.SideEffect
 import com.subhashh.lumen.ui.selection.SelectionTopControls
 import com.subhashh.lumen.ui.selection.SelectionActionBar
@@ -265,6 +266,10 @@ private fun MainScaffold(
     // "Videos" filter would leave a photo picker empty.
     var filter by remember { mutableStateOf(if (pick != null) LibraryFilter.All else prefs.libraryFilter) }
     var aspectRatioGrid by remember { mutableStateOf(prefs.aspectRatioGrid) }
+    var sort by remember { mutableStateOf(prefs.librarySort) }
+    var sortDescending by remember { mutableStateOf(prefs.sortDescending) }
+    /** Oldest first by date: the order Years / Months and "newest at the bottom" are built on. */
+    val chronological = sort == LibrarySort.Date && !sortDescending
     var gridColumns by remember { mutableIntStateOf(prefs.gridColumns) }
     val onGridColumns = { columns: Int ->
         gridColumns = columns
@@ -322,8 +327,10 @@ private fun MainScaffold(
     /** Album name prompt: renaming [album], or making a new one when null. */
     var albumNameRequest by remember { mutableStateOf<AlbumNameRequest?>(null) }
     // The Library tab is filtered by the ≡ menu; the viewer and selection page through the same list.
-    val libraryItems = remember(library, filter) {
-        library.orEmpty().let { all -> if (filter == LibraryFilter.All) all else all.filter(filter::matches) }
+    val libraryItems = remember(library, filter, sort, sortDescending) {
+        library.orEmpty()
+            .let { all -> if (filter == LibraryFilter.All) all else all.filter(filter::matches) }
+            .let { sort.apply(it, sortDescending) }
     }
     // Search: an index rebuilt off the main thread whenever the library changes, queried on
     // every keystroke (a few ms). The previous results stay up while the next ones compute.
@@ -357,14 +364,24 @@ private fun MainScaffold(
             CollectionKeys.Hidden -> if (hiddenUnlocked) hidden.orEmpty() else emptyList()
             else -> CollectionKeys.hiddenFolderId(key)?.let { id ->
                 if (hiddenUnlocked) hidden.orEmpty().filter { it.bucketId == id } else emptyList()
-            } ?: CollectionKeys.items(key, library.orEmpty(), trash)
+            } ?: CollectionKeys.items(key, library.orEmpty(), trash).let {
+                // Recently Deleted stays in deletion order; albums follow the Library's sort.
+                if (key == CollectionKeys.RecentlyDeleted) it else sort.apply(it, sortDescending)
+            }
         }
     }
     val months = remember(libraryItems) { periods(libraryItems, byYear = false) }
     val years = remember(libraryItems) { periods(libraryItems, byYear = true) }
     // A new filter starts at its newest item, like opening the Library.
-    LaunchedEffect(filter) {
-        if (libraryItems.isNotEmpty()) libraryGrid.scrollToItem(libraryItems.lastIndex)
+    LaunchedEffect(filter, sort, sortDescending) {
+        if (libraryItems.isNotEmpty()) libraryGrid.scrollToItem(if (chronological) libraryItems.lastIndex else 0)
+    }
+    // Years / Months only make sense oldest-first by date; any other order goes back to All.
+    LaunchedEffect(chronological) {
+        if (!chronological) {
+            zoomLevel = ZoomLevel.All
+            zoomBar = false
+        }
     }
     // Years and Months start at the newest card too: once when first loaded, and on a new filter.
     LaunchedEffect(months.isNotEmpty(), filter) {
@@ -811,6 +828,8 @@ private fun MainScaffold(
                         columns = gridColumns,
                         onColumnsChange = onGridColumns,
                         emptyText = filter.emptyText,
+                        startAtEnd = chronological,
+                        showMonth = sort == LibrarySort.Date,
                         items = libraryItems,
                         gridState = libraryGrid,
                         contentPadding = gridPadding,
@@ -879,6 +898,8 @@ private fun MainScaffold(
                         columns = gridColumns,
                         onColumnsChange = onGridColumns,
                         items = itemsOf(key),
+                        startAtEnd = chronological || key == CollectionKeys.RecentlyDeleted,
+                        showMonth = sort == LibrarySort.Date || key == CollectionKeys.RecentlyDeleted,
                         gridState = collectionGrid,
                         contentPadding = PaddingValues(top = statusTop + 152.dp, bottom = navBottom + 96.dp),
                         titleTopPadding = 64.dp,
@@ -935,6 +956,33 @@ private fun MainScaffold(
                 onAutoFocused = { focusSearch = false },
                 modifier = Modifier
                     .align(Alignment.TopCenter)
+                    .statusBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+            )
+        }
+
+        if (openCollection == CollectionKeys.RecentlyDeleted && tab == LumenTab.Collections && trash.isNotEmpty() &&
+            !selecting && !viewerOpen && !searching && settingsPage == null && pick == null
+        ) {
+            GlassTextButton(
+                backdrop = backdrop,
+                text = "Empty",
+                onClick = {
+                    val n = trash.size
+                    // With Media management on, Android deletes without asking; so Lumen always asks.
+                    confirmation = Confirmation(
+                        title = "Empty Recently Deleted?",
+                        message = if (n == 1) "This item will be deleted forever." else "All $n items will be deleted forever.",
+                        confirm = "Delete Forever",
+                        destructive = true,
+                    ) {
+                        selectionLauncher.launch(
+                            IntentSenderRequest.Builder(MediaActions.deleteForeverRequest(context, trash)).build(),
+                        )
+                    }
+                },
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
                     .statusBarsPadding()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
             )
@@ -1079,7 +1127,7 @@ private fun MainScaffold(
                 },
                 zoomLevel = zoomLevel.takeIf { tab == LumenTab.Library && !searching },
                 onZoomLevel = { zoomLevel = it },
-                showZoom = zoomBar || zoomLevel != ZoomLevel.All,
+                showZoom = chronological && (zoomBar || zoomLevel != ZoomLevel.All),
                 onShowTabs = {
                     zoomBar = false
                     zoomLevel = ZoomLevel.All
@@ -1104,6 +1152,14 @@ private fun MainScaffold(
             onAspectRatioGrid = {
                 aspectRatioGrid = it
                 prefs.aspectRatioGrid = it
+            },
+            sort = sort,
+            descending = sortDescending,
+            onSort = { newSort, descending ->
+                sort = newSort
+                sortDescending = descending
+                prefs.librarySort = newSort
+                prefs.sortDescending = descending
             },
             modifier = Modifier
                 .align(Alignment.TopEnd)
