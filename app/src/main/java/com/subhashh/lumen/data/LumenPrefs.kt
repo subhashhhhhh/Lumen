@@ -33,8 +33,17 @@ class LumenPrefs(context: Context) {
         get() = prefs.getStringSet(KeyExcluded, emptySet()).orEmpty().toSet()
         set(value) = prefs.edit { putStringSet(KeyExcluded, value) }
 
+    /**
+     * Folders left out of Hidden only. Kept apart from [excludedFolders] because those are listed
+     * in Settings, outside the lock, and these paths would give hidden folders away.
+     */
+    var hiddenExcludedFolders: Set<String>
+        get() = prefs.getStringSet(KeyHiddenExcluded, emptySet()).orEmpty().toSet()
+        set(value) = prefs.edit { putStringSet(KeyHiddenExcluded, value) }
+
     private companion object {
         const val KeyExcluded = "excluded_folders"
+        const val KeyHiddenExcluded = "hidden_excluded_folders"
         const val KeyColumns = "grid_columns"
         const val KeyAlbumColumns = "album_columns"
         const val KeyFilter = "library_filter"

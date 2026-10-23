@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.subhashh.lumen.data.ExcludedFolders
+import com.subhashh.lumen.data.HiddenIndex
 import com.subhashh.lumen.data.HiddenMedia
 import com.subhashh.lumen.data.LumenPrefs
 import com.subhashh.lumen.data.MediaItem
@@ -47,23 +48,48 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    private val _hidden = MutableStateFlow<List<MediaItem>?>(null)
-    /** Hidden photos and videos; null until scanned (only when the Hidden section opens). */
-    val hidden: StateFlow<List<MediaItem>?> = _hidden.asStateFlow()
+    /** Raw scan result, before exclusions; null until loaded (only once Hidden is opened). */
+    private val _hiddenAll = MutableStateFlow<List<MediaItem>?>(null)
+
+    private val _hiddenExcluded = MutableStateFlow(prefs.hiddenExcludedFolders)
+    /** Folders left out of Hidden only; shown inside Hidden, behind its lock. */
+    val hiddenExcluded: StateFlow<Set<String>> = _hiddenExcluded.asStateFlow()
+
+    /** Hidden photos and videos, minus both kinds of excluded folder. Null until first loaded. */
+    val hidden: StateFlow<List<MediaItem>?> = combine(_hiddenAll, _excluded, _hiddenExcluded) { all, excluded, hiddenExcluded ->
+        all?.filterNot { ExcludedFolders.covers(excluded, it) || ExcludedFolders.covers(hiddenExcluded, it) }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     private var hiddenScan: kotlinx.coroutines.Job? = null
 
     /**
-     * Scans storage for hidden files, only on demand. The previous result stays visible meanwhile,
-     * so reopening Hidden is instant; the list appears first and photo dimensions follow.
+     * Shows the last scan straight away (from memory, else from the saved index), then rescans
+     * storage behind it and swaps in what changed. Only the very first scan shows a spinner.
      */
     fun loadHidden() {
         hiddenScan?.cancel()
         hiddenScan = viewModelScope.launch {
-            val found = HiddenMedia.scan(_excluded.value)
-            _hidden.value = found
-            _hidden.value = HiddenMedia.withSizes(found)
+            val app = getApplication<Application>()
+            if (_hiddenAll.value == null) _hiddenAll.value = HiddenIndex.load(app)
+            // Unchanged files keep the sizes already read, so they compare equal and nothing redraws.
+            val known = _hiddenAll.value.orEmpty().associateBy { it.uri.path }
+            val found = HiddenMedia.scan().map { item ->
+                known[item.uri.path]?.takeIf { it.takenAt == item.takenAt && it.width > 0 } ?: item
+            }
+            if (found != _hiddenAll.value) _hiddenAll.value = found
+            val sized = HiddenMedia.withSizes(found)
+            if (sized != _hiddenAll.value) _hiddenAll.value = sized
+            HiddenIndex.save(app, sized)
         }
+    }
+
+    fun excludeFromHidden(folders: Collection<String>) = setHiddenExcluded(_hiddenExcluded.value + folders)
+
+    fun includeInHidden(folder: String) = setHiddenExcluded(_hiddenExcluded.value - folder)
+
+    private fun setHiddenExcluded(folders: Set<String>) {
+        prefs.hiddenExcludedFolders = folders
+        _hiddenExcluded.value = folders
     }
 
     fun exclude(folders: Collection<String>) = setExcluded(_excluded.value + folders)

@@ -1,0 +1,48 @@
+package com.subhashh.lumen.data
+
+import android.content.Context
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.File
+
+/**
+ * The last Hidden scan, saved so Hidden opens with its folders already there while a fresh scan
+ * runs behind them. One line per file: path, type, modified millis, width, height.
+ *
+ * In no-backup storage: it lists hidden paths, which must never end up in a cloud backup.
+ */
+object HiddenIndex {
+
+    private fun file(context: Context) = File(context.noBackupFilesDir, "hidden_index.tsv")
+
+    /** The saved list, or null when there's none (or it can't be read). */
+    suspend fun load(context: Context): List<MediaItem>? = withContext(Dispatchers.IO) {
+        runCatching {
+            val index = file(context)
+            if (!index.exists()) return@runCatching null
+            index.readLines().mapNotNull { line ->
+                val parts = line.split('\t')
+                if (parts.size != 5) return@mapNotNull null
+                HiddenMedia.item(
+                    File(parts[0]),
+                    type = parts[1],
+                    modified = parts[2].toLongOrNull() ?: return@mapNotNull null,
+                    width = parts[3].toIntOrNull() ?: 0,
+                    height = parts[4].toIntOrNull() ?: 0,
+                )
+            }
+        }.getOrNull()
+    }
+
+    suspend fun save(context: Context, items: List<MediaItem>) = withContext(Dispatchers.IO) {
+        runCatching {
+            val text = items.joinToString("\n") { item ->
+                "${item.uri.path}\t${item.mimeType}\t${item.takenAt}\t${item.width}\t${item.height}"
+            }
+            // Write then rename, so a crash mid-write never leaves half an index.
+            val temp = File(context.noBackupFilesDir, "hidden_index.tmp")
+            temp.writeText(text)
+            temp.renameTo(file(context))
+        }
+    }
+}

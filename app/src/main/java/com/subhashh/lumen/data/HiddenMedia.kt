@@ -33,13 +33,14 @@ object HiddenMedia {
 
     /**
      * Every hidden photo and video on shared storage, oldest first. Empty without All files access.
-     * Dimensions are left at 0 for speed; [withSizes] fills them in afterwards.
+     * Dimensions are left at 0 for speed; [withSizes] fills them in afterwards. Exclusions are
+     * the caller's job, so excluding or including a folder never needs a rescan.
      *
      * Walking 12k+ files with java.io through Android's storage layer took many seconds (every
      * entry is a slow stat), so the system's own `find` locates the dot-named entries and
      * `.nomedia` markers in one fast pass; only the hidden folders' contents are then listed.
      */
-    suspend fun scan(excluded: Set<String> = emptySet()): List<MediaItem> = withContext(Dispatchers.IO) {
+    suspend fun scan(): List<MediaItem> = withContext(Dispatchers.IO) {
         if (!available()) return@withContext emptyList()
         val root = Environment.getExternalStorageDirectory()
         val skip = File(root, "Android").absolutePath
@@ -54,9 +55,7 @@ object HiddenMedia {
         val found = LinkedHashMap<String, MediaItem>()
         fun add(file: File) {
             val type = Types[file.extension.lowercase()] ?: return
-            val item = file.toItem(root, type)
-            if (excluded.any { item.relativePath.startsWith(it) }) return
-            found.putIfAbsent(file.absolutePath, item)
+            found.putIfAbsent(file.absolutePath, item(file, type, file.lastModified()))
         }
         fun isJunk(dir: File) = generateSequence(dir) { it.parentFile }
             .takeWhile { it != root }
@@ -187,24 +186,28 @@ object HiddenMedia {
         items.count { item -> file(item)?.delete() == true }
     }
 
-    private fun File.toItem(root: File, type: String): MediaItem {
-        val isVideo = type.startsWith("video/")
-        val folder = parentFile ?: root
+    /** Type for a hidden file's extension, or null when it isn't a photo or video. */
+    fun typeOf(file: File): String? = Types[file.extension.lowercase()]
+
+    /** The item for a hidden [file]; [modified] in millis, sizes 0 when not read yet. */
+    fun item(file: File, type: String, modified: Long, width: Int = 0, height: Int = 0): MediaItem {
+        val root = Environment.getExternalStorageDirectory()
+        val folder = file.parentFile ?: root
         return MediaItem(
             // Negative, so it can never collide with a MediaStore id.
-            id = -(absolutePath.hashCode().toLong() and 0x7fffffffL) - 1,
-            uri = Uri.fromFile(this),
+            id = -(file.absolutePath.hashCode().toLong() and 0x7fffffffL) - 1,
+            uri = Uri.fromFile(file),
             mimeType = type,
-            isVideo = isVideo,
-            takenAt = lastModified(),
+            isVideo = type.startsWith("video/"),
+            takenAt = modified,
             durationMs = 0,
             isFavorite = false,
             relativePath = folder.relativeTo(root).path.let { if (it.isEmpty()) "" else "$it/" },
             bucketId = folder.absolutePath.hashCode().toLong(),
             bucketName = folder.name,
-            width = 0,
-            height = 0,
-            modified = lastModified() / 1000,
+            width = width,
+            height = height,
+            modified = modified / 1000,
         )
     }
 
