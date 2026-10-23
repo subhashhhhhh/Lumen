@@ -84,10 +84,14 @@ object ModelDownloads {
         mutableState.value = DownloadState.Idle
     }
 
-    /** Removes every tier's files and any half-downloaded parts. */
+    /** Removes every tier's files, half-downloaded parts and indexes. */
     fun delete(context: Context) {
         cancel(context)
-        ModelCatalog.all.forEach { it.dir(context).deleteRecursively() }
+        SmartIndex.cancel(context)
+        ModelCatalog.all.forEach {
+            it.dir(context).deleteRecursively()
+            EmbeddingStore.delete(context, it)
+        }
     }
 
     /** Bytes still to fetch, counting partial files already on disk. */
@@ -118,9 +122,13 @@ object ModelDownloads {
                     onProgress(done, total)
                 }
             }
-            // Switching tiers: the old one goes once the new one is complete.
-            ModelCatalog.all.filter { it != model }.forEach { it.dir(context).deleteRecursively() }
+            // Switching tiers: the old one (and its index) goes once the new one is complete.
+            ModelCatalog.all.filter { it != model }.forEach {
+                it.dir(context).deleteRecursively()
+                EmbeddingStore.delete(context, it)
+            }
             mutableState.value = DownloadState.Idle
+            SmartIndex.startNow(context)
             null
         } catch (e: CancellationException) {
             throw e

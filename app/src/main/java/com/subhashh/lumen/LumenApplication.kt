@@ -16,6 +16,7 @@ import coil3.video.VideoFrameDecoder
 import com.subhashh.lumen.data.GridThumbnailFetcher
 import com.subhashh.lumen.data.MediaThumbnailFetcher
 import com.subhashh.lumen.ui.AppLock
+import com.subhashh.lumen.data.ai.SmartIndex
 import com.subhashh.lumen.data.vault.VaultFetcher
 
 /** App-wide image loader, shared by the main app and the viewer other apps open. */
@@ -23,6 +24,8 @@ class LumenApplication : Application(), SingletonImageLoader.Factory {
     override fun onCreate() {
         super.onCreate()
         AppLock.install(this)
+        // Keeps Smart Search's background indexing queued (no-op until a model is downloaded).
+        SmartIndex.schedule(this)
     }
 
     override fun newImageLoader(context: PlatformContext): ImageLoader =

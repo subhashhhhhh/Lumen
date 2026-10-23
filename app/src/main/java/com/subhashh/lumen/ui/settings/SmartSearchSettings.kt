@@ -9,6 +9,13 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
+import com.subhashh.lumen.data.ai.EmbeddingStore
+import com.subhashh.lumen.data.ai.IndexProgress
+import com.subhashh.lumen.data.ai.Indexer
+import com.subhashh.lumen.data.ai.SmartIndex
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
@@ -40,6 +47,14 @@ internal fun SmartSearchGroup(
     val chosen = ModelCatalog.byId(chosenId)
     var removed by remember { mutableIntStateOf(0) }
     val installed = remember(refresh, state, removed, chosenId) { ModelDownloads.installed(context) }
+    val live by SmartIndex.progress.collectAsState()
+    val counted by produceState<IndexProgress?>(null, refresh, installed) {
+        val model = installed
+        value = if (model == null) null else withContext(Dispatchers.IO) {
+            IndexProgress(EmbeddingStore.of(context, model).count(), Indexer.eligible(context).size)
+        }
+    }
+    val progress = if (installed == null) null else live ?: counted
     var tokenRemoved by remember { mutableIntStateOf(0) }
     val hasToken = remember(refresh, tokenRemoved) { HfTokenStore(context).token != null }
     var wifiOnly by remember { mutableStateOf(prefs.modelWifiOnly) }
@@ -119,6 +134,18 @@ internal fun SmartSearchGroup(
             icon = LumenIcons.Import,
             iconColor = Indigo,
         )
+        if (progress != null) {
+            Divider()
+            val complete = progress.indexed >= progress.total
+            SettingsRow(
+                title = "Indexed",
+                subtitle = if (complete) "New photos and videos are added as they arrive" else "Continues while your phone charges",
+                value = if (complete) "All ${"%,d".format(progress.total)}" else "%,d of %,d".format(progress.indexed, progress.total),
+                onClick = null,
+                icon = LumenIcons.Image,
+                iconColor = Green,
+            )
+        }
         Divider()
         ToggleRow(
             title = "Download on Wi-Fi Only",

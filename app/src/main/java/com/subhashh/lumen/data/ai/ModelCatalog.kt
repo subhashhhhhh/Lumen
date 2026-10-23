@@ -16,6 +16,8 @@ data class AiModel(
     val repo: String,
     val commit: String,
     val files: List<ModelFile>,
+    /** How to run it once downloaded. */
+    val spec: OnnxSpec,
 ) {
     val bytes: Long get() = files.sumOf { it.bytes }
 
@@ -45,6 +47,7 @@ object ModelCatalog {
             ModelFile("textual_int8.onnx", 283_187_112, "6fdbedc85c54262bcbf380cfb048f03e10cf07237333fe4ca1e204a8f954d608"),
             ModelFile("gemma_bpe.bin", 7_134_060, "e9163029a76e66dadb07afd9373531a24687e25d7a027f65d13a2977331f53c2"),
         ),
+        spec = OnnxEmbedder.Siglip,
     )
 
     /** OpenCLIP ViT-B/32 LAION-2B (MIT), int8: about 8x faster to index, English only. */
@@ -59,6 +62,7 @@ object ModelCatalog {
             ModelFile("vocab.json", 862_328, "5047b556ce86ccaf6aa22b3ffccfc52d391ea4accdab9c2f2407da5b742d4363"),
             ModelFile("merges.txt", 524_619, "9fd691f7c8039210e0fced15865466c65820d09b63988b0174bfe25de299051a"),
         ),
+        spec = OnnxEmbedder.Clip,
     )
 
     val all = listOf(Accurate, Fast)
