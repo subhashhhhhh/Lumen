@@ -274,7 +274,9 @@ private fun MorphingTabs(
                 .glass(backdrop, shape = shape, exportedBackdrop = tabBarGlass)
                 .clip(shape),
         ) {
-            Box(
+            // Folded into the circle, the tabs are invisible; leaving them out of layout means
+            // nothing in them can sit between a tap and the circle's "show the tabs" action.
+            if (t < 0.5f) Box(
                 Modifier
                     .wrapContentWidth(Alignment.Start, unbounded = true)
                     .width(tabsWidth)
