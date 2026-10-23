@@ -313,7 +313,7 @@ private fun utilityIcon(key: String): ImageVector = when (key) {
 internal fun AlbumCard(
     collection: MediaCollection,
     onClick: () -> Unit,
-    subtitle: String = collection.count.toString(),
+    subtitle: String = if (collection.count == 0) "Empty" else collection.count.toString(),
     /** null when not selecting. */
     selected: Boolean? = null,
 ) {
@@ -347,15 +347,25 @@ internal fun AlbumCard(
             if (selected != null) SelectionMark(selected, Modifier.align(Alignment.BottomEnd).padding(8.dp))
         }
         Spacer(Modifier.height(6.dp))
-        Text(
-            collection.title,
-            fontSize = 15.sp,
-            fontWeight = FontWeight.Medium,
-            color = onBackground,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(horizontal = 2.dp),
-        )
+        Row(Modifier.padding(horizontal = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (collection.pinned) {
+                Icon(
+                    LumenIcons.Pin,
+                    contentDescription = "Pinned",
+                    tint = onBackground.copy(alpha = 0.6f),
+                    modifier = Modifier.size(13.dp),
+                )
+                Spacer(Modifier.width(4.dp))
+            }
+            Text(
+                collection.title,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Medium,
+                color = onBackground,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
         Text(
             subtitle,
             fontSize = 13.sp,

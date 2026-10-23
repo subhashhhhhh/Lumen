@@ -141,6 +141,8 @@ fun ViewerScreen(
     slideshowOf: Set<Long>? = null,
     /** Opened by another app: Share and Info, and ⋯ with only what works on someone else's file. */
     external: Boolean = false,
+    /** Viewing a folder album: ⋯ offers Make Album Cover. */
+    onMakeCover: ((MediaItem) -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val pager = rememberPagerState(initialPage = initialIndex) { items.size }
@@ -493,6 +495,7 @@ fun ViewerScreen(
                     onHide = onHide,
                     onHideFolder = onHideFolder,
                     onSlideshow = { slideshow = true },
+                    onMakeCover = onMakeCover,
                 ),
                 origin = TransformOrigin(1f, 0f),
                 modifier = Modifier
@@ -530,6 +533,7 @@ private fun viewerMenu(
     onHide: (MediaItem) -> Unit,
     onHideFolder: (MediaItem) -> Unit,
     onSlideshow: () -> Unit,
+    onMakeCover: ((MediaItem) -> Unit)?,
 ): List<List<MenuItem>> {
     val photo = !item.isVideo
     return listOf(
@@ -541,7 +545,10 @@ private fun viewerMenu(
             MenuItem("Rename…") { onRename(item) },
             if (MediaFiles.canRotate(item)) rotateMenu { degrees -> onRotate(item, degrees) } else null,
         ),
-        listOf(MenuItem("Slideshow") { onSlideshow() }),
+        listOfNotNull(
+            MenuItem("Slideshow") { onSlideshow() },
+            onMakeCover?.let { MenuItem("Make Album Cover") { it(item) } },
+        ),
         listOf(
             MenuItem("Hide") { onHide(item) },
             MenuItem("Hide Folder") { onHideFolder(item) },

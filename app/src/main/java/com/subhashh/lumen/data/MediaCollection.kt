@@ -21,6 +21,14 @@ object CollectionKeys {
     fun hiddenFolderId(key: String): Long? = key.removePrefix(HiddenFolderPrefix).toLongOrNull()
         .takeIf { key.startsWith(HiddenFolderPrefix) }
 
+    private const val EmptyAlbumPrefix = "empty:"
+
+    /** An album made with New Album that has nothing in it yet (so no MediaStore folder). */
+    fun emptyAlbum(relativePath: String) = "$EmptyAlbumPrefix$relativePath"
+
+    /** A device folder album, as opposed to a utility or something in Hidden. */
+    fun isFolder(key: String?) = key?.startsWith(FolderPrefix) == true
+
     /** Hidden itself or a folder inside it: everything that must stay behind the lock. */
     fun isHidden(key: String?) = key == Hidden || key?.startsWith(HiddenFolderPrefix) == true
     private const val FolderPrefix = "folder:"
@@ -48,10 +56,40 @@ internal val MediaItem.isScreenshot: Boolean
 data class MediaCollection(
     val key: String,
     val title: String,
-    /** Newest item, or null for an empty collection. */
+    /** Newest item (or the one chosen as cover), or null for an empty collection. */
     val cover: MediaItem?,
     val count: Int,
+    /** Folder albums: the folder, e.g. "DCIM/Camera/". Empty for utilities. */
+    val relativePath: String = "",
+    /** When its newest item was taken; sorts albums by recency. */
+    val latestAt: Long = 0,
+    val pinned: Boolean = false,
+    /** The cover was chosen with Make Album Cover rather than being the newest item. */
+    val customCover: Boolean = false,
 )
+
+/** How the Albums section is ordered; pinned albums always come first. */
+enum class AlbumSort(val label: String) { Recent("Recent"), Name("Name"), Count("Most Items") }
+
+/**
+ * The user's album arrangement, keyed by folder path so it survives MediaStore id changes:
+ * sort order, pinned albums (in pin order), chosen covers (folder → item id), and albums made
+ * with New Album that are still empty.
+ */
+@Immutable
+data class AlbumSettings(
+    val sort: AlbumSort = AlbumSort.Recent,
+    val pinned: List<String> = emptyList(),
+    val covers: Map<String, Long> = emptyMap(),
+    val created: List<String> = emptyList(),
+) {
+    /** The same arrangement after a folder moved from [old] to [new]. */
+    fun renamed(old: String, new: String) = copy(
+        pinned = pinned.map { if (it == old) new else it },
+        covers = covers.mapKeys { (path, _) -> if (path == old) new else path },
+        created = created.map { if (it == old) new else it },
+    )
+}
 
 object MediaCollections {
 
@@ -69,16 +107,45 @@ object MediaCollections {
     /** Count shown for Hidden, which stays unknown (and unshown) until unlocked. */
     const val LockedCount = -1
 
-    /** One album per device folder, most recently updated first. */
-    fun folders(library: List<MediaItem>): List<MediaCollection> =
-        library.groupBy { it.bucketId }
-            .map { (bucketId, items) ->
-                MediaCollection(
-                    key = CollectionKeys.folder(bucketId),
-                    title = items.last().bucketName,
-                    cover = items.last(),
-                    count = items.size,
-                )
-            }
-            .sortedByDescending { it.cover?.takenAt }
+    /**
+     * One album per device folder, plus albums made with New Album that are still empty,
+     * arranged by [settings]: chosen covers, pinned first (in pin order), then by the sort.
+     */
+    fun folders(library: List<MediaItem>, settings: AlbumSettings = AlbumSettings()): List<MediaCollection> {
+        val real = library.groupBy { it.bucketId }.map { (bucketId, items) ->
+            val newest = items.last()
+            val path = newest.relativePath
+            val chosen = settings.covers[path]?.let { id -> items.firstOrNull { it.id == id } }
+            MediaCollection(
+                key = CollectionKeys.folder(bucketId),
+                title = newest.bucketName,
+                cover = chosen ?: newest,
+                count = items.size,
+                relativePath = path,
+                latestAt = newest.takenAt,
+                pinned = path in settings.pinned,
+                customCover = chosen != null,
+            )
+        }
+        val paths = real.mapTo(HashSet()) { it.relativePath }
+        val empty = settings.created.filter { it !in paths }.map { path ->
+            MediaCollection(
+                key = CollectionKeys.emptyAlbum(path),
+                title = path.trimEnd('/').substringAfterLast('/'),
+                cover = null,
+                count = 0,
+                relativePath = path,
+                // New albums sort to the top of Recent, where the user expects to find them.
+                latestAt = Long.MAX_VALUE,
+                pinned = path in settings.pinned,
+            )
+        }
+        val sorted = when (settings.sort) {
+            AlbumSort.Recent -> (real + empty).sortedByDescending { it.latestAt }
+            AlbumSort.Name -> (real + empty).sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.title })
+            AlbumSort.Count -> (real + empty).sortedByDescending { it.count }
+        }
+        val (pinned, rest) = sorted.partition { it.pinned }
+        return pinned.sortedBy { settings.pinned.indexOf(it.relativePath) } + rest
+    }
 }

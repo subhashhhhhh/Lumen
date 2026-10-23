@@ -57,6 +57,10 @@ fun RenameDialog(
     currentName: String?,
     onRename: (newName: String) -> Unit,
     onDismiss: () -> Unit,
+    title: String = "Rename",
+    confirm: String = "Rename",
+    /** Files keep their extension fixed; album names have none. */
+    keepExtension: Boolean = true,
 ) {
     val open = currentName != null
     BackHandler(enabled = open, onBack = onDismiss)
@@ -74,8 +78,8 @@ fun RenameDialog(
         exit = fadeOut(tween(120)),
     ) {
         val name = currentName ?: return@AnimatedVisibility
-        val base = name.substringBeforeLast('.', name)
-        val ext = name.substringAfterLast('.', "").let { if (it.isEmpty()) "" else ".$it" }
+        val base = if (keepExtension) name.substringBeforeLast('.', name) else name
+        val ext = if (keepExtension) name.substringAfterLast('.', "").let { if (it.isEmpty()) "" else ".$it" } else ""
         var field by remember(name) { mutableStateOf(TextFieldValue(base, TextRange(0, base.length))) }
         val focus = remember { FocusRequester() }
         LaunchedEffect(name) { focus.requestFocus() }
@@ -96,7 +100,7 @@ fun RenameDialog(
                     .padding(top = 20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Text("Rename", color = text, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                Text(title, color = text, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.height(14.dp))
                 Row(
                     Modifier
@@ -136,7 +140,7 @@ fun RenameDialog(
                     )
                     Box(Modifier.width(0.5.dp).height(48.dp).background(secondary.copy(alpha = 0.3f)))
                     Text(
-                        "Rename",
+                        confirm,
                         color = if (valid) Color(0xFF0A84FF) else secondary,
                         fontSize = 17.sp,
                         fontWeight = FontWeight.SemiBold,

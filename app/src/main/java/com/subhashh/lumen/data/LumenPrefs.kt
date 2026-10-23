@@ -45,7 +45,30 @@ class LumenPrefs(context: Context) {
             ?: Appearance.System
         set(value) = prefs.edit { putString(KeyAppearance, value.name) }
 
+    /** Album sort, pins, covers and still-empty new albums. Lines of tab-separated fields. */
+    var albumSettings: AlbumSettings
+        get() = AlbumSettings(
+            sort = prefs.getString(KeyAlbumSort, null)?.let { name -> AlbumSort.entries.firstOrNull { it.name == name } }
+                ?: AlbumSort.Recent,
+            pinned = prefs.getString(KeyPinned, null)?.lines()?.filter { it.isNotEmpty() }.orEmpty(),
+            covers = prefs.getString(KeyCovers, null)?.lines()?.mapNotNull { line ->
+                val path = line.substringBefore('\t')
+                line.substringAfter('\t', "").toLongOrNull()?.let { path to it }
+            }?.toMap().orEmpty(),
+            created = prefs.getString(KeyCreated, null)?.lines()?.filter { it.isNotEmpty() }.orEmpty(),
+        )
+        set(value) = prefs.edit {
+            putString(KeyAlbumSort, value.sort.name)
+            putString(KeyPinned, value.pinned.joinToString("\n"))
+            putString(KeyCovers, value.covers.entries.joinToString("\n") { "${it.key}\t${it.value}" })
+            putString(KeyCreated, value.created.joinToString("\n"))
+        }
+
     private companion object {
+        const val KeyAlbumSort = "album_sort"
+        const val KeyPinned = "pinned_albums"
+        const val KeyCovers = "album_covers"
+        const val KeyCreated = "created_albums"
         const val KeyAppearance = "appearance"
         const val KeyExcluded = "excluded_folders"
         const val KeyColumns = "grid_columns"

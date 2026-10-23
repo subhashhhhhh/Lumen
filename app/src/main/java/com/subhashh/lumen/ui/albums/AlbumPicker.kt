@@ -212,7 +212,7 @@ private fun Sheet(
                 }
             }
             items(albums, key = { it.key }) { album ->
-                val path = album.cover?.relativePath ?: return@items
+                val path = album.relativePath.ifEmpty { album.cover?.relativePath } ?: return@items
                 AlbumRow(album, colors, onClick = { onPick(AlbumTarget(path, album.title)) })
             }
             item { Spacer(Modifier.height(24.dp)) }

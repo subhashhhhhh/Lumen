@@ -339,6 +339,27 @@ object MediaFiles {
         }
     }
 
+    /**
+     * Renames an album's folder from [oldPath] to [newPath] (relative paths). With All files
+     * access the folder itself is renamed, everything in it included, and rescanned; otherwise
+     * its photos and videos move through MediaStore (the caller gets the write grant), leaving
+     * the old folder behind with anything that isn't media.
+     */
+    suspend fun renameAlbum(context: Context, items: List<MediaItem>, oldPath: String, newPath: String): FileResult =
+        withContext(Dispatchers.IO) {
+            if (Environment.isExternalStorageManager()) {
+                val root = Environment.getExternalStorageDirectory()
+                val from = File(root, oldPath)
+                val to = File(root, newPath)
+                if (!to.exists() && from.renameTo(to)) {
+                    val files = items.flatMap { listOf(File(from, it.name), File(to, it.name)) }
+                    if (files.isNotEmpty()) scan(context, *files.toTypedArray())
+                    return@withContext FileResult(done = items.size, failed = 0, needsAllFilesAccess = false)
+                }
+            }
+            move(context, items, newPath)
+        }
+
     fun displayName(context: Context, item: MediaItem): String? =
         context.contentResolver.query(item.uri, arrayOf(MediaStore.MediaColumns.DISPLAY_NAME), null, null, null)
             ?.use { if (it.moveToFirst()) it.getString(0) else null }

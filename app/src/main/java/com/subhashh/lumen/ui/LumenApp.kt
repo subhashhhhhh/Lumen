@@ -45,6 +45,9 @@ import com.subhashh.lumen.data.CollectionKeys
 import com.subhashh.lumen.data.MediaThumbnailFetcher
 import com.subhashh.lumen.data.GridThumbnailFetcher
 import com.subhashh.lumen.data.MediaCollections
+import com.subhashh.lumen.data.MediaCollection
+import com.subhashh.lumen.data.AlbumSettings
+import com.subhashh.lumen.data.AlbumSort
 import com.subhashh.lumen.ui.components.GlassIconButton
 import com.subhashh.lumen.ui.components.GlassTextButton
 import androidx.compose.material3.Button
@@ -304,7 +307,20 @@ private fun MainScaffold(
             pick == null || (it.key != CollectionKeys.RecentlyDeleted && it.key != CollectionKeys.Hidden)
         }
     }
-    val folders = remember(library) { MediaCollections.folders(library.orEmpty()) }
+    var albumSettings by remember { mutableStateOf(prefs.albumSettings) }
+    val updateAlbums = { change: (AlbumSettings) -> AlbumSettings ->
+        albumSettings = change(albumSettings)
+        prefs.albumSettings = albumSettings
+    }
+    val folders = remember(library, albumSettings) { MediaCollections.folders(library.orEmpty(), albumSettings) }
+    // A new album stops being "created" once something is in it: it's a real folder then.
+    LaunchedEffect(folders) {
+        val real = folders.filter { it.count > 0 }.mapTo(HashSet()) { it.relativePath }
+        if (albumSettings.created.any { it in real }) updateAlbums { it.copy(created = it.created.filterNot(real::contains)) }
+    }
+    var collectionsMenuOpen by remember { mutableStateOf(false) }
+    /** Album name prompt: renaming [album], or making a new one when null. */
+    var albumNameRequest by remember { mutableStateOf<AlbumNameRequest?>(null) }
     // The Library tab is filtered by the ≡ menu; the viewer and selection page through the same list.
     val libraryItems = remember(library, filter) {
         library.orEmpty().let { all -> if (filter == LibraryFilter.All) all else all.filter(filter::matches) }
@@ -866,6 +882,8 @@ private fun MainScaffold(
                         gridState = collectionGrid,
                         contentPadding = PaddingValues(top = statusTop + 152.dp, bottom = navBottom + 96.dp),
                         titleTopPadding = 64.dp,
+                        emptyText = if (key.startsWith("empty:")) "This album is empty.\nAdd photos with ⋯ → Move to Album or Copy to Album."
+                        else "No photos or videos",
                         transition = transition,
                         onOpen = { index -> openViewer(key, index) },
                     )
@@ -970,17 +988,46 @@ private fun MainScaffold(
         }
 
         if (tab == LumenTab.Collections && openCollection == null && settingsPage == null && !searching && !viewerOpen && !selecting && pick == null) {
-            GlassIconButton(
-                backdrop = backdrop,
-                icon = LumenIcons.Settings,
-                contentDescription = "Settings",
-                onClick = { settingsPage = SettingsMain },
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .statusBarsPadding()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
-            )
+            ) {
+                GlassIconButton(
+                    backdrop = backdrop,
+                    icon = LumenIcons.Filter,
+                    contentDescription = "Album options",
+                    onClick = { collectionsMenuOpen = !collectionsMenuOpen },
+                )
+                GlassIconButton(
+                    backdrop = backdrop,
+                    icon = LumenIcons.Settings,
+                    contentDescription = "Settings",
+                    onClick = { settingsPage = SettingsMain },
+                )
+            }
         }
+        BackHandler(enabled = collectionsMenuOpen) { collectionsMenuOpen = false }
+        GlassMenu(
+            backdrop = backdrop,
+            open = collectionsMenuOpen && tab == LumenTab.Collections && openCollection == null && !viewerOpen && settingsPage == null,
+            onDismiss = { collectionsMenuOpen = false },
+            sections = listOf(
+                AlbumSort.entries.map { sort ->
+                    MenuItem("Sort by ${sort.label}", checked = sort == albumSettings.sort) {
+                        updateAlbums { it.copy(sort = sort) }
+                    }
+                },
+                listOf(MenuItem("New Album…") { albumNameRequest = AlbumNameRequest(album = null) }),
+            ),
+            origin = TransformOrigin(1f, 0f),
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .statusBarsPadding()
+                .padding(top = 64.dp, end = 16.dp),
+        )
 
         if ((inCollection || inSettings) && !viewerOpen) {
             GlassIconButton(
@@ -1086,7 +1133,12 @@ private fun MainScaffold(
                 allFavorite = allFavorite,
                 onShare = { MediaActions.share(context, selectedItems) },
                 onFavorite = { launch(MediaActions.favoriteRequest(context, selectedItems, favorite = !allFavorite)) },
-                onDelete = { launch(MediaActions.trashRequest(context, selectedItems)) },
+                onDelete = {
+                    // Empty new albums have nothing to trash; deleting one just forgets it.
+                    val emptyPaths = folders.filter { it.key in albumSelection.orEmpty() && it.count == 0 }.map { it.relativePath }.toSet()
+                    if (emptyPaths.isNotEmpty()) updateAlbums { it.copy(created = it.created.filterNot(emptyPaths::contains)) }
+                    if (selectedItems.isNotEmpty()) launch(MediaActions.trashRequest(context, selectedItems)) else endSelection()
+                },
                 onRestore = { launch(MediaActions.restoreRequest(context, selectedItems)) },
                 onDeleteForever = {
                     if (CollectionKeys.isHidden(selectionScope)) deleteHidden(selectedItems)
@@ -1109,8 +1161,32 @@ private fun MainScaffold(
                     listOf(MenuItem(if (many) "Exclude Folders" else "Exclude Folder") { excludeFromHidden(selectedItems) }),
                 )
             } else if (albumSelection != null) {
-                // Whole albums: move or copy their contents, or hide / exclude the folders.
+                // Whole albums: arrange them, move or copy their contents, or hide / exclude the folders.
+                val chosen = folders.filter { it.key in albumSelection.orEmpty() }
                 listOf(
+                    listOfNotNull(
+                        chosen.singleOrNull()?.let { album -> MenuItem("Rename Album…") { albumNameRequest = AlbumNameRequest(album) } },
+                        if (chosen.isNotEmpty() && chosen.all { it.pinned }) {
+                            MenuItem("Unpin") {
+                                val paths = chosen.map { it.relativePath }.toSet()
+                                updateAlbums { it.copy(pinned = it.pinned.filterNot(paths::contains)) }
+                                endSelection()
+                            }
+                        } else {
+                            MenuItem("Pin to Top") {
+                                val add = chosen.filterNot { it.pinned }.map { it.relativePath }
+                                updateAlbums { it.copy(pinned = it.pinned + add) }
+                                endSelection()
+                            }
+                        },
+                        if (chosen.any { it.customCover }) {
+                            MenuItem("Reset Cover") {
+                                val paths = chosen.map { it.relativePath }.toSet()
+                                updateAlbums { it.copy(covers = it.covers.filterKeys { p -> p !in paths }) }
+                                endSelection()
+                            }
+                        } else null,
+                    ),
                     listOf(
                         MenuItem("Move to Album…") { albumRequest = AlbumRequest(move = true, items = selectedItems) },
                         MenuItem("Copy to Album…") { albumRequest = AlbumRequest(move = false, items = selectedItems) },
@@ -1195,6 +1271,13 @@ private fun MainScaffold(
                 onRename = { renameItem = it },
                 onRotate = { item, degrees -> rotate(listOf(item), degrees) },
                 onExcludeFolder = { excludeFolders(listOf(it)) },
+                // Inside a folder album: make this photo its cover, like iOS's Make Key Photo.
+                onMakeCover = if (CollectionKeys.isFolder(source)) {
+                    { item ->
+                        updateAlbums { it.copy(covers = it.covers + (item.relativePath to item.id)) }
+                        toast("Album cover updated")
+                    }
+                } else null,
                 onHide = { hide(listOf(it)) },
                 onHideFolder = { hideFolders(listOf(it)) },
                 slideshowOf = slideshowOf,
@@ -1260,9 +1343,65 @@ private fun MainScaffold(
             onDismiss = { renameItem = null },
         )
 
+        RenameDialog(
+            currentName = albumNameRequest?.let { it.album?.title ?: "" },
+            title = if (albumNameRequest?.album == null) "New Album" else "Rename Album",
+            confirm = if (albumNameRequest?.album == null) "Create" else "Rename",
+            keepExtension = false,
+            onRename = { name ->
+                val album = albumNameRequest?.album
+                albumNameRequest = null
+                val clean = name.trim().replace('/', '_')
+                if (album == null) {
+                    // New albums go in Pictures/, where any app may add photos without All files access.
+                    val path = MediaFiles.newAlbumPath(clean)
+                    if (folders.any { it.relativePath.equals(path, ignoreCase = true) }) {
+                        toast("There's already an album called “$clean”")
+                    } else {
+                        updateAlbums { it.copy(created = it.created + path) }
+                        collectionsMenuOpen = false
+                        openCollection = CollectionKeys.emptyAlbum(path)
+                    }
+                } else {
+                    val parent = album.relativePath.trimEnd('/').substringBeforeLast('/', "")
+                    val newPath = (if (parent.isEmpty()) "" else "$parent/") + clean + "/"
+                    when {
+                        folders.any { it.relativePath.equals(newPath, ignoreCase = true) } ->
+                            toast("There's already an album called “$clean” there")
+                        album.count == 0 -> {
+                            updateAlbums { it.renamed(album.relativePath, newPath) }
+                            endSelection()
+                        }
+                        else -> {
+                            val items = library.orEmpty().filter { it.relativePath == album.relativePath }
+                            val run = {
+                                scope.launch {
+                                    val result = MediaFiles.renameAlbum(context, items, album.relativePath, newPath)
+                                    if (result.done > 0) updateAlbums { it.renamed(album.relativePath, newPath) }
+                                    finish(
+                                        when {
+                                            result.failed == 0 -> null
+                                            result.needsAllFilesAccess ->
+                                                "Couldn't rename “${album.title}”: that folder needs All files access (Settings → Permissions)"
+                                            else -> "Renamed ${result.done} of ${items.size}; ${result.failed} couldn't move"
+                                        },
+                                    )
+                                }
+                            }
+                            if (Environment.isExternalStorageManager()) run() else withWriteAccess(items) { run() }
+                        }
+                    }
+                }
+            },
+            onDismiss = { albumNameRequest = null },
+        )
+
         PhotoTransitionOverlay(transition)
     }
 }
+
+/** Naming an album: renaming [album], or a brand-new one when it's null. */
+private data class AlbumNameRequest(val album: MediaCollection?)
 
 @Composable
 private fun PermissionScreen(onGrant: () -> Unit) {

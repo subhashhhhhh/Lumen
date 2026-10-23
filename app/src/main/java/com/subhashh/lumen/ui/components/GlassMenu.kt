@@ -50,6 +50,8 @@ data class MenuItem(
     val destructive: Boolean = false,
     /** Choosing this item shows these instead (with a back row), like an iOS nested menu. */
     val submenu: List<MenuItem>? = null,
+    /** Shows a checkmark: the current choice in a pick-one section. */
+    val checked: Boolean = false,
     val onClick: () -> Unit = {},
 )
 
@@ -153,6 +155,9 @@ private fun MenuRow(item: MenuItem, colors: GlassColors, onClick: () -> Unit) {
             fontSize = 16.sp,
             modifier = Modifier.weight(1f),
         )
+        if (item.checked) {
+            Icon(LumenIcons.Check, contentDescription = "Selected", tint = colors.content, modifier = Modifier.size(18.dp))
+        }
         if (item.submenu != null) {
             Icon(
                 LumenIcons.Back,
