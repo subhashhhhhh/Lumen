@@ -55,6 +55,8 @@ baselineProfile {
 
 dependencies {
     testImplementation(libs.junit)
+    // Android's org.json is a stub in local tests; the real one stands in.
+    testImplementation(libs.org.json)
     implementation(libs.androidx.profileinstaller)
     baselineProfile(project(":baselineprofile"))
     implementation(libs.androidx.core.ktx)
