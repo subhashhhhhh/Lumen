@@ -163,19 +163,6 @@ private fun Context.hasMediaAccess(): Boolean = MediaPermissions.any {
 
 @Composable
 fun LumenApp() {
-    setSingletonImageLoaderFactory { context ->
-        ImageLoader.Builder(context)
-            // Platform ImageDecoder handles AVIF/HEIF, which BitmapFactory can't on every device.
-            .imageDecoderEnabled(true)
-            .components {
-                add(MediaThumbnailFetcher.Factory())
-                add(GridThumbnailFetcher.Factory(context))
-                add(VideoFrameDecoder.Factory())
-                add(SvgDecoder.Factory())
-            }
-            .build()
-    }
-
     val context = LocalContext.current
     val viewModel: LibraryViewModel = viewModel()
     var hasAccess by rememberSaveable { mutableStateOf(context.hasMediaAccess()) }

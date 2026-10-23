@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.media.MediaMetadataRetriever
 import android.provider.MediaStore
+import android.provider.OpenableColumns
 import androidx.compose.runtime.Immutable
 import androidx.core.content.ContextCompat
 import androidx.exifinterface.media.ExifInterface
@@ -52,7 +53,17 @@ object MediaDetailsLoader {
         var width = 0
         var height = 0
         var orientation = 0
-        if (item.uri.scheme == "content") {
+        if (item.uri.scheme == "content" && !ExternalMedia.isMediaStore(item.uri)) {
+            // Opened from another app: only what that app's provider offers.
+            resolver.query(item.uri, arrayOf(OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE), null, null, null)?.use { c ->
+                if (c.moveToFirst()) {
+                    name = c.getString(0).orEmpty()
+                    size = c.getLong(1)
+                }
+            }
+            width = item.width
+            height = item.height
+        } else if (item.uri.scheme == "content") {
             resolver.query(
                 ContentUris.withAppendedId(MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL), item.id),
                 arrayOf(
@@ -84,7 +95,7 @@ object MediaDetailsLoader {
             height = item.height
         }
         // MediaStore reports stored dimensions; show them as the photo is displayed.
-        if (orientation == 90 || orientation == 270) {
+        if (ExternalMedia.isMediaStore(item.uri) && orientation == 90 || orientation == 270) {
             width = height.also { height = width }
         }
 
@@ -94,7 +105,7 @@ object MediaDetailsLoader {
             Manifest.permission.ACCESS_MEDIA_LOCATION,
         ) == PackageManager.PERMISSION_GRANTED
         // Only MediaStore Uris carry redacted GPS; file Uris (hidden items) are read as-is.
-        val sourceUri = if (canReadLocation && item.uri.scheme == "content") MediaStore.setRequireOriginal(item.uri) else item.uri
+        val sourceUri = if (canReadLocation && ExternalMedia.isMediaStore(item.uri)) MediaStore.setRequireOriginal(item.uri) else item.uri
 
         var camera: CameraInfo? = null
         var location: GeoPoint? = null

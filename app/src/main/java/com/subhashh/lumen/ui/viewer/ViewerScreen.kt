@@ -139,6 +139,8 @@ fun ViewerScreen(
     onHideFolder: (MediaItem) -> Unit = {},
     /** Start a slideshow right away, limited to these ids (from a selection); null = don't. */
     slideshowOf: Set<Long>? = null,
+    /** Opened by another app: Share and Info, and ⋯ with only what works on someone else's file. */
+    external: Boolean = false,
 ) {
     val context = LocalContext.current
     val pager = rememberPagerState(initialPage = initialIndex) { items.size }
@@ -385,7 +387,20 @@ fun ViewerScreen(
                         Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
-                        if (inHidden) {
+                        if (external) {
+                            GlassIconButton(
+                                backdrop = backdrop,
+                                icon = LumenIcons.Share,
+                                contentDescription = "Share",
+                                onClick = { MediaActions.share(context, current) },
+                            )
+                            GlassIconButton(
+                                backdrop = backdrop,
+                                icon = LumenIcons.Info,
+                                contentDescription = "Details",
+                                onClick = motion::openInfo,
+                            )
+                        } else if (inHidden) {
                             GlassIconButton(
                                 backdrop = backdrop,
                                 icon = LumenIcons.Share,
@@ -467,7 +482,7 @@ fun ViewerScreen(
                 backdrop = backdrop,
                 open = moreOpen && chromeVisible,
                 onDismiss = { moreOpen = false },
-                sections = viewerMenu(
+                sections = if (external) externalMenu(context, current) else viewerMenu(
                     context = context,
                     item = current,
                     onCopyToAlbum = onCopyToAlbum,
@@ -542,6 +557,16 @@ private fun viewerMenu(
         ),
     )
 }
+
+/** ⋯ for a file another app opened in Lumen: hand-offs only, nothing that changes it. */
+private fun externalMenu(context: Context, item: MediaItem): List<List<MenuItem>> = listOf(
+    listOfNotNull(
+        MenuItem("Open with…") { MediaActions.openWith(context, item) },
+        if (!item.isVideo) MenuItem("Set as…") { MediaActions.setAs(context, item) } else null,
+        MenuItem("Copy to clipboard") { MediaActions.copyToClipboard(context, item) },
+    ),
+    listOfNotNull(if (!item.isVideo) MenuItem("Print") { MediaActions.print(context, item) } else null),
+)
 
 /** "Rotate ›" with Left / Right / 180° inside, shared by the viewer and selection menus. */
 fun rotateMenu(onRotate: (degrees: Int) -> Unit) = MenuItem(
