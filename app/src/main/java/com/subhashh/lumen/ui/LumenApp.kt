@@ -49,6 +49,10 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.subhashh.lumen.ui.hidden.hiddenFolders
+import com.subhashh.lumen.ui.hidden.HiddenScreen
+import com.subhashh.lumen.ui.hidden.HiddenFolder
+import androidx.compose.runtime.produceState
 import com.subhashh.lumen.ui.hidden.LockFlow
 import com.subhashh.lumen.ui.hidden.HiddenLockScreen
 import com.subhashh.lumen.data.HiddenLockStore
@@ -199,6 +203,10 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
     val allItems by viewModel.allItems.collectAsState()
     val excluded by viewModel.excluded.collectAsState()
     val hidden by viewModel.hidden.collectAsState()
+    // Folder grouping stats each folder for .nomedia, so it runs off the main thread.
+    val hiddenFolderList by produceState<List<HiddenFolder>?>(null, hidden) {
+        value = hidden?.let { withContext(Dispatchers.IO) { hiddenFolders(it) } }
+    }
     /** Hidden opens only after biometric unlock and re-locks whenever it's left. */
     var hiddenUnlocked by remember { mutableStateOf(false) }
     var confirmation by remember { mutableStateOf<Confirmation?>(null) }
@@ -272,7 +280,9 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
         when (key) {
             CollectionKeys.Library -> libraryItems
             CollectionKeys.Hidden -> if (hiddenUnlocked) hidden.orEmpty() else emptyList()
-            else -> CollectionKeys.items(key, library.orEmpty(), trash)
+            else -> CollectionKeys.hiddenFolderId(key)?.let { id ->
+                if (hiddenUnlocked) hidden.orEmpty().filter { it.bucketId == id } else emptyList()
+            } ?: CollectionKeys.items(key, library.orEmpty(), trash)
         }
     }
     val months = remember(libraryItems) { periods(libraryItems, byYear = false) }
@@ -297,7 +307,10 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
         settingsPage = if (settingsPage == SettingsLicenses || settingsPage == SettingsExcluded) SettingsMain else null
     }
     BackHandler(enabled = searching && !viewerOpen) { searching = false }
-    BackHandler(enabled = inCollection && !viewerOpen) { openCollection = null }
+    BackHandler(enabled = inCollection && !viewerOpen) {
+        // A folder inside Hidden steps back to Hidden's list, not out of Hidden.
+        openCollection = if (CollectionKeys.hiddenFolderId(openCollection.orEmpty()) != null) CollectionKeys.Hidden else null
+    }
     BackHandler(enabled = inSettings && !viewerOpen) { popSettings() }
 
     // Multi-select: null when not selecting. Lives here so the header, top controls and the
@@ -307,6 +320,8 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
         searching -> null
         tab == LumenTab.Library && zoomLevel == ZoomLevel.All -> CollectionKeys.Library
         tab == LumenTab.Library -> null
+        // Hidden's top level is a list of folders, not photos.
+        openCollection == CollectionKeys.Hidden -> null
         else -> openCollection
     }
     val selectableItems = selectableKey?.let(itemsOf).orEmpty()
@@ -461,19 +476,19 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
     }
     // Re-lock as soon as Hidden is left: its grid and the viewer over it are the only ways in.
     LaunchedEffect(openCollection, viewerSource) {
-        if (openCollection != CollectionKeys.Hidden && viewerSource != CollectionKeys.Hidden) hiddenUnlocked = false
+        if (!CollectionKeys.isHidden(openCollection) && !CollectionKeys.isHidden(viewerSource)) hiddenUnlocked = false
     }
     // Leaving the app locks it too, closing anything that shows hidden photos.
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) {
         if (hiddenUnlocked) {
-            if (viewerSource == CollectionKeys.Hidden) viewerSource = null
-            if (openCollection == CollectionKeys.Hidden) openCollection = null
+            if (CollectionKeys.isHidden(viewerSource)) viewerSource = null
+            if (CollectionKeys.isHidden(openCollection)) openCollection = null
             hiddenUnlocked = false
         }
     }
     // After a restart, never land inside Hidden without unlocking (its list is empty until then).
     LaunchedEffect(openCollection, hiddenUnlocked) {
-        if (openCollection == CollectionKeys.Hidden && !hiddenUnlocked) openCollection = null
+        if (CollectionKeys.isHidden(openCollection) && !hiddenUnlocked) openCollection = null
     }
 
     val excludeFolders: (List<MediaItem>) -> Unit = { items ->
@@ -676,11 +691,17 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                         }
                     }
                 }
+                openCollection == CollectionKeys.Hidden -> HiddenScreen(
+                    folders = hiddenFolderList,
+                    contentPadding = PaddingValues(top = statusTop + 72.dp, bottom = navBottom + 96.dp),
+                    onOpen = { openCollection = it },
+                )
                 openCollection != null -> {
                     val key = openCollection!!
                     LibraryScreen(
                         title = selection?.let { selectionTitle(selectedItems) }
-                            ?: (utilities + folders).firstOrNull { it.key == key }?.title.orEmpty(),
+                            ?: (utilities + folders).firstOrNull { it.key == key }?.title
+                            ?: hiddenFolderList?.firstOrNull { it.collection.key == key }?.collection?.title.orEmpty(),
                         selection = selection,
                         onSelectionChange = { selection = it },
                         aspectRatioGrid = aspectRatioGrid,
@@ -763,7 +784,13 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                 backdrop = backdrop,
                 icon = LumenIcons.Back,
                 contentDescription = "Back",
-                onClick = { if (inSettings) popSettings() else openCollection = null },
+                onClick = {
+                    when {
+                        inSettings -> popSettings()
+                        CollectionKeys.hiddenFolderId(openCollection.orEmpty()) != null -> openCollection = CollectionKeys.Hidden
+                        else -> openCollection = null
+                    }
+                },
                 modifier = Modifier
                     .align(Alignment.TopStart)
                     .statusBarsPadding()
@@ -846,14 +873,14 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                 backdrop = backdrop,
                 hasSelection = selectedItems.isNotEmpty(),
                 inTrash = selectableKey == CollectionKeys.RecentlyDeleted,
-                inHidden = selectableKey == CollectionKeys.Hidden,
+                inHidden = CollectionKeys.isHidden(selectableKey),
                 allFavorite = allFavorite,
                 onShare = { MediaActions.share(context, selectedItems) },
                 onFavorite = { launch(MediaActions.favoriteRequest(context, selectedItems, favorite = !allFavorite)) },
                 onDelete = { launch(MediaActions.trashRequest(context, selectedItems)) },
                 onRestore = { launch(MediaActions.restoreRequest(context, selectedItems)) },
                 onDeleteForever = {
-                    if (selectableKey == CollectionKeys.Hidden) deleteHidden(selectedItems)
+                    if (CollectionKeys.isHidden(selectableKey)) deleteHidden(selectedItems)
                     else launch(MediaActions.deleteForeverRequest(context, selectedItems))
                 },
                 onUnhide = { unhide(selectedItems) },
@@ -907,7 +934,7 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                 items = list,
                 initialIndex = viewerStart.coerceAtMost(list.lastIndex.coerceAtLeast(0)),
                 inTrash = source == CollectionKeys.RecentlyDeleted,
-                inHidden = source == CollectionKeys.Hidden,
+                inHidden = CollectionKeys.isHidden(source),
                 onUnhide = { unhide(listOf(it)) },
                 onDeleteHidden = { deleteHidden(listOf(it)) },
                 onClose = { exit ->

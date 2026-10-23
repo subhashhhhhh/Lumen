@@ -162,7 +162,7 @@ private fun utilityIcon(key: String): ImageVector = when (key) {
 }
 
 @Composable
-private fun AlbumCard(collection: MediaCollection, onClick: () -> Unit) {
+internal fun AlbumCard(collection: MediaCollection, onClick: () -> Unit, subtitle: String = collection.count.toString()) {
     val onBackground = MaterialTheme.colorScheme.onBackground
     Column(Modifier.pressable(onClick, pressedScale = 0.96f)) {
         Box(
@@ -191,7 +191,7 @@ private fun AlbumCard(collection: MediaCollection, onClick: () -> Unit) {
             modifier = Modifier.padding(horizontal = 2.dp),
         )
         Text(
-            collection.count.toString(),
+            subtitle,
             fontSize = 13.sp,
             color = onBackground.copy(alpha = 0.55f),
             modifier = Modifier.padding(horizontal = 2.dp),
@@ -206,7 +206,8 @@ private fun Cover(item: MediaItem) {
         // Own cache key: covers are larger than grid thumbnails, so they must not reuse those bitmaps.
         model = remember(item.version) {
             ImageRequest.Builder(context)
-                .data(MediaThumbnail(item.uri))
+                // Hidden files have no system thumbnail (file Uri); decode them directly.
+                .data(if (item.uri.scheme == "content") MediaThumbnail(item.uri) else item.uri)
                 .memoryCacheKey(ImageKeys.cover(item))
                 .build()
         },

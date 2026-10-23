@@ -51,9 +51,19 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
     /** Hidden photos and videos; null until scanned (only when the Hidden section opens). */
     val hidden: StateFlow<List<MediaItem>?> = _hidden.asStateFlow()
 
-    /** Walks storage for hidden files (~2 s on a full phone), so only on demand. */
+    private var hiddenScan: kotlinx.coroutines.Job? = null
+
+    /**
+     * Scans storage for hidden files, only on demand. The previous result stays visible meanwhile,
+     * so reopening Hidden is instant; the list appears first and photo dimensions follow.
+     */
     fun loadHidden() {
-        viewModelScope.launch { _hidden.value = HiddenMedia.scan() }
+        hiddenScan?.cancel()
+        hiddenScan = viewModelScope.launch {
+            val found = HiddenMedia.scan(_excluded.value)
+            _hidden.value = found
+            _hidden.value = HiddenMedia.withSizes(found)
+        }
     }
 
     fun exclude(folders: Collection<String>) = setExcluded(_excluded.value + folders)

@@ -31,32 +31,72 @@ object HiddenMedia {
 
     fun available() = Environment.isExternalStorageManager()
 
-    /** Every hidden photo and video on shared storage, oldest first. Empty without All files access. */
-    suspend fun scan(): List<MediaItem> = withContext(Dispatchers.IO) {
+    /**
+     * Every hidden photo and video on shared storage, oldest first. Empty without All files access.
+     * Dimensions are left at 0 for speed; [withSizes] fills them in afterwards.
+     *
+     * Walking 12k+ files with java.io through Android's storage layer took many seconds (every
+     * entry is a slow stat), so the system's own `find` locates the dot-named entries and
+     * `.nomedia` markers in one fast pass; only the hidden folders' contents are then listed.
+     */
+    suspend fun scan(excluded: Set<String> = emptySet()): List<MediaItem> = withContext(Dispatchers.IO) {
         if (!available()) return@withContext emptyList()
         val root = Environment.getExternalStorageDirectory()
-        val found = ArrayList<MediaItem>()
+        val skip = File(root, "Android").absolutePath
+        val hits = runCatching {
+            val process = ProcessBuilder(
+                "find", root.absolutePath, "-path", skip, "-prune", "-o",
+                "(", "-name", ".*", "-o", "-name", NoMedia, ")", "-print",
+            ).redirectErrorStream(false).start()
+            process.inputStream.bufferedReader().readLines().also { process.waitFor() }
+        }.getOrDefault(emptyList())
 
-        fun walk(dir: File, hiddenAbove: Boolean) {
-            val children = dir.listFiles() ?: return
-            val hidden = hiddenAbove ||
-                (dir != root && dir.name.startsWith('.')) ||
-                children.any { it.name == NoMedia }
-            for (child in children) {
-                if (child.isDirectory) {
-                    if (dir == root && child.name == "Android") continue
-                    if (child.name.lowercase() in JunkFolders) continue
-                    walk(child, hidden)
-                } else {
-                    val type = Types[child.extension.lowercase()] ?: continue
-                    if (hidden || child.name.startsWith('.')) found += child.toItem(root, type)
-                }
-            }
+        val found = LinkedHashMap<String, MediaItem>()
+        fun add(file: File) {
+            val type = Types[file.extension.lowercase()] ?: return
+            val item = file.toItem(root, type)
+            if (excluded.any { item.relativePath.startsWith(it) }) return
+            found.putIfAbsent(file.absolutePath, item)
+        }
+        fun isJunk(dir: File) = generateSequence(dir) { it.parentFile }
+            .takeWhile { it != root }
+            .any { it.name.lowercase() in JunkFolders }
+        // Everything below a hidden folder is hidden too (Android treats .nomedia as recursive).
+        fun addTree(dir: File) {
+            if (isJunk(dir)) return
+            dir.listFiles()?.forEach { if (it.isDirectory) addTree(it) else add(it) }
         }
 
-        walk(root, false)
-        found.sortWith(compareBy<MediaItem> { it.takenAt }.thenBy { it.id })
-        found
+        for (line in hits) {
+            val file = File(line)
+            when {
+                file.name == NoMedia -> file.parentFile?.let(::addTree)
+                file.isDirectory -> addTree(file)
+                !isJunk(file.parentFile ?: root) -> add(file)
+            }
+        }
+        found.values.sortedWith(compareBy<MediaItem> { it.takenAt }.thenBy { it.id })
+    }
+
+    /**
+     * [items] with photo dimensions read from their headers (the open/close zoom needs the shape).
+     * A separate pass so the Hidden grid can show the moment [scan] returns.
+     */
+    suspend fun withSizes(items: List<MediaItem>): List<MediaItem> = withContext(Dispatchers.IO) {
+        items.map { item ->
+            if (item.isVideo || item.width > 0) return@map item
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeFile(item.uri.path, bounds)
+            item.copy(width = bounds.outWidth.coerceAtLeast(0), height = bounds.outHeight.coerceAtLeast(0))
+        }
+    }
+
+    /** True when the whole folder is hidden (.nomedia or a dot-name here or above), not just some files in it. */
+    fun isHiddenFolder(folder: File): Boolean {
+        val root = Environment.getExternalStorageDirectory()
+        return generateSequence(folder) { it.parentFile }
+            .takeWhile { it != root }
+            .any { it.name.startsWith('.') || File(it, NoMedia).exists() }
     }
 
     /** True for items from [scan] (file Uris rather than MediaStore ones). */
@@ -149,15 +189,6 @@ object HiddenMedia {
 
     private fun File.toItem(root: File, type: String): MediaItem {
         val isVideo = type.startsWith("video/")
-        var width = 0
-        var height = 0
-        if (!isVideo) {
-            // Header only: cheap, and the open/close zoom needs the shape.
-            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-            BitmapFactory.decodeFile(absolutePath, bounds)
-            width = bounds.outWidth.coerceAtLeast(0)
-            height = bounds.outHeight.coerceAtLeast(0)
-        }
         val folder = parentFile ?: root
         return MediaItem(
             // Negative, so it can never collide with a MediaStore id.
@@ -171,8 +202,8 @@ object HiddenMedia {
             relativePath = folder.relativeTo(root).path.let { if (it.isEmpty()) "" else "$it/" },
             bucketId = folder.absolutePath.hashCode().toLong(),
             bucketName = folder.name,
-            width = width,
-            height = height,
+            width = 0,
+            height = 0,
             modified = lastModified() / 1000,
         )
     }

@@ -11,6 +11,16 @@ object CollectionKeys {
     const val RecentlyDeleted = "trash"
     /** Hidden files come from a storage scan, not MediaStore; the caller supplies them. */
     const val Hidden = "hidden"
+    private const val HiddenFolderPrefix = "hidden:"
+
+    /** One folder inside Hidden: its hidden files only. */
+    fun hiddenFolder(bucketId: Long) = "$HiddenFolderPrefix$bucketId"
+
+    fun hiddenFolderId(key: String): Long? = key.removePrefix(HiddenFolderPrefix).toLongOrNull()
+        .takeIf { key.startsWith(HiddenFolderPrefix) }
+
+    /** Hidden itself or a folder inside it: everything that must stay behind the lock. */
+    fun isHidden(key: String?) = key == Hidden || key?.startsWith(HiddenFolderPrefix) == true
     private const val FolderPrefix = "folder:"
 
     fun folder(bucketId: Long) = "$FolderPrefix$bucketId"
