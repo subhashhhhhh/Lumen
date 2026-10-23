@@ -70,6 +70,8 @@ fun SearchScreen(
     onOpen: (index: Int) -> Unit,
     onOpenAlbum: (key: String) -> Unit,
     onSuggestion: (String) -> Unit,
+    /** Picking several: ticks on what's chosen. */
+    picked: Set<Long>?,
     /** Columns, saved separately from the Library's; pinch changes them. */
     columns: Int,
     onColumnsChange: (Int) -> Unit,
@@ -136,7 +138,7 @@ fun SearchScreen(
                 bucket = bucket,
                 fit = false,
                 showDuration = columns <= 5,
-                selected = null,
+                selected = picked?.let { item.id in it },
                 onClick = {
                     keyboard?.hide()
                     onOpen(index)

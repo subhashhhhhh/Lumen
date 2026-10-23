@@ -46,6 +46,7 @@ import com.subhashh.lumen.data.MediaThumbnailFetcher
 import com.subhashh.lumen.data.GridThumbnailFetcher
 import com.subhashh.lumen.data.MediaCollections
 import com.subhashh.lumen.ui.components.GlassIconButton
+import com.subhashh.lumen.ui.components.GlassTextButton
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -162,7 +163,12 @@ private fun Context.hasMediaAccess(): Boolean = MediaPermissions.any {
 }
 
 @Composable
-fun LumenApp() {
+fun LumenApp(
+    /** Set when another app asked Lumen to pick photos or videos. */
+    pick: PickRequest? = null,
+    onPicked: (List<MediaItem>) -> Unit = {},
+    onCancelPick: () -> Unit = {},
+) {
     val context = LocalContext.current
     val viewModel: LibraryViewModel = viewModel()
     var hasAccess by rememberSaveable { mutableStateOf(context.hasMediaAccess()) }
@@ -182,15 +188,31 @@ fun LumenApp() {
     }
 
     if (hasAccess) {
-        MainScaffold(viewModel)
+        MainScaffold(viewModel, pick, onPicked, onCancelPick)
     } else {
         PermissionScreen(onGrant = { launcher.launch(MediaPermissions) })
     }
 }
 
 @Composable
-private fun MainScaffold(viewModel: LibraryViewModel) {
-    val library by viewModel.items.collectAsState()
+private fun MainScaffold(
+    viewModel: LibraryViewModel,
+    pick: PickRequest?,
+    onPicked: (List<MediaItem>) -> Unit,
+    onCancelPick: () -> Unit,
+) {
+    val loadedLibrary by viewModel.items.collectAsState()
+    // A picker shows only the asked-for types, everywhere: grids, albums, search.
+    val library = remember(loadedLibrary, pick) { pick?.let { p -> loadedLibrary?.filter(p::accepts) } ?: loadedLibrary }
+    /** Picking several: what's chosen so far, in order, kept across screens. */
+    var picked by remember { mutableStateOf<Map<Long, MediaItem>>(emptyMap()) }
+    /** A grid's selection changed to [ids]: update the picks from that grid, keep the others. */
+    val setPicked = { ids: Set<Long>?, gridItems: List<MediaItem> ->
+        val chosen = ids.orEmpty()
+        val gridIds = gridItems.mapTo(HashSet()) { it.id }
+        picked = picked.filterKeys { it in chosen || it !in gridIds } + gridItems.filter { it.id in chosen }.associateBy { it.id }
+    }
+    val pickTitle = pick?.let { if (it.multiple && picked.isNotEmpty()) "${picked.size} Selected" else it.title }
     val allItems by viewModel.allItems.collectAsState()
     val excluded by viewModel.excluded.collectAsState()
     val hidden by viewModel.hidden.collectAsState()
@@ -236,7 +258,9 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
 
     val context = LocalContext.current
     val prefs = remember { LumenPrefs(context) }
-    var filter by remember { mutableStateOf(prefs.libraryFilter) }
+    // A picker starts unfiltered: the asked-for types already narrow it, and a saved
+    // "Videos" filter would leave a photo picker empty.
+    var filter by remember { mutableStateOf(if (pick != null) LibraryFilter.All else prefs.libraryFilter) }
     var aspectRatioGrid by remember { mutableStateOf(prefs.aspectRatioGrid) }
     var gridColumns by remember { mutableIntStateOf(prefs.gridColumns) }
     val onGridColumns = { columns: Int ->
@@ -274,7 +298,12 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
     val yearsList = rememberLazyListState()
     SideEffect { transition.fitCells = aspectRatioGrid }
 
-    val utilities = remember(library, trash) { MediaCollections.utilities(library.orEmpty(), trash) }
+    val utilities = remember(library, trash, pick) {
+        MediaCollections.utilities(library.orEmpty(), trash).filter {
+            // Nothing to pick from the trash, and Hidden stays locked away.
+            pick == null || (it.key != CollectionKeys.RecentlyDeleted && it.key != CollectionKeys.Hidden)
+        }
+    }
     val folders = remember(library) { MediaCollections.folders(library.orEmpty()) }
     // The Library tab is filtered by the ≡ menu; the viewer and selection page through the same list.
     val libraryItems = remember(library, filter) {
@@ -649,6 +678,13 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
     // Grow the tapped photo out of its cell, then build the viewer behind it before revealing,
     // so the viewer's setup cost never stutters the animation.
     val openViewer: (key: String, index: Int) -> Unit = open@{ key, index ->
+        // Picking: a tap chooses instead of opening.
+        if (pick != null) {
+            val item = itemsOf(key).getOrNull(index) ?: return@open
+            if (!pick.multiple) onPicked(listOf(item))
+            else picked = if (item.id in picked) picked - item.id else picked + (item.id to item)
+            return@open
+        }
         if (transition.item != null) return@open
         val item = itemsOf(key).getOrNull(index) ?: return@open
         scope.launch {
@@ -687,6 +723,7 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                         openCollection = key
                     },
                     onSuggestion = { searchQuery = it },
+                    picked = if (pick?.multiple == true) picked.keys else null,
                     columns = searchColumns,
                     onColumnsChange = {
                         searchColumns = it
@@ -746,9 +783,14 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                 }
                 tab == LumenTab.Library -> Box(Modifier.nestedScroll(zoomBarScroll)) {
                     LibraryScreen(
-                        title = selection?.let { selectionTitle(selectedItems) } ?: "Library",
-                        selection = selection,
-                        onSelectionChange = { selection = it },
+                        title = pickTitle ?: selection?.let { selectionTitle(selectedItems) } ?: "Library",
+                        selection = if (pick?.multiple == true) picked.keys else selection,
+                        onSelectionChange = {
+                            when {
+                                pick?.multiple == true -> setPicked(it, libraryItems)
+                                pick == null -> selection = it
+                            }
+                        },
                         aspectRatioGrid = aspectRatioGrid,
                         columns = gridColumns,
                         onColumnsChange = onGridColumns,
@@ -800,18 +842,23 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                     columns = albumColumns,
                     onColumnsChange = onAlbumColumns,
                     selection = albumSelection,
-                    onSelectionChange = { albumSelection = it },
+                    onSelectionChange = { if (pick == null) albumSelection = it },
                     contentPadding = PaddingValues(top = statusTop + 72.dp, bottom = navBottom + 96.dp),
                     onOpen = { openCollection = it },
                 )
                 openCollection != null -> {
                     val key = openCollection!!
                     LibraryScreen(
-                        title = selection?.let { selectionTitle(selectedItems) }
+                        title = pickTitle ?: selection?.let { selectionTitle(selectedItems) }
                             ?: (utilities + folders).firstOrNull { it.key == key }?.title
                             ?: hiddenFolderList?.firstOrNull { it.collection.key == key }?.collection?.title.orEmpty(),
-                        selection = selection,
-                        onSelectionChange = { selection = it },
+                        selection = if (pick?.multiple == true) picked.keys else selection,
+                        onSelectionChange = {
+                            when {
+                                pick?.multiple == true -> setPicked(it, itemsOf(key))
+                                pick == null -> selection = it
+                            }
+                        },
                         aspectRatioGrid = aspectRatioGrid,
                         columns = gridColumns,
                         onColumnsChange = onGridColumns,
@@ -828,7 +875,7 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                     columns = albumColumns,
                     onColumnsChange = onAlbumColumns,
                     selection = albumSelection,
-                    onSelectionChange = { albumSelection = it },
+                    onSelectionChange = { if (pick == null) albumSelection = it },
                     utilities = utilities,
                     hiddenLockSet = lockSet,
                     folders = folders,
@@ -875,7 +922,29 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
             )
         }
 
-        if (tab == LumenTab.Library && !searching && selection == null && !viewerOpen && settingsPage == null) {
+        if (pick != null && !searching && !viewerOpen) {
+            GlassTextButton(
+                backdrop = backdrop,
+                text = "Cancel",
+                onClick = onCancelPick,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .statusBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+            )
+        }
+        if (pick?.multiple == true && picked.isNotEmpty()) {
+            GlassTextButton(
+                backdrop = backdrop,
+                text = "Add ${picked.size}",
+                onClick = { onPicked(picked.values.toList()) },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 16.dp, bottom = navBottom + 12.dp + 66.dp + 12.dp),
+            )
+        }
+
+        if (tab == LumenTab.Library && !searching && selection == null && !viewerOpen && settingsPage == null && pick == null) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 modifier = Modifier
@@ -900,7 +969,7 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
             }
         }
 
-        if (tab == LumenTab.Collections && openCollection == null && settingsPage == null && !searching && !viewerOpen && !selecting) {
+        if (tab == LumenTab.Collections && openCollection == null && settingsPage == null && !searching && !viewerOpen && !selecting && pick == null) {
             GlassIconButton(
                 backdrop = backdrop,
                 icon = LumenIcons.Settings,
