@@ -191,7 +191,7 @@ object Vault {
      * when encryption is turned off) or visible (unhide). An unhidden file whose folder is itself
      * hidden goes to Pictures/Restored, so it really shows up. Returns the restored file.
      */
-    suspend fun restore(context: Context, item: MediaItem, hidden: Boolean): File? = withContext(Dispatchers.IO) {
+    suspend fun restore(context: Context, item: MediaItem, hidden: Boolean, rescan: Boolean = !hidden): File? = withContext(Dispatchers.IO) {
         val k = key ?: return@withContext null
         val f = file(item) ?: return@withContext null
         val details = runCatching { Details.parse(VaultCrypto.readHeader(k, f)) }.getOrNull() ?: return@withContext null
@@ -210,9 +210,19 @@ object Vault {
         }
         f.delete()
         synchronized(listed) { listed.keys.removeAll { it.startsWith(f.name) } }
-        if (!hidden) scan(context, listOf(target.absolutePath))
+        if (rescan) scan(context, listOf(target.absolutePath))
         target
     }
+
+    /**
+     * Puts back anything that should never have been encrypted: files in the system's Recently
+     * Deleted (".trashed-…") or still being written (".pending-…"), which earlier versions mistook
+     * for hidden ones. Restored under their exact names and rescanned, so Android files them in its
+     * trash again with their expiry dates. Returns how many went back.
+     */
+    suspend fun releaseSystemFiles(context: Context, items: List<MediaItem>): Int =
+        items.filter { com.subhashh.lumen.data.HiddenMedia.isSystemFile(".${it.name}") || com.subhashh.lumen.data.HiddenMedia.isSystemFile(it.name) }
+            .count { restore(context, it, hidden = true, rescan = true) != null }
 
     fun delete(item: MediaItem): Boolean = file(item)?.delete() == true
 

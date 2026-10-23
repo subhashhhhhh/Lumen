@@ -98,7 +98,13 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
                     _vault.value = null
                     Vault.listCached(app)?.let { _vault.value = it }
                 }
-                _vault.value = Vault.list(app)
+                var listed = Vault.list(app)
+                // Earlier versions encrypted Android's own trash files; give them back.
+                if (Vault.releaseSystemFiles(app, listed) > 0) {
+                    listed = Vault.list(app)
+                    refresh() // they're back in Recently Deleted
+                }
+                _vault.value = listed
             }
         }
         hiddenScan = viewModelScope.launch {

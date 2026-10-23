@@ -38,6 +38,13 @@ object HiddenMedia {
     fun available() = Environment.isExternalStorageManager()
 
     /**
+     * Android's own dot-names, not something the user hid: ".trashed-<expiry>-name" is a file in
+     * the system's Recently Deleted (any app's trash), ".pending-<expiry>-name" one still being
+     * written. Hiding or encrypting them would pull them out of the trash.
+     */
+    fun isSystemFile(name: String) = name.startsWith(".trashed-") || name.startsWith(".pending-")
+
+    /**
      * Every hidden photo and video on shared storage, oldest first. Empty without All files access.
      * Dimensions are left at 0 for speed; [withSizes] fills them in afterwards. Exclusions are
      * the caller's job, so excluding or including a folder never needs a rescan.
@@ -60,6 +67,7 @@ object HiddenMedia {
 
         val found = LinkedHashMap<String, MediaItem>()
         fun add(file: File) {
+            if (isSystemFile(file.name)) return
             val type = Types[file.extension.lowercase()] ?: return
             found.putIfAbsent(file.absolutePath, item(file, type, file.lastModified()))
         }

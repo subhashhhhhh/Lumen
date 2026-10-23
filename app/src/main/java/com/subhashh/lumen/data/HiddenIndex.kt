@@ -24,6 +24,8 @@ object HiddenIndex {
             index.readLines().mapNotNull { line ->
                 val parts = line.split('\t')
                 if (parts.size != 6) return@mapNotNull null
+                // Saved before Lumen knew Android's trash names: never show those as hidden.
+                if (HiddenMedia.isSystemFile(File(parts[0]).name)) return@mapNotNull null
                 HiddenMedia.item(
                     File(parts[0]),
                     type = parts[1],
