@@ -86,6 +86,8 @@ import com.subhashh.lumen.ui.components.RenameDialog
 import com.subhashh.lumen.ui.components.DateTimeDialog
 import com.subhashh.lumen.data.MediaDates
 import com.subhashh.lumen.data.SettingsBackup
+import com.subhashh.lumen.data.ImageExport
+import com.subhashh.lumen.ui.settings.ResizeDialog
 import com.subhashh.lumen.data.FavoritesImport
 import android.provider.MediaStore
 import android.os.Environment
@@ -340,6 +342,8 @@ private fun MainScaffold(
         if (albumSettings.created.any { it in real }) updateAlbums { it.copy(created = it.created.filterNot(real::contains)) }
     }
     var collectionsMenuOpen by remember { mutableStateOf(false) }
+    /** Photos waiting for Resize or Convert's choices. */
+    var resizeRequest by remember { mutableStateOf<List<MediaItem>?>(null) }
     /** The photo being framed in Set as Wallpaper. */
     var wallpaperItem by remember { mutableStateOf<MediaItem?>(null) }
     /** Items waiting for a new date from Adjust Date & Time. */
@@ -1375,6 +1379,9 @@ private fun MainScaffold(
                 listOfNotNull(
                     if (selectedItems.any(MediaFiles::canRotate)) rotateMenu { rotate(selectedItems, it) } else null,
                     MenuItem("Adjust Date & Time…") { dateRequest = selectedItems },
+                    if (selectedItems.any { !it.isVideo }) MenuItem("Resize or Convert…") {
+                        resizeRequest = selectedItems.filterNot { it.isVideo }
+                    } else null,
                 ),
                 listOf(MenuItem("Hide") { hide(selectedItems) }),
                 listOf(
@@ -1441,6 +1448,7 @@ private fun MainScaffold(
                 onExcludeFolder = { excludeFolders(listOf(it)) },
                 onAdjustDate = { dateRequest = listOf(it) },
                 onSetWallpaper = { wallpaperItem = it },
+                onResize = { resizeRequest = listOf(it) },
                 // Inside a folder album: make this photo its cover, like iOS's Make Key Photo.
                 onMakeCover = if (CollectionKeys.isFolder(source)) {
                     { item ->
@@ -1576,6 +1584,28 @@ private fun MainScaffold(
                 onCancel = { wallpaperItem = null },
             )
         }
+
+        ResizeDialog(
+            count = resizeRequest?.size,
+            onSave = { target, format, quality ->
+                val items = resizeRequest.orEmpty()
+                resizeRequest = null
+                scope.launch {
+                    if (items.size > 1) toast("Saving ${items.size} copies…")
+                    val result = ImageExport.export(context, items, target, format, quality)
+                    val where = result.folders.singleOrNull()?.trimEnd('/')?.substringAfterLast('/')
+                    finish(
+                        when {
+                            result.saved == 0 -> "Couldn't save the copy"
+                            result.failed > 0 -> "Saved ${result.saved} of ${items.size}"
+                            where != null -> if (result.saved == 1) "Saved a copy in $where" else "Saved ${result.saved} copies in $where"
+                            else -> "Saved ${result.saved} copies"
+                        },
+                    )
+                }
+            },
+            onDismiss = { resizeRequest = null },
+        )
 
         DateTimeDialog(
             original = dateRequest?.minOf { it.takenAt },

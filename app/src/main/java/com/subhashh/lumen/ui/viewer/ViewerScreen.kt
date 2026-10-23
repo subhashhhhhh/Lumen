@@ -156,6 +156,7 @@ fun ViewerScreen(
     onMakeCover: ((MediaItem) -> Unit)? = null,
     onAdjustDate: (MediaItem) -> Unit = {},
     onSetWallpaper: (MediaItem) -> Unit = {},
+    onResize: (MediaItem) -> Unit = {},
 ) {
     val context = LocalContext.current
     val pager = rememberPagerState(initialPage = initialIndex) { items.size }
@@ -585,6 +586,7 @@ fun ViewerScreen(
                     onMakeCover = onMakeCover,
                     onAdjustDate = onAdjustDate,
                     onSetWallpaper = onSetWallpaper,
+                    onResize = onResize,
                 ),
                 origin = TransformOrigin(1f, 0f),
                 modifier = Modifier
@@ -625,6 +627,7 @@ private fun viewerMenu(
     onMakeCover: ((MediaItem) -> Unit)?,
     onAdjustDate: (MediaItem) -> Unit,
     onSetWallpaper: (MediaItem) -> Unit,
+    onResize: (MediaItem) -> Unit,
 ): List<List<MenuItem>> {
     val photo = !item.isVideo
     return listOf(
@@ -635,6 +638,7 @@ private fun viewerMenu(
         listOfNotNull(
             MenuItem("Rename…") { onRename(item) },
             MenuItem("Adjust Date & Time…") { onAdjustDate(item) },
+            if (photo) MenuItem("Resize or Convert…") { onResize(item) } else null,
             if (MediaFiles.canRotate(item)) rotateMenu { degrees -> onRotate(item, degrees) } else null,
         ),
         listOfNotNull(

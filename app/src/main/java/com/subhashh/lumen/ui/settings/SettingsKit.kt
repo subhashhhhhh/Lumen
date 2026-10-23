@@ -108,26 +108,30 @@ internal fun SettingsPage(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    val dark = LocalDarkTheme.current
+    PickerArea(modifier.background(if (dark) Color.Black else Color(0xFFF2F2F7))) {
+        Column(
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(contentPadding)
+                .padding(horizontal = 16.dp),
+            content = content,
+        )
+    }
+}
+
+/**
+ * Hosts [PickerRow]s' glass dropdowns: records [content] as the backdrop the dropdown glass
+ * refracts, and draws the open dropdown above it. Settings pages and dialogs wrap themselves in one.
+ */
+@Composable
+internal fun PickerArea(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     val backdrop = rememberLayerBackdrop()
     val host = remember { PickerHost() }
-    val dark = LocalDarkTheme.current
     CompositionLocalProvider(LocalPickerHost provides host) {
         Box(modifier.fillMaxSize()) {
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .layerBackdrop(backdrop)
-                    .background(if (dark) Color.Black else Color(0xFFF2F2F7)),
-            ) {
-                Column(
-                    Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                        .padding(contentPadding)
-                        .padding(horizontal = 16.dp),
-                    content = content,
-                )
-            }
+            Box(Modifier.fillMaxSize().layerBackdrop(backdrop)) { content() }
             PickerOverlay(host, backdrop)
         }
     }
