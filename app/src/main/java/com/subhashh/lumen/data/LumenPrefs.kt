@@ -88,7 +88,36 @@ class LumenPrefs(context: Context) {
         get() = prefs.getBoolean(KeyMuted, false)
         set(value) = prefs.edit { putBoolean(KeyMuted, value) }
 
+    /** Show Ultra HDR photos with their extra brightness (Android 14+). */
+    var hdrPhotos: Boolean
+        get() = prefs.getBoolean(KeyHdr, true)
+        set(value) = prefs.edit { putBoolean(KeyHdr, value) }
+
+    /** Seconds each slideshow photo stays up. */
+    var slideshowSeconds: Int
+        get() = prefs.getInt(KeySlideSeconds, 3)
+        set(value) = prefs.edit { putInt(KeySlideSeconds, value) }
+
+    /** Slideshow crossfades instead of sliding. */
+    var slideshowFade: Boolean
+        get() = prefs.getBoolean(KeySlideFade, false)
+        set(value) = prefs.edit { putBoolean(KeySlideFade, value) }
+
+    var slideshowShuffle: Boolean
+        get() = prefs.getBoolean(KeySlideShuffle, false)
+        set(value) = prefs.edit { putBoolean(KeySlideShuffle, value) }
+
+    /** Slideshow starts over at the end instead of stopping. */
+    var slideshowRepeat: Boolean
+        get() = prefs.getBoolean(KeySlideRepeat, false)
+        set(value) = prefs.edit { putBoolean(KeySlideRepeat, value) }
+
     private companion object {
+        const val KeyHdr = "hdr_photos"
+        const val KeySlideSeconds = "slideshow_seconds"
+        const val KeySlideFade = "slideshow_fade"
+        const val KeySlideShuffle = "slideshow_shuffle"
+        const val KeySlideRepeat = "slideshow_repeat"
         const val KeyAutoplay = "video_autoplay"
         const val KeyLoop = "video_loop"
         const val KeyMuted = "video_muted"

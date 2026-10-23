@@ -1,5 +1,10 @@
 package com.subhashh.lumen.ui.viewer
 
+import android.os.Build
+import android.content.pm.ActivityInfo
+import androidx.activity.compose.LocalActivity
+import com.subhashh.lumen.data.UltraHdr
+import androidx.compose.animation.core.Animatable
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.runtime.mutableFloatStateOf
 import com.subhashh.lumen.data.LumenPrefs
@@ -112,7 +117,7 @@ import androidx.media3.common.MediaItem as PlayerMediaItem
 /** Fraction of the screen height a downward drag must cover to dismiss on release. */
 private const val DismissThreshold = 0.15f
 
-private const val SlideshowIntervalMs = 3_000L
+private const val SlideshowFadeMs = 350
 private const val SlideshowTransitionMs = 700
 
 /** Release speed that counts as a flick. */
@@ -174,20 +179,61 @@ fun ViewerScreen(
     val atRest by remember { derivedStateOf { motion.dismissX == 0f && motion.dismissY == 0f } }
     var locationRefresh by remember { mutableIntStateOf(0) }
     var moreOpen by remember { mutableStateOf(false) }
-    // Slideshow: hides the chrome and advances every few seconds; any tap stops it.
+    // Slideshow: hides the chrome and advances on a timer (Settings → Slideshow: interval, slide
+    // or fade, shuffle, repeat); any tap stops it.
     var slideshow by remember { mutableStateOf(slideshowOf != null) }
+    /** The pages' opacity, for the fade transition. */
+    val slideshowAlpha = remember { Animatable(1f) }
     LaunchedEffect(slideshow) {
         if (!slideshow) return@LaunchedEffect
+        val prefs = LumenPrefs(context)
         chromeVisible = false
-        while (true) {
-            delay(SlideshowIntervalMs)
-            val next = (pager.currentPage + 1 until items.size)
-                .firstOrNull { slideshowOf == null || slideshowOf.isEmpty() || items[it].id in slideshowOf }
-            if (next == null) break
-            pager.animateScrollToPage(next, animationSpec = tween(SlideshowTransitionMs))
+        val eligible = items.indices.filter { slideshowOf.isNullOrEmpty() || items[it].id in slideshowOf }
+        // What's still to show: the rest in order, or the rest shuffled.
+        fun queueAfter(page: Int): ArrayDeque<Int> = ArrayDeque(
+            if (prefs.slideshowShuffle) eligible.filter { it != page }.shuffled() else eligible.filter { it > page },
+        )
+        var queue = queueAfter(pager.currentPage)
+        try {
+            while (true) {
+                delay(prefs.slideshowSeconds * 1000L)
+                if (queue.isEmpty()) {
+                    if (!prefs.slideshowRepeat) break
+                    queue = if (prefs.slideshowShuffle) queueAfter(pager.currentPage) else ArrayDeque(eligible)
+                    if (queue.isEmpty()) break
+                }
+                val next = queue.removeFirst()
+                if (prefs.slideshowFade) {
+                    slideshowAlpha.animateTo(0f, tween(SlideshowFadeMs))
+                    pager.scrollToPage(next)
+                    slideshowAlpha.animateTo(1f, tween(SlideshowFadeMs))
+                } else {
+                    pager.animateScrollToPage(next, animationSpec = tween(SlideshowTransitionMs))
+                }
+            }
+        } finally {
+            slideshowAlpha.snapTo(1f)
         }
         slideshow = false
         chromeVisible = true
+    }
+
+    // Ultra HDR photos get the window's HDR mode while they're on screen; nothing else does.
+    val activity = LocalActivity.current
+    var hdr by remember { mutableStateOf(false) }
+    LaunchedEffect(current?.id) {
+        hdr = current != null && LumenPrefs(context).hdrPhotos && UltraHdr.hasGainmap(context, current)
+    }
+    DisposableEffect(hdr, activity) {
+        val window = activity?.window
+        if (window != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            window.colorMode = if (hdr) ActivityInfo.COLOR_MODE_HDR else ActivityInfo.COLOR_MODE_DEFAULT
+        }
+        onDispose {
+            if (window != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                window.colorMode = ActivityInfo.COLOR_MODE_DEFAULT
+            }
+        }
     }
     val locationPermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
@@ -311,7 +357,9 @@ fun ViewerScreen(
                 // frame builds one page instead of three.
                 beyondViewportPageCount = if (preloadNeighbors) 1 else 0,
                 userScrollEnabled = !zoomed && !motion.dragging && atRest,
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { alpha = slideshowAlpha.value },
             ) { page ->
                 val item = items[page]
                 val isCurrent = page == pager.currentPage

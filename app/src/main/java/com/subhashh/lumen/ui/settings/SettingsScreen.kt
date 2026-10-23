@@ -161,6 +161,64 @@ fun SettingsScreen(
             )
         }
 
+        var hdr by remember { mutableStateOf(prefs.hdrPhotos) }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            Group("Photos") {
+                SettingsRow(
+                    title = "Ultra HDR",
+                    subtitle = "Show HDR photos from phones like Pixel with their full brightness",
+                    value = if (hdr) "On" else "Off",
+                    onClick = {
+                        hdr = !hdr
+                        prefs.hdrPhotos = hdr
+                    },
+                )
+            }
+        }
+
+        var slideSeconds by remember { mutableStateOf(prefs.slideshowSeconds) }
+        var slideFade by remember { mutableStateOf(prefs.slideshowFade) }
+        var slideShuffle by remember { mutableStateOf(prefs.slideshowShuffle) }
+        var slideRepeat by remember { mutableStateOf(prefs.slideshowRepeat) }
+        Group("Slideshow") {
+            SettingsRow(
+                title = "Each Photo For",
+                value = "$slideSeconds s",
+                onClick = {
+                    slideSeconds = SlideSeconds[(SlideSeconds.indexOf(slideSeconds) + 1).mod(SlideSeconds.size)]
+                    prefs.slideshowSeconds = slideSeconds
+                },
+            )
+            Divider()
+            SettingsRow(
+                title = "Transition",
+                value = if (slideFade) "Fade" else "Slide",
+                onClick = {
+                    slideFade = !slideFade
+                    prefs.slideshowFade = slideFade
+                },
+            )
+            Divider()
+            SettingsRow(
+                title = "Shuffle",
+                value = if (slideShuffle) "On" else "Off",
+                onClick = {
+                    slideShuffle = !slideShuffle
+                    prefs.slideshowShuffle = slideShuffle
+                },
+            )
+            Divider()
+            SettingsRow(
+                title = "Repeat",
+                subtitle = "Start over at the end instead of stopping",
+                value = if (slideRepeat) "On" else "Off",
+                onClick = {
+                    slideRepeat = !slideRepeat
+                    prefs.slideshowRepeat = slideRepeat
+                },
+            )
+        }
+
         Group("Hidden lock", footer = "Lumen's own lock for Hidden, separate from your phone's screen lock.") {
             SettingsRow(title = if (hiddenLockSet) "Change Lock" else "Set Up Lock", onClick = onChangeLock)
             if (hiddenLockSet) {
@@ -181,6 +239,9 @@ fun SettingsScreen(
         }
     }
 }
+
+/** Slideshow intervals the row cycles through, in seconds. */
+private val SlideSeconds = listOf(2, 3, 5, 10)
 
 private data class PermissionStatus(val manageMedia: Boolean, val allFiles: Boolean, val mediaLocation: Boolean) {
     companion object {
