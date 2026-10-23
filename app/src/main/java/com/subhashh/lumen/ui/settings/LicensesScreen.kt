@@ -32,6 +32,13 @@ private val Credits = listOf(
     Credit("Telephoto", "Saket Narayan", "Apache 2.0", "Zooming and tiled loading of large photos", "https://github.com/saket/telephoto"),
     Credit("Coil", "Coil Contributors", "Apache 2.0", "Image loading", "https://github.com/coil-kt/coil"),
     Credit(
+        "avif-coder (with libavif and dav1d)",
+        "Radzivon Bartoshyk",
+        "MIT · BSD",
+        "AVIF photos, on phones whose own decoder can't show them",
+        "https://github.com/awxkee/avif-coder",
+    ),
+    Credit(
         "Jetpack Compose, Media3, AndroidX",
         "The Android Open Source Project",
         "Apache 2.0",

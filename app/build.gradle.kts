@@ -75,6 +75,7 @@ dependencies {
     implementation(libs.coil.video)
     implementation(libs.coil.svg)
     implementation(libs.coil.gif)
+    implementation(libs.avif.coder.coil)
 
     // Zoomable, subsampled photos — saket/telephoto, Apache 2.0.
     implementation(libs.telephoto.zoomable.image.coil3)

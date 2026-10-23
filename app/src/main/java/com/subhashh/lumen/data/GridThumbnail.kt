@@ -15,6 +15,10 @@ import coil3.fetch.FetchResult
 import coil3.fetch.Fetcher
 import coil3.fetch.ImageFetchResult
 import coil3.request.Options
+import coil3.BitmapImage
+import coil3.request.CachePolicy
+import coil3.request.ImageRequest
+import coil3.request.allowHardware
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okio.Path.Companion.toOkioPath
@@ -36,6 +40,7 @@ class GridThumbnailFetcher(
     private val data: GridThumbnail,
     private val options: Options,
     private val cache: DiskCache,
+    private val imageLoader: ImageLoader,
 ) : Fetcher {
 
     override suspend fun fetch(): FetchResult = withContext(Dispatchers.IO) {
@@ -47,9 +52,29 @@ class GridThumbnailFetcher(
                 return@withContext ImageFetchResult(cached.asImage(), isSampled = true, dataSource = DataSource.DISK)
             }
         }
-        val bitmap = create(options.context, data.item, data.sizePx)
+        val bitmap = if (data.item.mimeType == "image/avif") {
+            decodeWithLoader(data.item, data.sizePx)
+        } else {
+            create(options.context, data.item, data.sizePx)
+        }
         save(key, bitmap)
         ImageFetchResult(bitmap.asImage(), isSampled = true, dataSource = DataSource.DISK)
+    }
+
+    /**
+     * AVIF goes through Coil's own pipeline, where Lumen's bundled AVIF decoder lives; the
+     * phone's decoder (used by ImageDecoder and Android's thumbnails) fails on some devices.
+     */
+    private suspend fun decodeWithLoader(item: MediaItem, sizePx: Int): Bitmap {
+        val result = imageLoader.execute(
+            ImageRequest.Builder(options.context)
+                .data(item.uri)
+                .size(sizePx, sizePx)
+                .allowHardware(false)
+                .memoryCachePolicy(CachePolicy.DISABLED)
+                .build(),
+        )
+        return (result.image as? BitmapImage)?.bitmap ?: error("Couldn't decode ${item.uri}")
     }
 
     private fun save(key: String, bitmap: Bitmap) {
@@ -74,7 +99,7 @@ class GridThumbnailFetcher(
         }
 
         override fun create(data: GridThumbnail, options: Options, imageLoader: ImageLoader): Fetcher =
-            GridThumbnailFetcher(data, options, cache)
+            GridThumbnailFetcher(data, options, cache, imageLoader)
     }
 
     private companion object {
