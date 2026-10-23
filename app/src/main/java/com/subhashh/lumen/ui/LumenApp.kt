@@ -47,6 +47,13 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.subhashh.lumen.ui.library.periods
+import com.subhashh.lumen.ui.library.ZoomLevel
+import com.subhashh.lumen.ui.library.TimelineScreen
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.AnimatedContent
 import com.subhashh.lumen.ui.settings.SettingsScreen
 import com.subhashh.lumen.ui.settings.LicensesScreen
 import com.subhashh.lumen.ui.theme.LocalGlassColors
@@ -178,6 +185,9 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
     var filter by remember { mutableStateOf(prefs.libraryFilter) }
     var aspectRatioGrid by remember { mutableStateOf(prefs.aspectRatioGrid) }
     var menuOpen by remember { mutableStateOf(false) }
+    var zoomLevel by rememberSaveable { mutableStateOf(ZoomLevel.All) }
+    val monthsList = rememberLazyListState()
+    val yearsList = rememberLazyListState()
     SideEffect { transition.fitCells = aspectRatioGrid }
 
     val utilities = remember(library, trash) { MediaCollections.utilities(library.orEmpty(), trash) }
@@ -189,9 +199,18 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
     val itemsOf = { key: String ->
         if (key == CollectionKeys.Library) libraryItems else CollectionKeys.items(key, library.orEmpty(), trash)
     }
+    val months = remember(libraryItems) { periods(libraryItems, byYear = false) }
+    val years = remember(libraryItems) { periods(libraryItems, byYear = true) }
     // A new filter starts at its newest item, like opening the Library.
     LaunchedEffect(filter) {
         if (libraryItems.isNotEmpty()) libraryGrid.scrollToItem(libraryItems.lastIndex)
+    }
+    // Years and Months start at the newest card too: once when first loaded, and on a new filter.
+    LaunchedEffect(months.isNotEmpty(), filter) {
+        if (months.isNotEmpty()) monthsList.scrollToItem(months.lastIndex)
+    }
+    LaunchedEffect(years.isNotEmpty(), filter) {
+        if (years.isNotEmpty()) yearsList.scrollToItem(years.lastIndex)
     }
 
     val viewerOpen = viewerSource != null
@@ -207,7 +226,8 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
     var selection by remember { mutableStateOf<Set<Long>?>(null) }
     val selectableKey = when {
         searching -> null
-        tab == LumenTab.Library -> CollectionKeys.Library
+        tab == LumenTab.Library && zoomLevel == ZoomLevel.All -> CollectionKeys.Library
+        tab == LumenTab.Library -> null
         else -> openCollection
     }
     val selectableItems = selectableKey?.let(itemsOf).orEmpty()
@@ -260,18 +280,53 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
             when {
                 searching -> SearchScreen()
                 library == null -> Unit
-                tab == LumenTab.Library -> LibraryScreen(
-                    title = selection?.let { selectionTitle(selectedItems) } ?: "Library",
-                    selection = selection,
-                    onSelectionChange = { selection = it },
-                    aspectRatioGrid = aspectRatioGrid,
-                    emptyText = filter.emptyText,
-                    items = libraryItems,
-                    gridState = libraryGrid,
-                    contentPadding = gridPadding,
-                    transition = transition,
-                    onOpen = { index -> openViewer(CollectionKeys.Library, index) },
-                )
+                tab == LumenTab.Library -> Box {
+                    LibraryScreen(
+                        title = selection?.let { selectionTitle(selectedItems) } ?: "Library",
+                        selection = selection,
+                        onSelectionChange = { selection = it },
+                        aspectRatioGrid = aspectRatioGrid,
+                        emptyText = filter.emptyText,
+                        items = libraryItems,
+                        gridState = libraryGrid,
+                        contentPadding = gridPadding,
+                        transition = transition,
+                        onOpen = { index -> openViewer(CollectionKeys.Library, index) },
+                        // Stays composed under Years/Months (hidden, so not drawn): coming back to
+                        // All is instant and keeps its scroll position.
+                        modifier = Modifier.graphicsLayer { alpha = if (zoomLevel == ZoomLevel.All) 1f else 0f },
+                    )
+                    AnimatedContent(
+                        targetState = zoomLevel,
+                        transitionSpec = {
+                            (fadeIn(tween(200)) + scaleIn(tween(240), initialScale = 0.96f))
+                                .togetherWith(fadeOut(tween(160)))
+                        },
+                        label = "zoomLevel",
+                    ) { level ->
+                        if (level != ZoomLevel.All) {
+                            TimelineScreen(
+                                periods = if (level == ZoomLevel.Years) years else months,
+                                level = level,
+                                listState = if (level == ZoomLevel.Years) yearsList else monthsList,
+                                contentPadding = gridPadding,
+                                emptyText = filter.emptyText,
+                                onOpen = { period ->
+                                    if (level == ZoomLevel.Years) {
+                                        zoomLevel = ZoomLevel.Months
+                                        val first = months.indexOfFirst { it.year == period.year }
+                                        if (first >= 0) scope.launch { monthsList.scrollToItem(first) }
+                                    } else {
+                                        zoomLevel = ZoomLevel.All
+                                        scope.launch { libraryGrid.scrollToItem(period.firstIndex) }
+                                    }
+                                },
+                            )
+                        } else {
+                            Box(Modifier.fillMaxSize())
+                        }
+                    }
+                }
                 settingsPage == SettingsLicenses -> LicensesScreen(
                     contentPadding = PaddingValues(top = statusTop + 72.dp, bottom = navBottom + 96.dp),
                 )
@@ -387,6 +442,8 @@ private fun MainScaffold(viewModel: LibraryViewModel) {
                 },
                 searchSelected = searching,
                 onSearch = { searching = true },
+                zoomLevel = zoomLevel.takeIf { tab == LumenTab.Library && !searching },
+                onZoomLevel = { zoomLevel = it },
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .graphicsLayer { alpha = tabBarAlpha }

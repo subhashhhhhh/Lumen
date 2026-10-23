@@ -295,7 +295,7 @@ private fun SelectionMark(selected: Boolean, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun LibraryHeader(title: String, subtitle: String, topPadding: Dp, modifier: Modifier = Modifier) {
+internal fun LibraryHeader(title: String, subtitle: String, topPadding: Dp, modifier: Modifier = Modifier) {
     Column(
         modifier
             .fillMaxWidth()

@@ -27,6 +27,9 @@ object ImageKeys {
 
     /** Album cover sized; larger than grid cells, so kept separate. */
     fun cover(id: Long) = "cover:$id"
+
+    /** Full-width Years/Months card. */
+    fun card(id: Long, heightPx: Int) = "card:$id:$heightPx"
 }
 
 /**
