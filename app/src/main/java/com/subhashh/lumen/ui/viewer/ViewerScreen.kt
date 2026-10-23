@@ -16,6 +16,8 @@ import android.Manifest
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
@@ -452,16 +454,20 @@ private fun TopBar(
             onClick = onBack,
             modifier = Modifier.align(Alignment.CenterStart),
         )
+        // Plain text like iOS, not a glass capsule. A soft glow in the background color keeps it
+        // readable where a tall photo runs up behind it.
+        val glow = Shadow(color = MaterialTheme.colorScheme.background.copy(alpha = 0.7f), blurRadius = 10f)
         Column(
-            Modifier
-                .align(Alignment.Center)
-                .glass(backdrop, shape = RoundedCornerShape(50))
-                .padding(horizontal = 20.dp, vertical = 6.dp),
+            Modifier.align(Alignment.Center),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             val (day, time) = remember(item.takenAt) { formatTakenAt(item.takenAt) }
-            Text(day, color = colors.content, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-            Text(time, color = colors.contentSecondary, fontSize = 12.sp)
+            Text(
+                day,
+                color = colors.content,
+                style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.SemiBold, shadow = glow),
+            )
+            Text(time, color = colors.contentSecondary, style = TextStyle(fontSize = 12.sp, shadow = glow))
         }
     }
 }
