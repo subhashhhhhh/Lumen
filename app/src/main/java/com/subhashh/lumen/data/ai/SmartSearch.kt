@@ -62,6 +62,16 @@ object SmartSearch {
         }
     }
 
+    /** Every item ranked, no cutoff (Search Lab's score curves). */
+    suspend fun rankedAll(context: Context, query: String): List<SmartHit>? = withContext(Dispatchers.Default) {
+        val installed = ModelDownloads.installed(context) ?: return@withContext null
+        lock.withLock {
+            val all = ready(context, installed)
+            if (all.size == 0) return@withContext emptyList()
+            scored(all, embedder!!.embedText(query))
+        }
+    }
+
     /** The model and vectors for [installed], loading what's missing or stale. Call under [lock]. */
     private fun ready(context: Context, installed: AiModel): Embeddings {
         if (model != installed) {
@@ -86,6 +96,16 @@ object SmartSearch {
     }
 
     private fun rank(all: Embeddings, q: FloatArray): List<SmartHit> {
+        val ranked = scored(all, q)
+        // Scores mean little in absolute terms and differ per model, so keep what's close to
+        // the best match: a query with one great hit shows few results, a broad one many.
+        val top = ranked.first().score
+        val bar = top - Spread * (top - ranked[ranked.size / 2].score)
+        return ranked.takeWhile { it.score >= bar }.take(MaxResults)
+    }
+
+    /** Each item's best score (and the frame it came from), best first. */
+    private fun scored(all: Embeddings, q: FloatArray): List<SmartHit> {
         // Best score per item, and the frame it came from.
         val best = HashMap<Long, SmartHit>()
         val dim = all.dim
@@ -97,12 +117,7 @@ object SmartSearch {
             val previous = best[id]
             if (previous == null || dot > previous.score) best[id] = SmartHit(id, dot, all.atMs[i])
         }
-        val ranked = best.values.sortedByDescending { it.score }
-        // Scores mean little in absolute terms and differ per model, so keep what's close to
-        // the best match: a query with one great hit shows few results, a broad one many.
-        val top = ranked.first().score
-        val bar = top - Spread * (top - ranked[ranked.size / 2].score)
-        return ranked.takeWhile { it.score >= bar }.take(MaxResults)
+        return best.values.sortedByDescending { it.score }
     }
 
     /** Frees the models and vectors (Smart Search removed, or memory is tight). */
