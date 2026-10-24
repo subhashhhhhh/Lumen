@@ -147,9 +147,13 @@ object FaceModel {
 
 /**
  * Subtitles: Cactus Compute's Whistle (speech to text, Apache 2.0) and Silero VAD v6.2.3 (where
- * people speak, MIT), so music isn't "transcribed" into invented lines.
+ * people speak, MIT), so music isn't "transcribed" into invented lines. Unchanged copies, hosted
+ * together; downloaded with either Smart Search tier.
  */
 object SpeechModel {
+    const val Repo = "subhashhhhhh/lumen-speech"
+    const val Commit = "7ead30428d4c748df73fe9c2d659cd1eb8ab997f"
+
     /** Settings' choices, by quality: Whistle for now; Whisper or Parakeet if they earn a place. */
     class Tier(val id: String, val label: String)
     val tiers = listOf(Tier("whistle", "Fast"))
@@ -159,6 +163,8 @@ object SpeechModel {
         ModelFile("vad.onnx", 1_289_603, "7ed98ddbad84ccac4cd0aeb3099049280713df825c610a8ed34543318f1b2c49"),
     )
     val bytes: Long get() = files.sumOf { it.bytes }
+
+    fun url(file: ModelFile) = "https://huggingface.co/$Repo/resolve/$Commit/${file.name}"
 
     fun dir(context: Context) = File(context.noBackupFilesDir, "models/speech")
 

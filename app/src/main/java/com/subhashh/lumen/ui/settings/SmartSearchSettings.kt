@@ -310,7 +310,7 @@ internal fun SmartSearchGroup(
         Anchor("subtitles-model", highlight) {
             SettingsRow(
                 title = "Subtitles Model",
-                subtitle = if (speechReady) "Ready · ${megabytes(SpeechModel.bytes)} on this phone" else "Not downloaded yet",
+                subtitle = if (speechReady) "Ready · ${megabytes(SpeechModel.bytes)} on this phone" else "Downloads with the Search Model",
                 value = null,
                 onClick = null,
                 icon = LumenIcons.Import,
