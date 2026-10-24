@@ -14,6 +14,14 @@
   <img src="https://img.shields.io/badge/Android-11%2B-3DDC84" alt="Android 11 or later">
 </p>
 
+<p align="center">
+  <a href="docs/media/lumen-launch.mp4"><img src="docs/images/hero.jpg" width="100%" alt="Lumen on a phone: the Library, a search for a cat that sleeps on a chair, and the page of a person"></a>
+</p>
+
+<p align="center">
+  <a href="docs/media/lumen-launch.mp4"><b>▶ Watch the launch video, 37 seconds</b></a>
+</p>
+
 Lumen is a photo gallery for Android. It does the same tasks as Google Photos and the Photos app
 on iPhone. It finds a photo from a description, reads the text in your photos, and puts the photos
 of each person together. Lumen does all of this work on your phone. Your photos, your faces, and
