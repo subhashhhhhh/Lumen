@@ -92,6 +92,24 @@ object MediaActions {
     fun deleteForeverRequest(context: Context, items: List<MediaItem>): IntentSender =
         MediaStore.createDeleteRequest(context.contentResolver, items.map { it.uri }).intentSender
 
+    /**
+     * Sets Android's shared favorite (seen by every gallery, kept across reinstalls) straight in
+     * MediaStore, instant like an app's own list, when Lumen may write it: with All files access.
+     * False when it may not; ask with [favoriteRequest] then, which opens a system screen (with
+     * Media management it doesn't ask, but the screen still pauses the app for a moment).
+     */
+    fun setFavoriteDirectly(context: Context, items: List<MediaItem>, favorite: Boolean): Boolean {
+        if (!android.os.Environment.isExternalStorageManager()) return false
+        if (items.any { it.uri.scheme != "content" }) return false
+        val values = android.content.ContentValues().apply { put(MediaStore.MediaColumns.IS_FAVORITE, if (favorite) 1 else 0) }
+        return try {
+            for (item in items) context.contentResolver.update(item.uri, values, null, null)
+            true
+        } catch (e: SecurityException) {
+            false
+        }
+    }
+
     fun favoriteRequest(context: Context, item: MediaItem): IntentSender =
         favoriteRequest(context, listOf(item), favorite = !item.isFavorite)
 

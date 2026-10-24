@@ -1935,7 +1935,13 @@ private fun MainScaffold(
                     if (CollectionKeys.isHidden(selectionScope)) shareHidden(selectedItems)
                     else MediaActions.share(context, selectedItems)
                 },
-                onFavorite = { launch(MediaActions.favoriteRequest(context, selectedItems, favorite = !allFavorite)) },
+                onFavorite = {
+                    if (MediaActions.setFavoriteDirectly(context, selectedItems, !allFavorite)) {
+                        viewModel.refresh()
+                        endSelection()
+                    }
+                    else launch(MediaActions.favoriteRequest(context, selectedItems, favorite = !allFavorite))
+                },
                 onDelete = {
                     // Empty new albums have nothing to trash; deleting one just forgets it.
                     val emptyPaths = folders.filter { it.key in albumSelection.orEmpty() && it.count == 0 }.map { it.relativePath }.toSet()

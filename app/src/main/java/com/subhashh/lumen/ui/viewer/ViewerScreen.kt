@@ -609,7 +609,8 @@ fun ViewerScreen(
                                     haptics.performHapticFeedback(
                                         if (current.isFavorite) HapticFeedbackType.ToggleOff else HapticFeedbackType.ToggleOn,
                                     )
-                                    launch(MediaActions.favoriteRequest(context, current))
+                                    if (MediaActions.setFavoriteDirectly(context, listOf(current), !current.isFavorite)) onMediaChanged()
+                                    else launch(MediaActions.favoriteRequest(context, current))
                                 },
                             )
                             GlassIconButton(
