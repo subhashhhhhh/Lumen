@@ -638,7 +638,8 @@ private fun MainScaffold(
     val months = remember(libraryItems) { periods(libraryItems, byYear = false) }
     val years = remember(libraryItems) { periods(libraryItems, byYear = true) }
     // A new filter starts at its newest item, like opening the Library.
-    LaunchedEffect(filter, sort, sortDescending) {
+    // Also out of onboarding: the newest photos are the ones it showed, so they're on screen.
+    LaunchedEffect(filter, sort, sortDescending, entrance) {
         if (libraryItems.isNotEmpty()) libraryGrid.scrollToItem(if (chronological) librarySections.entries.lastIndex else 0)
     }
     // Years / Months only make sense oldest-first by date; any other order goes back to All.
