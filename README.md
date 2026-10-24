@@ -5,8 +5,8 @@
 <h1 align="center">Lumen</h1>
 
 <p align="center">
-  A photo gallery for Android that finds your photos by what is in them.<br>
-  All of the smart features work on your phone. Your photos never go to a server.
+  The smart features of Google Photos and the iPhone Photos app, for Android.<br>
+  Nothing leaves your phone.
 </p>
 
 <p align="center">
@@ -14,13 +14,29 @@
   <img src="https://img.shields.io/badge/Android-11%2B-3DDC84" alt="Android 11 or later">
 </p>
 
-Lumen shows the photos and videos that are on your phone. It can also find a photo from a
-description, read the text in your photos, and put the photos of each person together. Lumen
-does all of this work on the phone. It has no account, no advertisements, and no analytics.
-Lumen costs nothing and its source code is open.
+Lumen is a photo gallery for Android. It does the same tasks as Google Photos and the Photos app
+on iPhone. It finds a photo from a description, reads the text in your photos, and puts the photos
+of each person together. Lumen does all of this work on your phone. Your photos, your faces, and
+your index never leave it.
+
+## Why Lumen
+
+Google Photos does this work on the servers of Google, and you must have a Google account. The
+Photos app on iPhone does the work on the phone, but it is only for Apple devices. Lumen gives you
+the same features on Android, without Google and without the cloud.
+
+- **No account.** You do not sign in to Google or to Lumen.
+- **No Google Play services.** Lumen does not use them, so it works on phones without Google apps.
+- **No cloud.** Lumen does not send your photos or their data to a server.
+- **No advertisements, no analytics, and no tracking.**
+- **Works offline.** After you download the models one time, the smart features work without the
+  internet.
+- **Open source.** Anyone can read and do a check of the code.
+- **No cost.**
 
 ## Contents
 
+- [Why Lumen](#why-lumen)
 - [Features](#features)
 - [Privacy](#privacy)
 - [Requirements](#requirements)
