@@ -63,6 +63,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
@@ -137,6 +138,10 @@ private val Entries = listOf(
     SettingEntry("import", "Import Settings", SettingsCategory.Backup, "restore backup"),
     SettingEntry("import-favorites", "Import Favorites", SettingsCategory.Backup, "fossify aves favourites hearts"),
     SettingEntry("licenses", "Open-Source Licenses", SettingsCategory.About, "credits open source"),
+    SettingEntry("software-update", "Software Update", SettingsCategory.About, "update upgrade new version download install"),
+    SettingEntry("auto-update", "Check for Updates Automatically", SettingsCategory.About, "update automatic daily"),
+    SettingEntry("github", "GitHub", SettingsCategory.About, "source code repository open source project"),
+    SettingEntry("report-bug", "Report a Bug", SettingsCategory.About, "issue problem feedback crash github"),
     SettingEntry("version", "Version", SettingsCategory.About, "about app version"),
 )
 
@@ -200,7 +205,7 @@ fun SettingsScreen(
                 var query by rememberSaveable { mutableStateOf("") }
                 SearchBox(query, onQueryChange = { query = it })
                 if (query.isNotBlank()) {
-                    val results = search(query, prefs.developerOptions || context.packageName.endsWith(".debug"))
+                    val results = search(query, prefs.developerOptions)
                     if (results.isEmpty()) {
                         Text(
                             "No settings match “${query.trim()}”.",
@@ -229,6 +234,20 @@ fun SettingsScreen(
                     }
                     val granted = listOf(status.manageMedia || Build.VERSION.SDK_INT < Build.VERSION_CODES.S, status.allFiles, status.mediaLocation)
                     val open = { c: SettingsCategory -> onOpenCategory(c, null) }
+                    // A newer Lumen found by Software Update, on top like iOS's.
+                    val update = (UpdateSession.state as? UpdateSession.State.Result)?.check
+                        .let { (it as? com.subhashh.lumen.data.Updater.Check.Available)?.release?.version }
+                        ?: prefs.availableUpdate
+                    if (update != null && com.subhashh.lumen.data.Updater.isNewer(update, context.versionName())) {
+                        Group("") {
+                            SettingsRow(
+                                title = "Lumen $update Is Available",
+                                onClick = { onOpenCategory(SettingsCategory.About, "software-update") },
+                                icon = LumenIcons.Import,
+                                iconColor = Blue,
+                            )
+                        }
+                    }
                     Group("") {
                         CategoryRow(SettingsCategory.Appearance, appearance.current.label, open)
                         Divider()
@@ -248,8 +267,8 @@ fun SettingsScreen(
                         Divider()
                         CategoryRow(SettingsCategory.About, context.versionName(), open)
                     }
-                    // Unlocked from About (Version, seven taps); always there in development builds.
-                    val developer = remember(refresh) { prefs.developerOptions || context.packageName.endsWith(".debug") }
+                    // Unlocked from About (Version, seven taps), like Android's.
+                    val developer = remember(refresh) { prefs.developerOptions }
                     if (developer) {
                         Group("") { CategoryRow(SettingsCategory.Developer, null, open) }
                     }
@@ -269,7 +288,7 @@ fun SettingsScreen(
                         SmartSearchGroup(prefs, refresh + hfTokenVersion, onConfirm, onEnterHfToken, highlight)
                     SettingsCategory.Permissions -> PermissionsPage(status, highlight)
                     SettingsCategory.Backup -> BackupPage(highlight, onExport, onImport, onImportFavorites)
-                    SettingsCategory.About -> AboutPage(prefs, highlight, onOpenLicenses)
+                    SettingsCategory.About -> AboutPage(prefs, highlight, onOpenLicenses, onConfirm)
                     SettingsCategory.Developer -> DeveloperPage(prefs, highlight)
                 }
             }
@@ -770,9 +789,42 @@ private fun ColumnScope.BackupPage(highlight: String?, onExport: () -> Unit, onI
 }
 
 @Composable
-private fun ColumnScope.AboutPage(prefs: LumenPrefs, highlight: String?, onOpenLicenses: () -> Unit) {
+private fun ColumnScope.AboutPage(
+    prefs: LumenPrefs,
+    highlight: String?,
+    onOpenLicenses: () -> Unit,
+    onConfirm: (com.subhashh.lumen.ui.components.Confirmation) -> Unit,
+) {
     val context = LocalContext.current
     var taps by remember { mutableIntStateOf(0) }
+    val open = { url: String ->
+        runCatching {
+            context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url)).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+        }
+        Unit
+    }
+    AboutHeader(version = context.versionName(), onDeveloper = { open(DeveloperUrl) })
+    SoftwareUpdateGroup(highlight, onConfirm)
+    Group("Open Source", footer = "Lumen is free and open source. Bugs and ideas are welcome on GitHub.") {
+        Anchor("github", highlight) {
+            SettingsRow(
+                title = "GitHub",
+                value = "subhashhhhhh/Lumen",
+                onClick = { open(RepoUrl) },
+                icon = LumenIcons.Code,
+                iconColor = Gray,
+            )
+        }
+        Divider()
+        Anchor("report-bug", highlight) {
+            SettingsRow(
+                title = "Report a Bug",
+                onClick = { open("$RepoUrl/issues") },
+                icon = LumenIcons.Bug,
+                iconColor = Red,
+            )
+        }
+    }
     Group("Lumen") {
         Anchor("licenses", highlight) {
             SettingsRow(
@@ -806,6 +858,34 @@ private fun ColumnScope.AboutPage(prefs: LumenPrefs, highlight: String?, onOpenL
         }
     }
 }
+
+/** Lumen's icon, name and version, and who made it (their name opens their GitHub). */
+@Composable
+private fun AboutHeader(version: String, onDeveloper: () -> Unit) {
+    val colors = groupColors()
+    Column(
+        Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        com.subhashh.lumen.ui.components.AppIcon(96.dp)
+        Spacer(Modifier.height(14.dp))
+        Text("Lumen", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = colors.text)
+        Text("Version $version", fontSize = 15.sp, color = colors.secondary)
+        Spacer(Modifier.height(10.dp))
+        Text(
+            androidx.compose.ui.text.buildAnnotatedString {
+                append("Made by ")
+                withStyle(androidx.compose.ui.text.SpanStyle(color = Blue, fontWeight = FontWeight.Medium)) { append("Subhash Gottumukkala") }
+            },
+            fontSize = 15.sp,
+            color = colors.secondary,
+            modifier = Modifier.clickable(onClick = onDeveloper).padding(horizontal = 12.dp, vertical = 6.dp),
+        )
+    }
+}
+
+private const val DeveloperUrl = "https://github.com/subhashhhhhh"
+private const val RepoUrl = "https://github.com/subhashhhhhh/Lumen"
 
 @Composable
 private fun ColumnScope.DeveloperPage(prefs: LumenPrefs, highlight: String?) {

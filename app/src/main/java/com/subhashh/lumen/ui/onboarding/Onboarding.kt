@@ -233,19 +233,7 @@ private fun Item(icon: ImageVector, title: String, subtitle: String, trailing: @
 private fun ColumnScope.Welcome(backdrop: Backdrop, onNext: () -> Unit) {
     Spacer(Modifier.weight(1f))
     // The app icon as the home screen shows it: background, flare and the phone's icon shape.
-    val context = LocalContext.current
-    val iconPx = with(LocalDensity.current) { 132.dp.roundToPx() }
-    val icon = remember(iconPx) {
-        androidx.core.content.ContextCompat.getDrawable(context, R.mipmap.ic_launcher)
-            ?.toBitmap(iconPx, iconPx)?.asImageBitmap()
-    }
-    if (icon != null) {
-        Image(
-            icon,
-            contentDescription = null,
-            modifier = Modifier.size(132.dp).align(Alignment.CenterHorizontally),
-        )
-    }
+    com.subhashh.lumen.ui.components.AppIcon(132.dp, Modifier.align(Alignment.CenterHorizontally))
     Spacer(Modifier.height(18.dp))
     Text(
         "Lumen",
