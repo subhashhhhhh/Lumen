@@ -1,5 +1,7 @@
 package com.subhashh.lumen.ui.people
 
+import com.subhashh.lumen.ui.transition.CoverTransition
+import com.subhashh.lumen.ui.transition.coverCell
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -50,6 +52,8 @@ fun PeopleScreen(
     /** Selected person keys (long-press, then tap or drag); null when not selecting. */
     selection: Set<String>? = null,
     onSelectionChange: (Set<String>?) -> Unit = {},
+    /** Faces grow out of their cards into the person's page. */
+    coverTransition: CoverTransition? = null,
     modifier: Modifier = Modifier,
 ) {
     val onBackground = MaterialTheme.colorScheme.onBackground
@@ -85,10 +89,13 @@ fun PeopleScreen(
                 Box {
                     FaceAvatar(
                         person, cover,
-                        Modifier.fillMaxWidth().graphicsLayer {
-                            scaleX = scale
-                            scaleY = scale
-                        },
+                        Modifier
+                            .fillMaxWidth()
+                            .then(if (coverTransition != null) Modifier.coverCell(coverTransition, key, circle = !square) else Modifier)
+                            .graphicsLayer {
+                                scaleX = scale
+                                scaleY = scale
+                            },
                         square = square,
                     )
                     if (selected != null) SelectionMark(selected, Modifier.align(Alignment.BottomEnd).padding(4.dp))

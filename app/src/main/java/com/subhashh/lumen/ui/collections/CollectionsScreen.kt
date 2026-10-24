@@ -64,6 +64,8 @@ import com.subhashh.lumen.data.MediaItem
 import com.subhashh.lumen.data.GridThumbnail
 import com.subhashh.lumen.data.ai.Person
 import com.subhashh.lumen.ui.people.FaceAvatar
+import com.subhashh.lumen.ui.transition.CoverTransition
+import com.subhashh.lumen.ui.transition.coverCell
 
 @Composable
 fun CollectionsScreen(
@@ -84,6 +86,8 @@ fun CollectionsScreen(
     /** Selected album keys while selecting; null when not in selection mode. */
     selection: Set<String>?,
     onSelectionChange: (Set<String>?) -> Unit,
+    /** Album covers and faces grow out of their cards into the page they open. */
+    coverTransition: CoverTransition,
     modifier: Modifier = Modifier,
 ) {
     // Grid order: title, People header and row (if any), Utilities header, utilities block,
@@ -116,6 +120,7 @@ fun CollectionsScreen(
             fullWidth {
                 PeopleRow(
                     people.take(PeopleShown),
+                    coverTransition = coverTransition,
                     onOpen = { if (selection == null) onOpen(it) },
                     modifier = Modifier.graphicsLayer { alpha = if (selection != null) 0.4f else 1f },
                 )
@@ -139,6 +144,7 @@ fun CollectionsScreen(
                 collection,
                 selected = selection?.let { collection.key in it },
                 onClick = { gestures.click(collection.key) { onOpen(collection.key) } },
+                coverModifier = Modifier.coverCell(coverTransition, collection.key),
             )
         }
     }
@@ -315,7 +321,12 @@ private const val CoverPx = 512
 
 /** The first [PeopleShown] people across the screen, faces in circles; named people first. */
 @Composable
-private fun PeopleRow(people: List<Pair<Person, MediaItem>>, onOpen: (key: String) -> Unit, modifier: Modifier = Modifier) {
+private fun PeopleRow(
+    people: List<Pair<Person, MediaItem>>,
+    coverTransition: CoverTransition,
+    onOpen: (key: String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val onBackground = MaterialTheme.colorScheme.onBackground
     Row(horizontalArrangement = Arrangement.spacedBy(14.dp), modifier = modifier.fillMaxWidth()) {
         for ((person, cover) in people) {
@@ -325,7 +336,7 @@ private fun PeopleRow(people: List<Pair<Person, MediaItem>>, onOpen: (key: Strin
                     .weight(1f)
                     .pressable({ onOpen(CollectionKeys.person(person.id)) }, pressedScale = 0.94f),
             ) {
-                FaceAvatar(person, cover, Modifier.fillMaxWidth())
+                FaceAvatar(person, cover, Modifier.fillMaxWidth().coverCell(coverTransition, CollectionKeys.person(person.id), circle = true))
                 Spacer(Modifier.height(6.dp))
                 Text(
                     person.name ?: "",
@@ -370,6 +381,8 @@ internal fun AlbumCard(
     subtitle: String = if (collection.count == 0) "Empty" else collection.count.toString(),
     /** null when not selecting. */
     selected: Boolean? = null,
+    /** On the square cover, e.g. for the open transition to find it. */
+    coverModifier: Modifier = Modifier,
 ) {
     val onBackground = MaterialTheme.colorScheme.onBackground
     // Selected covers shrink a little inside their slot, like photos in the grid.
@@ -381,7 +394,7 @@ internal fun AlbumCard(
     Column(Modifier.pressable(onClick, pressedScale = 0.96f)) {
         Box(Modifier.fillMaxWidth().aspectRatio(1f)) {
             Box(
-                Modifier
+                coverModifier
                     .fillMaxSize()
                     .graphicsLayer {
                         scaleX = scale

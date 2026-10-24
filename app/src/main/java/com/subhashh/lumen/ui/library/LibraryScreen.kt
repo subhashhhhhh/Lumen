@@ -31,6 +31,9 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.material3.Icon
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.runtime.LaunchedEffect
@@ -102,6 +105,12 @@ fun LibraryScreen(
     sections: GridSections? = null,
     /** Settings → Library → Curved Edge Display. */
     curvedEdge: Boolean = false,
+    /**
+     * An album's or person's cover across the top, scrolling with the grid; [contentPadding]'s
+     * top should leave [heroHeight] for it. The title shows once it's scrolled away.
+     */
+    hero: (@Composable (Modifier) -> Unit)? = null,
+    heroHeight: Dp = 0.dp,
 ) {
     val grid = sections ?: remember(items) { GridSections.of(items, SectionMode.None) }
     val entries = grid.entries
@@ -138,6 +147,19 @@ fun LibraryScreen(
     val longPressActive = remember { booleanArrayOf(false) }
 
     Box(modifier.fillMaxSize()) {
+        if (hero != null) {
+            val heroPx = with(density) { heroHeight.roundToPx() }
+            // Behind the grid, moved by the grid's scroll: no extra grid item, so grid indices
+            // (drag-select, the viewer's close flight) stay those of the photos.
+            hero(
+                Modifier
+                    .height(heroHeight)
+                    .offset {
+                        val first = gridState.firstVisibleItemIndex == 0
+                        IntOffset(0, if (first) -gridState.firstVisibleItemScrollOffset else -heroPx)
+                    },
+            )
+        }
         LazyVerticalGrid(
             columns = GridCells.Fixed(columns),
             state = gridState,
@@ -219,11 +241,23 @@ fun LibraryScreen(
             curvedEdge = curvedEdge,
         )
 
+        val collapseFrom = with(density) { (heroHeight - 240.dp).toPx() }
+        val collapseOver = with(density) { 80.dp.toPx() }
         LibraryHeader(
             title = title,
             subtitle = if (showMonth) visibleMonth else "",
             topPadding = titleTopPadding,
-            modifier = Modifier.align(Alignment.TopStart),
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .graphicsLayer {
+                    // Under a cover, the title (with its scrim) arrives as the cover leaves; while
+                    // selecting it's needed for the count.
+                    alpha = when {
+                        hero == null || currentSelection != null -> 1f
+                        gridState.firstVisibleItemIndex > 0 -> 1f
+                        else -> ((gridState.firstVisibleItemScrollOffset - collapseFrom) / collapseOver).coerceIn(0f, 1f)
+                    }
+                },
         )
     }
 }

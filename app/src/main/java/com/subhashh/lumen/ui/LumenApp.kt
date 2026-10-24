@@ -23,6 +23,12 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.IntSize
 import com.subhashh.lumen.ui.transition.PhotoTransition
+import com.subhashh.lumen.ui.transition.CoverTransition
+import com.subhashh.lumen.ui.transition.CoverTransitionOverlay
+import com.subhashh.lumen.ui.transition.HeroCover
+import com.subhashh.lumen.ui.collections.CoverUnderlay
+import com.subhashh.lumen.ui.collections.heroSlot
+import com.subhashh.lumen.ui.transition.coverPage
 import com.subhashh.lumen.ui.transition.PhotoTransitionOverlay
 import com.subhashh.lumen.ui.viewer.fullScreenRect
 import kotlinx.coroutines.delay
@@ -334,6 +340,8 @@ private fun MainScaffold(
     val hiddenGrid = rememberLazyGridState()
     val scope = rememberCoroutineScope()
     val transition = remember { PhotoTransition() }
+    val coverTransition = remember { CoverTransition() }
+    var coverOpening by remember { mutableStateOf(false) }
     val reduceMotion = com.subhashh.lumen.ui.theme.LocalMotion.current.reduce
     var screenSize by remember { mutableStateOf(IntSize.Zero) }
     val viewerBackground = MaterialTheme.colorScheme.background
@@ -430,6 +438,60 @@ private fun MainScaffold(
     }
     val people = remember(allPeople) { allPeople.filterNot { it.first.hidden } }
     val personOf = { key: String? -> CollectionKeys.personId(key)?.let { id -> allPeople.firstOrNull { it.first.id == id }?.first } }
+    /** The photo across the top of an album's or person's page; null for pages without one. */
+    val heroOf = { key: String? ->
+        when {
+            key == null -> null
+            CollectionKeys.isFolder(key) -> folders.firstOrNull { it.key == key }?.cover?.let { HeroCover(key, it) }
+            else -> CollectionKeys.personId(key)?.let { id -> allPeople.firstOrNull { it.first.id == id } }?.let { (person, cover) ->
+                if (person.coverInVideo) HeroCover(key, cover, crop = com.subhashh.lumen.data.ai.FaceStore.cropFile(context, person.coverFaceId))
+                else HeroCover(key, cover, face = person.coverBox)
+            }
+        }
+    }
+    // An album's or person's cover: the top 46% of the screen.
+    val heroHeight = with(LocalDensity.current) { (screenSize.height * HeroShare).toDp() }
+    val heroRect = { androidx.compose.ui.geometry.Rect(0f, 0f, screenSize.width.toFloat(), screenSize.height * HeroShare) }
+    /** Opens [key], growing its cover out of its card when it has one on screen. */
+    val openCollectionFromCard: (key: String) -> Unit = open@{ key ->
+        if (coverTransition.flying || coverOpening) return@open
+        val cover = heroOf(key) ?: run {
+            openCollection = key
+            return@open
+        }
+        coverOpening = true
+        scope.launch {
+            try {
+                if (coverTransition.prepare(context, cover, heroRect())) {
+                    openCollection = key
+                    coverTransition.open()
+                } else {
+                    openCollection = key
+                }
+            } finally {
+                coverOpening = false
+                coverTransition.finish()
+            }
+        }
+    }
+    /** Leaves the open album or person for [target], shrinking its cover back into its card. */
+    val closeCollection: (target: String?) -> Unit = close@{ target ->
+        if (coverTransition.flying || coverOpening) return@close
+        val cover = heroOf(openCollection) ?: run {
+            openCollection = target
+            return@close
+        }
+        coverOpening = true
+        scope.launch {
+            try {
+                coverTransition.close(cover, heroRect())
+            } finally {
+                openCollection = target
+                coverTransition.finish()
+                coverOpening = false
+            }
+        }
+    }
     /** Merge with…: the People page picks who [mergeFrom] joins. */
     var mergeFrom by rememberSaveable { mutableStateOf<Long?>(null) }
     var showHiddenPeople by rememberSaveable { mutableStateOf(false) }
@@ -617,18 +679,26 @@ private fun MainScaffold(
     }
     val searchGrid = rememberLazyGridState()
     LaunchedEffect(searchQuery) { searchGrid.scrollToItem(0) }
+    // Pages that open with a cover across the top start at the top, so by date the newest
+    // photos come first, right under it.
+    val coverPageDescending = sort == LibrarySort.Date || sortDescending
     val itemsOf = { key: String ->
         when (key) {
             CollectionKeys.Library -> libraryItems
             CollectionKeys.Search -> searchSections?.firstOrNull { it.id == searchSection }?.items.orEmpty()
             CollectionKeys.Hidden -> if (hiddenUnlocked) hidden.orEmpty() else emptyList()
             else -> personOf(key)?.let { person ->
-                sort.apply(library.orEmpty().filter { it.id in person.mediaIds }, sortDescending)
+                sort.apply(library.orEmpty().filter { it.id in person.mediaIds }, coverPageDescending)
             } ?: CollectionKeys.hiddenFolderId(key)?.let { id ->
                 if (hiddenUnlocked) hidden.orEmpty().filter { it.bucketId == id } else emptyList()
             } ?: CollectionKeys.items(key, library.orEmpty(), trash).let {
-                // Recently Deleted stays in deletion order; albums follow the Library's sort.
-                if (key == CollectionKeys.RecentlyDeleted) it else sort.apply(it, sortDescending)
+                // Recently Deleted stays in deletion order; albums follow the Library's sort,
+                // except that by date they read newest first, under their cover.
+                when {
+                    key == CollectionKeys.RecentlyDeleted -> it
+                    CollectionKeys.isFolder(key) -> sort.apply(it, coverPageDescending)
+                    else -> sort.apply(it, sortDescending)
+                }
             }
         }
     }
@@ -687,12 +757,12 @@ private fun MainScaffold(
     BackHandler(enabled = searching && !viewerOpen) { searching = false }
     BackHandler(enabled = inCollection && !viewerOpen) {
         // A folder inside Hidden steps back to Hidden's list, not out of Hidden.
-        openCollection = when {
+        closeCollection(when {
             openCollection == CollectionKeys.People && mergeFrom != null -> CollectionKeys.person(mergeFrom!!).also { mergeFrom = null }
             CollectionKeys.hiddenFolderId(openCollection.orEmpty()) != null -> CollectionKeys.Hidden
             CollectionKeys.personId(openCollection) != null && personFromPeople -> CollectionKeys.People
             else -> null
-        }
+        })
     }
     BackHandler(enabled = inSettings && !viewerOpen) { popSettings() }
 
@@ -1190,6 +1260,74 @@ private fun MainScaffold(
         }
     }
 
+    // Collections and People: also drawn under an album or person while its cover flies.
+    val peoplePage: @Composable (Modifier) -> Unit = { pageModifier ->
+            val from = mergeFrom?.let { id -> allPeople.firstOrNull { it.first.id == id }?.first }
+            PeopleScreen(
+                people = when {
+                    from != null -> allPeople.filter { it.first.id != from.id && (!it.first.hidden || showHiddenPeople) }
+                    showHiddenPeople -> allPeople
+                    else -> people
+                },
+                title = when {
+                    from != null -> "Merge with…"
+                    peopleSelection.isNullOrEmpty() -> if (peopleSelection != null) "Select People" else "People"
+                    else -> "${peopleSelection!!.size} Selected"
+                },
+                selection = if (from == null) peopleSelection else null,
+                onSelectionChange = { if (from == null && pick == null) peopleSelection = it },
+                square = peopleSquare,
+                gridState = peopleGrid,
+                contentPadding = PaddingValues(top = statusTop + 64.dp, bottom = navBottom + 96.dp),
+                coverTransition = coverTransition,
+                modifier = pageModifier,
+                onOpen = { key ->
+                    val target = personOf(key)
+                    if (from != null && target != null) {
+                        val fromName = from.name ?: "this person"
+                        confirmation = Confirmation(
+                            title = "Merge People?",
+                            message = "Photos of $fromName and ${target.name ?: "the person you chose"} will show as one person" +
+                                ((target.name ?: from.name)?.let { ", named $it." } ?: "."),
+                            confirm = "Merge",
+                            onConfirm = {
+                                mergeFrom = null
+                                personFromPeople = false
+                                openCollection = key
+                                scope.launch(Dispatchers.IO) {
+                                    com.subhashh.lumen.data.ai.FaceStore.of(context).merge(keep = target.id, gone = from.id)
+                                }
+                            },
+                        )
+                    } else {
+                        personFromPeople = true
+                        openCollectionFromCard(key)
+                    }
+                },
+            )
+    }
+    val collectionsPage: @Composable (Modifier) -> Unit = { pageModifier ->
+        CollectionsScreen(
+            title = albumSelection?.let { albumSelectionTitle(it.size, "Album") } ?: "Collections",
+            columns = albumColumns,
+            onColumnsChange = onAlbumColumns,
+            selection = albumSelection,
+            onSelectionChange = { if (pick == null) albumSelection = it },
+            utilities = utilities,
+            hiddenLockSet = lockSet,
+            folders = folders,
+            people = people,
+            gridState = collectionsGrid,
+            contentPadding = PaddingValues(top = statusTop + 16.dp, bottom = navBottom + 96.dp),
+            coverTransition = coverTransition,
+            modifier = pageModifier,
+            onOpen = { key ->
+                personFromPeople = false
+                if (key == CollectionKeys.Hidden) openHidden() else openCollectionFromCard(key)
+            },
+        )
+    }
+
     Box(Modifier.fillMaxSize().onSizeChanged { screenSize = it }) {
         // Everything the glass controls refract lives inside this layer.
         Box(
@@ -1198,340 +1336,295 @@ private fun MainScaffold(
                 .layerBackdrop(backdrop)
                 .background(MaterialTheme.colorScheme.background),
         ) {
-            when {
-                searching -> SearchScreen(
-                    query = searchQuery,
-                    sections = searchSections,
-                    lookingInside = smartPending,
-                    expanded = searchExpanded,
-                    onToggleSection = { id -> searchExpanded = if (id in searchExpanded) searchExpanded - id else searchExpanded + id },
-                    activeSection = searchSection,
-                    albums = searchAlbums,
-                    people = personMatches,
-                    unnamed = unnamedSubject,
-                    onOpenPerson = { key ->
-                        rememberSearch(searchQuery)
-                        searching = false
-                        settingsPage = null
-                        tab = LumenTab.Collections
-                        openCollection = key
-                    },
-                    onNamePerson = { person ->
-                        personNameSuggestion = searchQuery.trim().split(Regex("\\s+")).joinToString(" ") { w -> w.replaceFirstChar { it.uppercase() } }
-                        personNameRequest = person
-                    },
-                    recent = recentSearches,
-                    suggested = smartSuggestions,
-                    suggestions = if (smartSuggestions.isEmpty()) searchSuggestions else emptyList(),
-                    onClearRecent = {
-                        prefs.recentSearches = emptyList()
-                        recentSearches = emptyList()
-                    },
-                    gridState = searchGrid,
-                    contentPadding = PaddingValues(top = statusTop + 72.dp, bottom = navBottom + 96.dp),
-                    transition = transition,
-                    onOpen = { section, index ->
-                        rememberSearch(searchQuery)
-                        searchSection = section
-                        openViewer(CollectionKeys.Search, index)
-                    },
-                    onOpenAlbum = { key ->
-                        searching = false
-                        settingsPage = null
-                        tab = LumenTab.Collections
-                        openCollection = key
-                    },
-                    onSuggestion = { searchQuery = it },
-                    picked = if (pick?.multiple == true) picked.keys else null,
-                    columns = searchColumns,
-                    onColumnsChange = {
-                        searchColumns = it
-                        prefs.searchColumns = it
-                    },
-                )
-                library == null -> Unit
-                settingsPage == SettingsLicenses -> LicensesScreen(
-                    contentPadding = PaddingValues(top = statusTop + 72.dp, bottom = navBottom + 96.dp),
-                )
-                settingsPage == SettingsMain || settingsPage?.startsWith(SettingsCategoryPrefix) == true -> SettingsScreen(
-                    category = SettingsCategory.of(settingsPage?.removePrefix(SettingsCategoryPrefix)),
-                    highlight = settingsHighlight,
-                    onOpenCategory = { category, highlight ->
-                        settingsHighlight = highlight
-                        settingsPage = settingsCategoryPage(category)
-                    },
-                    contentPadding = PaddingValues(top = statusTop + 72.dp, bottom = navBottom + 96.dp),
-                    onOpenLicenses = { settingsPage = SettingsLicenses },
-                    onConfirm = { confirmation = it },
-                    onEnterHfToken = { enteringHfToken = true },
-                    hfTokenVersion = hfTokenVersion,
-                    onOpenExcluded = { settingsPage = SettingsExcluded },
-                    onOpenHidden = {
-                        // Hidden lives in Collections; go there, then unlock.
-                        settingsPage = null
-                        tab = LumenTab.Collections
-                        openHidden()
-                    },
-                    hiddenLockSet = lockSet,
-                    onChangeLock = { lockFlow = if (lockSet) LockFlow.Change else LockFlow.Setup },
-                    biometricsOn = lockSet && biometrics,
-                    onToggleBiometrics = toggle@{
-                        val host = activity ?: return@toggle
-                        if (biometrics) {
-                            lockStore.biometrics = false
-                            biometrics = false
-                        } else if (HiddenLock.biometricsAvailable(host)) {
-                            // Turning it on proves the fingerprint or face works first.
-                            HiddenLock.biometric(host, "Cancel", onSuccess = {
-                                lockStore.biometrics = true
-                                biometrics = true
-                            }, onFallback = {})
-                        } else {
-                            toast("Add a fingerprint or face in your phone's settings first")
-                        }
-                    },
-                    excludedCount = excluded.size,
-                    encryptHidden = encryptHidden,
-                    onToggleEncryptHidden = toggle@{ on ->
-                        if (!lockStore.isSet) {
-                            toast("Set up a Lumen lock first (Privacy → Set Up Lumen Lock)")
-                            return@toggle
-                        }
-                        if (needsAllFiles()) return@toggle
-                        confirmation = if (on) {
-                            Confirmation(
-                                title = "Encrypt Hidden?",
-                                message = (hidden?.filterNot(Vault::isVault)?.size?.let { "$it hidden items move" } ?: "Everything in Hidden moves") +
-                                    " into an encrypted vault that no other app or file manager can read (excluded folders stay as they are). " +
-                                    "It stays on your storage, so it survives uninstalling Lumen; your Lumen lock opens it again.\n\n" +
-                                    "If you uninstall Lumen and forget your lock, these files can't be recovered by anyone. " +
-                                    "A password is safer than a short PIN.",
-                                confirm = "Encrypt",
-                            ) {
-                                pendingEncryption = true
-                                lockFlow = LockFlow.Confirm
-                            }
-                        } else {
-                            Confirmation(
-                                title = "Stop encrypting Hidden?",
-                                message = "Everything in the vault is decrypted back to where it was, hidden the usual way: " +
-                                    "out of your library, but visible to file managers and some galleries.",
-                                confirm = "Decrypt",
-                            ) {
-                                pendingEncryption = false
-                                lockFlow = LockFlow.Confirm
-                            }
-                        }
-                    },
-                    appLockOn = appLockOn,
-                    onToggleAppLock = { on ->
-                        if (on && !lockStore.isSet) {
-                            // App Lock uses the same lock as Hidden: set one up first.
-                            setupForAppLock = true
-                            lockFlow = LockFlow.Setup
-                        } else {
-                            prefs.appLock = on
-                            appLockOn = on
-                            activity?.let(AppLock::settingsChanged)
-                        }
-                    },
-                    onExport = {
-                        exportLauncher.launch("Lumen settings ${java.time.LocalDate.now()}.json")
-                    },
-                    onImportFavorites = {
-                        favoritesLauncher.launch(arrayOf("text/plain", "application/json", "application/octet-stream"))
-                    },
-                    onImport = {
-                        confirmation = Confirmation(
-                            title = "Import settings?",
-                            message = "Your current settings, album arrangement and exclusions are replaced by the backup's. " +
-                                "Favorites in it are added to yours.",
-                            confirm = "Import",
-                        ) { importLauncher.launch(arrayOf("application/json", "application/octet-stream", "text/plain")) }
-                    },
-                )
-                settingsPage == SettingsExcluded -> {
-                    val all = allItems.orEmpty()
-                    // Hidden folders count too, once Hidden has been scanned.
-                    val hiddenFiles = hiddenAll.orEmpty()
-                    ExcludedFoldersScreen(
-                        excluded = remember(excluded, all, hiddenFiles) {
-                            excluded.sorted().map { folder ->
-                                folder to (all.count { it.relativePath.startsWith(folder) } +
-                                    hiddenFiles.count { it.relativePath.startsWith(folder) })
-                            }
+            // Its own lambda (a separate JVM method): MainScaffold is at the 64 KB method limit.
+            val screens: @Composable () -> Unit = {
+                when {
+                    searching -> SearchScreen(
+                        query = searchQuery,
+                        sections = searchSections,
+                        lookingInside = smartPending,
+                        expanded = searchExpanded,
+                        onToggleSection = { id -> searchExpanded = if (id in searchExpanded) searchExpanded - id else searchExpanded + id },
+                        activeSection = searchSection,
+                        albums = searchAlbums,
+                        people = personMatches,
+                        unnamed = unnamedSubject,
+                        onOpenPerson = { key ->
+                            rememberSearch(searchQuery)
+                            searching = false
+                            settingsPage = null
+                            tab = LumenTab.Collections
+                            openCollection = key
                         },
-                        suggestions = remember(excluded, all) { ExcludedFolders.suggestions(all, excluded) },
+                        onNamePerson = { person ->
+                            personNameSuggestion = searchQuery.trim().split(Regex("\\s+")).joinToString(" ") { w -> w.replaceFirstChar { it.uppercase() } }
+                            personNameRequest = person
+                        },
+                        recent = recentSearches,
+                        suggested = smartSuggestions,
+                        suggestions = if (smartSuggestions.isEmpty()) searchSuggestions else emptyList(),
+                        onClearRecent = {
+                            prefs.recentSearches = emptyList()
+                            recentSearches = emptyList()
+                        },
+                        gridState = searchGrid,
                         contentPadding = PaddingValues(top = statusTop + 72.dp, bottom = navBottom + 96.dp),
-                        onInclude = viewModel::include,
-                        onExclude = { viewModel.exclude(listOf(it)) },
-                        onChooseFolder = { excludePicker = true },
+                        transition = transition,
+                        onOpen = { section, index ->
+                            rememberSearch(searchQuery)
+                            searchSection = section
+                            openViewer(CollectionKeys.Search, index)
+                        },
+                        onOpenAlbum = { key ->
+                            searching = false
+                            settingsPage = null
+                            tab = LumenTab.Collections
+                            openCollection = key
+                        },
+                        onSuggestion = { searchQuery = it },
+                        picked = if (pick?.multiple == true) picked.keys else null,
+                        columns = searchColumns,
+                        onColumnsChange = {
+                            searchColumns = it
+                            prefs.searchColumns = it
+                        },
                     )
-                }
-                tab == LumenTab.Library -> Box(Modifier.nestedScroll(zoomBarScroll)) {
-                    LibraryScreen(
-                        title = pickTitle ?: selection?.let { selectionTitle(selectedItems) } ?: "Library",
-                        selection = if (pick?.multiple == true) picked.keys else selection,
-                        onSelectionChange = {
-                            when {
-                                pick?.multiple == true -> setPicked(it, libraryItems)
-                                pick == null -> selection = it
+                    library == null -> Unit
+                    settingsPage == SettingsLicenses -> LicensesScreen(
+                        contentPadding = PaddingValues(top = statusTop + 72.dp, bottom = navBottom + 96.dp),
+                    )
+                    settingsPage == SettingsMain || settingsPage?.startsWith(SettingsCategoryPrefix) == true -> SettingsScreen(
+                        category = SettingsCategory.of(settingsPage?.removePrefix(SettingsCategoryPrefix)),
+                        highlight = settingsHighlight,
+                        onOpenCategory = { category, highlight ->
+                            settingsHighlight = highlight
+                            settingsPage = settingsCategoryPage(category)
+                        },
+                        contentPadding = PaddingValues(top = statusTop + 72.dp, bottom = navBottom + 96.dp),
+                        onOpenLicenses = { settingsPage = SettingsLicenses },
+                        onConfirm = { confirmation = it },
+                        onEnterHfToken = { enteringHfToken = true },
+                        hfTokenVersion = hfTokenVersion,
+                        onOpenExcluded = { settingsPage = SettingsExcluded },
+                        onOpenHidden = {
+                            // Hidden lives in Collections; go there, then unlock.
+                            settingsPage = null
+                            tab = LumenTab.Collections
+                            openHidden()
+                        },
+                        hiddenLockSet = lockSet,
+                        onChangeLock = { lockFlow = if (lockSet) LockFlow.Change else LockFlow.Setup },
+                        biometricsOn = lockSet && biometrics,
+                        onToggleBiometrics = toggle@{
+                            val host = activity ?: return@toggle
+                            if (biometrics) {
+                                lockStore.biometrics = false
+                                biometrics = false
+                            } else if (HiddenLock.biometricsAvailable(host)) {
+                                // Turning it on proves the fingerprint or face works first.
+                                HiddenLock.biometric(host, "Cancel", onSuccess = {
+                                    lockStore.biometrics = true
+                                    biometrics = true
+                                }, onFallback = {})
+                            } else {
+                                toast("Add a fingerprint or face in your phone's settings first")
                             }
                         },
-                        aspectRatioGrid = aspectRatioGrid,
-                        columns = gridColumns,
-                        onColumnsChange = onGridColumns,
-                        emptyText = filter.emptyText,
-                        startAtEnd = chronological,
-                        showMonth = sort == LibrarySort.Date,
-                        scrollLabel = scrollLabel,
-                        sections = librarySections,
-                        curvedEdge = curvedEdge,
-                        items = libraryItems,
-                        gridState = libraryGrid,
-                        contentPadding = gridPadding,
-                        transition = transition,
-                        onOpen = { index -> openViewer(CollectionKeys.Library, index) },
-                        // Stays composed under Years/Months (hidden, so not drawn): coming back to
-                        // All is instant and keeps its scroll position.
-                        modifier = Modifier.graphicsLayer { alpha = if (zoomLevel == ZoomLevel.All) 1f else 0f },
+                        excludedCount = excluded.size,
+                        encryptHidden = encryptHidden,
+                        onToggleEncryptHidden = toggle@{ on ->
+                            if (!lockStore.isSet) {
+                                toast("Set up a Lumen lock first (Privacy → Set Up Lumen Lock)")
+                                return@toggle
+                            }
+                            if (needsAllFiles()) return@toggle
+                            confirmation = if (on) {
+                                Confirmation(
+                                    title = "Encrypt Hidden?",
+                                    message = (hidden?.filterNot(Vault::isVault)?.size?.let { "$it hidden items move" } ?: "Everything in Hidden moves") +
+                                        " into an encrypted vault that no other app or file manager can read (excluded folders stay as they are). " +
+                                        "It stays on your storage, so it survives uninstalling Lumen; your Lumen lock opens it again.\n\n" +
+                                        "If you uninstall Lumen and forget your lock, these files can't be recovered by anyone. " +
+                                        "A password is safer than a short PIN.",
+                                    confirm = "Encrypt",
+                                ) {
+                                    pendingEncryption = true
+                                    lockFlow = LockFlow.Confirm
+                                }
+                            } else {
+                                Confirmation(
+                                    title = "Stop encrypting Hidden?",
+                                    message = "Everything in the vault is decrypted back to where it was, hidden the usual way: " +
+                                        "out of your library, but visible to file managers and some galleries.",
+                                    confirm = "Decrypt",
+                                ) {
+                                    pendingEncryption = false
+                                    lockFlow = LockFlow.Confirm
+                                }
+                            }
+                        },
+                        appLockOn = appLockOn,
+                        onToggleAppLock = { on ->
+                            if (on && !lockStore.isSet) {
+                                // App Lock uses the same lock as Hidden: set one up first.
+                                setupForAppLock = true
+                                lockFlow = LockFlow.Setup
+                            } else {
+                                prefs.appLock = on
+                                appLockOn = on
+                                activity?.let(AppLock::settingsChanged)
+                            }
+                        },
+                        onExport = {
+                            exportLauncher.launch("Lumen settings ${java.time.LocalDate.now()}.json")
+                        },
+                        onImportFavorites = {
+                            favoritesLauncher.launch(arrayOf("text/plain", "application/json", "application/octet-stream"))
+                        },
+                        onImport = {
+                            confirmation = Confirmation(
+                                title = "Import settings?",
+                                message = "Your current settings, album arrangement and exclusions are replaced by the backup's. " +
+                                    "Favorites in it are added to yours.",
+                                confirm = "Import",
+                            ) { importLauncher.launch(arrayOf("application/json", "application/octet-stream", "text/plain")) }
+                        },
                     )
-                    AnimatedContent(
-                        targetState = zoomLevel,
-                        transitionSpec = {
-                            (fadeIn(tween(200)) + scaleIn(tween(240), initialScale = 0.96f))
-                                .togetherWith(fadeOut(tween(160)))
-                        },
-                        label = "zoomLevel",
-                    ) { level ->
-                        if (level != ZoomLevel.All) {
-                            TimelineScreen(
-                                periods = if (level == ZoomLevel.Years) years else months,
-                                level = level,
-                                listState = if (level == ZoomLevel.Years) yearsList else monthsList,
-                                contentPadding = gridPadding,
-                                emptyText = filter.emptyText,
-                                onOpen = { period ->
-                                    if (level == ZoomLevel.Years) {
-                                        zoomLevel = ZoomLevel.Months
-                                        val first = months.indexOfFirst { it.year == period.year }
-                                        if (first >= 0) scope.launch { monthsList.scrollToItem(first) }
-                                    } else {
-                                        zoomLevel = ZoomLevel.All
-                                        scope.launch { libraryGrid.scrollToItem(librarySections.gridIndexOf(period.firstIndex)) }
-                                    }
-                                },
-                            )
-                        } else {
-                            Box(Modifier.fillMaxSize())
-                        }
+                    settingsPage == SettingsExcluded -> {
+                        val all = allItems.orEmpty()
+                        // Hidden folders count too, once Hidden has been scanned.
+                        val hiddenFiles = hiddenAll.orEmpty()
+                        ExcludedFoldersScreen(
+                            excluded = remember(excluded, all, hiddenFiles) {
+                                excluded.sorted().map { folder ->
+                                    folder to (all.count { it.relativePath.startsWith(folder) } +
+                                        hiddenFiles.count { it.relativePath.startsWith(folder) })
+                                }
+                            },
+                            suggestions = remember(excluded, all) { ExcludedFolders.suggestions(all, excluded) },
+                            contentPadding = PaddingValues(top = statusTop + 72.dp, bottom = navBottom + 96.dp),
+                            onInclude = viewModel::include,
+                            onExclude = { viewModel.exclude(listOf(it)) },
+                            onChooseFolder = { excludePicker = true },
+                        )
                     }
-                }
-                openCollection == CollectionKeys.Hidden -> HiddenScreen(
-                    encrypted = encryptHidden,
-                    folders = hiddenFolderList,
-                    gridState = hiddenGrid,
-                    title = albumSelection?.let { albumSelectionTitle(it.size, "Folder") } ?: "Hidden",
-                    columns = albumColumns,
-                    onColumnsChange = onAlbumColumns,
-                    selection = albumSelection,
-                    onSelectionChange = { if (pick == null) albumSelection = it },
-                    contentPadding = PaddingValues(top = statusTop + 72.dp, bottom = navBottom + 96.dp),
-                    onOpen = { openCollection = it },
-                )
-                openCollection == CollectionKeys.People -> {
-                    val from = mergeFrom?.let { id -> allPeople.firstOrNull { it.first.id == id }?.first }
-                    PeopleScreen(
-                        people = when {
-                            from != null -> allPeople.filter { it.first.id != from.id && (!it.first.hidden || showHiddenPeople) }
-                            showHiddenPeople -> allPeople
-                            else -> people
-                        },
-                        title = when {
-                            from != null -> "Merge with…"
-                            peopleSelection.isNullOrEmpty() -> if (peopleSelection != null) "Select People" else "People"
-                            else -> "${peopleSelection!!.size} Selected"
-                        },
-                        selection = if (from == null) peopleSelection else null,
-                        onSelectionChange = { if (from == null && pick == null) peopleSelection = it },
-                        square = peopleSquare,
-                        gridState = peopleGrid,
-                        contentPadding = PaddingValues(top = statusTop + 64.dp, bottom = navBottom + 96.dp),
-                        onOpen = { key ->
-                            val target = personOf(key)
-                            if (from != null && target != null) {
-                                val fromName = from.name ?: "this person"
-                                confirmation = Confirmation(
-                                    title = "Merge People?",
-                                    message = "Photos of $fromName and ${target.name ?: "the person you chose"} will show as one person" +
-                                        ((target.name ?: from.name)?.let { ", named $it." } ?: "."),
-                                    confirm = "Merge",
-                                    onConfirm = {
-                                        mergeFrom = null
-                                        personFromPeople = false
-                                        openCollection = key
-                                        scope.launch(Dispatchers.IO) {
-                                            com.subhashh.lumen.data.ai.FaceStore.of(context).merge(keep = target.id, gone = from.id)
+                    tab == LumenTab.Library -> Box(Modifier.nestedScroll(zoomBarScroll)) {
+                        LibraryScreen(
+                            title = pickTitle ?: selection?.let { selectionTitle(selectedItems) } ?: "Library",
+                            selection = if (pick?.multiple == true) picked.keys else selection,
+                            onSelectionChange = {
+                                when {
+                                    pick?.multiple == true -> setPicked(it, libraryItems)
+                                    pick == null -> selection = it
+                                }
+                            },
+                            aspectRatioGrid = aspectRatioGrid,
+                            columns = gridColumns,
+                            onColumnsChange = onGridColumns,
+                            emptyText = filter.emptyText,
+                            startAtEnd = chronological,
+                            showMonth = sort == LibrarySort.Date,
+                            scrollLabel = scrollLabel,
+                            sections = librarySections,
+                            curvedEdge = curvedEdge,
+                            items = libraryItems,
+                            gridState = libraryGrid,
+                            contentPadding = gridPadding,
+                            transition = transition,
+                            onOpen = { index -> openViewer(CollectionKeys.Library, index) },
+                            // Stays composed under Years/Months (hidden, so not drawn): coming back to
+                            // All is instant and keeps its scroll position.
+                            modifier = Modifier.graphicsLayer { alpha = if (zoomLevel == ZoomLevel.All) 1f else 0f },
+                        )
+                        AnimatedContent(
+                            targetState = zoomLevel,
+                            transitionSpec = {
+                                (fadeIn(tween(200)) + scaleIn(tween(240), initialScale = 0.96f))
+                                    .togetherWith(fadeOut(tween(160)))
+                            },
+                            label = "zoomLevel",
+                        ) { level ->
+                            if (level != ZoomLevel.All) {
+                                TimelineScreen(
+                                    periods = if (level == ZoomLevel.Years) years else months,
+                                    level = level,
+                                    listState = if (level == ZoomLevel.Years) yearsList else monthsList,
+                                    contentPadding = gridPadding,
+                                    emptyText = filter.emptyText,
+                                    onOpen = { period ->
+                                        if (level == ZoomLevel.Years) {
+                                            zoomLevel = ZoomLevel.Months
+                                            val first = months.indexOfFirst { it.year == period.year }
+                                            if (first >= 0) scope.launch { monthsList.scrollToItem(first) }
+                                        } else {
+                                            zoomLevel = ZoomLevel.All
+                                            scope.launch { libraryGrid.scrollToItem(librarySections.gridIndexOf(period.firstIndex)) }
                                         }
                                     },
                                 )
                             } else {
-                                personFromPeople = true
-                                openCollection = key
+                                Box(Modifier.fillMaxSize())
                             }
-                        },
+                        }
+                    }
+                    openCollection == CollectionKeys.Hidden -> HiddenScreen(
+                        encrypted = encryptHidden,
+                        folders = hiddenFolderList,
+                        gridState = hiddenGrid,
+                        title = albumSelection?.let { albumSelectionTitle(it.size, "Folder") } ?: "Hidden",
+                        columns = albumColumns,
+                        onColumnsChange = onAlbumColumns,
+                        selection = albumSelection,
+                        onSelectionChange = { if (pick == null) albumSelection = it },
+                        contentPadding = PaddingValues(top = statusTop + 72.dp, bottom = navBottom + 96.dp),
+                        onOpen = { openCollection = it },
                     )
+                    openCollection == CollectionKeys.People -> peoplePage(Modifier)
+                    openCollection != null -> {
+                        val key = openCollection!!
+                        val cover = heroOf(key)
+                        CoverUnderlay(coverTransition, if (CollectionKeys.personId(key) != null && personFromPeople) peoplePage else collectionsPage)
+                        val items = openItems ?: itemsOf(key)
+                        LibraryScreen(
+                            title = pickTitle ?: selection?.let { selectionTitle(selectedItems) }
+                                ?: personOf(key)?.let { it.name ?: "Add Name" }
+                                ?: (utilities + folders).firstOrNull { it.key == key }?.title
+                                ?: hiddenFolderList?.firstOrNull { it.collection.key == key }?.collection?.title.orEmpty(),
+                            selection = if (pick?.multiple == true) picked.keys else selection,
+                            onSelectionChange = {
+                                when {
+                                    pick?.multiple == true -> setPicked(it, itemsOf(key))
+                                    pick == null -> selection = it
+                                }
+                            },
+                            aspectRatioGrid = aspectRatioGrid,
+                            columns = gridColumns,
+                            onColumnsChange = onGridColumns,
+                            items = items,
+                            sections = collectionSections,
+                            curvedEdge = curvedEdge,
+                            startAtEnd = (chronological && cover == null) || key == CollectionKeys.RecentlyDeleted,
+                            showMonth = sort == LibrarySort.Date || key == CollectionKeys.RecentlyDeleted,
+                            scrollLabel = if (key == CollectionKeys.RecentlyDeleted) { item -> ScrollMonth.format(java.util.Date(item.takenAt)) } else scrollLabel,
+                            gridState = collectionGrid,
+                            contentPadding = PaddingValues(top = if (cover != null) heroHeight + 2.dp else statusTop + 152.dp, bottom = navBottom + 96.dp),
+                            titleTopPadding = 64.dp,
+                            hero = cover?.let { c ->
+                                heroSlot(c, personOf(key)?.let { it.name ?: "Add Name" } ?: folders.firstOrNull { it.key == key }?.title.orEmpty(), items, coverTransition)
+                            },
+                            heroHeight = heroHeight,
+                            modifier = Modifier.coverPage(coverTransition),
+                            emptyText = if (key.startsWith("empty:")) "This album is empty.\nAdd photos with ⋯ → Move to Album or Copy to Album."
+                            else "No photos or videos",
+                            transition = transition,
+                            onOpen = { index -> openViewer(key, index) },
+                        )
+                    }
+                    else -> collectionsPage(Modifier)
                 }
-                openCollection != null -> {
-                    val key = openCollection!!
-                    LibraryScreen(
-                        title = pickTitle ?: selection?.let { selectionTitle(selectedItems) }
-                            ?: personOf(key)?.let { it.name ?: "Add Name" }
-                            ?: (utilities + folders).firstOrNull { it.key == key }?.title
-                            ?: hiddenFolderList?.firstOrNull { it.collection.key == key }?.collection?.title.orEmpty(),
-                        selection = if (pick?.multiple == true) picked.keys else selection,
-                        onSelectionChange = {
-                            when {
-                                pick?.multiple == true -> setPicked(it, itemsOf(key))
-                                pick == null -> selection = it
-                            }
-                        },
-                        aspectRatioGrid = aspectRatioGrid,
-                        columns = gridColumns,
-                        onColumnsChange = onGridColumns,
-                        items = openItems ?: itemsOf(key),
-                        sections = collectionSections,
-                        curvedEdge = curvedEdge,
-                        startAtEnd = chronological || key == CollectionKeys.RecentlyDeleted,
-                        showMonth = sort == LibrarySort.Date || key == CollectionKeys.RecentlyDeleted,
-                        scrollLabel = if (key == CollectionKeys.RecentlyDeleted) { item -> ScrollMonth.format(java.util.Date(item.takenAt)) } else scrollLabel,
-                        gridState = collectionGrid,
-                        contentPadding = PaddingValues(top = statusTop + 152.dp, bottom = navBottom + 96.dp),
-                        titleTopPadding = 64.dp,
-                        emptyText = if (key.startsWith("empty:")) "This album is empty.\nAdd photos with ⋯ → Move to Album or Copy to Album."
-                        else "No photos or videos",
-                        transition = transition,
-                        onOpen = { index -> openViewer(key, index) },
-                    )
-                }
-                else -> CollectionsScreen(
-                    title = albumSelection?.let { albumSelectionTitle(it.size, "Album") } ?: "Collections",
-                    columns = albumColumns,
-                    onColumnsChange = onAlbumColumns,
-                    selection = albumSelection,
-                    onSelectionChange = { if (pick == null) albumSelection = it },
-                    utilities = utilities,
-                    hiddenLockSet = lockSet,
-                    folders = folders,
-                    people = people,
-                    gridState = collectionsGrid,
-                    contentPadding = PaddingValues(top = statusTop + 16.dp, bottom = navBottom + 96.dp),
-                    onOpen = { key ->
-                        personFromPeople = false
-                        if (key == CollectionKeys.Hidden) openHidden() else openCollection = key
-                    },
-                )
             }
+            screens()
+            CoverTransitionOverlay(coverTransition)
         }
 
 
@@ -1787,8 +1880,8 @@ private fun MainScaffold(
                             mergeFrom = null
                         }
                         CollectionKeys.hiddenFolderId(openCollection.orEmpty()) != null -> openCollection = CollectionKeys.Hidden
-                        CollectionKeys.personId(openCollection) != null && personFromPeople -> openCollection = CollectionKeys.People
-                        else -> openCollection = null
+                        CollectionKeys.personId(openCollection) != null && personFromPeople -> closeCollection(CollectionKeys.People)
+                        else -> closeCollection(null)
                     }
                 },
                 modifier = Modifier
@@ -2395,6 +2488,9 @@ private fun MainScaffold(
         }
     }
 }
+
+/** Share of the screen's height an album's or person's cover takes at the top of its page. */
+private const val HeroShare = 0.46f
 
 /** Naming an album: renaming [album], or a brand-new one when it's null. */
 private data class AlbumNameRequest(val album: MediaCollection?)
