@@ -120,3 +120,19 @@ object FaceModel {
 
     fun installed(context: Context): Boolean = files.all { File(dir(context), it.name).length() == it.bytes }
 }
+
+/**
+ * Subtitles: Cactus Compute's Whistle (speech to text, Apache 2.0) and Silero VAD v6.2.3 (where
+ * people speak, MIT), so music isn't "transcribed" into invented lines.
+ */
+object SpeechModel {
+    val files = listOf(
+        ModelFile("whistle.cact", 16_919_407, "b6e02f048568ac5d01a2042556c658061e699acbc0aa2a1439f52f3d461dffeb"),
+        ModelFile("vad.onnx", 1_289_603, "7ed98ddbad84ccac4cd0aeb3099049280713df825c610a8ed34543318f1b2c49"),
+    )
+    val bytes: Long get() = files.sumOf { it.bytes }
+
+    fun dir(context: Context) = File(context.noBackupFilesDir, "models/speech")
+
+    fun installed(context: Context): Boolean = files.all { File(dir(context), it.name).length() == it.bytes }
+}

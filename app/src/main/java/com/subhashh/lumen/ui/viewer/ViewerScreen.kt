@@ -117,6 +117,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import kotlin.math.abs
+import androidx.compose.ui.draw.clip
 import androidx.media3.common.MediaItem as PlayerMediaItem
 
 /** Fraction of the screen height a downward drag must cover to dismiss on release. */
@@ -172,6 +173,9 @@ fun ViewerScreen(
     val scope = rememberCoroutineScope()
 
     var chromeVisible by rememberSaveable { mutableStateOf(true) }
+    /** CC: subtitles made on the phone for videos, on until turned off again. */
+    var captions by rememberSaveable { mutableStateOf(false) }
+    val speechReady = remember { com.subhashh.lumen.data.ai.SpeechModel.installed(context) }
     var zoomed by remember { mutableStateOf(false) }
     val flingVelocity = with(LocalDensity.current) { FlingVelocity.toPx() }
     val haptics = LocalHapticFeedback.current
@@ -451,6 +455,18 @@ fun ViewerScreen(
             }
         }
 
+        if (captions && current?.isVideo == true && player != null && atRest) {
+            SubtitleOverlay(
+                item = current,
+                player = player,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+                    // Above the controls when they're up, near the bottom when they're not.
+                    .padding(bottom = if (chromeVisible) 150.dp else 40.dp, start = 24.dp, end = 24.dp),
+            )
+        }
+
         AnimatedVisibility(
             visible = chromeVisible && atRest && current != null,
             enter = fadeIn(),
@@ -474,6 +490,12 @@ fun ViewerScreen(
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                 ) {
                     if (current.isVideo) {
+                        if (speechReady) {
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                                CaptionsButton(backdrop, on = captions, onClick = { captions = !captions })
+                            }
+                            Spacer(Modifier.height(8.dp))
+                        }
                         if (player != null) VideoControls(backdrop, player)
                         Spacer(Modifier.height(12.dp))
                     }
@@ -859,6 +881,79 @@ private fun VideoControls(backdrop: Backdrop, player: Player) {
                     LumenPrefs(context).videoMuted = muted
                 }, pressedScale = 0.8f)
                 .padding(7.dp),
+        )
+    }
+}
+
+/** CC above the video controls, at the right: lit while subtitles are on. */
+@Composable
+private fun CaptionsButton(backdrop: Backdrop, on: Boolean, onClick: () -> Unit) {
+    val colors = LocalGlassColors.current
+    Box(
+        Modifier
+            .size(44.dp)
+            .pressable(onClick, pressedScale = 0.85f)
+            .glass(backdrop, shape = RoundedCornerShape(50)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            "CC",
+            color = if (on) MaterialTheme.colorScheme.primary else colors.content,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold,
+        )
+    }
+}
+
+/**
+ * The line being spoken now, made on the phone ([com.subhashh.lumen.data.ai.Subtitles]): the
+ * part being watched first. "Making subtitles…" until the first lines arrive; "No speech" if
+ * the video turns out to have none.
+ */
+@Composable
+private fun SubtitleOverlay(item: MediaItem, player: Player, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    var cues by remember(item.id) { mutableStateOf<List<com.subhashh.lumen.data.ai.Cue>>(emptyList()) }
+    var finished by remember(item.id) { mutableStateOf(false) }
+    var failed by remember(item.id) { mutableStateOf(false) }
+    var position by remember(item.id) { mutableLongStateOf(0L) }
+    LaunchedEffect(item.id) {
+        try {
+            com.subhashh.lumen.data.ai.Subtitles.generate(context, item, player.currentPosition).collect { cues = it }
+            finished = true
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            android.util.Log.w("LumenSubtitles", "Couldn't make subtitles for ${item.name}", e)
+            failed = true
+        }
+    }
+    LaunchedEffect(player) {
+        while (true) {
+            position = player.currentPosition
+            delay(100)
+        }
+    }
+    val line = cues.lastOrNull { position >= it.startMs && position <= it.endMs }?.text
+    val status = when {
+        line != null -> null
+        failed -> "Subtitles unavailable"
+        finished && cues.isEmpty() -> "No speech"
+        !finished && cues.none { it.startMs >= position - 30_000 && it.startMs <= position + 30_000 } -> "Making subtitles…"
+        else -> null
+    }
+    val text = line ?: status ?: return
+    Box(modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        Text(
+            text,
+            color = if (line != null) Color.White else Color.White.copy(alpha = 0.75f),
+            fontSize = if (line != null) 17.sp else 13.sp,
+            fontWeight = if (line != null) FontWeight.Medium else FontWeight.Normal,
+            textAlign = TextAlign.Center,
+            modifier = Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .background(Color.Black.copy(alpha = 0.55f))
+                .padding(horizontal = 10.dp, vertical = 5.dp),
         )
     }
 }
