@@ -45,12 +45,24 @@ class TextReader(dir: File, threads: Int, gpu: Boolean = false, recGpuWidths: Li
     /** Index 0 is CTC's "no character"; the model adds a space after the list. */
     private val chars: Array<String> = loadChars(File(dir, "rec.yml"))
 
+    /**
+     * Time spent per step, in ns, when set (Search Lab's profile); null in normal use. Keys:
+     * detect, cut, cpu, cpuDecode, gpuPrepare, gpu, gpuRead, gpuDecode, and batches@<width>.
+     */
+    var timings: MutableMap<String, Long>? = null
+
+    private inline fun <T> timed(step: String, block: () -> T): T {
+        val t = timings ?: return block()
+        val start = System.nanoTime()
+        return block().also { t[step] = (t[step] ?: 0L) + (System.nanoTime() - start) }
+    }
+
     /** Lines of text, top to bottom; empty when there are none. */
     fun read(original: Bitmap): List<String> {
         // Thumbnails can come back as hardware bitmaps, which can't be read pixel by pixel.
         val image = if (original.config == Bitmap.Config.HARDWARE) original.copy(Bitmap.Config.ARGB_8888, false) else original
         try {
-            val boxes = detect(image).sortedBy { box -> box.sumOf { it.y.toDouble() } }
+            val boxes = timed("detect") { detect(image) }.sortedBy { box -> box.sumOf { it.y.toDouble() } }
             return readBoxes(image, boxes).filterNotNull()
         } finally {
             if (image !== original) image.recycle()
@@ -339,10 +351,11 @@ class TextReader(dir: File, threads: Int, gpu: Boolean = false, recGpuWidths: Li
 
     /** Lines for one batch of boxes, in order; null where a box didn't read as text. */
     private fun recognize(image: Bitmap, boxes: List<Array<Point>>): List<String?> {
-        val lines = boxes.map { cut(image, it) }
+        val lines = timed("cut") { boxes.map { cut(image, it) } }
         try {
             val widest = lines.maxOf { it.width }
             val gpu = gpuRec.entries.firstOrNull { it.key >= widest }?.value?.value
+            timings?.let { t -> val key = "batches@${gpu?.width ?: "cpu"}"; t[key] = (t[key] ?: 0L) + 1 }
             return gpu?.read(lines) ?: recognizeCpu(lines, widest)
         } finally {
             lines.forEach { it.recycle() }
@@ -367,7 +380,7 @@ class TextReader(dir: File, threads: Int, gpu: Boolean = false, recGpuWidths: Li
         }
         val shape = longArrayOf(lines.size.toLong(), 3, RecHeight.toLong(), width.toLong())
         return OnnxTensor.createTensor(env, FloatBuffer.wrap(input), shape).use { x ->
-            rec.run(mapOf("x" to x)).use { result ->
+            timed("cpu") { rec.run(mapOf("x" to x)) }.use { result -> timed("cpuDecode") {
                 val out = (result[0] as OnnxTensor).floatBuffer
                 val classes = chars.size + 1
                 val steps = out.remaining() / (lines.size * classes)
@@ -386,7 +399,7 @@ class TextReader(dir: File, threads: Int, gpu: Boolean = false, recGpuWidths: Li
                         probability = { _, c -> row[c].toDouble() },
                     )
                 }
-            }
+            } }
         }
     }
 
@@ -476,7 +489,7 @@ class TextReader(dir: File, threads: Int, gpu: Boolean = false, recGpuWidths: Li
      * comes in two halves (`logits_0`, `logits_1`: 18,710 classes are wider than the GPU's
      * textures) of raw scores, so the best character and its probability are worked out here.
      */
-    private inner class GpuRecognizer(file: File, private val width: Int) : AutoCloseable {
+    private inner class GpuRecognizer(file: File, val width: Int) : AutoCloseable {
         private val environment = Environment.create()
         private val model = CompiledModel.create(
             file.path,
@@ -489,7 +502,7 @@ class TextReader(dir: File, threads: Int, gpu: Boolean = false, recGpuWidths: Li
         private val outputs = listOf(model.createOutputBuffer("logits_0"), model.createOutputBuffer("logits_1"))
         private val input = FloatArray(Batch * RecHeight * width * 3)
 
-        fun read(lines: List<Bitmap>): List<String?> {
+        fun read(lines: List<Bitmap>): List<String?> = timed("gpuPrepare") {
             input.fill(0f)
             val argb = IntArray(RecHeight * width)
             for ((b, line) in lines.withIndex()) {
@@ -503,12 +516,13 @@ class TextReader(dir: File, threads: Int, gpu: Boolean = false, recGpuWidths: Li
                 }
             }
             inputs[0].writeFloat(input)
-            model.run(inputs, outputs, 0)
-            val low = outputs[0].readFloat()
-            val high = outputs[1].readFloat()
+        }.let {
+            timed("gpu") { model.run(inputs, outputs, 0) }
+            val low = timed("gpuRead") { outputs[0].readFloat() }
+            val high = timed("gpuRead") { outputs[1].readFloat() }
             val half = low.size / (Batch * (width / 8))
             val steps = width / 8
-            return List(lines.size) { b ->
+            timed("gpuDecode") { List(lines.size) { b ->
                 decode(
                     steps,
                     best = { t ->
@@ -528,7 +542,7 @@ class TextReader(dir: File, threads: Int, gpu: Boolean = false, recGpuWidths: Li
                         1 / sum
                     },
                 )
-            }
+            } }
         }
 
         override fun close() {
