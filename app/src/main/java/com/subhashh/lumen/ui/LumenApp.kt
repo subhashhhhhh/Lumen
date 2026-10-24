@@ -29,6 +29,7 @@ import com.subhashh.lumen.ui.transition.HeroCover
 import com.subhashh.lumen.ui.collections.CoverUnderlay
 import com.subhashh.lumen.ui.collections.heroSlot
 import com.subhashh.lumen.ui.transition.coverPage
+import com.subhashh.lumen.ui.components.GlassMorphButton
 import com.subhashh.lumen.ui.transition.PhotoTransitionOverlay
 import com.subhashh.lumen.ui.viewer.fullScreenRect
 import kotlinx.coroutines.delay
@@ -1746,7 +1747,16 @@ private fun MainScaffold(
             }
         }
 
-        if (tab == LumenTab.Collections && openCollection == null && settingsPage == null && !searching && !viewerOpen && !selecting && pick == null) {
+        // While an album's or person's cover flies, Collections' buttons go with the page under it.
+        val coverFromPeople = CollectionKeys.personId(openCollection) != null && personFromPeople
+        val coverOverCollections = coverTransition.flying && !coverFromPeople
+        if (tab == LumenTab.Collections && (openCollection == null || coverOverCollections) && settingsPage == null && !searching && !viewerOpen && !selecting && pick == null) {
+            val leaving = Modifier.graphicsLayer {
+                val c = if (openCollection == null) 0f else coverTransition.chrome()
+                alpha = 1f - c
+                scaleX = 1f - 0.3f * c
+                scaleY = 1f - 0.3f * c
+            }
             Row(
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 modifier = Modifier
@@ -1759,12 +1769,15 @@ private fun MainScaffold(
                     icon = LumenIcons.Filter,
                     contentDescription = "Album options",
                     onClick = { collectionsMenuOpen = !collectionsMenuOpen },
+                    modifier = leaving,
                 )
                 GlassIconButton(
                     backdrop = backdrop,
                     icon = LumenIcons.Settings,
                     contentDescription = "Settings",
                     onClick = { settingsPage = SettingsMain },
+                    // A person's ⋯ grows out of this one instead (below), in its place.
+                    modifier = if (openCollection != null && CollectionKeys.personId(openCollection) != null) Modifier.graphicsLayer { alpha = 0f } else leaving,
                 )
             }
         }
@@ -1824,7 +1837,21 @@ private fun MainScaffold(
 
         // A person's album: ⋯ for naming, merging and hiding them.
         val openPerson = if (inCollection && !viewerOpen && !selecting && pick == null) personOf(openCollection) else null
-        if (openPerson != null) {
+        if (openPerson != null && coverTransition.flying) {
+            // The page underneath's rightmost button (Settings, or People's options) turns into ⋯.
+            GlassMorphButton(
+                backdrop = backdrop,
+                from = if (coverFromPeople) LumenIcons.Filter else LumenIcons.Settings,
+                to = LumenIcons.More,
+                fraction = { coverTransition.chrome() },
+                contentDescription = "Person options",
+                onClick = {},
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .statusBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+            )
+        } else if (openPerson != null) {
             GlassIconButton(
                 backdrop = backdrop,
                 icon = LumenIcons.More,
@@ -1887,7 +1914,14 @@ private fun MainScaffold(
                 modifier = Modifier
                     .align(Alignment.TopStart)
                     .statusBarsPadding()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    // Collections has no Back: it comes and goes with an album's or person's flight.
+                    .graphicsLayer {
+                        val c = if (coverOverCollections) coverTransition.chrome() else 1f
+                        alpha = c
+                        scaleX = 0.7f + 0.3f * c
+                        scaleY = 0.7f + 0.3f * c
+                    },
             )
         }
 

@@ -159,6 +159,12 @@ class CoverTransition {
     /** The open page: invisible at the card, there well before the cover lands in the header. */
     fun pageAlpha(): Float = if (cover == null) 1f else ((progress - 0.15f) / 0.6f).coerceIn(0f, 1f)
 
+    /**
+     * The top buttons: 0 shows the page underneath's, 1 the open page's. Ahead of the cover a
+     * little, so they've settled by the time it lands.
+     */
+    fun chrome(): Float = if (cover == null) 1f else ((progress - 0.1f) / 0.7f).coerceIn(0f, 1f)
+
     /** Collections (or People) under the page while the cover flies. */
     fun parentAlpha(): Float = 1f - (progress / 0.7f).coerceIn(0f, 1f)
     fun parentScale(): Float = 1f - 0.05f * progress
