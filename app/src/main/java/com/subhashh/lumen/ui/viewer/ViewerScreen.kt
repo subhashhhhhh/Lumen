@@ -323,9 +323,14 @@ fun ViewerScreen(
         onDispose { view.keepScreenOn = false }
     }
 
+    // Favorite and delete go through Android's request screen, which pauses Lumen for a moment
+    // (and so the video) even when it doesn't need to ask: a video that was playing carries on.
+    var playingBeforeRequest by remember { mutableStateOf(false) }
     val requestLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartIntentSenderForResult(),
     ) { result ->
+        if (playingBeforeRequest) player?.play()
+        playingBeforeRequest = false
         if (result.resultCode == Activity.RESULT_OK) onMediaChanged()
     }
 
@@ -528,6 +533,7 @@ fun ViewerScreen(
                         Spacer(Modifier.height(12.dp))
                     }
                     val launch = { sender: android.content.IntentSender ->
+                        playingBeforeRequest = player?.isPlaying == true
                         requestLauncher.launch(IntentSenderRequest.Builder(sender).build())
                     }
                     Row(
