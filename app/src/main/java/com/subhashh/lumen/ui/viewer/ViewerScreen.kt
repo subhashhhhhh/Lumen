@@ -25,6 +25,7 @@ import coil3.SingletonImageLoader
 import coil3.memory.MemoryCache
 import coil3.request.ImageRequest
 import com.subhashh.lumen.ui.images.ImageKeys
+import com.subhashh.lumen.ui.images.version
 import kotlin.math.roundToInt
 import android.os.Handler
 import android.os.Looper
@@ -34,6 +35,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
@@ -165,6 +167,10 @@ fun ViewerScreen(
     onResize: (MediaItem) -> Unit = {},
     /** Hidden's Share: encrypted items need a decrypted copy first. */
     onShareHidden: (MediaItem) -> Unit = {},
+    /** Everyone Faces found, with cover photos: the details sheet shows who's in this one. */
+    people: List<Pair<com.subhashh.lumen.data.ai.Person, MediaItem>> = emptyList(),
+    onOpenPerson: (com.subhashh.lumen.data.ai.Person) -> Unit = {},
+    onNamePerson: (com.subhashh.lumen.data.ai.Person) -> Unit = {},
 ) {
     val context = LocalContext.current
     val pager = rememberPagerState(initialPage = initialIndex) { items.size }
@@ -397,6 +403,26 @@ fun ViewerScreen(
                     onDismiss = close,
                 ),
         ) {
+            // Details open: a heavily blurred copy of the photo fills the screen behind it, for the
+            // glass sheet to pick up its colours (Android 12+, where blur exists).
+            if (current != null && sheetVisible && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                coil3.compose.AsyncImage(
+                    model = remember(current.id, current.version) {
+                        ImageRequest.Builder(context)
+                            .data(com.subhashh.lumen.data.MediaThumbnail(current.uri))
+                            .size(256)
+                            .memoryCacheKey("ambient:${current.version}")
+                            .placeholderMemoryCacheKey(com.subhashh.lumen.ui.images.bestPlaceholderKey(SingletonImageLoader.get(context), current))
+                            .build()
+                    },
+                    contentDescription = null,
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer { alpha = infoFraction() * 0.85f }
+                        .blur(48.dp),
+                )
+            }
             HorizontalPager(
                 state = pager,
                 key = { items[it].id },
@@ -630,7 +656,13 @@ fun ViewerScreen(
         if (current != null && sheetVisible) {
             DetailsSheet(
                 item = current,
+                backdrop = backdrop,
                 locationRefresh = locationRefresh,
+                people = people,
+                onOpenPerson = onOpenPerson,
+                onNamePerson = onNamePerson,
+                onRename = onRename,
+                onAdjustDate = onAdjustDate,
                 onOpenMap = { MediaActions.openInMaps(context, it) },
                 onAllowLocation = { locationPermission.launch(Manifest.permission.ACCESS_MEDIA_LOCATION) },
                 modifier = Modifier

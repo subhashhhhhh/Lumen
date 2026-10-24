@@ -219,6 +219,26 @@ class FaceStore private constructor(context: Context) : SQLiteOpenHelper(context
         }.sortedByDescending { it.mediaIds.size }
     }
 
+    /**
+     * The people in one photo or video, biggest face first, each with the moment they first
+     * show (videos; null for photos).
+     */
+    fun peopleIn(mediaId: Long): List<Pair<Long, Long?>> {
+        val out = LinkedHashMap<Long, Long?>()
+        readableDatabase.rawQuery(
+            "SELECT person, at_ms FROM faces WHERE media_id = ? AND person IS NOT NULL ORDER BY (r - l) * (b - t) DESC",
+            arrayOf(mediaId.toString()),
+        ).use { c ->
+            while (c.moveToNext()) {
+                val person = c.getLong(0)
+                val at = if (c.isNull(1)) null else c.getLong(1)
+                val earliest = out[person]
+                if (person !in out || (at != null && (earliest == null || at < earliest))) out[person] = at
+            }
+        }
+        return out.toList()
+    }
+
     /** Names a person; blank clears the name. */
     fun rename(person: Long, name: String) {
         writableDatabase.execSQL("UPDATE people SET name = ? WHERE id = ?", arrayOf<Any?>(name.trim().ifEmpty { null }, person))

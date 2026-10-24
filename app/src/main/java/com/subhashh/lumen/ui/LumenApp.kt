@@ -1982,6 +1982,17 @@ private fun MainScaffold(
                 inTrash = source == CollectionKeys.RecentlyDeleted,
                 inHidden = CollectionKeys.isHidden(source),
                 onShareHidden = { shareHidden(listOf(it)) },
+                people = allPeople,
+                onOpenPerson = { person ->
+                    // Leave the viewer for that person's album, from wherever it was opened.
+                    viewerSource = null
+                    slideshowOf = null
+                    searching = false
+                    settingsPage = null
+                    tab = LumenTab.Collections
+                    openCollection = CollectionKeys.person(person.id)
+                },
+                onNamePerson = { personNameRequest = it },
                 onUnhide = { unhide(listOf(it)) },
                 onDeleteHidden = { deleteHidden(listOf(it)) },
                 onClose = { exit ->
