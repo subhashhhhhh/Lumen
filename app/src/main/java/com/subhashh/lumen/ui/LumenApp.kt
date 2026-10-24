@@ -31,6 +31,8 @@ import com.subhashh.lumen.ui.collections.heroSubtitle
 import com.subhashh.lumen.ui.transition.CoverHeader
 import com.subhashh.lumen.ui.transition.coverPage
 import com.subhashh.lumen.ui.components.GlassMorphButton
+import com.subhashh.lumen.ui.people.MergePeopleDialog
+import com.subhashh.lumen.ui.people.MergeProposal
 import com.subhashh.lumen.ui.transition.PhotoTransitionOverlay
 import com.subhashh.lumen.ui.viewer.fullScreenRect
 import kotlinx.coroutines.delay
@@ -455,6 +457,8 @@ private fun MainScaffold(
     var mergeFrom by rememberSaveable { mutableStateOf<Long?>(null) }
     var showHiddenPeople by rememberSaveable { mutableStateOf(false) }
     var personNameRequest by remember { mutableStateOf<com.subhashh.lumen.data.ai.Person?>(null) }
+    /** A name that another person already has: merge them, or keep both with it. */
+    var mergeProposal by remember { mutableStateOf<MergeProposal?>(null) }
     var personMenuOpen by remember { mutableStateOf(false) }
     var peopleMenuOpen by remember { mutableStateOf(false) }
     var peopleSquare by remember { mutableStateOf(prefs.peopleSquare) }
@@ -2408,12 +2412,28 @@ private fun MainScaffold(
                 val person = personNameRequest
                 personNameRequest = null
                 personNameSuggestion = null
-                if (person != null) scope.launch(Dispatchers.IO) { com.subhashh.lumen.data.ai.FaceStore.of(context).rename(person.id, name) }
+                val proposal = person?.let { mergeProposalFor(it, name, allPeople) }
+                if (proposal != null) mergeProposal = proposal
+                else if (person != null) scope.launch(Dispatchers.IO) { com.subhashh.lumen.data.ai.FaceStore.of(context).rename(person.id, name) }
             },
             onDismiss = {
                 personNameRequest = null
                 personNameSuggestion = null
             },
+        )
+        MergePeopleDialog(
+            proposal = mergeProposal,
+            onMerge = { p ->
+                mergeProposal = null
+                // Its page becomes the merged person's.
+                if (openCollection == CollectionKeys.person(p.person.id)) openCollection = CollectionKeys.person(p.match.id)
+                scope.launch(Dispatchers.IO) { com.subhashh.lumen.data.ai.FaceStore.of(context).merge(keep = p.match.id, gone = p.person.id) }
+            },
+            onKeepSeparate = { p ->
+                mergeProposal = null
+                scope.launch(Dispatchers.IO) { com.subhashh.lumen.data.ai.FaceStore.of(context).rename(p.person.id, p.name) }
+            },
+            onDismiss = { mergeProposal = null },
         )
         RenameDialog(
             currentName = albumNameRequest?.let { it.album?.title ?: "" },
@@ -2536,6 +2556,19 @@ private fun MainScaffold(
             com.subhashh.lumen.ui.onboarding.Entrance(exit, cellOf = { transition.cellRect(it) }, onDone = onEntranceDone)
         }
     }
+}
+
+/** Another person already called [name] (any case), with both faces' photos; null when the name's free. */
+private fun mergeProposalFor(
+    person: com.subhashh.lumen.data.ai.Person,
+    name: String,
+    people: List<Pair<com.subhashh.lumen.data.ai.Person, MediaItem>>,
+): MergeProposal? {
+    val wanted = name.trim()
+    if (wanted.isEmpty()) return null
+    val match = people.firstOrNull { (other, _) -> other.id != person.id && other.name?.trim().equals(wanted, ignoreCase = true) } ?: return null
+    val cover = people.firstOrNull { it.first.id == person.id }?.second ?: return null
+    return MergeProposal(person, cover, match.first, match.second, match.first.name!!.trim())
 }
 
 /** Share of the screen's height an album's or person's cover takes at the top of its page. */
