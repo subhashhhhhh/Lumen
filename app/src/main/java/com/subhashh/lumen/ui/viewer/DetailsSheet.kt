@@ -155,10 +155,10 @@ fun DetailsSheet(
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier
-                            .width(80.dp)
+                            .width(98.dp)
                             .pressable({ onOpenPerson(person) }, pressedScale = 0.94f),
                     ) {
-                        FaceAvatar(person, cover, Modifier.size(72.dp))
+                        FaceAvatar(person, cover, Modifier.size(90.dp))
                         Text(
                             person.name ?: "Unnamed",
                             color = if (person.name == null) colors.secondary else colors.text,
@@ -252,10 +252,12 @@ private fun Group(colors: SheetColors, content: @Composable ColumnScope.() -> Un
 }
 
 @Composable
-private fun Title(icon: ImageVector, text: String, colors: SheetColors, trailing: (@Composable () -> Unit)? = null) {
+private fun Title(icon: ImageVector?, text: String, colors: SheetColors, trailing: (@Composable () -> Unit)? = null) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, null, tint = colors.secondary, modifier = Modifier.size(20.dp))
-        Spacer(Modifier.width(10.dp))
+        if (icon != null) {
+            Icon(icon, null, tint = colors.secondary, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(10.dp))
+        }
         Text(text, color = colors.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
         trailing?.invoke()
     }
@@ -425,7 +427,7 @@ private fun compass(degrees: Double): String {
 
 @Composable
 private fun FileGroup(item: MediaItem, d: MediaDetails, colors: SheetColors, onRename: (MediaItem) -> Unit) {
-    Title(LumenIcons.Document, d.fileName, colors) {
+    Title(null, d.fileName, colors) {
         Icon(
             LumenIcons.Edit,
             contentDescription = "Rename",
@@ -435,7 +437,7 @@ private fun FileGroup(item: MediaItem, d: MediaDetails, colors: SheetColors, onR
     }
     Spacer(Modifier.height(2.dp))
     val where = listOfNotNull(d.volume, d.folder.trimEnd('/').ifEmpty { null }).joinToString("  ·  ").ifEmpty { "Internal storage" }
-    Text(where, color = colors.secondary, fontSize = 13.sp, modifier = Modifier.padding(start = 30.dp))
+    Text(where, color = colors.secondary, fontSize = 13.sp)
     val chips = listOfNotNull(MediaSource.describe(item.relativePath, d.fileName)?.let { "From $it" })
     val dates = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
     val lines = listOfNotNull(
