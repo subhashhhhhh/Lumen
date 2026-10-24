@@ -3,6 +3,7 @@ package com.subhashh.lumen.data
 import android.content.Context
 import android.graphics.ImageDecoder
 import android.os.Build
+import com.subhashh.lumen.data.vault.Vault
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -25,10 +26,15 @@ object UltraHdr {
         if (item.isVideo || item.mimeType !in Candidates) return null
         return withContext(Dispatchers.IO) {
             runCatching {
-                val source = if (item.uri.scheme == "file") {
-                    ImageDecoder.createSource(java.io.File(item.uri.path!!))
-                } else {
-                    ImageDecoder.createSource(context.contentResolver, item.uri)
+                val source = when {
+                    // Encrypted Hidden: decrypted in memory, as the viewer does to show it.
+                    Vault.isVault(item) -> {
+                        val bytes = java.io.ByteArrayOutputStream()
+                        if (!Vault.decrypt(item, bytes)) return@runCatching null
+                        ImageDecoder.createSource(java.nio.ByteBuffer.wrap(bytes.toByteArray()))
+                    }
+                    item.uri.scheme == "file" -> ImageDecoder.createSource(java.io.File(item.uri.path!!))
+                    else -> ImageDecoder.createSource(context.contentResolver, item.uri)
                 }
                 ImageDecoder.decodeBitmap(source) { decoder, _, _ ->
                     decoder.setTargetSampleSize(32)
