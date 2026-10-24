@@ -5,6 +5,23 @@ import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Text
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.sp
+import kotlin.math.roundToInt
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
@@ -52,7 +69,15 @@ import java.io.File
  * replaces the photo for people whose cover is a face found in a video.
  */
 @Immutable
-data class HeroCover(val key: String, val item: MediaItem, val face: List<Float>? = null, val crop: File? = null)
+data class HeroCover(
+    val key: String,
+    val item: MediaItem,
+    val face: List<Float>? = null,
+    val crop: File? = null,
+    /** The name and count shown over it. */
+    val title: String = "",
+    val subtitle: String = "",
+)
 
 /**
  * Opening an album or person: its cover grows out of its card into the big photo across the top
@@ -165,6 +190,9 @@ class CoverTransition {
      */
     fun chrome(): Float = if (cover == null) 1f else ((progress - 0.1f) / 0.7f).coerceIn(0f, 1f)
 
+    /** The header's name and shading over the flying cover: in as it lands, out as it leaves. */
+    fun labelAlpha(): Float = ((progress - 0.55f) / 0.45f).coerceIn(0f, 1f)
+
     /** Collections (or People) under the page while the cover flies. */
     fun parentAlpha(): Float = 1f - (progress / 0.7f).coerceIn(0f, 1f)
     fun parentScale(): Float = 1f - 0.05f * progress
@@ -236,13 +264,17 @@ fun heroRequest(context: Context, cover: HeroCover): ImageRequest {
 /** Shorter side the header's photo is decoded at: the screen's width. */
 private const val HeroPx = 1280
 
-/** The flying cover. Swallows touches while it flies; draws nothing when idle. */
+/**
+ * The flying cover, with the header's shading and name fading in over it as it lands (the
+ * page's own are hidden under it until then). Swallows touches while it flies; draws nothing
+ * when idle.
+ */
 @Composable
 fun CoverTransitionOverlay(transition: CoverTransition) {
     val cover = transition.cover ?: return
     val context = LocalContext.current
     val painter = rememberAsyncImagePainter(remember(cover) { heroRequest(context, cover) })
-    Canvas(
+    Box(
         Modifier
             .fillMaxSize()
             .pointerInput(Unit) {
@@ -251,34 +283,103 @@ fun CoverTransitionOverlay(transition: CoverTransition) {
                 }
             },
     ) {
-        val f = transition.frame()
-        val photo = photoSize(painter, cover)
-        val atCell = photoRect(CoverWindows.cell(photo, cover.face), f.cell, photo)
-        val atHero = photoRect(CoverWindows.hero(photo, f.hero.width / f.hero.height, cover.face), f.hero, photo)
-        val cellRadius = if (f.circle) f.cell.width / 2f else 12.dp.toPx()
-        drawCover(
-            painter = painter,
-            photo = lerp(atCell, atHero, f.fraction),
-            clip = f.clip,
-            radius = (cellRadius * (1f - f.fraction)).coerceAtLeast(0f),
-            alpha = f.alpha,
+        Canvas(Modifier.fillMaxSize()) {
+            val f = transition.frame()
+            drawFlight(painter, cover, f)
+            val label = transition.labelAlpha()
+            if (label > 0f) clipRect(f.clip.left, f.clip.top, f.clip.right, f.clip.bottom) { drawHeroScrims(f.clip, label) }
+        }
+        HeroLabel(
+            cover.title,
+            cover.subtitle,
+            Modifier
+                .layout { measurable, constraints ->
+                    // Pinned to the flying cover's bottom-left corner, as on the page.
+                    val clip = transition.frame().clip
+                    val placeable = measurable.measure(Constraints(maxWidth = clip.width.roundToInt().coerceAtLeast(0)))
+                    layout(constraints.maxWidth, constraints.maxHeight) {
+                        placeable.place(clip.left.roundToInt(), (clip.bottom - placeable.height).roundToInt())
+                    }
+                }
+                .graphicsLayer { alpha = transition.labelAlpha() },
         )
     }
 }
 
-/** The header's photo, cut the way the flight ends. Hidden while its cover is in flight. */
+private fun DrawScope.drawFlight(painter: Painter, cover: HeroCover, f: CoverTransition.Frame) {
+    val photo = photoSize(painter, cover)
+    val atCell = photoRect(CoverWindows.cell(photo, cover.face), f.cell, photo)
+    val atHero = photoRect(CoverWindows.hero(photo, f.hero.width / f.hero.height, cover.face), f.hero, photo)
+    val cellRadius = if (f.circle) f.cell.width / 2f else 12.dp.toPx()
+    drawCover(
+        painter = painter,
+        photo = lerp(atCell, atHero, f.fraction),
+        clip = f.clip,
+        radius = (cellRadius * (1f - f.fraction)).coerceAtLeast(0f),
+        alpha = f.alpha,
+    )
+}
+
+/** The header's top shading (status bar, back button) and bottom shading (the name), within [r]. */
+fun DrawScope.drawHeroScrims(r: Rect, alpha: Float) {
+    val top = 140.dp.toPx()
+    drawRect(
+        Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.35f), Color.Transparent), startY = r.top, endY = r.top + top),
+        topLeft = r.topLeft,
+        size = Size(r.width, top),
+        alpha = alpha,
+    )
+    val bottom = 200.dp.toPx()
+    drawRect(
+        Brush.verticalGradient(BottomScrim, startY = r.bottom - bottom, endY = r.bottom),
+        topLeft = Offset(r.left, r.bottom - bottom),
+        size = Size(r.width, bottom),
+        alpha = alpha,
+    )
+}
+
+private val BottomScrim = listOf(
+    Color.Transparent,
+    Color.Black.copy(alpha = 0.18f),
+    Color.Black.copy(alpha = 0.55f),
+    Color.Black.copy(alpha = 0.85f),
+)
+
+/** The name and count at the header's bottom-left. */
 @Composable
-fun HeroImage(cover: HeroCover, transition: CoverTransition, modifier: Modifier = Modifier) {
+fun HeroLabel(title: String, subtitle: String, modifier: Modifier = Modifier) {
+    Column(modifier.padding(start = 20.dp, end = 20.dp, bottom = 18.dp)) {
+        Text(title, style = HeroTitle, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        if (subtitle.isNotEmpty()) Text(subtitle, style = HeroSubtitle)
+    }
+}
+
+private val TextShadow = Shadow(color = Color.Black.copy(alpha = 0.45f), blurRadius = 6f)
+private val HeroTitle = TextStyle(color = Color.White, fontSize = 34.sp, fontWeight = FontWeight.Bold, lineHeight = 38.sp, shadow = TextShadow)
+private val HeroSubtitle = TextStyle(color = Color(0xD9FFFFFF), fontSize = 15.sp, fontWeight = FontWeight.Medium, shadow = TextShadow)
+
+/**
+ * The header: the photo cut the way the flight ends, its shading, and the name and count.
+ * Hidden while its cover is in flight, which draws all of it.
+ */
+@Composable
+fun CoverHeader(cover: HeroCover, transition: CoverTransition, modifier: Modifier = Modifier) {
     val context = LocalContext.current
-    val painter = rememberAsyncImagePainter(remember(cover) { heroRequest(context, cover) })
-    Canvas(
+    // Without the label: the page's cover shouldn't reload when its count changes.
+    val painter = rememberAsyncImagePainter(remember(cover.key, cover.item, cover.face, cover.crop) { heroRequest(context, cover) })
+    Box(
         modifier
+            .fillMaxWidth()
             .onPlaced { transition.registerHero(it) }
             .graphicsLayer { alpha = if (transition.hides(cover.key)) 0f else 1f },
     ) {
-        val photo = photoSize(painter, cover)
-        val bounds = Rect(Offset.Zero, size)
-        drawCover(painter, photoRect(CoverWindows.hero(photo, size.width / size.height, cover.face), bounds, photo), bounds, 0f, 1f)
+        Canvas(Modifier.fillMaxSize()) {
+            val photo = photoSize(painter, cover)
+            val bounds = Rect(Offset.Zero, size)
+            drawCover(painter, photoRect(CoverWindows.hero(photo, size.width / size.height, cover.face), bounds, photo), bounds, 0f, 1f)
+            drawHeroScrims(bounds, 1f)
+        }
+        HeroLabel(cover.title, cover.subtitle, Modifier.align(Alignment.BottomStart))
     }
 }
 

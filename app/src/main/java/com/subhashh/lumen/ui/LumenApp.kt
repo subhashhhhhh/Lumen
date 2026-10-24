@@ -26,8 +26,9 @@ import com.subhashh.lumen.ui.transition.PhotoTransition
 import com.subhashh.lumen.ui.transition.CoverTransition
 import com.subhashh.lumen.ui.transition.CoverTransitionOverlay
 import com.subhashh.lumen.ui.transition.HeroCover
-import com.subhashh.lumen.ui.collections.CoverUnderlay
-import com.subhashh.lumen.ui.collections.heroSlot
+import com.subhashh.lumen.ui.collections.coverUnderlay
+import com.subhashh.lumen.ui.collections.heroSubtitle
+import com.subhashh.lumen.ui.transition.CoverHeader
 import com.subhashh.lumen.ui.transition.coverPage
 import com.subhashh.lumen.ui.components.GlassMorphButton
 import com.subhashh.lumen.ui.transition.PhotoTransitionOverlay
@@ -450,49 +451,6 @@ private fun MainScaffold(
             }
         }
     }
-    // An album's or person's cover: the top 46% of the screen.
-    val heroHeight = with(LocalDensity.current) { (screenSize.height * HeroShare).toDp() }
-    val heroRect = { androidx.compose.ui.geometry.Rect(0f, 0f, screenSize.width.toFloat(), screenSize.height * HeroShare) }
-    /** Opens [key], growing its cover out of its card when it has one on screen. */
-    val openCollectionFromCard: (key: String) -> Unit = open@{ key ->
-        if (coverTransition.flying || coverOpening) return@open
-        val cover = heroOf(key) ?: run {
-            openCollection = key
-            return@open
-        }
-        coverOpening = true
-        scope.launch {
-            try {
-                if (coverTransition.prepare(context, cover, heroRect())) {
-                    openCollection = key
-                    coverTransition.open()
-                } else {
-                    openCollection = key
-                }
-            } finally {
-                coverOpening = false
-                coverTransition.finish()
-            }
-        }
-    }
-    /** Leaves the open album or person for [target], shrinking its cover back into its card. */
-    val closeCollection: (target: String?) -> Unit = close@{ target ->
-        if (coverTransition.flying || coverOpening) return@close
-        val cover = heroOf(openCollection) ?: run {
-            openCollection = target
-            return@close
-        }
-        coverOpening = true
-        scope.launch {
-            try {
-                coverTransition.close(cover, heroRect())
-            } finally {
-                openCollection = target
-                coverTransition.finish()
-                coverOpening = false
-            }
-        }
-    }
     /** Merge with…: the People page picks who [mergeFrom] joins. */
     var mergeFrom by rememberSaveable { mutableStateOf<Long?>(null) }
     var showHiddenPeople by rememberSaveable { mutableStateOf(false) }
@@ -718,6 +676,56 @@ private fun MainScaffold(
     }
     val collectionSections = remember(openItems, gridSectionMode, openCollection) {
         openItems?.let { GridSections.of(it, if (openCollection == CollectionKeys.RecentlyDeleted) SectionMode.None else gridSectionMode) }
+    }
+    /** [heroOf] with the name and count it shows. */
+    val heroWithLabel = { key: String? ->
+        heroOf(key)?.let { cover ->
+            val name = personOf(key)?.let { it.name ?: "Add Name" } ?: folders.firstOrNull { it.key == key }?.title.orEmpty()
+            cover.copy(title = name, subtitle = heroSubtitle(if (key == openCollection) openItems.orEmpty() else itemsOf(key!!)))
+        }
+    }
+    // An album's or person's cover: the top 46% of the screen.
+    val heroHeight = with(LocalDensity.current) { (screenSize.height * HeroShare).toDp() }
+    val heroRect = { androidx.compose.ui.geometry.Rect(0f, 0f, screenSize.width.toFloat(), screenSize.height * HeroShare) }
+    /** Opens [key], growing its cover out of its card when it has one on screen. */
+    val openCollectionFromCard: (key: String) -> Unit = open@{ key ->
+        if (coverTransition.flying || coverOpening) return@open
+        val cover = heroWithLabel(key) ?: run {
+            openCollection = key
+            return@open
+        }
+        coverOpening = true
+        scope.launch {
+            try {
+                if (coverTransition.prepare(context, cover, heroRect())) {
+                    openCollection = key
+                    coverTransition.open()
+                } else {
+                    openCollection = key
+                }
+            } finally {
+                coverOpening = false
+                coverTransition.finish()
+            }
+        }
+    }
+    /** Leaves the open album or person for [target], shrinking its cover back into its card. */
+    val closeCollection: (target: String?) -> Unit = close@{ target ->
+        if (coverTransition.flying || coverOpening) return@close
+        val cover = heroWithLabel(openCollection) ?: run {
+            openCollection = target
+            return@close
+        }
+        coverOpening = true
+        scope.launch {
+            try {
+                coverTransition.close(cover, heroRect())
+            } finally {
+                openCollection = target
+                coverTransition.finish()
+                coverOpening = false
+            }
+        }
     }
     val months = remember(libraryItems) { periods(libraryItems, byYear = false) }
     val years = remember(libraryItems) { periods(libraryItems, byYear = true) }
@@ -1580,48 +1588,55 @@ private fun MainScaffold(
                         contentPadding = PaddingValues(top = statusTop + 72.dp, bottom = navBottom + 96.dp),
                         onOpen = { openCollection = it },
                     )
-                    openCollection == CollectionKeys.People -> peoplePage(Modifier)
-                    openCollection != null -> {
-                        val key = openCollection!!
-                        val cover = heroOf(key)
-                        CoverUnderlay(coverTransition, if (CollectionKeys.personId(key) != null && personFromPeople) peoplePage else collectionsPage)
-                        val items = openItems ?: itemsOf(key)
-                        LibraryScreen(
-                            title = pickTitle ?: selection?.let { selectionTitle(selectedItems) }
-                                ?: personOf(key)?.let { it.name ?: "Add Name" }
-                                ?: (utilities + folders).firstOrNull { it.key == key }?.title
-                                ?: hiddenFolderList?.firstOrNull { it.collection.key == key }?.collection?.title.orEmpty(),
-                            selection = if (pick?.multiple == true) picked.keys else selection,
-                            onSelectionChange = {
-                                when {
-                                    pick?.multiple == true -> setPicked(it, itemsOf(key))
-                                    pick == null -> selection = it
-                                }
-                            },
-                            aspectRatioGrid = aspectRatioGrid,
-                            columns = gridColumns,
-                            onColumnsChange = onGridColumns,
-                            items = items,
-                            sections = collectionSections,
-                            curvedEdge = curvedEdge,
-                            startAtEnd = (chronological && cover == null) || key == CollectionKeys.RecentlyDeleted,
-                            showMonth = sort == LibrarySort.Date || key == CollectionKeys.RecentlyDeleted,
-                            scrollLabel = if (key == CollectionKeys.RecentlyDeleted) { item -> ScrollMonth.format(java.util.Date(item.takenAt)) } else scrollLabel,
-                            gridState = collectionGrid,
-                            contentPadding = PaddingValues(top = if (cover != null) heroHeight + 2.dp else statusTop + 152.dp, bottom = navBottom + 96.dp),
-                            titleTopPadding = 64.dp,
-                            hero = cover?.let { c ->
-                                heroSlot(c, personOf(key)?.let { it.name ?: "Add Name" } ?: folders.firstOrNull { it.key == key }?.title.orEmpty(), items, coverTransition)
-                            },
-                            heroHeight = heroHeight,
-                            modifier = Modifier.coverPage(coverTransition),
-                            emptyText = if (key.startsWith("empty:")) "This album is empty.\nAdd photos with ⋯ → Move to Album or Copy to Album."
-                            else "No photos or videos",
-                            transition = transition,
-                            onOpen = { index -> openViewer(key, index) },
-                        )
+                    else -> {
+                        // Collections and People keep one place here, under an album or person
+                        // opened from them (see coverUnderlay): never rebuilt as its cover flies.
+                        val key = openCollection
+                        val fromPeople = CollectionKeys.personId(key) != null && personFromPeople
+                        val coverPage = key != null && (CollectionKeys.isFolder(key) || CollectionKeys.personId(key) != null)
+                        if (key == null || (coverPage && !fromPeople)) {
+                            collectionsPage(if (key == null) Modifier else Modifier.coverUnderlay(coverTransition))
+                        }
+                        if (key == CollectionKeys.People || (coverPage && fromPeople)) {
+                            peoplePage(if (key == CollectionKeys.People) Modifier else Modifier.coverUnderlay(coverTransition))
+                        }
+                        if (key != null && key != CollectionKeys.People) {
+                            val cover = heroWithLabel(key)
+                            val items = openItems ?: itemsOf(key)
+                            LibraryScreen(
+                                title = pickTitle ?: selection?.let { selectionTitle(selectedItems) }
+                                    ?: personOf(key)?.let { it.name ?: "Add Name" }
+                                    ?: (utilities + folders).firstOrNull { it.key == key }?.title
+                                    ?: hiddenFolderList?.firstOrNull { it.collection.key == key }?.collection?.title.orEmpty(),
+                                selection = if (pick?.multiple == true) picked.keys else selection,
+                                onSelectionChange = {
+                                    when {
+                                        pick?.multiple == true -> setPicked(it, itemsOf(key))
+                                        pick == null -> selection = it
+                                    }
+                                },
+                                aspectRatioGrid = aspectRatioGrid,
+                                columns = gridColumns,
+                                onColumnsChange = onGridColumns,
+                                items = items,
+                                sections = collectionSections,
+                                curvedEdge = curvedEdge,
+                                startAtEnd = (chronological && cover == null) || key == CollectionKeys.RecentlyDeleted,
+                                showMonth = sort == LibrarySort.Date || key == CollectionKeys.RecentlyDeleted,
+                                scrollLabel = if (key == CollectionKeys.RecentlyDeleted) { item -> ScrollMonth.format(java.util.Date(item.takenAt)) } else scrollLabel,
+                                gridState = collectionGrid,
+                                contentPadding = PaddingValues(top = if (cover != null) heroHeight + 2.dp else statusTop + 152.dp, bottom = navBottom + 96.dp),
+                                titleTopPadding = 64.dp,
+                                hero = cover?.let { c -> { heroModifier -> CoverHeader(c, coverTransition, heroModifier) } },
+                                heroHeight = heroHeight,
+                                modifier = Modifier.coverPage(coverTransition),
+                                emptyText = if (key.startsWith("empty:")) "This album is empty.\nAdd photos with ⋯ → Move to Album or Copy to Album."
+                                else "No photos or videos",
+                                transition = transition,
+                                onOpen = { index -> openViewer(key, index) },
+                            )
+                        }
                     }
-                    else -> collectionsPage(Modifier)
                 }
             }
             screens()
