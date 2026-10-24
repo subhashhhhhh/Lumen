@@ -1,12 +1,9 @@
 package com.subhashh.lumen.ui.viewer
 
-import com.subhashh.lumen.data.ai.TextStore
 import com.subhashh.lumen.data.ai.Subtitles
 import com.subhashh.lumen.data.ai.SpeechModel
 import com.subhashh.lumen.data.ai.SearchSuggestions
-import com.subhashh.lumen.data.ai.OcrModel
 import com.subhashh.lumen.data.ai.ModelDownloads
-import com.subhashh.lumen.data.ai.LiveText
 import com.subhashh.lumen.data.ai.Cue
 import com.subhashh.lumen.data.CaptionStore
 import com.subhashh.lumen.data.AllMetadata
@@ -260,7 +257,7 @@ private fun CaptionRow(caption: String?, colors: SheetColors, onEdit: () -> Unit
 
 /**
  * What Lumen's models found: what it looks like (Smart Search's everyday words it stands out
- * for), the words read in it, and for videos, subtitles to copy or export. Hidden when there's
+ * for), and for videos, subtitles to copy or export. Hidden when there's
  * nothing.
  */
 @Composable
@@ -273,14 +270,8 @@ private fun WhatLumenSees(item: MediaItem, colors: SheetColors) {
             }.getOrNull().orEmpty()
         }
     }
-    val text by produceState<String?>(null, item.id) {
-        value = withContext(Dispatchers.IO) {
-            runCatching { if (OcrModel.installed(context)) TextStore.of(context).text(item.id) else null }.getOrNull()?.takeIf { it.isNotBlank() }
-                ?: LiveText.cached(item)?.lines?.joinToString("\n") { it.text }?.takeIf { it.isNotBlank() }
-        }
-    }
     val speech = item.isVideo && remember { SpeechModel.installed(context) }
-    if (looks.isEmpty() && text == null && !speech) return
+    if (looks.isEmpty() && !speech) return
     Spacer(Modifier.height(10.dp))
     Group(colors) {
         Title(LumenIcons.Search, "What Lumen Sees", colors)
@@ -289,20 +280,6 @@ private fun WhatLumenSees(item: MediaItem, colors: SheetColors) {
             Line("Looks like", colors, secondary = true)
             Spacer(Modifier.height(6.dp))
             Chips(looks.map { w -> w.replaceFirstChar { it.uppercase() } }, colors)
-        }
-        text?.let { words ->
-            Spacer(Modifier.height(12.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Text", color = colors.secondary, fontSize = 13.sp, modifier = Modifier.weight(1f))
-                Action("Copy All", colors) { copyText(context, words) }
-            }
-            Text(
-                words,
-                color = colors.text,
-                fontSize = 14.sp,
-                maxLines = 4,
-                overflow = TextOverflow.Ellipsis,
-            )
         }
         if (speech) {
             Spacer(Modifier.height(12.dp))
