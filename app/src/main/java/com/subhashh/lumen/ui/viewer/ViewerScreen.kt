@@ -11,6 +11,7 @@ import com.subhashh.lumen.data.vault.VaultDataSource
 import com.subhashh.lumen.ui.theme.LocalMotion
 import android.view.WindowManager
 import com.subhashh.lumen.data.HdrMode
+import com.subhashh.lumen.data.FilmStripSize
 import android.os.Build
 import android.content.pm.ActivityInfo
 import androidx.activity.compose.LocalActivity
@@ -206,6 +207,8 @@ fun ViewerScreen(
     val sheetVisible by remember { derivedStateOf { motion.reveal > 0f } }
     // Settings → Photos & Videos → Maps, read each time the viewer opens.
     val showMaps = remember { com.subhashh.lumen.data.LumenPrefs(context).showMaps }
+    // Settings → Photos & Videos → Film Strip.
+    val filmStrip = remember { com.subhashh.lumen.data.LumenPrefs(context).filmStrip }
     // Live Text: the photo on screen is read once it settles (a few hundred ms, then cached).
     val liveText = remember { LiveTextState() }
     LaunchedEffect(current?.id, current?.modified) {
@@ -539,8 +542,8 @@ fun ViewerScreen(
                         if (player != null) VideoControls(backdrop, player)
                         Spacer(Modifier.height(12.dp))
                     }
-                    if (items.size > 1 && !external) {
-                        FilmStrip(items, pager)
+                    if (items.size > 1 && !external && filmStrip != FilmStripSize.Off) {
+                        FilmStrip(items, pager, filmStrip.heightDp.dp)
                         Spacer(Modifier.height(12.dp))
                     }
                     val launch = { sender: android.content.IntentSender ->

@@ -12,6 +12,9 @@ import com.subhashh.lumen.ui.theme.Appearance
  */
 enum class HdrMode(val label: String) { Off("Off"), MatchBrightness("Match Brightness"), Full("Full HDR") }
 
+/** The viewer's film strip: its height, in dp; Off hides it. */
+enum class FilmStripSize(val label: String, val heightDp: Int) { Off("Off", 0), Small("Small", 32), Medium("Medium", 42), Large("Large", 56) }
+
 /** Small persisted view preferences. */
 class LumenPrefs(context: Context) {
     private val prefs = context.getSharedPreferences("lumen", Context.MODE_PRIVATE)
@@ -112,6 +115,10 @@ class LumenPrefs(context: Context) {
         get() = prefs.getString(KeyHdrMode, null)?.let { name -> HdrMode.entries.firstOrNull { it.name == name } }
             ?: if (prefs.getBoolean(KeyHdr, true)) HdrMode.MatchBrightness else HdrMode.Off
         set(value) = prefs.edit { putString(KeyHdrMode, value.name) }
+
+    var filmStrip: FilmStripSize
+        get() = prefs.getString(KeyFilmStrip, null)?.let { name -> FilmStripSize.entries.firstOrNull { it.name == name } } ?: FilmStripSize.Medium
+        set(value) = prefs.edit { putString(KeyFilmStrip, value.name) }
 
     /** Seconds each slideshow photo stays up. */
     var slideshowSeconds: Int
@@ -256,6 +263,7 @@ class LumenPrefs(context: Context) {
         const val KeyReduceMotion = "reduce_motion"
         const val KeyHdr = "hdr_photos"
         const val KeyHdrMode = "hdr_mode"
+        const val KeyFilmStrip = "film_strip"
         const val KeySlideSeconds = "slideshow_seconds"
         const val KeySlideFade = "slideshow_fade"
         const val KeySlideShuffle = "slideshow_shuffle"

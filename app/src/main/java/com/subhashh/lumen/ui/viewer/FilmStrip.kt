@@ -39,6 +39,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil3.SingletonImageLoader
 import coil3.compose.AsyncImage
@@ -61,7 +62,8 @@ import kotlin.math.roundToInt
  * drag or flick it to skim (the photo above keeps up, with a tick per photo), tap one to go there.
  */
 @Composable
-fun FilmStrip(items: List<MediaItem>, pager: PagerState, modifier: Modifier = Modifier) {
+fun FilmStrip(items: List<MediaItem>, pager: PagerState, height: Dp, modifier: Modifier = Modifier) {
+    val sliceDp = height.value * SliceShare
     val scope = rememberCoroutineScope()
     val haptics = LocalHapticFeedback.current
     val currentItems by rememberUpdatedState(items)
@@ -72,7 +74,7 @@ fun FilmStrip(items: List<MediaItem>, pager: PagerState, modifier: Modifier = Mo
     val position = { skim ?: (pager.currentPage + pager.currentPageOffsetFraction) }
     // Which thumbnails exist: a screenful either side of the photo shown (recomposes per page).
     val centre = (skim?.roundToInt() ?: pager.currentPage).coerceIn(0, (items.size - 1).coerceAtLeast(0))
-    val reach = (LocalConfiguration.current.screenWidthDp / (SliceDp + GapDp) / 2f).toInt() + 3
+    val reach = (LocalConfiguration.current.screenWidthDp / (sliceDp + GapDp) / 2f).toInt() + 3
     val window = (centre - reach).coerceAtLeast(0)..(centre + reach).coerceAtMost(items.lastIndex)
 
     /** Moves the photo above to the one under the strip's middle, with a tick for each new one. */
@@ -95,7 +97,7 @@ fun FilmStrip(items: List<MediaItem>, pager: PagerState, modifier: Modifier = Mo
         },
         modifier = modifier
             .fillMaxWidth()
-            .height(StripHeight)
+            .height(height)
             // Thumbnails fade out towards both edges instead of being cut off.
             .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
             .drawWithContent {
@@ -108,7 +110,7 @@ fun FilmStrip(items: List<MediaItem>, pager: PagerState, modifier: Modifier = Mo
                 )
             }
             .pointerInput(Unit) {
-                val step = (SliceDp + GapDp).dp.toPx()
+                val step = (sliceDp + GapDp).dp.toPx()
                 awaitEachGesture {
                     val down = awaitFirstDown()
                     skimJob?.cancel()
@@ -126,7 +128,7 @@ fun FilmStrip(items: List<MediaItem>, pager: PagerState, modifier: Modifier = Mo
                     }
                     if (moved < viewConfiguration.touchSlop) {
                         // A tap: go to the thumbnail under the finger.
-                        val target = indexAt(down.position.x, size.width.toFloat(), position(), currentItems, this@pointerInput)
+                        val target = indexAt(down.position.x, size.width.toFloat(), position(), currentItems, height, this@pointerInput)
                         skim = null
                         if (target != null && target != pager.currentPage) scope.launch { pager.animateScrollToPage(target) }
                         return@awaitEachGesture
@@ -154,7 +156,7 @@ fun FilmStrip(items: List<MediaItem>, pager: PagerState, modifier: Modifier = Mo
     ) { measurables, constraints ->
         val p = position()
         val strip = constraints.maxWidth.toFloat()
-        val slots = slots(window, p, items, this)
+        val slots = slots(window, p, items, height, this)
         val placeables = measurables.mapIndexed { n, m ->
             val w = slots[n].width.roundToInt().coerceAtLeast(1)
             m.measure(Constraints.fixed(w, constraints.maxHeight))
@@ -196,12 +198,12 @@ private class Slot(val center: Float, val width: Float)
  * the strip at [p] pages: slices everywhere, opening up to the photo's own shape (and a little
  * more room around it) as it nears the middle.
  */
-private fun slots(window: IntRange, p: Float, items: List<MediaItem>, density: androidx.compose.ui.unit.Density): List<Slot> {
+private fun slots(window: IntRange, p: Float, items: List<MediaItem>, stripHeight: Dp, density: androidx.compose.ui.unit.Density): List<Slot> {
     if (window.isEmpty()) return emptyList()
     with(density) {
-        val slice = SliceDp.dp.toPx()
+        val slice = stripHeight.toPx() * SliceShare
         val gap = GapDp.dp.toPx()
-        val height = StripHeight.toPx()
+        val height = stripHeight.toPx()
         fun openness(i: Int) = (1f - abs(i - p)).coerceIn(0f, 1f)
         fun width(i: Int): Float {
             val item = items[i]
@@ -229,17 +231,17 @@ private fun slots(window: IntRange, p: Float, items: List<MediaItem>, density: a
 }
 
 /** The thumbnail under [x] on a strip [stripWidth] wide at position [p], if any. */
-private fun indexAt(x: Float, stripWidth: Float, p: Float, items: List<MediaItem>, density: androidx.compose.ui.unit.Density): Int? {
-    val reach = (stripWidth / with(density) { (SliceDp + GapDp).dp.toPx() } / 2f).toInt() + 3
+private fun indexAt(x: Float, stripWidth: Float, p: Float, items: List<MediaItem>, stripHeight: Dp, density: androidx.compose.ui.unit.Density): Int? {
+    val reach = (stripWidth / with(density) { stripHeight.toPx() * SliceShare + GapDp.dp.toPx() } / 2f).toInt() + 3
     val centre = p.roundToInt().coerceIn(0, items.lastIndex)
     val window = (centre - reach).coerceAtLeast(0)..(centre + reach).coerceAtMost(items.lastIndex)
-    val slots = slots(window, p, items, density)
+    val slots = slots(window, p, items, stripHeight, density)
     val offset = x - stripWidth / 2f
     return window.zip(slots).firstOrNull { (_, s) -> abs(offset - s.center) <= s.width / 2f + 2f }?.first
 }
 
-private val StripHeight = 42.dp
-private const val SliceDp = 26f
+/** A thumbnail's slice width, as a share of the strip's height. */
+private const val SliceShare = 0.62f
 private const val GapDp = 2f
 /** Extra room either side of the photo shown. */
 private const val CurrentGapDp = 6f

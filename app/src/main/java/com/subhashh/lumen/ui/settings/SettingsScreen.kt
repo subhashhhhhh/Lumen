@@ -15,6 +15,7 @@ import kotlinx.coroutines.delay
 import com.subhashh.lumen.ui.library.SectionMode
 import com.subhashh.lumen.ui.theme.LocalMotion
 import com.subhashh.lumen.data.HdrMode
+import com.subhashh.lumen.data.FilmStripSize
 import androidx.compose.runtime.mutableStateOf
 import com.subhashh.lumen.data.LumenPrefs
 import android.Manifest
@@ -100,6 +101,7 @@ private val Entries = listOf(
     SettingEntry("excluded", "Excluded Folders", SettingsCategory.Library, "ignore folders hide whatsapp junk"),
     SettingEntry("curved-edge", "Curved Edge Display", SettingsCategory.Library, "fast scroll scrollbar handle edge"),
     SettingEntry("ultra-hdr", "Ultra HDR", SettingsCategory.PhotosVideos, "hdr brightness glow"),
+    SettingEntry("film-strip", "Film Strip", SettingsCategory.PhotosVideos, "thumbnails strip scrubber skim viewer height size"),
     SettingEntry("maps", "Maps", SettingsCategory.PhotosVideos, "map location openstreetmap openfreemap network privacy"),
     SettingEntry("autoplay", "Autoplay Videos", SettingsCategory.PhotosVideos, "video play automatically"),
     SettingEntry("loop", "Loop Videos", SettingsCategory.PhotosVideos, "repeat video"),
@@ -467,6 +469,25 @@ private fun ColumnScope.PhotosPage(prefs: LumenPrefs, highlight: String?) {
                     iconColor = Orange,
                 )
             }
+        }
+    }
+    var filmStrip by remember { mutableStateOf(prefs.filmStrip) }
+    Group(
+        "Viewer",
+        footer = "The thumbnails above the viewer's buttons: drag them to skim through photos.",
+    ) {
+        Anchor("film-strip", highlight) {
+            PickerRow(
+                title = "Film Strip",
+                options = FilmStripSize.entries.map { it.label },
+                selected = filmStrip.ordinal,
+                onSelect = {
+                    filmStrip = FilmStripSize.entries[it]
+                    prefs.filmStrip = filmStrip
+                },
+                icon = LumenIcons.Image,
+                iconColor = Blue,
+            )
         }
     }
     Group(
