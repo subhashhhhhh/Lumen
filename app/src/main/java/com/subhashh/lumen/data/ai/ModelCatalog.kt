@@ -3,7 +3,8 @@ package com.subhashh.lumen.data.ai
 import android.content.Context
 import java.io.File
 
-data class ModelFile(val name: String, val bytes: Long, val sha256: String)
+/** [optional]: added in a later version; the model works without it until it's downloaded. */
+data class ModelFile(val name: String, val bytes: Long, val sha256: String, val optional: Boolean = false)
 
 /**
  * A downloadable model, pinned to one commit of its Hugging Face repo so the files can't change
@@ -26,8 +27,12 @@ data class AiModel(
     /** App-private, never backed up: the files are large and re-downloadable. */
     fun dir(context: Context) = File(context.noBackupFilesDir, "models/$id")
 
+    /** It works: every required file is in place. */
     fun installed(context: Context): Boolean =
-        files.all { File(dir(context), it.name).length() == it.bytes }
+        files.filterNot { it.optional }.all { File(dir(context), it.name).length() == it.bytes }
+
+    /** Every file of this version is in place; otherwise Settings offers the rest as an update. */
+    fun complete(context: Context): Boolean = files.all { File(dir(context), it.name).length() == it.bytes }
 }
 
 /**
@@ -36,16 +41,17 @@ data class AiModel(
  * researched and left out. Conversions: tools/models/. Hosting: huggingface.co/subhashhhhhh.
  */
 object ModelCatalog {
-    /** Google's SigLIP 2 B/16 (Apache 2.0): fp32 image encoder (LiteRT, GPU-ready), int8 text, packed tokenizer. */
+    /** Google's SigLIP 2 B/16 (Apache 2.0): fp32 image encoder (LiteRT, GPU-ready), int8 text, packed tokenizer, Looks like vocabulary. */
     val Accurate = AiModel(
         id = "siglip2-b16",
         label = "Accurate",
         repo = "subhashhhhhh/lumen-siglip2-b16",
-        commit = "4b62b4b89ca725a72cde54dc75bb6bb3a4994c63",
+        commit = "a04c26dcc208923ac1c0c4e7126be041ff65ce49",
         files = listOf(
             ModelFile("visual.tflite", 369_330_540, "b358184561275f176135257853e9927dd5fa0ca6e9cd3f52c63572d5a9740951"),
             ModelFile("textual_int8.onnx", 283_187_112, "6fdbedc85c54262bcbf380cfb048f03e10cf07237333fe4ca1e204a8f954d608"),
             ModelFile("gemma_bpe.bin", 7_134_060, "e9163029a76e66dadb07afd9373531a24687e25d7a027f65d13a2977331f53c2"),
+            ModelFile("vocabulary.bin", 6_536_435, "96070e6bdc36e01255b0501d6259c0482e9e7d85faafb4c0d949f871b8def1bf", optional = true),
         ),
         spec = OnnxEmbedder.Siglip,
     )
@@ -55,12 +61,13 @@ object ModelCatalog {
         id = "clip-vit-b32",
         label = "Fast",
         repo = "subhashhhhhh/lumen-clip-vit-b32",
-        commit = "8163ae3be41a5698dad50a5696c9d577d390c91c",
+        commit = "5eca4f3a8eb045c138d7dbadc9a478735a279fbd",
         files = listOf(
             ModelFile("visual_int8.onnx", 95_777_877, "17755a1228aee44f4274eadac14a600a5e45ab9f6325b6ad070b5d0d75e05073"),
             ModelFile("textual_int8.onnx", 140_296_927, "e1631f9b00b2a14e5b268a9c73000b1eec3c79bd7d4876ce10fe4f0de1a03b1e"),
             ModelFile("vocab.json", 862_328, "5047b556ce86ccaf6aa22b3ffccfc52d391ea4accdab9c2f2407da5b742d4363"),
             ModelFile("merges.txt", 524_619, "9fd691f7c8039210e0fced15865466c65820d09b63988b0174bfe25de299051a"),
+            ModelFile("vocabulary.bin", 4_372_211, "0f0ab53ade495ed6dbaa0d238bd1a4f7c3b2e6970309f174ad0c02add9abbcac", optional = true),
         ),
         spec = OnnxEmbedder.Clip,
     )

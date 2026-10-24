@@ -79,7 +79,7 @@ object ModelDownloads {
 
     /** Every file of this version of [pack] is in place (Search: the chosen tier). */
     fun complete(context: Context, pack: ModelPack): Boolean = when (pack) {
-        ModelPack.Search -> model(context).installed(context)
+        ModelPack.Search -> model(context).complete(context)
         ModelPack.Text -> OcrModel.complete(context)
         ModelPack.Faces -> FaceModel.installed(context)
         ModelPack.Subtitles -> SpeechModel.installed(context)

@@ -12,11 +12,15 @@ import kotlin.math.sqrt
 data class Suggestion(val term: String, val coverId: Long)
 
 /**
- * Search suggestions from what's actually in the library. Each everyday thing in [Vocabulary]
- * is scored against the index: how far its ten best-matching items stand above the library's
- * typical score for it (in standard deviations). Things a library really has stand out; things
- * it doesn't (no dogs in it, say) don't, because nothing matches them much better than average.
- * Computed in the background after indexing and kept in a small file; refreshed as the library grows.
+ * What a library (and each item in it) is about, from a vocabulary of everyday words: the
+ * search model's shipped one ([VocabularyFile], ~4,200 words) or, before that's downloaded, the
+ * small built-in [Vocabulary]. Every word is scored against every item once, in the background
+ * after indexing, and summed up in small files; refreshed as the library grows.
+ *
+ * - Suggestions: words whose ten best items stand far above the library's typical score for
+ *   them (in standard deviations). Things a library really has stand out; things it doesn't
+ *   (no dogs in it, say) don't.
+ * - Looks like ([looksLike]): an item's own best words.
  */
 object SearchSuggestions {
     private const val Tag = "LumenSuggest"
@@ -31,122 +35,181 @@ object SearchSuggestions {
         List(list.length()) { i -> list.getJSONObject(i).let { Suggestion(it.getString("term"), it.getLong("cover")) } }
     }.getOrDefault(emptyList())
 
-    /** Recomputes when missing or when the index has grown or shrunk noticeably since. */
+    private fun shipped(context: Context, model: AiModel) = File(model.dir(context), "vocabulary.bin")
+
+    /** Which vocabulary the stats were made from: the shipped file (by size) or the built-in list. */
+    private fun source(context: Context, model: AiModel): String =
+        shipped(context, model).takeIf { it.isFile }?.let { "shipped:${it.length()}" } ?: "builtin:${Vocabulary.size}"
+
+    /** Recomputes when missing, when the vocabulary changed, or when the index grew or shrank noticeably. */
     fun refreshIfStale(context: Context, model: AiModel) {
         val count = EmbeddingStore.of(context, model).count()
         if (count == 0) return
         val previous = runCatching { JSONObject(file(context, model).readText()).getInt("indexed") }.getOrNull()
-            // The word list changed with an update: work it out again.
-            ?.takeIf { vocab(context, model).size == Vocabulary.size }
+            ?.takeIf { stats(context, model)?.source == source(context, model) }
         if (previous != null && kotlin.math.abs(count - previous) < maxOf(50, previous / 50)) return
         refresh(context, model, count)
     }
 
+    /** The vocabulary's words and text vectors: shipped with the model, else embedded here. */
+    private fun words(context: Context, model: AiModel): Pair<List<String>, List<FloatArray>> =
+        VocabularyFile.read(shipped(context, model)) ?: OnnxEmbedder(model.dir(context), model.spec, threads = 2).use { e ->
+            Vocabulary to Vocabulary.map { e.embedText(it) }
+        }
+
     private fun refresh(context: Context, model: AiModel, indexed: Int) {
         val start = SystemClock.elapsedRealtime()
+        val source = source(context, model)
         val all = EmbeddingStore.of(context, model).loadAll()
         if (all.size == 0) return
         // Which item each row belongs to: one row per photo, one per kept frame of a video.
         val index = HashMap<Long, Int>()
         val itemIds = ArrayList<Long>()
         val itemOf = IntArray(all.size) { i -> index.getOrPut(all.mediaIds[i]) { itemIds.add(all.mediaIds[i]); itemIds.size - 1 } }
+        val (words, vectors) = words(context, model)
+        val n = words.size
         val dim = all.dim
-        val scored = ArrayList<Triple<String, Double, Long>>()
-        val vocab = ArrayList<Term>()
-        OnnxEmbedder(model.dir(context), model.spec, threads = 2).use { embedder ->
-            val itemScores = FloatArray(itemIds.size)
-            for (term in Vocabulary) {
-                val q = embedder.embedText(term)
-                itemScores.fill(Float.NEGATIVE_INFINITY)
-                for (i in 0 until all.size) {
-                    var dot = 0f
-                    val base = i * dim
-                    for (d in 0 until dim) dot += q[d] * all.vectors[base + d]
-                    if (dot > itemScores[itemOf[i]]) itemScores[itemOf[i]] = dot
+        val median = FloatArray(n)
+        val strength = DoubleArray(n)
+        val cover = LongArray(n)
+        // Each item's best word score above that word's median: sets how sure "Looks like" must be.
+        val itemTop = FloatArray(itemIds.size) { Float.NEGATIVE_INFINITY }
+        // Thousands of words × every vector: spread over the cores.
+        val workers = Runtime.getRuntime().availableProcessors().coerceIn(1, 4)
+        val threads = List(workers) { w ->
+            Thread {
+                val scores = FloatArray(itemIds.size)
+                val localTop = FloatArray(itemIds.size) { Float.NEGATIVE_INFINITY }
+                for (t in w until n step workers) {
+                    val q = vectors[t]
+                    scores.fill(Float.NEGATIVE_INFINITY)
+                    for (i in 0 until all.size) {
+                        var dot = 0f
+                        val base = i * dim
+                        for (d in 0 until dim) dot += q[d] * all.vectors[base + d]
+                        if (dot > scores[itemOf[i]]) scores[itemOf[i]] = dot
+                    }
+                    val sorted = scores.sortedArray()
+                    median[t] = sorted[sorted.size / 2]
+                    val mean = scores.average()
+                    val sd = sqrt(scores.sumOf { (it - mean) * (it - mean) } / scores.size)
+                    val top = (sorted.size - 1 downTo maxOf(0, sorted.size - 10)).map { sorted[it].toDouble() }.average()
+                    strength[t] = if (sd > 0) (top - mean) / sd else 0.0
+                    cover[t] = itemIds[scores.indices.maxBy { scores[it] }]
+                    for (i in scores.indices) localTop[i] = maxOf(localTop[i], scores[i] - median[t])
                 }
-                val order = itemScores.indices.sortedByDescending { itemScores[it] }
-                val top = order.take(10).map { itemScores[it].toDouble() }.average()
-                val mean = itemScores.average()
-                val sd = sqrt(itemScores.sumOf { (it - mean) * (it - mean) } / itemScores.size)
-                if (sd > 0) scored += Triple(term, (top - mean) / sd, itemIds[order.first()])
-                // Every word is kept, so the saved list always matches [Vocabulary].
-                vocab += Term(term, q, mean.toFloat(), maxOf(sd, 1e-6).toFloat())
-            }
+                synchronized(itemTop) { for (i in itemTop.indices) itemTop[i] = maxOf(itemTop[i], localTop[i]) }
+            }.apply { start() }
         }
+        threads.forEach { it.join() }
         // Strongest first; one suggestion per cover photo (cat and kitten would share one).
         val covers = HashSet<Long>()
-        val best = scored.sortedByDescending { it.second }.filter { covers.add(it.third) }.take(Keep)
+        val best = (0 until n).sortedByDescending { strength[it] }.filter { covers.add(cover[it]) }.take(Keep)
         val json = JSONObject()
             .put("indexed", indexed)
             .put("suggestions", JSONArray().apply {
-                best.forEach { put(JSONObject().put("term", it.first).put("cover", it.third).put("strength", it.second)) }
+                best.forEach { put(JSONObject().put("term", words[it]).put("cover", cover[it]).put("strength", strength[it])) }
             })
         file(context, model).apply { parentFile?.mkdirs() }.writeText(json.toString())
-        saveVocab(context, model, vocab)
-        Log.i(Tag, "Suggestions for ${model.id} in ${SystemClock.elapsedRealtime() - start} ms: " +
-            best.take(12).joinToString { "${it.first} %.1f".format(it.second) })
+        // "Looks like" names a word for about 70% of items: the bar is the 30th percentile of
+        // items' best scores; words close behind the best (a third of the middle spread) join it.
+        val tops = itemTop.sortedArray()
+        val floor = tops[(tops.size * 0.3).toInt().coerceIn(0, tops.lastIndex)]
+        val margin = 0.3f * (tops[(tops.size * 0.75).toInt().coerceIn(0, tops.lastIndex)] - tops[(tops.size * 0.25).toInt()])
+        saveStats(context, model, Stats(source, floor, margin, words, vectors, median))
+        Log.i(Tag, "Suggestions for ${model.id} from $n words in ${SystemClock.elapsedRealtime() - start} ms: " +
+            best.take(12).joinToString { "${words[it]} %.1f".format(strength[it]) })
     }
 
-    /** A word's vector, and how the library's items score on it: their mean and spread. */
-    private class Term(val word: String, val vector: FloatArray, val mean: Float, val sd: Float)
+    /** Each word, its vector, and its median score over the library; the bar and margin for [looksLike]. */
+    private class Stats(
+        val source: String,
+        val floor: Float,
+        val margin: Float,
+        val words: List<String>,
+        val vectors: List<FloatArray>,
+        val median: FloatArray,
+    )
 
-    private fun vocabFile(context: Context, model: AiModel) = File(context.noBackupFilesDir, "search/vocabulary-${model.id}.bin")
+    private fun statsFile(context: Context, model: AiModel) = File(context.noBackupFilesDir, "search/looks-like-${model.id}.bin")
 
-    private fun saveVocab(context: Context, model: AiModel, terms: List<Term>) {
-        java.io.DataOutputStream(vocabFile(context, model).outputStream().buffered()).use { out ->
-            out.writeInt(terms.size)
-            out.writeInt(terms.firstOrNull()?.vector?.size ?: 0)
-            for (t in terms) {
-                out.writeUTF(t.word)
-                out.writeFloat(t.mean)
-                out.writeFloat(t.sd)
-                t.vector.forEach(out::writeFloat)
+    private fun saveStats(context: Context, model: AiModel, s: Stats) {
+        java.io.DataOutputStream(statsFile(context, model).outputStream().buffered()).use { out ->
+            out.writeUTF(s.source)
+            out.writeFloat(s.floor)
+            out.writeFloat(s.margin)
+            out.writeInt(s.words.size)
+            out.writeInt(s.vectors.firstOrNull()?.size ?: 0)
+            for (i in s.words.indices) {
+                out.writeUTF(s.words[i])
+                out.writeFloat(s.median[i])
+                for (x in s.vectors[i]) out.writeShort(android.util.Half.toHalf(x).toInt())
             }
         }
-        cachedVocab = null
+        cachedStats = null
     }
 
-    @Volatile private var cachedVocab: Pair<String, List<Term>>? = null
+    @Volatile private var cachedStats: Pair<String, Stats?>? = null
 
-    private fun vocab(context: Context, model: AiModel): List<Term> {
-        cachedVocab?.takeIf { it.first == model.id }?.let { return it.second }
-        val terms = runCatching {
-            java.io.DataInputStream(vocabFile(context, model).inputStream().buffered()).use { input ->
+    private fun stats(context: Context, model: AiModel): Stats? {
+        cachedStats?.takeIf { it.first == model.id }?.let { return it.second }
+        val stats = runCatching {
+            java.io.DataInputStream(statsFile(context, model).inputStream().buffered()).use { input ->
+                val source = input.readUTF()
+                val floor = input.readFloat()
+                val margin = input.readFloat()
                 val n = input.readInt()
                 val dim = input.readInt()
-                List(n) {
-                    val word = input.readUTF()
-                    val mean = input.readFloat()
-                    val sd = input.readFloat()
-                    Term(word, FloatArray(dim) { input.readFloat() }, mean, sd)
+                val words = ArrayList<String>(n)
+                val vectors = ArrayList<FloatArray>(n)
+                val median = FloatArray(n)
+                for (i in 0 until n) {
+                    words += input.readUTF()
+                    median[i] = input.readFloat()
+                    vectors += FloatArray(dim) { android.util.Half.toFloat(input.readShort()) }
                 }
+                Stats(source, floor, margin, words, vectors, median)
             }
-        }.getOrDefault(emptyList())
-        cachedVocab = model.id to terms
-        return terms
+        }.getOrNull()
+        cachedStats = model.id to stats
+        return stats
     }
 
     /**
-     * What an item looks like: each word scored against how the library usually does on it
-     * (spreads above its mean), then compared within the item: its best word, and any close
-     * behind ([Margin]), each at least [Floor]; at most [max]. Comparing within the item matters
-     * for what a library is full of: tennis videos in a tennis-heavy library don't stand out
-     * from the library on "tennis", but "tennis" still beats every other word for them.
+     * What an item looks like: each word's score for it minus the word's median over the
+     * library (words that match everything a little don't win), then its best words: the top
+     * one above the library's bar and any close behind, a word only once ("tennis" and "tennis
+     * match" share one, as do near-synonyms), at most [max]. Ranking within the item keeps what
+     * a library is full of nameable: tennis videos in a tennis-heavy library still get "tennis".
      */
     fun looksLike(context: Context, model: AiModel, mediaId: Long, max: Int = 3): List<String> {
+        val s = stats(context, model) ?: return emptyList()
         val vectors = EmbeddingStore.of(context, model).vectorsOf(mediaId)
         if (vectors.isEmpty()) return emptyList()
-        val ranked = vocab(context, model).map { t ->
-            val best = vectors.maxOf { v -> var dot = 0f; for (d in v.indices) dot += v[d] * t.vector[d]; dot }
-            t.word to (best - t.mean) / t.sd
-        }.sortedByDescending { it.second }
-        val top = ranked.firstOrNull()?.second ?: return emptyList()
-        return ranked.take(max).filter { it.second >= maxOf(Floor, top - Margin) }.map { it.first }
+        val score = FloatArray(s.words.size) { t ->
+            val q = s.vectors[t]
+            vectors.maxOf { v -> var dot = 0f; for (d in v.indices) dot += v[d] * q[d]; dot } - s.median[t]
+        }
+        val order = score.indices.sortedByDescending { score[it] }
+        val top = score[order.first()]
+        if (top < s.floor) return emptyList()
+        val picked = ArrayList<Int>()
+        for (t in order) {
+            if (picked.size >= max || score[t] < maxOf(s.floor, top - s.margin)) break
+            val words = s.words[t].lowercase().split(' ').toSet()
+            val same = picked.any { p ->
+                s.words[p].lowercase().split(' ').any { it in words } || cosine(s.vectors[p], s.vectors[t]) > 0.85f
+            }
+            if (!same) picked += t
+        }
+        return picked.map { s.words[it] }
     }
 
-    /** Tuned on the owner's library (2026-10-24): 65% of items get a word; tennis, bikes, cats right. */
-    private const val Floor = 2.3f
-    private const val Margin = 0.6f
+    private fun cosine(a: FloatArray, b: FloatArray): Float {
+        var dot = 0f; var na = 0f; var nb = 0f
+        for (i in a.indices) { dot += a[i] * b[i]; na += a[i] * a[i]; nb += b[i] * b[i] }
+        return dot / (sqrt(na) * sqrt(nb))
+    }
 
     /** Everyday things people photograph and search for. */
     private val Vocabulary = listOf(

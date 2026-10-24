@@ -365,7 +365,7 @@ private fun packStatus(context: Context, pack: ModelPack, state: DownloadState, 
     return when {
         ModelDownloads.complete(context, pack) -> "Ready · ${megabytes(size)} on this phone" to "Remove"
         // Switching tiers: the current one keeps working until the new one is in.
-        pack == ModelPack.Search && installed != null ->
+        pack == ModelPack.Search && installed != null && installed != ModelDownloads.model(context) ->
             "Using ${installed.label} · ${ModelDownloads.model(context).label} is ${megabytes(size)}" to "Download"
         // A newer version changed some files, or a download stopped part way: fetch the rest.
         remaining < size -> "Update available · ${megabytes(remaining)}" to "Update"
