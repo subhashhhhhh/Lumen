@@ -154,8 +154,11 @@ fun ViewerScreen(
     slideshowOf: Set<Long>? = null,
     /** Opened by another app: Share and Info, and ⋯ with only what works on someone else's file. */
     external: Boolean = false,
-    /** Viewing a folder album: ⋯ offers Make Album Cover. */
+    /** Viewing a folder album: ⋯ offers Make Album Cover (a person's photos: [coverLabel]). */
     onMakeCover: ((MediaItem) -> Unit)? = null,
+    coverLabel: String = "Make Album Cover",
+    /** Viewing a person's photos: ⋯ offers this ("Not Chiara") to take them out of this one. */
+    notPerson: Pair<String, (MediaItem) -> Unit>? = null,
     onAdjustDate: (MediaItem) -> Unit = {},
     onSetWallpaper: (MediaItem) -> Unit = {},
     onResize: (MediaItem) -> Unit = {},
@@ -588,6 +591,8 @@ fun ViewerScreen(
                     onHideFolder = onHideFolder,
                     onSlideshow = { slideshow = true },
                     onMakeCover = onMakeCover,
+                    coverLabel = coverLabel,
+                    notPerson = notPerson,
                     onAdjustDate = onAdjustDate,
                     onSetWallpaper = onSetWallpaper,
                     onResize = onResize,
@@ -629,12 +634,21 @@ private fun viewerMenu(
     onHideFolder: (MediaItem) -> Unit,
     onSlideshow: () -> Unit,
     onMakeCover: ((MediaItem) -> Unit)?,
+    coverLabel: String,
+    notPerson: Pair<String, (MediaItem) -> Unit>?,
     onAdjustDate: (MediaItem) -> Unit,
     onSetWallpaper: (MediaItem) -> Unit,
     onResize: (MediaItem) -> Unit,
 ): List<List<MenuItem>> {
     val photo = !item.isVideo
-    return listOf(
+    return listOfNotNull(
+        // A person's photos: their own options first.
+        notPerson?.let { (label, action) ->
+            listOfNotNull(
+                onMakeCover?.let { MenuItem(coverLabel) { it(item) } },
+                MenuItem(label) { action(item) },
+            )
+        },
         listOf(
             MenuItem("Move to Album…") { onMoveToAlbum(item) },
             MenuItem("Copy to Album…") { onCopyToAlbum(item) },
@@ -647,7 +661,7 @@ private fun viewerMenu(
         ),
         listOfNotNull(
             MenuItem("Slideshow") { onSlideshow() },
-            onMakeCover?.let { MenuItem("Make Album Cover") { it(item) } },
+            if (notPerson == null) onMakeCover?.let { MenuItem(coverLabel) { it(item) } } else null,
         ),
         // Folder actions live on albums (Collections → long-press), not on a single photo.
         listOf(MenuItem("Hide") { onHide(item) }),

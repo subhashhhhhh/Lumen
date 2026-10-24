@@ -1819,7 +1819,7 @@ private fun MainScaffold(
                 // In a person's album: these photos aren't them.
                 personOf(selectableKey)?.let { person ->
                     listOf(
-                        MenuItem("Not This Person") {
+                        MenuItem(notPersonLabel(person)) {
                             val ids = selectedItems.map { it.id }
                             endSelection()
                             scope.launch(Dispatchers.IO) { com.subhashh.lumen.data.ai.FaceStore.of(context).notThisPerson(person.id, ids) }
@@ -1905,12 +1905,25 @@ private fun MainScaffold(
                 onSetWallpaper = { wallpaperItem = it },
                 onResize = { resizeRequest = listOf(it) },
                 // Inside a folder album: make this photo its cover, like iOS's Make Key Photo.
-                onMakeCover = if (CollectionKeys.isFolder(source)) {
-                    { item ->
+                onMakeCover = when {
+                    CollectionKeys.isFolder(source) -> { item ->
                         updateAlbums { it.copy(covers = it.covers + (item.relativePath to item.id)) }
                         toast("Album cover updated")
                     }
-                } else null,
+                    personOf(source) != null -> { item ->
+                        val id = personOf(source)!!.id
+                        scope.launch(Dispatchers.IO) { com.subhashh.lumen.data.ai.FaceStore.of(context).setCover(id, item.id) }
+                        toast("Cover updated")
+                    }
+                    else -> null
+                },
+                coverLabel = if (personOf(source) != null) "Make Person Cover" else "Make Album Cover",
+                notPerson = personOf(source)?.let { person ->
+                    notPersonLabel(person) to { item ->
+                        scope.launch(Dispatchers.IO) { com.subhashh.lumen.data.ai.FaceStore.of(context).notThisPerson(person.id, listOf(item.id)) }
+                        toast("Removed from ${person.name ?: "this person"}")
+                    }
+                },
                 onHide = { hide(listOf(it)) },
                 onHideFolder = { hideFolders(listOf(it)) },
                 slideshowOf = slideshowOf,
@@ -2151,6 +2164,9 @@ private fun MainScaffold(
 
 /** Naming an album: renaming [album], or a brand-new one when it's null. */
 private data class AlbumNameRequest(val album: MediaCollection?)
+
+/** "Not Chiara", or "Not This Person" before they're named. */
+private fun notPersonLabel(person: com.subhashh.lumen.data.ai.Person) = person.name?.let { "Not $it" } ?: "Not This Person"
 
 @Composable
 private fun PermissionScreen(onGrant: () -> Unit) {

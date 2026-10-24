@@ -49,7 +49,7 @@ class NewFace(val box: FloatArray, val vector: FloatArray, val atMs: Long? = nul
  * app-private, not backed up. People carry what the user decides (names, merges, hidden), so
  * grouping only ever adds faces to people; it never moves a face that already has one.
  */
-class FaceStore private constructor(context: Context) : SQLiteOpenHelper(context, file(context).path, null, 3) {
+class FaceStore private constructor(context: Context) : SQLiteOpenHelper(context, file(context).path, null, 4) {
     private val crops = cropDir(context)
 
     init {
@@ -73,7 +73,7 @@ class FaceStore private constructor(context: Context) : SQLiteOpenHelper(context
         )
         db.execSQL("CREATE INDEX faces_media ON faces (media_id)")
         db.execSQL("CREATE INDEX faces_person ON faces (person)")
-        db.execSQL("CREATE TABLE people (id INTEGER PRIMARY KEY, name TEXT, hidden INTEGER NOT NULL DEFAULT 0)")
+        db.execSQL("CREATE TABLE people (id INTEGER PRIMARY KEY, name TEXT, hidden INTEGER NOT NULL DEFAULT 0, cover_face INTEGER)")
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
@@ -81,6 +81,8 @@ class FaceStore private constructor(context: Context) : SQLiteOpenHelper(context
         if (oldVersion < 2) db.execSQL("ALTER TABLE faces ADD COLUMN not_person INTEGER")
         // 3: faces in videos, with the moment (null for photos).
         if (oldVersion < 3) db.execSQL("ALTER TABLE faces ADD COLUMN at_ms INTEGER")
+        // 4: covers the user chose (Make Person Cover).
+        if (oldVersion < 4) db.execSQL("ALTER TABLE people ADD COLUMN cover_face INTEGER")
     }
 
     /** Item id → the `modified` it was looked at. */
@@ -176,8 +178,12 @@ class FaceStore private constructor(context: Context) : SQLiteOpenHelper(context
     /** Every person with at least one face, most photos first. */
     fun people(): List<Person> {
         val names = HashMap<Long, Pair<String?, Boolean>>()
-        readableDatabase.rawQuery("SELECT id, name, hidden FROM people", null).use { c ->
-            while (c.moveToNext()) names[c.getLong(0)] = (if (c.isNull(1)) null else c.getString(1)) to (c.getInt(2) != 0)
+        val chosen = HashMap<Long, Long>()
+        readableDatabase.rawQuery("SELECT id, name, hidden, cover_face FROM people", null).use { c ->
+            while (c.moveToNext()) {
+                names[c.getLong(0)] = (if (c.isNull(1)) null else c.getString(1)) to (c.getInt(2) != 0)
+                if (!c.isNull(3)) chosen[c.getLong(0)] = c.getLong(3)
+            }
         }
         class Acc(val media: HashSet<Long> = HashSet(), var faces: Int = 0) {
             var cover = 0L
@@ -194,8 +200,10 @@ class FaceStore private constructor(context: Context) : SQLiteOpenHelper(context
                 a.faces++
                 val box = listOf(c.getFloat(2), c.getFloat(3), c.getFloat(4), c.getFloat(5))
                 val video = !c.isNull(7)
-                // The biggest face, from a photo when there is one (sharper than a video frame).
-                val score = (box[2] - box[0]) * (box[3] - box[1]) + if (video) 0f else 1f
+                // The cover the user chose; else the biggest face, from a photo when there is one
+                // (sharper than a video frame).
+                val score = if (chosen[c.getLong(0)] == c.getLong(6)) 10f
+                else (box[2] - box[0]) * (box[3] - box[1]) + if (video) 0f else 1f
                 if (score > a.score) {
                     a.score = score
                     a.cover = c.getLong(1)
@@ -255,6 +263,16 @@ class FaceStore private constructor(context: Context) : SQLiteOpenHelper(context
         } finally {
             db.endTransaction()
         }
+        version++
+    }
+
+    /** Make Person Cover: [person]'s face in this photo or video (the biggest, if several). */
+    fun setCover(person: Long, mediaId: Long) {
+        writableDatabase.execSQL(
+            "UPDATE people SET cover_face = (SELECT id FROM faces WHERE person = ? AND media_id = ? " +
+                "ORDER BY (r - l) * (b - t) DESC LIMIT 1) WHERE id = ?",
+            arrayOf(person, mediaId, person),
+        )
         version++
     }
 
