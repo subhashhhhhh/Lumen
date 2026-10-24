@@ -22,12 +22,18 @@ class ModelDownloadJob : JobService() {
     private var transfer: Job? = null
 
     override fun onStartJob(params: JobParameters): Boolean {
-        val total = ModelDownloads.totalBytes(this)
-        notify(params, DownloadNotification.build(this, done = total - ModelDownloads.remainingBytes(this), total = total))
+        val (first, firstDone, firstTotal) = ModelDownloads.first(this) ?: Triple(ModelPack.Search, 0L, 0L)
+        notify(params, DownloadNotification.build(this, first, firstDone, firstTotal))
         transfer = scope.launch {
-            val retry = ModelDownloads.run(this@ModelDownloadJob) { done, total ->
-                notify(params, DownloadNotification.build(this@ModelDownloadJob, done, total))
-                updateTransferredNetworkBytes(params, done, 0)
+            var sent = 0L
+            var before = 0L
+            var current = first
+            val retry = ModelDownloads.run(this@ModelDownloadJob) { pack, done, total ->
+                notify(params, DownloadNotification.build(this@ModelDownloadJob, pack, done, total))
+                // Android wants bytes for the whole transfer; each pack counts from zero.
+                if (pack != current) { before = sent; current = pack }
+                sent = before + done
+                updateTransferredNetworkBytes(params, sent, 0)
             }
             jobFinished(params, retry == true)
         }

@@ -154,6 +154,11 @@ class LumenPrefs(context: Context) {
         get() = prefs.getBoolean(KeyModelWifiOnly, true)
         set(value) = prefs.edit { putBoolean(KeyModelWifiOnly, value) }
 
+    /** Smart Features packs ([com.subhashh.lumen.data.ai.ModelPack] ids) waiting to download, in order. */
+    var modelQueue: List<String>
+        get() = prefs.getString(KeyModelQueue, null)?.split(',')?.filter { it.isNotEmpty() } ?: emptyList()
+        set(value) = prefs.edit { putString(KeyModelQueue, value.joinToString(",")) }
+
     var curvedEdge: Boolean
         get() = prefs.getBoolean(KeyCurvedEdge, false)
         set(value) = prefs.edit { putBoolean(KeyCurvedEdge, value) }
@@ -197,6 +202,7 @@ class LumenPrefs(context: Context) {
         const val KeyVideoDetail = "video_detail"
         const val KeyIndexOnBattery = "index_on_battery"
         const val KeyModelWifiOnly = "model_wifi_only"
+        const val KeyModelQueue = "model_queue"
         const val KeySearchModel = "search_model"
         const val KeySections = "section_mode"
         const val KeyReduceMotion = "reduce_motion"

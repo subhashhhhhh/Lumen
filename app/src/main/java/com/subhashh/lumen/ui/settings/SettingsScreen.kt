@@ -118,7 +118,9 @@ private val Entries = listOf(
     SettingEntry("subtitles-model", "Subtitles Model", SettingsCategory.SmartSearch, "subtitles captions cc transcription speech download"),
     SettingEntry("index-on-battery", "Index on Battery", SettingsCategory.SmartSearch, "charging battery background scan indexing"),
     SettingEntry("video-detail", "Video Detail", SettingsCategory.SmartSearch, "video frames resolution faces quality speed"),
+    SettingEntry("face-model", "Face Models", SettingsCategory.SmartSearch, "people faces persons download remove update"),
     SettingEntry("faces", "Faces", SettingsCategory.SmartSearch, "people faces persons grouping progress"),
+    SettingEntry("text-model", "Text Reader", SettingsCategory.SmartSearch, "ocr words text in photos screenshots download remove update"),
     SettingEntry("text-read", "Text Read", SettingsCategory.SmartSearch, "ocr words text in photos screenshots reading progress"),
     SettingEntry("wifi-only", "Download on Wi-Fi Only", SettingsCategory.SmartSearch, "mobile data cellular download"),
     SettingEntry("hf-token", "Hugging Face Token", SettingsCategory.SmartSearch, "huggingface token download speed"),
@@ -215,7 +217,9 @@ fun SettingsScreen(
                     }
                 } else {
                     val appearance = LocalAppearance.current
-                    val smartSearchOn = remember(refresh) { com.subhashh.lumen.data.ai.ModelDownloads.installed(context) != null }
+                    val smartSearchOn = remember(refresh) {
+                        com.subhashh.lumen.data.ai.ModelPack.entries.any { com.subhashh.lumen.data.ai.ModelDownloads.usable(context, it) }
+                    }
                     val granted = listOf(status.manageMedia || Build.VERSION.SDK_INT < Build.VERSION_CODES.S, status.allFiles, status.mediaLocation)
                     val open = { c: SettingsCategory -> onOpenCategory(c, null) }
                     Group("") {

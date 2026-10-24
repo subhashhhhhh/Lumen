@@ -68,14 +68,14 @@ object SmartIndex {
     }
 
     /**
-     * Makes sure both jobs are queued, if a model is installed. Safe to call often (app start). A
+     * Makes sure both jobs are queued, if a search, text or face model is installed. Safe to call often (app start). A
      * backlog job waiting out a back-off is replaced by a fresh one, so opening Lumen restarts a
      * stalled index; a running one is left alone.
      */
     fun schedule(context: Context, replace: Boolean = false) {
         val app = context.applicationContext
         scope.launch {
-            if (ModelDownloads.installed(app) == null) return@launch
+            if (!anythingToIndex(app)) return@launch
             val work = WorkManager.getInstance(app)
             val waiting = work.getWorkInfosForUniqueWorkFlow(Backlog).first()
                 .any { it.state == WorkInfo.State.ENQUEUED && it.runAttemptCount > 0 }
@@ -97,6 +97,10 @@ object SmartIndex {
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    /** Each pack downloads on its own: faces or text can be on the phone without search. */
+    private fun anythingToIndex(context: Context) =
+        ModelDownloads.installed(context) != null || FaceModel.installed(context) || OcrModel.installed(context)
 
     /** After a model download: start indexing the newest items right away, charging or not. */
     fun startNow(context: Context) {
@@ -137,7 +141,8 @@ object SmartIndex {
 
     class IndexWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
         override suspend fun doWork(): Result {
-            val model = ModelDownloads.installed(applicationContext) ?: return Result.success()
+            if (!anythingToIndex(applicationContext)) return Result.success()
+            val model = ModelDownloads.installed(applicationContext)
             val backlog = inputData.getString(KeyMode) == Backlog
             val limit = if (backlog) Int.MAX_VALUE else NewLimit
             // One pass at a time: both jobs would otherwise work through the same items side by
@@ -160,15 +165,18 @@ object SmartIndex {
 
         /**
          * Faces first (fastest; while videos are decoded for faces, their frames are kept for
-         * the next step), then Smart Search's vectors, then the words in photos.
+         * the next step), then Smart Search's vectors, then the words in photos. Steps whose
+         * models aren't downloaded are skipped (each indexer checks its own).
          */
-        private suspend fun pass(model: AiModel, limit: Int): Indexer.Outcome {
+        private suspend fun pass(model: AiModel?, limit: Int): Indexer.Outcome {
             val faces = FaceIndexer(applicationContext, model).run(limit)
             if (faces != Indexer.Outcome.Done) return faces
-            val vectors = Indexer(applicationContext, model).run(limit)
-            if (vectors != Indexer.Outcome.Done) return vectors
-            // Suggested searches follow what's in the library; refreshed once it's all indexed.
-            SearchSuggestions.refreshIfStale(applicationContext, model)
+            if (model != null) {
+                val vectors = Indexer(applicationContext, model).run(limit)
+                if (vectors != Indexer.Outcome.Done) return vectors
+                // Suggested searches follow what's in the library; refreshed once it's all indexed.
+                SearchSuggestions.refreshIfStale(applicationContext, model)
+            }
             return TextIndexer(applicationContext).run(limit)
         }
     }

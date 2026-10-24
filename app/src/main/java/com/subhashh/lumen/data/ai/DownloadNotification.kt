@@ -16,7 +16,7 @@ object DownloadNotification {
     const val Id = 4201
     private const val Channel = "downloads"
 
-    fun build(context: Context, done: Long, total: Long): Notification {
+    fun build(context: Context, pack: ModelPack, done: Long, total: Long): Notification {
         val manager = context.getSystemService(NotificationManager::class.java)
         if (manager.getNotificationChannel(Channel) == null) {
             manager.createNotificationChannel(
@@ -34,7 +34,7 @@ object DownloadNotification {
         val percent = if (total > 0) (done * 100 / total).toInt() else 0
         return NotificationCompat.Builder(context, Channel)
             .setSmallIcon(R.drawable.ic_launcher_monochrome)
-            .setContentTitle("Downloading Smart Features")
+            .setContentTitle("Downloading ${pack.label}")
             .setContentText("${megabytes(done)} of ${megabytes(total)}")
             .setProgress(100, percent, total == 0L)
             .setOngoing(true)

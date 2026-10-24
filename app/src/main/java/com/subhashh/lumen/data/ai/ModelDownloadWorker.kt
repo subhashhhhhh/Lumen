@@ -10,9 +10,9 @@ import androidx.work.WorkerParameters
 class ModelDownloadWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
-        val total = ModelDownloads.totalBytes(applicationContext)
-        setForeground(info(total - ModelDownloads.remainingBytes(applicationContext), total))
-        val retry = ModelDownloads.run(applicationContext) { done, total -> setForegroundAsync(info(done, total)) }
+        val (first, done, total) = ModelDownloads.first(applicationContext) ?: return Result.success()
+        setForeground(info(first, done, total))
+        val retry = ModelDownloads.run(applicationContext) { pack, got, all -> setForegroundAsync(info(pack, got, all)) }
         return when (retry) {
             null -> Result.success()
             true -> Result.retry()
@@ -20,9 +20,9 @@ class ModelDownloadWorker(context: Context, params: WorkerParameters) : Coroutin
         }
     }
 
-    private fun info(done: Long, total: Long) = ForegroundInfo(
+    private fun info(pack: ModelPack, done: Long, total: Long) = ForegroundInfo(
         DownloadNotification.Id,
-        DownloadNotification.build(applicationContext, done, total),
+        DownloadNotification.build(applicationContext, pack, done, total),
         ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC,
     )
 }

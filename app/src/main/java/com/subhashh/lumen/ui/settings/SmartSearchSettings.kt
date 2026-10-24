@@ -1,6 +1,7 @@
 package com.subhashh.lumen.ui.settings
 
 import android.Manifest
+import android.content.Context
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -28,6 +29,7 @@ import com.subhashh.lumen.data.ai.DownloadState
 import com.subhashh.lumen.data.ai.HfTokenStore
 import com.subhashh.lumen.data.ai.ModelCatalog
 import com.subhashh.lumen.data.ai.ModelDownloads
+import com.subhashh.lumen.data.ai.ModelPack
 import com.subhashh.lumen.data.ai.OcrModel
 import com.subhashh.lumen.data.ai.SpeechModel
 import com.subhashh.lumen.data.ai.FaceModel
@@ -36,8 +38,9 @@ import com.subhashh.lumen.ui.components.Confirmation
 import com.subhashh.lumen.ui.icons.LumenIcons
 
 /**
- * Settings → Smart Search: download (or remove) the search model, Wi-Fi only, and an optional
- * Hugging Face token. The only part of Lumen that touches the network.
+ * Settings → Smart Features: Smart Search, Text Reading, Faces and Subtitles, each downloaded,
+ * updated and removed on its own ([ModelPack]); then indexing and download options. The only
+ * part of Lumen that touches the network.
  */
 @Composable
 internal fun SmartSearchGroup(
@@ -53,10 +56,11 @@ internal fun SmartSearchGroup(
     val state by ModelDownloads.state.collectAsState()
     var chosenId by remember { mutableStateOf(prefs.searchModel) }
     val chosen = ModelCatalog.byId(chosenId)
-    var removed by remember { mutableIntStateOf(0) }
-    val installed = remember(refresh, state, removed, chosenId) { ModelDownloads.installed(context) }
-    val readerMissing = remember(refresh, state, removed) { !OcrModel.installed(context) }
-    val extrasMissing = remember(refresh, state, removed) { !ModelDownloads.extrasInstalled(context) }
+    /** Bumped after every download, cancel and remove: re-read what's on the phone. */
+    var changed by remember { mutableIntStateOf(0) }
+    val installed = remember(refresh, state, changed, chosenId) { ModelDownloads.installed(context) }
+    val readerReady = remember(refresh, state, changed) { OcrModel.installed(context) }
+    val facesReady = remember(refresh, state, changed) { FaceModel.installed(context) }
     val live by SmartIndex.progress.collectAsState()
     val counted by produceState<IndexProgress?>(null, refresh, installed) {
         val model = installed
@@ -66,16 +70,15 @@ internal fun SmartSearchGroup(
     }
     val progress = if (installed == null) null else live ?: counted
     val liveText by SmartIndex.textProgress.collectAsState()
-    val countedText by produceState<IndexProgress?>(null, refresh, installed, readerMissing) {
-        value = if (installed == null || readerMissing) null else withContext(Dispatchers.IO) {
+    val countedText by produceState<IndexProgress?>(null, refresh, readerReady) {
+        value = if (!readerReady) null else withContext(Dispatchers.IO) {
             IndexProgress(TextStore.of(context).count(), Indexer.eligible(context).size)
         }
     }
-    val textProgress = if (installed == null || readerMissing) null else liveText ?: countedText
-    val facesMissing = remember(refresh, state, removed) { !FaceModel.installed(context) }
+    val textProgress = if (!readerReady) null else liveText ?: countedText
     val liveFaces by SmartIndex.faceProgress.collectAsState()
-    val countedFaces by produceState<Pair<IndexProgress, Int>?>(null, refresh, installed, facesMissing, liveFaces) {
-        value = if (installed == null || facesMissing) null else withContext(Dispatchers.IO) {
+    val countedFaces by produceState<Pair<IndexProgress, Int>?>(null, refresh, facesReady, liveFaces) {
+        value = if (!facesReady) null else withContext(Dispatchers.IO) {
             val store = FaceStore.of(context)
             IndexProgress(store.count(), Indexer.eligible(context).size) to store.peopleCount()
         }
@@ -86,45 +89,62 @@ internal fun SmartSearchGroup(
     var wifiOnly by remember { mutableStateOf(prefs.modelWifiOnly) }
     var videoDetail by remember { mutableStateOf(prefs.videoDetail) }
     var onBattery by remember { mutableStateOf(prefs.indexOnBattery) }
+    val waitingText = if (onBattery) "Continues in the background" else "Continues while your phone charges"
 
     // The download's progress notification needs this on Android 13+; it downloads either way.
+    var asked by remember { mutableStateOf<ModelPack?>(null) }
     val askNotifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
-        ModelDownloads.start(context, wifiOnly)
+        asked?.let { pack -> ModelDownloads.start(context, pack, wifiOnly) }
+        changed++
     }
-    fun download() {
+    fun download(pack: ModelPack) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            asked = pack
             askNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
         } else {
-            ModelDownloads.start(context, wifiOnly)
+            ModelDownloads.start(context, pack, wifiOnly)
+            changed++
         }
     }
 
-    val size = megabytes(chosen.bytes + ModelDownloads.ExtrasBytes)
-    val remaining = remember(state, refresh, removed, chosenId) { ModelDownloads.remainingBytes(context) }
-    val update = if (remaining < chosen.bytes + ModelDownloads.ExtrasBytes) "Update available · ${megabytes(remaining)}" to "Update"
-        else "Not downloaded · $size" to "Download"
-    val (status, action) = when (val s = state) {
-        is DownloadState.Running -> "Downloading · ${megabytes(s.done)} of ${megabytes(s.total)}" to "Cancel"
-        DownloadState.Waiting -> (if (wifiOnly) "Waiting for Wi-Fi…" else "Waiting for a connection…") to "Cancel"
-        is DownloadState.Failed -> "Couldn't download: ${s.message}" to "Retry"
-        DownloadState.Idle -> when (installed) {
-            // A newer version added the text reader or face models: search works until they're fetched.
-            chosen -> if (extrasMissing) update else "Ready · $size on this phone" to "Remove"
-            // Part of it is here already: a newer version changed some files (Accurate's image model).
-            null -> update
-            // Switching tiers: the current one keeps working until the new one is in.
-            else -> "Using ${installed.label} · ${chosen.label} is $size" to "Download"
-        }
+    /** One pack's row: its state, and Download / Update / Cancel / Retry / Remove. */
+    @Composable
+    fun PackRow(pack: ModelPack, title: String, removeTitle: String, removeMessage: String, iconColor: Color) {
+        val (status, action) = remember(state, refresh, changed, chosenId) { packStatus(context, pack, state, wifiOnly) }
+        SettingsRow(
+            title = title,
+            subtitle = status,
+            value = action,
+            onClick = {
+                when (action) {
+                    "Cancel" -> {
+                        ModelDownloads.cancel(context, pack, wifiOnly)
+                        changed++
+                    }
+                    "Remove" -> onConfirm(
+                        Confirmation(
+                            title = removeTitle,
+                            message = removeMessage + " (${megabytes(ModelDownloads.bytes(context, pack))})",
+                            confirm = "Remove",
+                            destructive = true,
+                            onConfirm = {
+                                ModelDownloads.delete(context, pack, wifiOnly)
+                                changed++
+                            },
+                        ),
+                    )
+                    else -> download(pack)
+                }
+            },
+            icon = LumenIcons.Import,
+            iconColor = iconColor,
+        )
     }
-    val busy = state is DownloadState.Running || state is DownloadState.Waiting
 
     Group(
-        "Search Model",
-        footer = "Find photos by what's in them, like “cat asleep on a sofa”, or by the words in " +
-            "them, like a name in a chat screenshot. Accurate finds more " +
-            "and understands many languages; Fast is smaller and quicker to set up, in English. " +
-            "The search model downloads once from Hugging Face; your photos and searches never " +
-            "leave this phone.",
+        "Smart Search",
+        footer = "Find photos by what's in them, like “cat asleep on a sofa”. Accurate finds more " +
+            "and understands many languages; Fast is smaller and quicker to set up, in English.",
     ) {
         Anchor("search-quality", highlight) {
             PickerRow(
@@ -135,7 +155,8 @@ internal fun SmartSearchGroup(
                     val next = ModelCatalog.all[it]
                     if (next != chosen) {
                         // A half-finished download was for the other tier; its parts stay to resume.
-                        if (busy) ModelDownloads.cancel(context)
+                        val s = state
+                        if (s is DownloadState.Running && s.pack == ModelPack.Search) ModelDownloads.cancel(context, ModelPack.Search, wifiOnly)
                         chosenId = next.id
                         prefs.searchModel = next.id
                     }
@@ -146,30 +167,65 @@ internal fun SmartSearchGroup(
         }
         Divider()
         Anchor("search-model", highlight) {
-            SettingsRow(
-                title = "Search Model",
-                subtitle = status,
-                value = action,
-                onClick = {
-                    when (action) {
-                        "Cancel" -> ModelDownloads.cancel(context)
-                        "Remove" -> onConfirm(
-                            Confirmation(
-                                title = "Remove All Models?",
-                                message = "Search by what's in photos, text reading, faces and subtitles stop working until you download them again ($size).",
-                                confirm = "Remove",
-                                destructive = true,
-                                onConfirm = {
-                                    ModelDownloads.delete(context)
-                                    removed++
-                                },
-                            ),
-                        )
-                        else -> download()
-                    }
-                },
-                icon = LumenIcons.Import,
-                iconColor = Indigo,
+            PackRow(
+                ModelPack.Search, "Search Model", "Remove Smart Search?",
+                "Searching by what's in photos stops working until you download it again. Text, faces and subtitles stay",
+                Indigo,
+            )
+        }
+        if (progress != null) {
+            Divider()
+            val complete = progress.indexed >= progress.total
+            Anchor("indexed", highlight) {
+                SettingsRow(
+                    title = "Indexed",
+                    subtitle = if (complete) "New photos and videos are added as they arrive" else waitingText,
+                    value = if (complete) "All ${"%,d".format(progress.total)}" else "%,d of %,d".format(progress.indexed, progress.total),
+                    onClick = null,
+                    icon = LumenIcons.Image,
+                    iconColor = Green,
+                )
+            }
+        }
+    }
+
+    Group(
+        "Text in Photos",
+        footer = "Search the words in photos, screenshots and videos, like a name in a chat. " +
+            "Reads Latin scripts, Chinese and Japanese.",
+    ) {
+        Anchor("text-model", highlight) {
+            PackRow(
+                ModelPack.Text, "Text Reader", "Remove Text Reading?",
+                "Searching the words in photos stops working, and the words read so far are deleted",
+                Orange,
+            )
+        }
+        if (textProgress != null) {
+            Divider()
+            val complete = textProgress.indexed >= textProgress.total
+            Anchor("text-read", highlight) {
+                SettingsRow(
+                    title = "Text Read",
+                    subtitle = if (complete) "Words in photos and videos are searchable" else waitingText,
+                    value = if (complete) "All ${"%,d".format(textProgress.total)}" else "%,d of %,d".format(textProgress.indexed, textProgress.total),
+                    onClick = null,
+                    icon = LumenIcons.Document,
+                    iconColor = Orange,
+                )
+            }
+        }
+    }
+
+    Group(
+        "Faces",
+        footer = "Groups photos and videos by person, in Collections → People. Name people to find them in Search.",
+    ) {
+        Anchor("face-model", highlight) {
+            PackRow(
+                ModelPack.Faces, "Face Models", "Remove Faces?",
+                "People, their names and merges are deleted; downloading again finds everyone from scratch",
+                Purple,
             )
         }
         if (faceProgress != null) {
@@ -179,8 +235,7 @@ internal fun SmartSearchGroup(
             Anchor("faces", highlight) {
                 SettingsRow(
                     title = "Faces",
-                    subtitle = if (complete) "%,d people found".format(people) else (if (onBattery) "Continues in the background" else "Continues while your phone charges") +
-                        " · %,d people so far".format(people),
+                    subtitle = if (complete) "%,d people found".format(people) else "$waitingText · %,d people so far".format(people),
                     value = if (complete) "All ${"%,d".format(progress.total)}" else "%,d of %,d".format(progress.indexed, progress.total),
                     onClick = null,
                     icon = LumenIcons.Image,
@@ -188,35 +243,38 @@ internal fun SmartSearchGroup(
                 )
             }
         }
-        if (progress != null) {
-            Divider()
-            val complete = progress.indexed >= progress.total
-            Anchor("indexed", highlight) {
-                SettingsRow(
-                    title = "Indexed",
-                    subtitle = if (complete) "New photos and videos are added as they arrive" else "Photos and videos, after Faces",
-                    value = if (complete) "All ${"%,d".format(progress.total)}" else "%,d of %,d".format(progress.indexed, progress.total),
-                    onClick = null,
-                    icon = LumenIcons.Image,
-                    iconColor = Green,
-                )
-            }
-        }
-        if (textProgress != null) {
-            Divider()
-            val complete = textProgress.indexed >= textProgress.total
-            Anchor("text-read", highlight) {
-                SettingsRow(
-                    title = "Text Read",
-                    subtitle = if (complete) "Words in photos and videos are searchable" else "Photos and videos, after Indexed",
-                    value = if (complete) "All ${"%,d".format(textProgress.total)}" else "%,d of %,d".format(textProgress.indexed, textProgress.total),
-                    onClick = null,
-                    icon = LumenIcons.Search,
-                    iconColor = Orange,
-                )
-            }
+    }
+
+    // Subtitles: made on the phone when CC is tapped on a video.
+    Group(
+        "Subtitles",
+        footer = "Tap CC on a video to make subtitles on this phone. Works for English, German, " +
+            "French, Spanish, Italian, Dutch and Polish speech; music without speech gets none.",
+    ) {
+        Anchor("subtitle-quality", highlight) {
+            PickerRow(
+                title = "Subtitle Quality",
+                options = SpeechModel.tiers.map { "${it.label} · ${megabytes(SpeechModel.bytes)}" },
+                selected = 0,
+                onSelect = {},
+                icon = LumenIcons.Video,
+                iconColor = Purple,
+            )
         }
         Divider()
+        Anchor("subtitles-model", highlight) {
+            PackRow(
+                ModelPack.Subtitles, "Subtitles Model", "Remove Subtitles?",
+                "CC can't make new subtitles until you download it again. Subtitles already made stay",
+                Indigo,
+            )
+        }
+    }
+
+    Group(
+        "Indexing and Downloads",
+        footer = "Models download once from Hugging Face; your photos and searches never leave this phone.",
+    ) {
         Anchor("index-on-battery", highlight) {
             ToggleRow(
                 title = "Index on Battery",
@@ -288,35 +346,29 @@ internal fun SmartSearchGroup(
             )
         }
     }
+}
 
-    // Subtitles: made on the phone when CC is tapped on a video.
-    val speechReady = remember(refresh, state, removed) { SpeechModel.installed(context) }
-    Group(
-        "Subtitles",
-        footer = "Tap CC on a video to make subtitles on this phone. Works for English, German, " +
-            "French, Spanish, Italian, Dutch and Polish speech; music without speech gets none.",
-    ) {
-        Anchor("subtitle-quality", highlight) {
-            PickerRow(
-                title = "Subtitle Quality",
-                options = SpeechModel.tiers.map { "${it.label} · ${megabytes(SpeechModel.bytes)}" },
-                selected = 0,
-                onSelect = {},
-                icon = LumenIcons.Video,
-                iconColor = Purple,
-            )
-        }
-        Divider()
-        Anchor("subtitles-model", highlight) {
-            SettingsRow(
-                title = "Subtitles Model",
-                subtitle = if (speechReady) "Ready · ${megabytes(SpeechModel.bytes)} on this phone" else "Downloads with the Search Model",
-                value = null,
-                onClick = null,
-                icon = LumenIcons.Import,
-                iconColor = Indigo,
-            )
-        }
+/** A pack's status line and its action, from the download state and the files on the phone. */
+private fun packStatus(context: Context, pack: ModelPack, state: DownloadState, wifiOnly: Boolean): Pair<String, String> {
+    val size = ModelDownloads.bytes(context, pack)
+    val queued = pack in ModelDownloads.queue(context)
+    if (state is DownloadState.Running && state.pack == pack) {
+        return "Downloading · ${megabytes(state.done)} of ${megabytes(state.total)}" to "Cancel"
     }
-
+    if (queued && state is DownloadState.Running) return "Queued, after ${state.pack.label}" to "Cancel"
+    if (queued && state == DownloadState.Waiting) {
+        return (if (wifiOnly) "Waiting for Wi-Fi…" else "Waiting for a connection…") to "Cancel"
+    }
+    if (state is DownloadState.Failed && state.pack == pack) return "Couldn't download: ${state.message}" to "Retry"
+    val remaining = ModelDownloads.remainingBytes(context, pack)
+    val installed = ModelDownloads.installed(context)
+    return when {
+        ModelDownloads.complete(context, pack) -> "Ready · ${megabytes(size)} on this phone" to "Remove"
+        // Switching tiers: the current one keeps working until the new one is in.
+        pack == ModelPack.Search && installed != null ->
+            "Using ${installed.label} · ${ModelDownloads.model(context).label} is ${megabytes(size)}" to "Download"
+        // A newer version changed some files, or a download stopped part way: fetch the rest.
+        remaining < size -> "Update available · ${megabytes(remaining)}" to "Update"
+        else -> "Not downloaded · ${megabytes(size)}" to "Download"
+    }
 }
