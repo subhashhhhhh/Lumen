@@ -21,13 +21,13 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
 import coil3.compose.AsyncImage
 import com.subhashh.lumen.data.MediaItem
-import com.subhashh.lumen.data.MediaThumbnail
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -50,6 +50,7 @@ class OnboardingExit(val tiles: List<ExitTile>, val tap: Offset, val background:
 @Composable
 fun Entrance(exit: OnboardingExit, cellOf: (MediaItem) -> Rect?, onDone: () -> Unit) {
     val density = LocalDensity.current
+    val context = LocalContext.current
     val progress = remember(exit) { exit.tiles.map { Animatable(0f) } }
     val backdrop = remember(exit) { Animatable(1f) }
     val targets = remember(exit) { arrayOfNulls<Rect>(exit.tiles.size) }
@@ -94,7 +95,7 @@ fun Entrance(exit: OnboardingExit, cellOf: (MediaItem) -> Rect?, onDone: () -> U
             )
             val corner = with(density) { lerp(10.dp.toPx(), 0f, p).coerceAtLeast(0f).toDp() }
             AsyncImage(
-                model = MediaThumbnail(t.item.uri),
+                model = remember(t.item.id) { mosaicRequest(context, t.item) },
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier

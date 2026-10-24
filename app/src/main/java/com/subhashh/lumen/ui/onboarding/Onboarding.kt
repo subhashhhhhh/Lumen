@@ -431,6 +431,21 @@ private fun ColumnScope.Schedule(backdrop: Backdrop, onNext: () -> Unit) {
     }
 }
 
+/**
+ * A last-screen photo's image: a fixed size and its own cache key, so the flight into the
+ * Library ([Entrance]) shows the very same bitmap from its first frame, no blink.
+ */
+internal fun mosaicRequest(context: Context, item: MediaItem) =
+    coil3.request.ImageRequest.Builder(context)
+        .data(MediaThumbnail(item.uri))
+        .size(MosaicPx)
+        .memoryCacheKey("onboarding:${item.id}")
+        .placeholderMemoryCacheKey("onboarding:${item.id}")
+        .build()
+
+/** Last-screen photos are decoded this big: sharp at their size, and in the grid cell they land in. */
+private const val MosaicPx = 384
+
 /** A photo on the last screen: where it's laid out, and its tilt and drift right now. */
 private class MosaicTile(val item: MediaItem) {
     var coordinates: LayoutCoordinates? = null
@@ -466,7 +481,7 @@ private fun Mosaic(tiles: List<MosaicTile>, modifier: Modifier = Modifier) {
         for ((i, tile) in shown.withIndex()) {
             val (jx, jy, jr) = jitter[i]
             coil3.compose.AsyncImage(
-                model = MediaThumbnail(tile.item.uri),
+                model = mosaicRequest(LocalContext.current, tile.item),
                 contentDescription = null,
                 contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                 modifier = Modifier
