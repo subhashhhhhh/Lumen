@@ -14,3 +14,7 @@ DESIGN.md
 PRODUCT.md
 ROADMAP.md
 FEATURES.md
+
+# Native build intermediates (CMake) and Python caches
+app/.cxx/
+__pycache__/
