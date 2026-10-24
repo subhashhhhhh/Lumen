@@ -3,8 +3,7 @@ package com.subhashh.lumen.data.ai
 import android.content.Context
 import java.io.File
 
-/** [url]: where it comes from, when that isn't its model's own repo. */
-data class ModelFile(val name: String, val bytes: Long, val sha256: String, val url: String? = null)
+data class ModelFile(val name: String, val bytes: Long, val sha256: String)
 
 /**
  * A downloadable model, pinned to one commit of its Hugging Face repo so the files can't change
@@ -22,7 +21,7 @@ data class AiModel(
 ) {
     val bytes: Long get() = files.sumOf { it.bytes }
 
-    fun url(file: ModelFile) = file.url ?: "https://huggingface.co/$repo/resolve/$commit/${file.name}"
+    fun url(file: ModelFile) = "https://huggingface.co/$repo/resolve/$commit/${file.name}"
 
     /** App-private, never backed up: the files are large and re-downloadable. */
     fun dir(context: Context) = File(context.noBackupFilesDir, "models/$id")
@@ -73,36 +72,26 @@ object ModelCatalog {
 
 /**
  * Reading text in photos: Baidu's PP-OCRv6 small (Apache 2.0), text detection and recognition,
- * 50 languages (Chinese, English, Japanese, Latin scripts). Downloaded with either Smart Search
- * tier, straight from PaddlePaddle's own repos at pinned commits, plus our GPU conversion of
- * the detector (huggingface.co/subhashhhhhh/lumen-ppocrv6-small). `rec.yml` carries the
+ * 50 languages (Chinese, English, Japanese, Latin scripts), plus our GPU conversion of the
+ * detector (tools/ocr/). Downloaded with either Smart Search tier. `rec.yml` carries the
  * recognizer's character list.
  */
 object OcrModel {
-    private const val Hf = "https://huggingface.co/PaddlePaddle"
+    const val Repo = "subhashhhhhh/lumen-ppocrv6-small"
+    const val Commit = "317d22b05de952034b115d4905e9955193179a01"
+
+    /** Detection for LiteRT's GPU, 960×960; used where [GpuCheck] passes. */
+    const val DetGpu = "det_gpu.tflite"
+
     val files = listOf(
-        ModelFile(
-            "det.onnx", 9_880_512, "d73e0058b7a8086bbd57f3d10b8bcd4ff95363f67e06e2762b5e814fe9c9410e",
-            "$Hf/PP-OCRv6_small_det_onnx/resolve/28fe5895c24fd108c19eb3e8479f4ab385fbfc62/inference.onnx",
-        ),
-        ModelFile(
-            "rec.onnx", 21_159_378, "5435fd747c9e0efe15a96d0b378d5bd157e9492ed8fd80edf08f30d02fa24634",
-            "$Hf/PP-OCRv6_small_rec_onnx/resolve/b8f84f0b80c529de40b4fbb3544b84fa7233a513/inference.onnx",
-        ),
-        ModelFile(
-            "rec.yml", 150_579, "ab078671bb49f06228eadccd34f1bb501e157f7a047095ffb943ba81512c77d1",
-            "$Hf/PP-OCRv6_small_rec_onnx/resolve/b8f84f0b80c529de40b4fbb3544b84fa7233a513/inference.yml",
-        ),
-        // Our LiteRT conversion of the detector, for the GPU (tools/ocr/).
-        ModelFile(
-            DetGpu, 9_869_976, "8a7676cbc5a01ca47544bf95af2196c8b1b6c7b75beec9ad9b17857dffb71d1e",
-            "https://huggingface.co/subhashhhhhh/lumen-ppocrv6-small/resolve/f5a6e3fc293abbf453f9c28ec785fe43d967d3e2/det_gpu.tflite",
-        ),
+        ModelFile("det.onnx", 9_880_512, "d73e0058b7a8086bbd57f3d10b8bcd4ff95363f67e06e2762b5e814fe9c9410e"),
+        ModelFile("rec.onnx", 21_159_378, "5435fd747c9e0efe15a96d0b378d5bd157e9492ed8fd80edf08f30d02fa24634"),
+        ModelFile("rec.yml", 150_579, "ab078671bb49f06228eadccd34f1bb501e157f7a047095ffb943ba81512c77d1"),
+        ModelFile(DetGpu, 9_869_976, "8a7676cbc5a01ca47544bf95af2196c8b1b6c7b75beec9ad9b17857dffb71d1e"),
     )
     val bytes: Long get() = files.sumOf { it.bytes }
 
-    /** Detection for LiteRT's GPU, 960×960 (tools/ocr/README.md); used where [GpuCheck] passes. */
-    const val DetGpu = "det_gpu.tflite"
+    fun url(file: ModelFile) = "https://huggingface.co/$Repo/resolve/$Commit/${file.name}"
 
     fun dir(context: Context) = File(context.noBackupFilesDir, "models/ppocrv6-small")
 

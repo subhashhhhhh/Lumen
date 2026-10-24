@@ -128,7 +128,7 @@ object ModelDownloads {
         }
         return try {
             ModelDownloader(model.files, model::url, model.dir(context), token).run(0, total, report)
-            ModelDownloader(OcrModel.files, { it.url!! }, OcrModel.dir(context), token).run(model.bytes, total, report)
+            ModelDownloader(OcrModel.files, OcrModel::url, OcrModel.dir(context), token).run(model.bytes, total, report)
             // Files a newer version no longer uses (Accurate's ONNX image model, before LiteRT).
             val wanted = model.files.mapTo(HashSet()) { it.name }
             model.dir(context).listFiles()?.filter { it.name !in wanted }?.forEach { it.deleteRecursively() }
