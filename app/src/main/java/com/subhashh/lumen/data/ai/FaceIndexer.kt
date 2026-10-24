@@ -98,7 +98,8 @@ object FaceGrouping {
                     val s = dot(v, faces[j].vector)
                     if (s < SamePerson) continue
                     close += j
-                    if (person[j] != null && s >= bestSim) {
+                    // Never back to a person the user took this face from.
+                    if (person[j] != null && person[j] != faces[i].notPerson && s >= bestSim) {
                         bestSim = s
                         best = j
                     }

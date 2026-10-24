@@ -18,6 +18,8 @@ class Face(
     val bottom: Float,
     val vector: FloatArray,
     val person: Long?,
+    /** The person the user said this isn't (Not This Person): grouping never puts it back there. */
+    val notPerson: Long?,
 )
 
 /**
@@ -41,7 +43,7 @@ data class Person(
  * app-private, not backed up. People carry what the user decides (names, merges, hidden), so
  * grouping only ever adds faces to people; it never moves a face that already has one.
  */
-class FaceStore private constructor(context: Context) : SQLiteOpenHelper(context, file(context).path, null, 1) {
+class FaceStore private constructor(context: Context) : SQLiteOpenHelper(context, file(context).path, null, 2) {
 
     init {
         setWriteAheadLoggingEnabled(true)
@@ -59,14 +61,18 @@ class FaceStore private constructor(context: Context) : SQLiteOpenHelper(context
         db.execSQL("CREATE TABLE items (media_id INTEGER PRIMARY KEY, modified INTEGER NOT NULL)")
         db.execSQL(
             "CREATE TABLE faces (id INTEGER PRIMARY KEY, media_id INTEGER NOT NULL, " +
-                "l REAL NOT NULL, t REAL NOT NULL, r REAL NOT NULL, b REAL NOT NULL, vec BLOB NOT NULL, person INTEGER)",
+                "l REAL NOT NULL, t REAL NOT NULL, r REAL NOT NULL, b REAL NOT NULL, vec BLOB NOT NULL, person INTEGER, " +
+                "not_person INTEGER)",
         )
         db.execSQL("CREATE INDEX faces_media ON faces (media_id)")
         db.execSQL("CREATE INDEX faces_person ON faces (person)")
         db.execSQL("CREATE TABLE people (id INTEGER PRIMARY KEY, name TEXT, hidden INTEGER NOT NULL DEFAULT 0)")
     }
 
-    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) = Unit
+    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+        // 2: Not This Person.
+        if (oldVersion < 2) db.execSQL("ALTER TABLE faces ADD COLUMN not_person INTEGER")
+    }
 
     /** Item id → the `modified` it was looked at. */
     fun indexed(): Map<Long, Long> = HashMap<Long, Long>().apply {
@@ -127,7 +133,7 @@ class FaceStore private constructor(context: Context) : SQLiteOpenHelper(context
 
     /** Every face, newest row last. */
     fun faces(): List<Face> = ArrayList<Face>().apply {
-        readableDatabase.rawQuery("SELECT id, media_id, l, t, r, b, vec, person FROM faces ORDER BY id", null).use { c ->
+        readableDatabase.rawQuery("SELECT id, media_id, l, t, r, b, vec, person, not_person FROM faces ORDER BY id", null).use { c ->
             while (c.moveToNext()) {
                 val blob = c.getBlob(6)
                 val vector = FloatArray(blob.size / 4).also {
@@ -136,7 +142,7 @@ class FaceStore private constructor(context: Context) : SQLiteOpenHelper(context
                 add(
                     Face(
                         c.getLong(0), c.getLong(1), c.getFloat(2), c.getFloat(3), c.getFloat(4), c.getFloat(5),
-                        vector, if (c.isNull(7)) null else c.getLong(7),
+                        vector, if (c.isNull(7)) null else c.getLong(7), if (c.isNull(8)) null else c.getLong(8),
                     ),
                 )
             }
@@ -174,6 +180,52 @@ class FaceStore private constructor(context: Context) : SQLiteOpenHelper(context
     /** Names a person; blank clears the name. */
     fun rename(person: Long, name: String) {
         writableDatabase.execSQL("UPDATE people SET name = ? WHERE id = ?", arrayOf<Any?>(name.trim().ifEmpty { null }, person))
+        version++
+    }
+
+    /**
+     * Makes [gone] part of [keep]: its faces, and its name if [keep] has none. Faces told they
+     * aren't [gone] aren't [keep] either.
+     */
+    fun merge(keep: Long, gone: Long) {
+        val db = writableDatabase
+        db.beginTransaction()
+        try {
+            db.execSQL("UPDATE faces SET person = ? WHERE person = ?", arrayOf(keep, gone))
+            db.execSQL("UPDATE faces SET not_person = ? WHERE not_person = ?", arrayOf(keep, gone))
+            db.execSQL(
+                "UPDATE people SET name = (SELECT name FROM people WHERE id = ?) WHERE id = ? AND name IS NULL",
+                arrayOf(gone, keep),
+            )
+            db.delete("people", "id = ?", arrayOf(gone.toString()))
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+        version++
+    }
+
+    /** Not This Person: [person]'s faces in these photos leave them for good; an emptied person goes. */
+    fun notThisPerson(person: Long, mediaIds: Collection<Long>) {
+        val db = writableDatabase
+        db.beginTransaction()
+        try {
+            for (id in mediaIds) {
+                db.execSQL(
+                    "UPDATE faces SET person = NULL, not_person = ? WHERE person = ? AND media_id = ?",
+                    arrayOf(person, person, id),
+                )
+            }
+            db.execSQL("DELETE FROM people WHERE id = ? AND NOT EXISTS (SELECT 1 FROM faces WHERE person = ?)", arrayOf(person, person))
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+        version++
+    }
+
+    fun setHidden(person: Long, hidden: Boolean) {
+        writableDatabase.execSQL("UPDATE people SET hidden = ? WHERE id = ?", arrayOf(if (hidden) 1 else 0, person))
         version++
     }
 

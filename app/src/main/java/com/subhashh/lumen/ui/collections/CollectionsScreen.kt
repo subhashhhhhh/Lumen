@@ -317,7 +317,7 @@ private const val CoverPx = 512
 @Composable
 private fun PeopleRow(people: List<Pair<Person, MediaItem>>, onOpen: (key: String) -> Unit, modifier: Modifier = Modifier) {
     val onBackground = MaterialTheme.colorScheme.onBackground
-    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = modifier.fillMaxWidth()) {
+    Row(horizontalArrangement = Arrangement.spacedBy(14.dp), modifier = modifier.fillMaxWidth()) {
         for ((person, cover) in people) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -329,7 +329,7 @@ private fun PeopleRow(people: List<Pair<Person, MediaItem>>, onOpen: (key: Strin
                 Spacer(Modifier.height(6.dp))
                 Text(
                     person.name ?: "",
-                    fontSize = 12.sp,
+                    fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
                     color = onBackground,
                     maxLines = 1,
@@ -342,7 +342,7 @@ private fun PeopleRow(people: List<Pair<Person, MediaItem>>, onOpen: (key: Strin
     }
 }
 
-private const val PeopleShown = 6
+private const val PeopleShown = 4
 
 /** iOS system colors, one per utility, so each row is recognisable at a glance. */
 private fun utilityColor(key: String): Color = when (key) {

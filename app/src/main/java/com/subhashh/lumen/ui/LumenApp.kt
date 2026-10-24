@@ -369,16 +369,19 @@ private fun MainScaffold(
         }
     }
     // Only photos the library shows (no excluded folders, Hidden or trash); named people first.
-    val people = remember(peopleRows, library) {
+    val allPeople = remember(peopleRows, library) {
         val byId = library.orEmpty().associateBy { it.id }
         peopleRows.asSequence()
-            .filterNot { it.hidden }
             .mapNotNull { p -> byId[p.coverMediaId]?.let { p.copy(mediaIds = p.mediaIds.filterTo(HashSet()) { it in byId }) to it } }
             .filter { it.first.mediaIds.isNotEmpty() }
             .sortedWith(compareBy<Pair<com.subhashh.lumen.data.ai.Person, MediaItem>> { it.first.name == null }.thenByDescending { it.first.mediaIds.size })
             .toList()
     }
-    val personOf = { key: String? -> CollectionKeys.personId(key)?.let { id -> people.firstOrNull { it.first.id == id }?.first } }
+    val people = remember(allPeople) { allPeople.filterNot { it.first.hidden } }
+    val personOf = { key: String? -> CollectionKeys.personId(key)?.let { id -> allPeople.firstOrNull { it.first.id == id }?.first } }
+    /** Merge with…: the People page picks who [mergeFrom] joins. */
+    var mergeFrom by rememberSaveable { mutableStateOf<Long?>(null) }
+    var showHiddenPeople by rememberSaveable { mutableStateOf(false) }
     var personNameRequest by remember { mutableStateOf<com.subhashh.lumen.data.ai.Person?>(null) }
     var personMenuOpen by remember { mutableStateOf(false) }
     var peopleMenuOpen by remember { mutableStateOf(false) }
@@ -386,6 +389,13 @@ private fun MainScaffold(
     /** The open person came from the People page, so Back returns there. */
     var personFromPeople by rememberSaveable { mutableStateOf(false) }
     val peopleGrid = rememberLazyGridState()
+    // A person who's gone (merged away, last photo taken out) can't stay open.
+    LaunchedEffect(openCollection, peopleRows) {
+        val id = CollectionKeys.personId(openCollection) ?: return@LaunchedEffect
+        if (peopleRows.isNotEmpty() && peopleRows.none { it.id == id }) {
+            openCollection = if (personFromPeople) CollectionKeys.People else null
+        }
+    }
     // A new album stops being "created" once something is in it: it's a real folder then.
     LaunchedEffect(folders) {
         val real = folders.filter { it.count > 0 }.mapTo(HashSet()) { it.relativePath }
@@ -523,7 +533,7 @@ private fun MainScaffold(
     val gridSectionMode = if (sort == LibrarySort.Date) sectionMode else SectionMode.None
     val librarySections = remember(libraryItems, gridSectionMode) { GridSections.of(libraryItems, gridSectionMode) }
     /** The open album's photos and their headers, shared by its grid and the viewer's close flight. */
-    val openItems = remember(openCollection, library, trash, hidden, hiddenUnlocked, sort, sortDescending, people) {
+    val openItems = remember(openCollection, library, trash, hidden, hiddenUnlocked, sort, sortDescending, allPeople) {
         openCollection?.takeIf { it != CollectionKeys.Hidden }?.let(itemsOf)
     }
     val collectionSections = remember(openItems, gridSectionMode, openCollection) {
@@ -568,6 +578,7 @@ private fun MainScaffold(
     BackHandler(enabled = inCollection && !viewerOpen) {
         // A folder inside Hidden steps back to Hidden's list, not out of Hidden.
         openCollection = when {
+            openCollection == CollectionKeys.People && mergeFrom != null -> CollectionKeys.person(mergeFrom!!).also { mergeFrom = null }
             CollectionKeys.hiddenFolderId(openCollection.orEmpty()) != null -> CollectionKeys.Hidden
             CollectionKeys.personId(openCollection) != null && personFromPeople -> CollectionKeys.People
             else -> null
@@ -1297,16 +1308,43 @@ private fun MainScaffold(
                     contentPadding = PaddingValues(top = statusTop + 72.dp, bottom = navBottom + 96.dp),
                     onOpen = { openCollection = it },
                 )
-                openCollection == CollectionKeys.People -> PeopleScreen(
-                    people = people,
-                    square = peopleSquare,
-                    gridState = peopleGrid,
-                    contentPadding = PaddingValues(top = statusTop + 64.dp, bottom = navBottom + 96.dp),
-                    onOpen = { key ->
-                        personFromPeople = true
-                        openCollection = key
-                    },
-                )
+                openCollection == CollectionKeys.People -> {
+                    val from = mergeFrom?.let { id -> allPeople.firstOrNull { it.first.id == id }?.first }
+                    PeopleScreen(
+                        people = when {
+                            from != null -> allPeople.filter { it.first.id != from.id && (!it.first.hidden || showHiddenPeople) }
+                            showHiddenPeople -> allPeople
+                            else -> people
+                        },
+                        title = if (from != null) "Merge with…" else "People",
+                        square = peopleSquare,
+                        gridState = peopleGrid,
+                        contentPadding = PaddingValues(top = statusTop + 64.dp, bottom = navBottom + 96.dp),
+                        onOpen = { key ->
+                            val target = personOf(key)
+                            if (from != null && target != null) {
+                                val fromName = from.name ?: "this person"
+                                confirmation = Confirmation(
+                                    title = "Merge People?",
+                                    message = "Photos of $fromName and ${target.name ?: "the person you chose"} will show as one person" +
+                                        ((target.name ?: from.name)?.let { ", named $it." } ?: "."),
+                                    confirm = "Merge",
+                                    onConfirm = {
+                                        mergeFrom = null
+                                        personFromPeople = false
+                                        openCollection = key
+                                        scope.launch(Dispatchers.IO) {
+                                            com.subhashh.lumen.data.ai.FaceStore.of(context).merge(keep = target.id, gone = from.id)
+                                        }
+                                    },
+                                )
+                            } else {
+                                personFromPeople = true
+                                openCollection = key
+                            }
+                        },
+                    )
+                }
                 openCollection != null -> {
                     val key = openCollection!!
                     LibraryScreen(
@@ -1538,6 +1576,7 @@ private fun MainScaffold(
                         prefs.peopleSquare = square
                     }
                 },
+                listOf(MenuItem("Show Hidden People", checked = showHiddenPeople) { showHiddenPeople = !showHiddenPeople }),
             ),
             origin = TransformOrigin(1f, 0f),
             modifier = Modifier
@@ -1546,7 +1585,7 @@ private fun MainScaffold(
                 .padding(top = 64.dp, end = 16.dp),
         )
 
-        // A person's album: ⋯ for naming them (merge and hide come next).
+        // A person's album: ⋯ for naming, merging and hiding them.
         val openPerson = if (inCollection && !viewerOpen && !selecting && pick == null) personOf(openCollection) else null
         if (openPerson != null) {
             GlassIconButton(
@@ -1566,7 +1605,23 @@ private fun MainScaffold(
             open = personMenuOpen && openPerson != null,
             onDismiss = { personMenuOpen = false },
             sections = listOf(
-                listOf(MenuItem(if (openPerson?.name == null) "Add Name…" else "Rename…") { personNameRequest = openPerson }),
+                listOf(
+                    MenuItem(if (openPerson?.name == null) "Add Name…" else "Rename…") { personNameRequest = openPerson },
+                    MenuItem("Merge with…") {
+                        mergeFrom = openPerson?.id
+                        openCollection = CollectionKeys.People
+                    },
+                ),
+                listOf(
+                    if (openPerson?.hidden == true) MenuItem("Unhide Person") {
+                        val id = openPerson.id
+                        scope.launch(Dispatchers.IO) { com.subhashh.lumen.data.ai.FaceStore.of(context).setHidden(id, false) }
+                    } else MenuItem("Hide Person") {
+                        val id = openPerson?.id ?: return@MenuItem
+                        openCollection = if (personFromPeople) CollectionKeys.People else null
+                        scope.launch(Dispatchers.IO) { com.subhashh.lumen.data.ai.FaceStore.of(context).setHidden(id, true) }
+                    },
+                ),
             ),
             origin = TransformOrigin(1f, 0f),
             modifier = Modifier
@@ -1583,6 +1638,10 @@ private fun MainScaffold(
                 onClick = {
                     when {
                         inSettings -> popSettings()
+                        openCollection == CollectionKeys.People && mergeFrom != null -> {
+                            openCollection = CollectionKeys.person(mergeFrom!!)
+                            mergeFrom = null
+                        }
                         CollectionKeys.hiddenFolderId(openCollection.orEmpty()) != null -> openCollection = CollectionKeys.Hidden
                         CollectionKeys.personId(openCollection) != null && personFromPeople -> openCollection = CollectionKeys.People
                         else -> openCollection = null
@@ -1756,7 +1815,17 @@ private fun MainScaffold(
                         },
                     ),
                 )
-            } else listOf(
+            } else listOfNotNull(
+                // In a person's album: these photos aren't them.
+                personOf(selectableKey)?.let { person ->
+                    listOf(
+                        MenuItem("Not This Person") {
+                            val ids = selectedItems.map { it.id }
+                            endSelection()
+                            scope.launch(Dispatchers.IO) { com.subhashh.lumen.data.ai.FaceStore.of(context).notThisPerson(person.id, ids) }
+                        },
+                    )
+                },
                 listOf(
                     MenuItem("Move to Album…") { albumRequest = AlbumRequest(move = true, items = selectedItems) },
                     MenuItem("Copy to Album…") { albumRequest = AlbumRequest(move = false, items = selectedItems) },

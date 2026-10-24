@@ -18,6 +18,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -28,10 +29,14 @@ import com.subhashh.lumen.data.ai.Person
 import com.subhashh.lumen.ui.collections.ScreenTitle
 import com.subhashh.lumen.ui.components.pressable
 
-/** Collections → People → Open: everyone found in photos, three across, named people first. */
+/**
+ * Collections → People → Open: everyone found in photos, three across, named people first. Also
+ * the picker for a person's Merge with… ([title]). Hidden people, when shown, are dimmed.
+ */
 @Composable
 fun PeopleScreen(
     people: List<Pair<Person, MediaItem>>,
+    title: String,
     square: Boolean,
     gridState: LazyGridState,
     contentPadding: PaddingValues,
@@ -47,11 +52,13 @@ fun PeopleScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp),
         modifier = modifier.fillMaxSize().padding(horizontal = 16.dp),
     ) {
-        item(span = { GridItemSpan(maxLineSpan) }) { ScreenTitle("People") }
+        item(span = { GridItemSpan(maxLineSpan) }) { ScreenTitle(title) }
         items(people, key = { it.first.id }) { (person, cover) ->
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.pressable({ onOpen(CollectionKeys.person(person.id)) }, pressedScale = 0.95f),
+                modifier = Modifier
+                    .pressable({ onOpen(CollectionKeys.person(person.id)) }, pressedScale = 0.95f)
+                    .graphicsLayer { alpha = if (person.hidden) 0.45f else 1f },
             ) {
                 FaceAvatar(cover, person.coverBox, Modifier.fillMaxWidth(), square = square)
                 Spacer(Modifier.height(6.dp))
