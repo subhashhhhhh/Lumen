@@ -478,7 +478,10 @@ private fun MainScaffold(
                 SearchSection.Text, "Text in Photos",
                 textMatches.orEmpty().mapNotNull { byId[it] }.sortedByDescending { it.takenAt },
             ),
-            SearchSection(SearchSection.Smart, "Smart Search", smartHits.orEmpty().mapNotNull { byId[it.mediaId] }),
+            SearchSection(
+                SearchSection.Smart, "Smart Search", smartHits.orEmpty().mapNotNull { byId[it.mediaId] },
+                scores = smartHits.orEmpty().associate { it.mediaId to it.score },
+            ),
         )
     }
     /** Sections opened with See All; closed again for each new search. */

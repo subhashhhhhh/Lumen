@@ -37,6 +37,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.geometry.Offset
@@ -63,7 +65,13 @@ import com.subhashh.lumen.ui.transition.PhotoTransition
 import com.subhashh.lumen.ui.transition.transitionCell
 
 /** One way of matching a search, shown as its own section: one row until See All. */
-data class SearchSection(val id: String, val title: String, val items: List<MediaItem>) {
+data class SearchSection(
+    val id: String,
+    val title: String,
+    val items: List<MediaItem>,
+    /** Smart Search's score per item, shown on the cells in development builds only. */
+    val scores: Map<Long, Float> = emptyMap(),
+) {
     companion object {
         const val Names = "names"
         const val People = "people"
@@ -158,6 +166,8 @@ fun SearchScreen(
     }
     // Where each cell was last placed, so a tap outside the active section can still fly from it.
     val placed = remember { HashMap<String, LayoutCoordinates>() }
+    // Debug and profile builds (".debug"): Smart Search's scores on its cells, to tune its cutoff.
+    val showScores = LocalContext.current.packageName.endsWith(".debug")
     val shown = sections?.let { visibleSections(it, lookingInside) }.orEmpty()
     LazyVerticalGrid(
         columns = GridCells.Fixed(columns),
@@ -204,6 +214,7 @@ fun SearchScreen(
             items(count, key = { "${section.id}:${section.items[it].id}" }) { index ->
                 val item = section.items[index]
                 val cellKey = "${section.id}:${item.id}"
+                Box {
                 Thumbnail(
                     item = item,
                     bucket = bucket,
@@ -219,6 +230,19 @@ fun SearchScreen(
                         .onPlaced { placed[cellKey] = it }
                         .then(if (section.id == activeSection) Modifier.transitionCell(transition, item.id) else Modifier),
                 )
+                val score = section.scores[item.id]
+                if (showScores && score != null) {
+                    Text(
+                        "#${index + 1} %.3f".format(score),
+                        fontSize = 10.sp,
+                        color = Color.White,
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .background(Color.Black.copy(alpha = 0.6f))
+                            .padding(horizontal = 3.dp, vertical = 1.dp),
+                    )
+                }
+                }
             }
         }
         if (sections != null && shown.isEmpty() && albums.isEmpty()) {
