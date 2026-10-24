@@ -46,8 +46,11 @@ object MediaFrames {
     fun thumbnail(context: Context, item: MediaItem): Bitmap =
         context.contentResolver.loadThumbnail(item.uri, Size(Px, Px), null)
 
-    /** Calls [onFrame] with each frame's time (0 for a photo) and pixels; stops if it returns false. */
-    suspend fun forEach(context: Context, item: MediaItem, onFrame: suspend (atMs: Long, frame: Bitmap) -> Boolean) {
+    /**
+     * Calls [onFrame] with each frame's time (0 for a photo) and pixels, at most [px] on their
+     * long side; stops if it returns false.
+     */
+    suspend fun forEach(context: Context, item: MediaItem, px: Int = Px, onFrame: suspend (atMs: Long, frame: Bitmap) -> Boolean) {
         if (!item.isVideo) {
             onFrame(0, thumbnail(context, item))
             return
@@ -60,7 +63,7 @@ object MediaFrames {
             val params = MediaMetadataRetriever.BitmapParams().apply { preferredConfig = Bitmap.Config.ARGB_8888 }
             var last: IntArray? = null
             for (at in keyframes(context, item, times(duration))) {
-                val frame = retriever.getScaledFrameAtTime(at * 1000, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, Px, Px, params)
+                val frame = retriever.getScaledFrameAtTime(at * 1000, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, px, px, params)
                     ?: continue
                 val signature = signature(frame)
                 if (last != null && difference(last, signature) < SameFrame) {

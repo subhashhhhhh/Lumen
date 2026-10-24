@@ -75,7 +75,7 @@ internal fun SmartSearchGroup(
     val countedFaces by produceState<Pair<IndexProgress, Int>?>(null, refresh, installed, facesMissing, liveFaces) {
         value = if (installed == null || facesMissing) null else withContext(Dispatchers.IO) {
             val store = FaceStore.of(context)
-            IndexProgress(store.count(), Indexer.eligible(context).count { !it.isVideo }) to store.peopleCount()
+            IndexProgress(store.count(), Indexer.eligible(context).size) to store.peopleCount()
         }
     }
     val faceProgress = countedFaces?.let { (counted, people) -> (liveFaces ?: counted) to people }
@@ -203,7 +203,7 @@ internal fun SmartSearchGroup(
             Anchor("faces", highlight) {
                 SettingsRow(
                     title = "Faces",
-                    subtitle = if (complete) "%,d people found".format(people) else "Photos, after Text Read · %,d people so far".format(people),
+                    subtitle = if (complete) "%,d people found".format(people) else "Photos and videos, after Text Read · %,d people so far".format(people),
                     value = if (complete) "All ${"%,d".format(progress.total)}" else "%,d of %,d".format(progress.indexed, progress.total),
                     onClick = null,
                     icon = LumenIcons.Image,

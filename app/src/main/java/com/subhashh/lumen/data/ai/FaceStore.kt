@@ -36,14 +36,21 @@ data class Person(
     val coverMediaId: Long,
     /** The cover face's box, fractions of its photo: left, top, right, bottom. */
     val coverBox: List<Float>,
+    val coverFaceId: Long,
+    /** The cover is a video's face: shown from its saved crop ([FaceStore.crop]), not the video's thumbnail. */
+    val coverInVideo: Boolean,
 )
+
+/** A face to save: box as fractions, fingerprint, and for a video the moment it's from. */
+class NewFace(val box: FloatArray, val vector: FloatArray, val atMs: Long? = null)
 
 /**
  * Faces found in photos and the people they're grouped into. Same lifecycle as [EmbeddingStore]:
  * app-private, not backed up. People carry what the user decides (names, merges, hidden), so
  * grouping only ever adds faces to people; it never moves a face that already has one.
  */
-class FaceStore private constructor(context: Context) : SQLiteOpenHelper(context, file(context).path, null, 2) {
+class FaceStore private constructor(context: Context) : SQLiteOpenHelper(context, file(context).path, null, 3) {
+    private val crops = cropDir(context)
 
     init {
         setWriteAheadLoggingEnabled(true)
@@ -62,7 +69,7 @@ class FaceStore private constructor(context: Context) : SQLiteOpenHelper(context
         db.execSQL(
             "CREATE TABLE faces (id INTEGER PRIMARY KEY, media_id INTEGER NOT NULL, " +
                 "l REAL NOT NULL, t REAL NOT NULL, r REAL NOT NULL, b REAL NOT NULL, vec BLOB NOT NULL, person INTEGER, " +
-                "not_person INTEGER)",
+                "not_person INTEGER, at_ms INTEGER)",
         )
         db.execSQL("CREATE INDEX faces_media ON faces (media_id)")
         db.execSQL("CREATE INDEX faces_person ON faces (person)")
@@ -72,6 +79,8 @@ class FaceStore private constructor(context: Context) : SQLiteOpenHelper(context
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
         // 2: Not This Person.
         if (oldVersion < 2) db.execSQL("ALTER TABLE faces ADD COLUMN not_person INTEGER")
+        // 3: faces in videos, with the moment (null for photos).
+        if (oldVersion < 3) db.execSQL("ALTER TABLE faces ADD COLUMN at_ms INTEGER")
     }
 
     /** Item id → the `modified` it was looked at. */
@@ -89,17 +98,21 @@ class FaceStore private constructor(context: Context) : SQLiteOpenHelper(context
         if (c.moveToFirst()) c.getInt(0) else 0
     }
 
-    /** Replaces [mediaId]'s faces (an edited photo is looked at again). Boxes are fractions. */
-    fun put(mediaId: Long, modified: Long, faces: List<Pair<FloatArray, FloatArray>>) {
+    /** Replaces [mediaId]'s faces (an edited photo is looked at again); returns the new faces' ids. */
+    fun put(mediaId: Long, modified: Long, faces: List<NewFace>): List<Long> {
         val db = writableDatabase
+        val ids = ArrayList<Long>()
         db.beginTransaction()
         try {
+            dropCrops(db, "media_id = ?", arrayOf(mediaId.toString()))
             db.delete("faces", "media_id = ?", arrayOf(mediaId.toString()))
-            for ((box, vector) in faces) {
-                db.insert("faces", null, ContentValues().apply {
+            for (face in faces) {
+                val box = face.box
+                ids += db.insert("faces", null, ContentValues().apply {
                     put("media_id", mediaId)
                     put("l", box[0]); put("t", box[1]); put("r", box[2]); put("b", box[3])
-                    put("vec", toBytes(vector))
+                    put("vec", toBytes(face.vector))
+                    face.atMs?.let { put("at_ms", it) }
                 })
             }
             db.insertWithOnConflict("items", null, ContentValues().apply {
@@ -111,6 +124,16 @@ class FaceStore private constructor(context: Context) : SQLiteOpenHelper(context
             db.endTransaction()
         }
         version++
+        return ids
+    }
+
+    /** Where a video face's crop is saved (photos' faces are cut from the photo when shown). */
+    fun crop(faceId: Long) = File(crops, "$faceId.jpg")
+
+    private fun dropCrops(db: SQLiteDatabase, where: String, args: Array<String>) {
+        db.rawQuery("SELECT id FROM faces WHERE at_ms IS NOT NULL AND $where", args).use { c ->
+            while (c.moveToNext()) crop(c.getLong(0)).delete()
+        }
     }
 
     fun remove(ids: Collection<Long>) {
@@ -119,6 +142,7 @@ class FaceStore private constructor(context: Context) : SQLiteOpenHelper(context
         db.beginTransaction()
         try {
             for (id in ids) {
+                dropCrops(db, "media_id = ?", arrayOf(id.toString()))
                 db.delete("faces", "media_id = ?", arrayOf(id.toString()))
                 db.delete("items", "media_id = ?", arrayOf(id.toString()))
             }
@@ -155,25 +179,35 @@ class FaceStore private constructor(context: Context) : SQLiteOpenHelper(context
         readableDatabase.rawQuery("SELECT id, name, hidden FROM people", null).use { c ->
             while (c.moveToNext()) names[c.getLong(0)] = (if (c.isNull(1)) null else c.getString(1)) to (c.getInt(2) != 0)
         }
-        class Acc(val media: HashSet<Long> = HashSet(), var faces: Int = 0, var cover: Long = 0, var box: List<Float> = emptyList(), var area: Float = -1f)
+        class Acc(val media: HashSet<Long> = HashSet(), var faces: Int = 0) {
+            var cover = 0L
+            var face = 0L
+            var video = false
+            var box: List<Float> = emptyList()
+            var score = -1f
+        }
         val acc = HashMap<Long, Acc>()
-        readableDatabase.rawQuery("SELECT person, media_id, l, t, r, b FROM faces WHERE person IS NOT NULL", null).use { c ->
+        readableDatabase.rawQuery("SELECT person, media_id, l, t, r, b, id, at_ms FROM faces WHERE person IS NOT NULL", null).use { c ->
             while (c.moveToNext()) {
                 val a = acc.getOrPut(c.getLong(0)) { Acc() }
                 a.media += c.getLong(1)
                 a.faces++
                 val box = listOf(c.getFloat(2), c.getFloat(3), c.getFloat(4), c.getFloat(5))
-                val area = (box[2] - box[0]) * (box[3] - box[1])
-                if (area > a.area) {
-                    a.area = area
+                val video = !c.isNull(7)
+                // The biggest face, from a photo when there is one (sharper than a video frame).
+                val score = (box[2] - box[0]) * (box[3] - box[1]) + if (video) 0f else 1f
+                if (score > a.score) {
+                    a.score = score
                     a.cover = c.getLong(1)
+                    a.face = c.getLong(6)
+                    a.video = video
                     a.box = box
                 }
             }
         }
         return acc.mapNotNull { (id, a) ->
             val (name, hidden) = names[id] ?: return@mapNotNull null
-            Person(id, name, hidden, a.media, a.faces, a.cover, a.box)
+            Person(id, name, hidden, a.media, a.faces, a.cover, a.box, a.face, a.video)
         }.sortedByDescending { it.mediaIds.size }
     }
 
@@ -263,7 +297,13 @@ class FaceStore private constructor(context: Context) : SQLiteOpenHelper(context
             open?.close()
             open = null
             SQLiteDatabase.deleteDatabase(file(context))
+            cropDir(context).deleteRecursively()
         }
+
+        private fun cropDir(context: Context) = File(context.noBackupFilesDir, "faces").apply { mkdirs() }
+
+        /** [crop] without opening the database, for showing a cover. */
+        fun cropFile(context: Context, faceId: Long) = File(cropDir(context), "$faceId.jpg")
 
         private fun file(context: Context) =
             File(context.noBackupFilesDir, "search/faces.db").apply { parentFile?.mkdirs() }

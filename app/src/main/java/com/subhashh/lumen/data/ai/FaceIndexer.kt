@@ -1,27 +1,34 @@
 package com.subhashh.lumen.data.ai
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.os.PowerManager
 import android.os.SystemClock
 import android.util.Log
+import com.subhashh.lumen.data.MediaItem
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ensureActive
 import kotlin.coroutines.coroutineContext
 
 /**
- * One faces pass: brings [FaceStore] in line with the library (photos only, newest first), then
- * groups new faces into people ([FaceGrouping]). Runs after [TextIndexer] in the same background
- * job, under the same rules.
+ * One faces pass: brings [FaceStore] in line with the library, then groups new faces into people
+ * ([FaceGrouping]). Photos first, newest first; then videos, read like Smart Search reads them
+ * (one frame a second up to two minutes, else 120 spread out, near-identical frames skipped) at
+ * photo size. A video keeps one face per person in it, the biggest, with its moment and a saved
+ * crop; otherwise one reel would outweigh a whole album. Runs after [TextIndexer] in the same
+ * background job, under the same rules.
  */
 class FaceIndexer(private val context: Context) {
 
-    /** Looks at most [limit] photos. */
+    /** Looks at most [limit] photos and videos. */
     suspend fun run(limit: Int = Int.MAX_VALUE): Indexer.Outcome {
         if (!FaceModel.installed(context)) return Indexer.Outcome.Done
         val store = FaceStore.of(context)
-        val library = Indexer.eligible(context).filterNot { it.isVideo }
+        val library = Indexer.eligible(context)
         val known = store.indexed()
         store.remove(known.keys - library.mapTo(HashSet()) { it.id })
-        val todo = library.filter { known[it.id] != it.modified }.sortedByDescending { it.takenAt }
+        val todo = library.filter { known[it.id] != it.modified }
+            .sortedWith(compareBy<MediaItem> { it.isVideo }.thenByDescending { it.takenAt })
         var finished = library.size - todo.size
         SmartIndex.reportFaces(context, finished, library.size)
         if (todo.isEmpty()) {
@@ -36,13 +43,33 @@ class FaceIndexer(private val context: Context) {
                 coroutineContext.ensureActive()
                 if (power.currentThermalStatus >= PowerManager.THERMAL_STATUS_MODERATE) { outcome = Indexer.Outcome.TooHot; break }
                 val started = SystemClock.elapsedRealtime()
-                val faces = runCatching {
-                    val bitmap = MediaFrames.forReading(context, item, FaceReader.ReadSide)
-                    try { reader.read(bitmap) } finally { bitmap.recycle() }
-                }.onFailure { Log.w(Tag, "Couldn't read ${item.name}", it) }.getOrDefault(emptyList())
-                store.put(item.id, item.modified, faces.map { it.box to it.vector })
+                if (item.isVideo) {
+                    var frames = 0
+                    val kept = ArrayList<Kept>()
+                    runCatching {
+                        MediaFrames.forEach(context, item, FaceReader.ReadSide) { at, frame ->
+                            frames++
+                            for (face in reader.read(frame)) keep(kept, face, at, frame)
+                            frame.recycle()
+                            true
+                        }
+                    }.onFailure { if (it is CancellationException) throw it; Log.w(Tag, "Couldn't read ${item.name}", it) }
+                    val ids = store.put(item.id, item.modified, kept.map { NewFace(it.face.box, it.face.vector, it.atMs) })
+                    for ((id, k) in ids.zip(kept)) {
+                        runCatching { store.crop(id).outputStream().use { k.crop.compress(Bitmap.CompressFormat.JPEG, 88, it) } }
+                        k.crop.recycle()
+                    }
+                    Log.d(Tag, "${item.name.take(40)}: ${item.durationMs / 1000}s video, $frames frames, ${kept.size} people, " +
+                        "${SystemClock.elapsedRealtime() - started} ms")
+                } else {
+                    val faces = runCatching {
+                        val bitmap = MediaFrames.forReading(context, item, FaceReader.ReadSide)
+                        try { reader.read(bitmap) } finally { bitmap.recycle() }
+                    }.onFailure { Log.w(Tag, "Couldn't read ${item.name}", it) }.getOrDefault(emptyList())
+                    store.put(item.id, item.modified, faces.map { NewFace(it.box, it.vector) })
+                    Log.d(Tag, "${item.name.take(40)}: ${faces.size} faces, ${SystemClock.elapsedRealtime() - started} ms")
+                }
                 SmartIndex.reportFaces(context, ++finished, library.size)
-                Log.d(Tag, "${item.name.take(40)}: ${faces.size} faces, ${SystemClock.elapsedRealtime() - started} ms")
                 // Group as we go, so people appear during a long first pass.
                 if (finished % GroupEvery == 0) FaceGrouping.run(store)
             }
@@ -51,10 +78,48 @@ class FaceIndexer(private val context: Context) {
         return outcome
     }
 
+    private class Kept(var face: FaceReader.Found, var atMs: Long, var crop: Bitmap, var area: Float)
+
+    /** A face joins whoever it matches among this video's faces (keeping the bigger one), or is someone new. */
+    private fun keep(kept: MutableList<Kept>, face: FaceReader.Found, atMs: Long, frame: Bitmap) {
+        val area = (face.box[2] - face.box[0]) * (face.box[3] - face.box[1])
+        val same = kept.maxByOrNull { dot(it.face.vector, face.vector) }?.takeIf { dot(it.face.vector, face.vector) >= FaceGrouping.SamePerson }
+        when {
+            same == null -> kept += Kept(face, atMs, crop(frame, face.box), area)
+            area > same.area -> {
+                same.crop.recycle()
+                same.face = face
+                same.atMs = atMs
+                same.crop = crop(frame, face.box)
+                same.area = area
+            }
+        }
+    }
+
+    /** The face with hair and chin, square, [CropPx] across: what People shows for a video face. */
+    private fun crop(frame: Bitmap, box: FloatArray): Bitmap {
+        val cx = (box[0] + box[2]) / 2 * frame.width
+        val cy = (box[1] + box[3]) / 2 * frame.height
+        val side = (maxOf((box[2] - box[0]) * frame.width, (box[3] - box[1]) * frame.height) * 1.7f)
+            .coerceAtMost(minOf(frame.width, frame.height).toFloat())
+        val s = side.toInt().coerceAtLeast(1)
+        val left = (cx - side / 2).toInt().coerceIn(0, frame.width - s)
+        val top = (cy - side / 2).toInt().coerceIn(0, frame.height - s)
+        val square = Bitmap.createBitmap(frame, left, top, s, s)
+        return Bitmap.createScaledBitmap(square, CropPx, CropPx, true).also { if (it !== square) square.recycle() }
+    }
+
+    private fun dot(a: FloatArray, b: FloatArray): Float {
+        var sum = 0f
+        for (i in a.indices) sum += a[i] * b[i]
+        return sum
+    }
+
     private companion object {
         const val Tag = "LumenFaces"
         val Threads = (Runtime.getRuntime().availableProcessors() / 2).coerceIn(1, 4)
         const val GroupEvery = 200
+        const val CropPx = 256
     }
 }
 

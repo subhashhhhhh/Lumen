@@ -60,7 +60,7 @@ fun PeopleScreen(
                     .pressable({ onOpen(CollectionKeys.person(person.id)) }, pressedScale = 0.95f)
                     .graphicsLayer { alpha = if (person.hidden) 0.45f else 1f },
             ) {
-                FaceAvatar(cover, person.coverBox, Modifier.fillMaxWidth(), square = square)
+                FaceAvatar(person, cover, Modifier.fillMaxWidth(), square = square)
                 Spacer(Modifier.height(6.dp))
                 Text(
                     person.name ?: "%,d photos".format(person.mediaIds.size),

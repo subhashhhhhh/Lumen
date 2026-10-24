@@ -22,6 +22,8 @@ import coil3.size.Size
 import coil3.transform.Transformation
 import com.subhashh.lumen.data.GridThumbnail
 import com.subhashh.lumen.data.MediaItem
+import com.subhashh.lumen.data.ai.FaceStore
+import com.subhashh.lumen.data.ai.Person
 import com.subhashh.lumen.ui.images.version
 import kotlin.math.ceil
 import kotlin.math.roundToInt
@@ -31,6 +33,24 @@ import kotlin.math.roundToInt
  * where the face comes out sharp (cached on disk like grid thumbnails), cut to a square around
  * the face with some hair and chin.
  */
+@Composable
+fun FaceAvatar(person: Person, cover: MediaItem, modifier: Modifier = Modifier, square: Boolean = false) {
+    if (person.coverInVideo) {
+        // A video's thumbnail is its first frame, maybe without them: the crop saved while indexing.
+        val context = LocalContext.current
+        Box(modifier.aspectRatio(1f).clip(if (square) RoundedCornerShape(12.dp) else CircleShape)) {
+            AsyncImage(
+                model = remember(person.coverFaceId) { FaceStore.cropFile(context, person.coverFaceId) },
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+    } else {
+        FaceAvatar(cover, person.coverBox, modifier, square)
+    }
+}
+
 @Composable
 fun FaceAvatar(item: MediaItem, box: List<Float>, modifier: Modifier = Modifier, square: Boolean = false) {
     val context = LocalContext.current

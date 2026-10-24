@@ -325,7 +325,7 @@ private fun PeopleRow(people: List<Pair<Person, MediaItem>>, onOpen: (key: Strin
                     .weight(1f)
                     .pressable({ onOpen(CollectionKeys.person(person.id)) }, pressedScale = 0.94f),
             ) {
-                FaceAvatar(cover, person.coverBox, Modifier.fillMaxWidth())
+                FaceAvatar(person, cover, Modifier.fillMaxWidth())
                 Spacer(Modifier.height(6.dp))
                 Text(
                     person.name ?: "",
