@@ -6,7 +6,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -14,12 +13,25 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
+import androidx.compose.animation.core.snap
+import androidx.compose.material3.Icon
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.layout.onSizeChanged
+import com.subhashh.lumen.ui.icons.LumenIcons
+import me.saket.telephoto.zoomable.DoubleClickToZoomListener
+import me.saket.telephoto.zoomable.ZoomSpec
+import me.saket.telephoto.zoomable.ZoomableContentLocation
+import me.saket.telephoto.zoomable.ZoomableState
+import me.saket.telephoto.zoomable.rememberZoomableState
+import me.saket.telephoto.zoomable.zoomable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -52,6 +64,8 @@ fun VideoPage(
     item: MediaItem,
     player: Player?,
     onTap: () -> Unit,
+    /** Pinch-zoomed in: the pager and swipe-to-dismiss stay still meanwhile. */
+    onZoomedChange: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     // Size the video area to the video's shape from the start. Until the player decodes a first
@@ -61,34 +75,63 @@ fun VideoPage(
     val playerAspect = player?.let { rememberVideoAspect(it) }
     val aspect = playerAspect ?: item.aspectRatio()
     val haptics = LocalHapticFeedback.current
-    /** The last double-tap skip, for the "−10 s / +10 s" flash; a new id restarts it. */
-    var skip by remember { mutableStateOf<Skip?>(null) }
-    LaunchedEffect(skip) {
-        if (skip != null) {
+    /** The last double-tap, for its flash ("−10 s", play, pause…); a new id restarts it. */
+    var flash by remember { mutableStateOf<Flash?>(null) }
+    LaunchedEffect(flash) {
+        if (flash != null) {
             delay(600)
-            skip = null
+            flash = null
         }
     }
-    Box(
-        modifier
-            .fillMaxSize()
-            // Double-tap the left or right half to skip back or ahead 10 s, like YouTube. A single
-            // tap still shows or hides the controls (a beat later, to tell it from a double).
-            .pointerInput(player) {
-                detectTapGestures(
-                    onTap = { onTap() },
-                    onDoubleTap = { offset ->
-                        val p = player ?: return@detectTapGestures
-                        val back = offset.x < size.width / 2f
+    // Pinch to zoom, as for photos. Double-tap doesn't zoom here: the middle plays or pauses,
+    // the outer edges skip back or ahead 10 s, like YouTube. A single tap still shows or hides
+    // the controls.
+    val zoom = rememberZoomableState(zoomSpec = ZoomSpec(maxZoomFactor = 4f))
+    LaunchedEffect(aspect) {
+        if (aspect != null) zoom.setContentLocation(ZoomableContentLocation.scaledInsideAndCenterAligned(Size(aspect * 1000f, 1000f)))
+    }
+    LaunchedEffect(player != null, zoom) {
+        // Only the page with the player (the one on screen) locks the pager.
+        if (player == null) return@LaunchedEffect
+        snapshotFlow { (zoom.zoomFraction ?: 0f) > 0.01f }.collect(onZoomedChange)
+    }
+    // Leaving the page (another becomes current) zooms back out.
+    LaunchedEffect(player == null) { if (player == null) zoom.resetZoom(animationSpec = snap()) }
+    var width by remember { mutableIntStateOf(0) }
+    val doubleTap = remember(player) {
+        object : DoubleClickToZoomListener {
+            override suspend fun onDoubleClick(state: ZoomableState, centroid: Offset) {
+                val p = player ?: return
+                val edge = width * EdgeShare
+                val kind = when {
+                    centroid.x < edge -> FlashKind.Back
+                    centroid.x > width - edge -> FlashKind.Ahead
+                    p.isPlaying -> FlashKind.Pause
+                    else -> FlashKind.Play
+                }
+                when (kind) {
+                    FlashKind.Back, FlashKind.Ahead -> {
                         val end = p.duration.takeIf { it > 0 } ?: Long.MAX_VALUE
-                        p.seekTo((p.currentPosition + if (back) -SkipMs else SkipMs).coerceIn(0L, end))
-                        haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
-                        skip = Skip(back, (skip?.id ?: 0) + 1)
-                    },
-                )
-            },
-        contentAlignment = Alignment.Center,
-    ) {
+                        p.seekTo((p.currentPosition + if (kind == FlashKind.Back) -SkipMs else SkipMs).coerceIn(0L, end))
+                    }
+                    FlashKind.Pause -> p.pause()
+                    FlashKind.Play -> {
+                        if (p.playbackState == Player.STATE_ENDED) p.seekTo(0)
+                        p.play()
+                    }
+                }
+                haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                flash = Flash(kind, (flash?.id ?: 0) + 1)
+            }
+        }
+    }
+    Box(modifier.fillMaxSize().onSizeChanged { width = it.width }, contentAlignment = Alignment.Center) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .zoomable(zoom, onClick = { onTap() }, onDoubleClick = doubleTap),
+            contentAlignment = Alignment.Center,
+        ) {
         val frame = if (aspect != null) Modifier.aspectRatio(aspect) else Modifier.fillMaxSize()
         if (player != null) {
             ContentFrame(
@@ -104,12 +147,21 @@ fun VideoPage(
         } else {
             Box(frame) { StillFrame(item) }
         }
-        val shown = skip
+        }
+        // Remembered while it fades out, so it doesn't jump to the middle as it goes.
+        var shown by remember { mutableStateOf(FlashKind.Play) }
+        flash?.let { shown = it.kind }
         AnimatedVisibility(
-            visible = shown != null,
+            visible = flash != null,
             enter = fadeIn(tween(90)) + scaleIn(tween(160), initialScale = 0.8f),
             exit = fadeOut(tween(250)),
-            modifier = Modifier.align(if (shown?.back != false) Alignment.CenterStart else Alignment.CenterEnd),
+            modifier = Modifier.align(
+                when (shown) {
+                    FlashKind.Back -> Alignment.CenterStart
+                    FlashKind.Ahead -> Alignment.CenterEnd
+                    else -> Alignment.Center
+                },
+            ),
         ) {
             Box(
                 Modifier
@@ -118,18 +170,31 @@ fun VideoPage(
                     .background(Color.Black.copy(alpha = 0.35f), CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(
-                    if (shown?.back != false) "−10 s" else "+10 s",
-                    color = Color.White,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold,
-                )
+                when (shown) {
+                    FlashKind.Back, FlashKind.Ahead -> Text(
+                        if (shown == FlashKind.Back) "−10 s" else "+10 s",
+                        color = Color.White,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    else -> Icon(
+                        if (shown == FlashKind.Pause) LumenIcons.Pause else LumenIcons.Play,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(40.dp),
+                    )
+                }
             }
         }
     }
 }
 
-private data class Skip(val back: Boolean, val id: Int)
+private enum class FlashKind { Back, Ahead, Play, Pause }
+
+private data class Flash(val kind: FlashKind, val id: Int)
+
+/** Share of the width at each side where a double-tap skips instead of playing or pausing. */
+private const val EdgeShare = 0.28f
 
 private const val SkipMs = 10_000L
 

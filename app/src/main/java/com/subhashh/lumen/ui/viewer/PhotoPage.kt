@@ -9,6 +9,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import coil3.request.ImageRequest
 import com.subhashh.lumen.data.MediaItem
@@ -44,7 +49,9 @@ fun PhotoPage(
     }
 
     val haptics = LocalHapticFeedback.current
-    Box(modifier.fillMaxSize()) {
+    var viewport by remember { mutableStateOf(IntSize.Zero) }
+    val doubleClick = remember { FillOnDoubleClick { viewport } }
+    Box(modifier.fillMaxSize().onSizeChanged { viewport = it }) {
     ZoomableAsyncImage(
         model = remember(item.version) {
             ImageRequest.Builder(context)
@@ -66,6 +73,7 @@ fun PhotoPage(
                 else -> onTap()
             }
         },
+        onDoubleClick = doubleClick,
         // Long-press on text selects the word there.
         onLongClick = { p ->
             if (liveText?.selectAt(state.zoomableState.transformedContentBounds, p) == true) {

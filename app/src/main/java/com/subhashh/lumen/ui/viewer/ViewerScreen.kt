@@ -472,6 +472,7 @@ fun ViewerScreen(
                         item = item,
                         player = player?.takeIf { isCurrent },
                         onTap = toggleChrome,
+                        onZoomedChange = { zoomed = it },
                         modifier = pageModifier,
                     )
                 } else {
