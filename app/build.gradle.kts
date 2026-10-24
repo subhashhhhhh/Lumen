@@ -8,6 +8,14 @@ plugins {
 val lab: File = rootProject.file("../lumen-lab")
 val hasLab = lab.resolve("src/java").isDirectory
 
+/**
+ * The release key stays outside the repository. Release builds are signed only when its password
+ * is given, e.g. LUMEN_KEY_PASSWORD from the macOS Keychain; otherwise they come out unsigned.
+ */
+val releaseKeyPassword: String? = providers.environmentVariable("LUMEN_KEY_PASSWORD").orNull
+val releaseKeyStore: File = providers.environmentVariable("LUMEN_KEYSTORE").orNull?.let(::File)
+    ?: File(System.getProperty("user.home"), ".lumen-signing/lumen-release.jks")
+
 android {
     namespace = "com.subhashh.lumen"
     compileSdk = 37
@@ -37,8 +45,37 @@ android {
         }
     }
 
+    signingConfigs {
+        if (releaseKeyPassword != null) {
+            create("release") {
+                storeFile = releaseKeyStore
+                storePassword = releaseKeyPassword
+                keyAlias = "lumen"
+                keyPassword = releaseKeyPassword
+            }
+        }
+    }
+
+    // Release APKs per processor, plus one universal APK. Only for release tasks, so debug and
+    // profile builds stay a single APK.
+    splits {
+        abi {
+            isEnable = gradle.startParameter.taskNames.any { it.contains("Release", ignoreCase = true) }
+            reset()
+            include("arm64-v8a", "armeabi-v7a", "x86_64")
+            isUniversalApk = true
+        }
+    }
+
+    // 32-bit x86 Android 11+ devices don't exist in practice; its libraries only bloated the
+    // universal APK (~50 MB).
+    packaging {
+        jniLibs { excludes += "lib/x86/**" }
+    }
+
     buildTypes {
         release {
+            signingConfigs.findByName("release")?.let { signingConfig = it }
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")

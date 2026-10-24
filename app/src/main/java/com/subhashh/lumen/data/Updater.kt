@@ -55,8 +55,13 @@ object Updater {
                 val json = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
                 val version = json.getString("tag_name").removePrefix("v")
                 val assets = json.optJSONArray("assets")
-                val apk = (0 until (assets?.length() ?: 0)).map { assets!!.getJSONObject(it) }
-                    .firstOrNull { it.getString("name").endsWith(".apk", ignoreCase = true) }
+                val apks = (0 until (assets?.length() ?: 0)).map { assets!!.getJSONObject(it) }
+                    .filter { it.getString("name").endsWith(".apk", ignoreCase = true) }
+                // The APK for this phone's processor ("Lumen-0.2.0-arm64-v8a.apk"), else the
+                // universal one, else whatever APK there is.
+                val apk = Build.SUPPORTED_ABIS.firstNotNullOfOrNull { abi -> apks.firstOrNull { "-$abi." in it.getString("name") } }
+                    ?: apks.firstOrNull { "universal" in it.getString("name") }
+                    ?: apks.firstOrNull()
                     ?: return@runCatching Check.Failed("The latest release has no APK")
                 if (!isNewer(version, installedVersion(context))) return@runCatching Check.UpToDate
                 Check.Available(
