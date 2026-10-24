@@ -224,9 +224,18 @@ fun LumenApp(
     var onboarded by remember {
         mutableStateOf(prefs.onboardingDone ?: context.hasMediaAccess().also { prefs.onboardingDone = it })
     }
-    when {
-        // Another app asking for a photo: straight to the picker (or the access prompt).
-        !onboarded && pick == null -> {
+    val showOnboarding = !onboarded && pick == null
+    Box(Modifier.fillMaxSize()) {
+        // One call site for the app whether onboarding is up or not: it's built underneath once
+        // access is granted, so when onboarding ends its grid is already laid out and scrolled
+        // for the photos to fly into, with nothing to build at that moment.
+        if (hasAccess) {
+            MainScaffold(viewModel, pick, onPicked, onCancelPick, entrance, onEntranceDone = { entrance = null })
+        } else if (!showOnboarding) {
+            PermissionScreen(onGrant = { launcher.launch(MediaPermissions) })
+        }
+        // Another app asking for a photo goes straight to the picker (or the access prompt).
+        if (showOnboarding) {
             val items by viewModel.items.collectAsState()
             com.subhashh.lumen.ui.onboarding.Onboarding(
                 hasAccess = hasAccess,
@@ -239,8 +248,6 @@ fun LumenApp(
                 },
             )
         }
-        hasAccess -> MainScaffold(viewModel, pick, onPicked, onCancelPick, entrance, onEntranceDone = { entrance = null })
-        else -> PermissionScreen(onGrant = { launcher.launch(MediaPermissions) })
     }
 }
 

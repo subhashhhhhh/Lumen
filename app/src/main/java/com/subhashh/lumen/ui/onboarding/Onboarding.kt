@@ -5,6 +5,7 @@ import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -127,7 +128,13 @@ fun Onboarding(
     val backdrop = rememberLayerBackdrop()
     BackHandler(enabled = step != Step.Welcome) { step = Step.entries[step.ordinal - 1] }
 
-    Box(Modifier.fillMaxSize().background(Color.Black)) {
+    // Opaque, and every touch stays here: the Library is already built underneath.
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .pointerInput(Unit) { awaitPointerEventScope { while (true) awaitPointerEvent().changes.forEach { it.consume() } } },
+    ) {
         // Plain: the glass sits on black.
         Box(Modifier.fillMaxSize().layerBackdrop(backdrop))
         AnimatedContent(
@@ -526,7 +533,7 @@ private fun ColumnScope.Finish(backdrop: Backdrop, photos: List<MediaItem>, onFi
                 leaving = true
                 scope.launch {
                     // The words step aside first; the photos fly from where they are then.
-                    fade.animateTo(0f, tween(160))
+                    fade.animateTo(0f, tween(120))
                     onFinish(OnboardingExit(tiles.mapNotNull { it.exit() }, button, Color.Black))
                 }
             }

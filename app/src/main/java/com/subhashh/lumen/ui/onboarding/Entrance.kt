@@ -84,7 +84,8 @@ fun Entrance(exit: OnboardingExit, cellOf: (MediaItem) -> Rect?, onDone: () -> U
         Canvas(Modifier.fillMaxSize()) { drawRect(exit.background.copy(alpha = backdrop.value)) }
         for ((i, t) in exit.tiles.withIndex()) {
             val p = progress[i].value
-            val to = targets[i]
+            // Where its cell is now: the grid may still be settling, so follow it every frame.
+            val to = cellOf(t.item) ?: targets[i]
             // No cell on screen: drift down a little and fade instead of landing.
             val end = to ?: t.rect.translate(0f, t.rect.height)
             val rect = Rect(
