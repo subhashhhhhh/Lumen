@@ -21,6 +21,13 @@ object CollectionKeys {
     fun hiddenFolderId(key: String): Long? = key.removePrefix(HiddenFolderPrefix).toLongOrNull()
         .takeIf { key.startsWith(HiddenFolderPrefix) }
 
+    private const val PersonPrefix = "person:"
+
+    /** One person's photos (Collections → People). */
+    fun person(id: Long) = "$PersonPrefix$id"
+
+    fun personId(key: String?): Long? = key?.takeIf { it.startsWith(PersonPrefix) }?.removePrefix(PersonPrefix)?.toLongOrNull()
+
     private const val EmptyAlbumPrefix = "empty:"
 
     /** An album made with New Album that has nothing in it yet (so no MediaStore folder). */

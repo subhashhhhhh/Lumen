@@ -21,6 +21,22 @@ class Face(
 )
 
 /**
+ * A person as the People row and their album show them: name (null until named), the photos
+ * they're in, and the face to show for them (their biggest, so the sharpest).
+ */
+@androidx.compose.runtime.Immutable
+data class Person(
+    val id: Long,
+    val name: String?,
+    val hidden: Boolean,
+    val mediaIds: Set<Long>,
+    val faceCount: Int,
+    val coverMediaId: Long,
+    /** The cover face's box, fractions of its photo: left, top, right, bottom. */
+    val coverBox: List<Float>,
+)
+
+/**
  * Faces found in photos and the people they're grouped into. Same lifecycle as [EmbeddingStore]:
  * app-private, not backed up. People carry what the user decides (names, merges, hidden), so
  * grouping only ever adds faces to people; it never moves a face that already has one.
@@ -32,9 +48,11 @@ class FaceStore private constructor(context: Context) : SQLiteOpenHelper(context
     }
 
     /** Bumped on every write, so screens know to reload. */
-    @Volatile
-    var version = 0
-        private set
+    var version: Int
+        get() = changes.value
+        private set(value) {
+            changes.value = value
+        }
 
     override fun onCreate(db: SQLiteDatabase) {
         // A photo with no faces keeps its row in items, so it isn't looked at again.
@@ -125,6 +143,40 @@ class FaceStore private constructor(context: Context) : SQLiteOpenHelper(context
         }
     }
 
+    /** Every person with at least one face, most photos first. */
+    fun people(): List<Person> {
+        val names = HashMap<Long, Pair<String?, Boolean>>()
+        readableDatabase.rawQuery("SELECT id, name, hidden FROM people", null).use { c ->
+            while (c.moveToNext()) names[c.getLong(0)] = (if (c.isNull(1)) null else c.getString(1)) to (c.getInt(2) != 0)
+        }
+        class Acc(val media: HashSet<Long> = HashSet(), var faces: Int = 0, var cover: Long = 0, var box: List<Float> = emptyList(), var area: Float = -1f)
+        val acc = HashMap<Long, Acc>()
+        readableDatabase.rawQuery("SELECT person, media_id, l, t, r, b FROM faces WHERE person IS NOT NULL", null).use { c ->
+            while (c.moveToNext()) {
+                val a = acc.getOrPut(c.getLong(0)) { Acc() }
+                a.media += c.getLong(1)
+                a.faces++
+                val box = listOf(c.getFloat(2), c.getFloat(3), c.getFloat(4), c.getFloat(5))
+                val area = (box[2] - box[0]) * (box[3] - box[1])
+                if (area > a.area) {
+                    a.area = area
+                    a.cover = c.getLong(1)
+                    a.box = box
+                }
+            }
+        }
+        return acc.mapNotNull { (id, a) ->
+            val (name, hidden) = names[id] ?: return@mapNotNull null
+            Person(id, name, hidden, a.media, a.faces, a.cover, a.box)
+        }.sortedByDescending { it.mediaIds.size }
+    }
+
+    /** Names a person; blank clears the name. */
+    fun rename(person: Long, name: String) {
+        writableDatabase.execSQL("UPDATE people SET name = ? WHERE id = ?", arrayOf<Any?>(name.trim().ifEmpty { null }, person))
+        version++
+    }
+
     /** Saves grouping: faces joining existing people, and new people with their first faces. */
     fun assign(joins: Map<Long, Long>, newPeople: List<List<Long>>) {
         if (joins.isEmpty() && newPeople.isEmpty()) return
@@ -144,6 +196,9 @@ class FaceStore private constructor(context: Context) : SQLiteOpenHelper(context
     }
 
     companion object {
+        /** [version] as a flow: People in Collections reloads when the face pass adds people. */
+        val changes = kotlinx.coroutines.flow.MutableStateFlow(0)
+
         @Volatile
         private var open: FaceStore? = null
 

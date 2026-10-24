@@ -82,6 +82,7 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.geometry.Offset
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.Dispatchers
 import com.subhashh.lumen.ui.components.RenameDialog
 import com.subhashh.lumen.data.ai.HfTokenStore
@@ -355,6 +356,30 @@ private fun MainScaffold(
         prefs.albumSettings = albumSettings
     }
     val folders = remember(library, albumSettings) { MediaCollections.folders(library.orEmpty(), albumSettings) }
+    // People (Settings → Smart Search → Faces), reloaded as the face pass finds them: at most
+    // every couple of seconds, since it saves after every photo.
+    val peopleRows by produceState(emptyList<com.subhashh.lumen.data.ai.Person>()) {
+        @OptIn(kotlinx.coroutines.FlowPreview::class)
+        com.subhashh.lumen.data.ai.FaceStore.changes.debounce(1_500).collect {
+            value = withContext(Dispatchers.IO) {
+                if (!com.subhashh.lumen.data.ai.FaceModel.installed(context)) emptyList()
+                else com.subhashh.lumen.data.ai.FaceStore.of(context).people()
+            }
+        }
+    }
+    // Only photos the library shows (no excluded folders, Hidden or trash); named people first.
+    val people = remember(peopleRows, library) {
+        val byId = library.orEmpty().associateBy { it.id }
+        peopleRows.asSequence()
+            .filterNot { it.hidden }
+            .mapNotNull { p -> byId[p.coverMediaId]?.let { p.copy(mediaIds = p.mediaIds.filterTo(HashSet()) { it in byId }) to it } }
+            .filter { it.first.mediaIds.isNotEmpty() }
+            .sortedWith(compareBy<Pair<com.subhashh.lumen.data.ai.Person, MediaItem>> { it.first.name == null }.thenByDescending { it.first.mediaIds.size })
+            .toList()
+    }
+    val personOf = { key: String? -> CollectionKeys.personId(key)?.let { id -> people.firstOrNull { it.first.id == id }?.first } }
+    var personNameRequest by remember { mutableStateOf<com.subhashh.lumen.data.ai.Person?>(null) }
+    var personMenuOpen by remember { mutableStateOf(false) }
     // A new album stops being "created" once something is in it: it's a real folder then.
     LaunchedEffect(folders) {
         val real = folders.filter { it.count > 0 }.mapTo(HashSet()) { it.relativePath }
@@ -409,17 +434,29 @@ private fun MainScaffold(
     val smartHits = smart?.second
     val smartPending = searchQuery.isNotBlank() && smart?.first != searchQuery &&
         remember(searching) { com.subhashh.lumen.data.ai.ModelDownloads.installed(context) != null }
-    // Exact name, folder and date matches first, then photos with the words in them (newest
-    // first), then Smart Search's, best first.
-    val searchResults = remember(keywordResults, textMatches, smartHits, library) {
+    // Exact name, folder and date matches first, then people of that name and photos with the
+    // words in them (newest first), then Smart Search's, best first.
+    // People named like the search (every word starts one of the name's words): exact, so
+    // right after name and date matches.
+    val personMatches = remember(people, searchQuery) {
+        val terms = SearchIndex.terms(searchQuery)
+        if (terms.isEmpty()) emptyList()
+        else people.filter { (person, _) ->
+            val words = SearchIndex.terms(person.name.orEmpty())
+            terms.all { term -> words.any { it.startsWith(term) } }
+        }
+    }
+    val searchResults = remember(keywordResults, personMatches, textMatches, smartHits, library) {
         val keyword = keywordResults ?: return@remember null
         val text = textMatches.orEmpty()
         val hits = smartHits.orEmpty()
-        if (text.isEmpty() && hits.isEmpty()) return@remember keyword
+        if (personMatches.isEmpty() && text.isEmpty() && hits.isEmpty()) return@remember keyword
         val byId = library.orEmpty().associateBy { it.id }
         val seen = keyword.mapTo(HashSet()) { it.id }
-        val withText = text.mapNotNull { byId[it] }.filter { seen.add(it.id) }.sortedByDescending { it.takenAt }
-        keyword + withText + hits.mapNotNull { hit -> byId[hit.mediaId]?.takeIf { seen.add(it.id) } }
+        val ofPeople = personMatches.flatMap { it.first.mediaIds }.mapNotNull { byId[it] }
+            .filter { seen.add(it.id) }.sortedByDescending { it.takenAt }
+        keyword + ofPeople + text.mapNotNull { byId[it] }.filter { seen.add(it.id) }.sortedByDescending { it.takenAt } +
+            hits.mapNotNull { hit -> byId[hit.mediaId]?.takeIf { seen.add(it.id) } }
     }
     val searchAlbums = remember(folders, searchQuery) {
         val terms = SearchIndex.terms(searchQuery)
@@ -460,7 +497,9 @@ private fun MainScaffold(
             CollectionKeys.Library -> libraryItems
             CollectionKeys.Search -> searchResults.orEmpty()
             CollectionKeys.Hidden -> if (hiddenUnlocked) hidden.orEmpty() else emptyList()
-            else -> CollectionKeys.hiddenFolderId(key)?.let { id ->
+            else -> personOf(key)?.let { person ->
+                sort.apply(library.orEmpty().filter { it.id in person.mediaIds }, sortDescending)
+            } ?: CollectionKeys.hiddenFolderId(key)?.let { id ->
                 if (hiddenUnlocked) hidden.orEmpty().filter { it.bucketId == id } else emptyList()
             } ?: CollectionKeys.items(key, library.orEmpty(), trash).let {
                 // Recently Deleted stays in deletion order; albums follow the Library's sort.
@@ -478,7 +517,7 @@ private fun MainScaffold(
     val gridSectionMode = if (sort == LibrarySort.Date) sectionMode else SectionMode.None
     val librarySections = remember(libraryItems, gridSectionMode) { GridSections.of(libraryItems, gridSectionMode) }
     /** The open album's photos and their headers, shared by its grid and the viewer's close flight. */
-    val openItems = remember(openCollection, library, trash, hidden, hiddenUnlocked, sort, sortDescending) {
+    val openItems = remember(openCollection, library, trash, hidden, hiddenUnlocked, sort, sortDescending, people) {
         openCollection?.takeIf { it != CollectionKeys.Hidden }?.let(itemsOf)
     }
     val collectionSections = remember(openItems, gridSectionMode, openCollection) {
@@ -1252,6 +1291,7 @@ private fun MainScaffold(
                     val key = openCollection!!
                     LibraryScreen(
                         title = pickTitle ?: selection?.let { selectionTitle(selectedItems) }
+                            ?: personOf(key)?.let { it.name ?: "Add Name" }
                             ?: (utilities + folders).firstOrNull { it.key == key }?.title
                             ?: hiddenFolderList?.firstOrNull { it.collection.key == key }?.collection?.title.orEmpty(),
                         selection = if (pick?.multiple == true) picked.keys else selection,
@@ -1288,6 +1328,7 @@ private fun MainScaffold(
                     utilities = utilities,
                     hiddenLockSet = lockSet,
                     folders = folders,
+                    people = people,
                     gridState = collectionsGrid,
                     contentPadding = PaddingValues(top = statusTop + 16.dp, bottom = navBottom + 96.dp),
                     onOpen = { key -> if (key == CollectionKeys.Hidden) openHidden() else openCollection = key },
@@ -1441,6 +1482,35 @@ private fun MainScaffold(
                     }
                 },
                 listOf(MenuItem("New Album…") { albumNameRequest = AlbumNameRequest(album = null) }),
+            ),
+            origin = TransformOrigin(1f, 0f),
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .statusBarsPadding()
+                .padding(top = 64.dp, end = 16.dp),
+        )
+
+        // A person's album: ⋯ for naming them (merge and hide come next).
+        val openPerson = if (inCollection && !viewerOpen && !selecting && pick == null) personOf(openCollection) else null
+        if (openPerson != null) {
+            GlassIconButton(
+                backdrop = backdrop,
+                icon = LumenIcons.More,
+                contentDescription = "Person options",
+                onClick = { personMenuOpen = !personMenuOpen },
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .statusBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+            )
+        }
+        BackHandler(enabled = personMenuOpen) { personMenuOpen = false }
+        GlassMenu(
+            backdrop = backdrop,
+            open = personMenuOpen && openPerson != null,
+            onDismiss = { personMenuOpen = false },
+            sections = listOf(
+                listOf(MenuItem(if (openPerson?.name == null) "Add Name…" else "Rename…") { personNameRequest = openPerson }),
             ),
             origin = TransformOrigin(1f, 0f),
             modifier = Modifier
@@ -1821,6 +1891,18 @@ private fun MainScaffold(
             onDismiss = { renameItem = null },
         )
 
+        RenameDialog(
+            currentName = personNameRequest?.let { it.name ?: "" },
+            title = if (personNameRequest?.name == null) "Add Name" else "Rename",
+            confirm = "Done",
+            keepExtension = false,
+            onRename = { name ->
+                val person = personNameRequest
+                personNameRequest = null
+                if (person != null) scope.launch(Dispatchers.IO) { com.subhashh.lumen.data.ai.FaceStore.of(context).rename(person.id, name) }
+            },
+            onDismiss = { personNameRequest = null },
+        )
         RenameDialog(
             currentName = albumNameRequest?.let { it.album?.title ?: "" },
             title = if (albumNameRequest?.album == null) "New Album" else "Rename Album",

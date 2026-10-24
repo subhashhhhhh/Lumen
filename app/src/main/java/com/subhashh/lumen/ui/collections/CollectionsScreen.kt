@@ -62,6 +62,10 @@ import com.subhashh.lumen.data.MediaCollection
 import com.subhashh.lumen.data.MediaCollections
 import com.subhashh.lumen.data.MediaItem
 import com.subhashh.lumen.data.GridThumbnail
+import com.subhashh.lumen.data.ai.Person
+import com.subhashh.lumen.ui.people.FaceAvatar
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items as rowItems
 
 @Composable
 fun CollectionsScreen(
@@ -71,6 +75,8 @@ fun CollectionsScreen(
     /** Hidden shows "Set Up" until it has a lock, then "Locked". */
     hiddenLockSet: Boolean,
     folders: List<MediaCollection>,
+    /** People found in photos (Settings → Smart Search), each with the photo for their face. */
+    people: List<Pair<Person, MediaItem>>,
     gridState: LazyGridState,
     contentPadding: PaddingValues,
     onOpen: (key: String) -> Unit,
@@ -82,10 +88,11 @@ fun CollectionsScreen(
     onSelectionChange: (Set<String>?) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // Grid order: title, Utilities header, utilities block, Albums header, then the albums.
+    // Grid order: title, People header and row (if any), Utilities header, utilities block,
+    // Albums header, then the albums.
     val gestures = rememberAlbumGridGestures(
         gridState = gridState,
-        keys = { List<String?>(4) { null } + folders.map { it.key } },
+        keys = { List<String?>(if (people.isEmpty()) 4 else 6) { null } + folders.map { it.key } },
         columns = columns,
         onColumnsChange = onColumnsChange,
         selection = selection,
@@ -105,6 +112,17 @@ fun CollectionsScreen(
             .then(gestures.modifier),
     ) {
         fullWidth { ScreenTitle(title) }
+
+        if (people.isNotEmpty()) {
+            fullWidth { SectionHeader("People", trailing = people.size.toString()) }
+            fullWidth {
+                PeopleRow(
+                    people,
+                    onOpen = { if (selection == null) onOpen(it) },
+                    modifier = Modifier.graphicsLayer { alpha = if (selection != null) 0.4f else 1f },
+                )
+            }
+        }
 
         fullWidth { SectionHeader("Utilities") }
         fullWidth {
@@ -289,6 +307,40 @@ private fun UtilityGroup(
 }
 
 private const val CoverPx = 512
+
+/** People as a sideways row of faces in circles, iOS-style; named people first. */
+@Composable
+private fun PeopleRow(people: List<Pair<Person, MediaItem>>, onOpen: (key: String) -> Unit, modifier: Modifier = Modifier) {
+    val onBackground = MaterialTheme.colorScheme.onBackground
+    LazyRow(
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+        // Edge to edge, past the grid's side padding, but starting in line with the titles.
+        contentPadding = PaddingValues(horizontal = 4.dp),
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        rowItems(people, key = { it.first.id }) { (person, cover) ->
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier
+                    .width(PersonSize)
+                    .pressable({ onOpen(CollectionKeys.person(person.id)) }, pressedScale = 0.94f),
+            ) {
+                FaceAvatar(cover, person.coverBox, PersonSize)
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    person.name ?: "",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = onBackground,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+    }
+}
+
+private val PersonSize = 76.dp
 
 /** iOS system colors, one per utility, so each row is recognisable at a glance. */
 private fun utilityColor(key: String): Color = when (key) {
