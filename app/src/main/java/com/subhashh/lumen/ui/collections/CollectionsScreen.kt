@@ -64,8 +64,6 @@ import com.subhashh.lumen.data.MediaItem
 import com.subhashh.lumen.data.GridThumbnail
 import com.subhashh.lumen.data.ai.Person
 import com.subhashh.lumen.ui.people.FaceAvatar
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items as rowItems
 
 @Composable
 fun CollectionsScreen(
@@ -114,10 +112,10 @@ fun CollectionsScreen(
         fullWidth { ScreenTitle(title) }
 
         if (people.isNotEmpty()) {
-            fullWidth { SectionHeader("People", trailing = people.size.toString()) }
+            fullWidth { SectionHeader("People", trailing = "Open", onTrailingClick = { if (selection == null) onOpen(CollectionKeys.People) }) }
             fullWidth {
                 PeopleRow(
-                    people,
+                    people.take(PeopleShown),
                     onOpen = { if (selection == null) onOpen(it) },
                     modifier = Modifier.graphicsLayer { alpha = if (selection != null) 0.4f else 1f },
                 )
@@ -217,7 +215,7 @@ private fun LazyGridScope.fullWidth(content: @Composable () -> Unit) =
     item(span = { GridItemSpan(maxLineSpan) }) { content() }
 
 @Composable
-private fun SectionHeader(title: String, trailing: String? = null) {
+private fun SectionHeader(title: String, trailing: String? = null, onTrailingClick: (() -> Unit)? = null) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -231,7 +229,14 @@ private fun SectionHeader(title: String, trailing: String? = null) {
             color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.weight(1f),
         )
-        if (trailing != null) {
+        if (trailing != null && onTrailingClick != null) {
+            Text(
+                trailing,
+                fontSize = 16.sp,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.pressable(onTrailingClick, pressedScale = 0.92f),
+            )
+        } else if (trailing != null) {
             Text(trailing, fontSize = 15.sp, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f))
         }
     }
@@ -308,28 +313,23 @@ private fun UtilityGroup(
 
 private const val CoverPx = 512
 
-/** People as a sideways row of faces in circles, iOS-style; named people first. */
+/** The first [PeopleShown] people across the screen, faces in circles; named people first. */
 @Composable
 private fun PeopleRow(people: List<Pair<Person, MediaItem>>, onOpen: (key: String) -> Unit, modifier: Modifier = Modifier) {
     val onBackground = MaterialTheme.colorScheme.onBackground
-    LazyRow(
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
-        // Edge to edge, past the grid's side padding, but starting in line with the titles.
-        contentPadding = PaddingValues(horizontal = 4.dp),
-        modifier = modifier.fillMaxWidth(),
-    ) {
-        rowItems(people, key = { it.first.id }) { (person, cover) ->
+    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = modifier.fillMaxWidth()) {
+        for ((person, cover) in people) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
-                    .width(PersonSize)
+                    .weight(1f)
                     .pressable({ onOpen(CollectionKeys.person(person.id)) }, pressedScale = 0.94f),
             ) {
-                FaceAvatar(cover, person.coverBox, PersonSize)
+                FaceAvatar(cover, person.coverBox, Modifier.fillMaxWidth())
                 Spacer(Modifier.height(6.dp))
                 Text(
                     person.name ?: "",
-                    fontSize = 13.sp,
+                    fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
                     color = onBackground,
                     maxLines = 1,
@@ -337,10 +337,12 @@ private fun PeopleRow(people: List<Pair<Person, MediaItem>>, onOpen: (key: Strin
                 )
             }
         }
+        // A short row keeps its faces the same size as a full one.
+        repeat(PeopleShown - people.size) { Spacer(Modifier.weight(1f)) }
     }
 }
 
-private val PersonSize = 76.dp
+private const val PeopleShown = 6
 
 /** iOS system colors, one per utility, so each row is recognisable at a glance. */
 private fun utilityColor(key: String): Color = when (key) {

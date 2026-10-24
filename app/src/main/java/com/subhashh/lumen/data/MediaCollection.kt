@@ -21,6 +21,8 @@ object CollectionKeys {
     fun hiddenFolderId(key: String): Long? = key.removePrefix(HiddenFolderPrefix).toLongOrNull()
         .takeIf { key.startsWith(HiddenFolderPrefix) }
 
+    /** Every person found in photos (Collections → People → Open). */
+    const val People = "people"
     private const val PersonPrefix = "person:"
 
     /** One person's photos (Collections → People). */

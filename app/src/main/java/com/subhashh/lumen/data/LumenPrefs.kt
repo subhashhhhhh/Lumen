@@ -158,6 +158,11 @@ class LumenPrefs(context: Context) {
         get() = prefs.getBoolean(KeyCurvedEdge, false)
         set(value) = prefs.edit { putBoolean(KeyCurvedEdge, value) }
 
+    /** Collections → People: faces in circles (default) or rounded squares. */
+    var peopleSquare: Boolean
+        get() = prefs.getBoolean(KeyPeopleSquare, false)
+        set(value) = prefs.edit { putBoolean(KeyPeopleSquare, value) }
+
     /** Settings → Privacy → App Lock: Lumen asks for its lock when opened. */
     var appLock: Boolean
         get() = prefs.getBoolean(KeyAppLock, false)
@@ -178,6 +183,7 @@ class LumenPrefs(context: Context) {
         const val KeyAppLock = "app_lock"
         const val KeyAppLockMinutes = "app_lock_minutes"
         const val KeyCurvedEdge = "curved_edge"
+        const val KeyPeopleSquare = "people_square"
         const val KeyModelWifiOnly = "model_wifi_only"
         const val KeySearchModel = "search_model"
         const val KeySections = "section_mode"

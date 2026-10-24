@@ -3,7 +3,10 @@ package com.subhashh.lumen.ui.people
 import android.graphics.Bitmap
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -12,7 +15,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.Dp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.transformations
@@ -25,17 +27,18 @@ import kotlin.math.ceil
 import kotlin.math.roundToInt
 
 /**
- * A person's face in a circle: their photo at a size where the face comes out sharp (cached on
- * disk like grid thumbnails), cut to a square around the face with some hair and chin.
+ * A person's face in a circle, or a rounded square (People's filter menu): their photo at a size
+ * where the face comes out sharp (cached on disk like grid thumbnails), cut to a square around
+ * the face with some hair and chin.
  */
 @Composable
-fun FaceAvatar(item: MediaItem, box: List<Float>, size: Dp, modifier: Modifier = Modifier) {
+fun FaceAvatar(item: MediaItem, box: List<Float>, modifier: Modifier = Modifier, square: Boolean = false) {
     val context = LocalContext.current
     val photoPx = remember(box) { photoSizeFor(box) }
     Box(
         modifier
-            .size(size)
-            .clip(CircleShape)
+            .aspectRatio(1f)
+            .clip(if (square) RoundedCornerShape(12.dp) else CircleShape)
             .background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.08f)),
     ) {
         AsyncImage(
@@ -49,7 +52,7 @@ fun FaceAvatar(item: MediaItem, box: List<Float>, size: Dp, modifier: Modifier =
             },
             contentDescription = null,
             contentScale = ContentScale.Crop,
-            modifier = Modifier.size(size),
+            modifier = Modifier.fillMaxSize(),
         )
     }
 }

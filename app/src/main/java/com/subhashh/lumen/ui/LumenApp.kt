@@ -158,6 +158,7 @@ import coil3.video.VideoFrameDecoder
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.subhashh.lumen.ui.collections.CollectionsScreen
+import com.subhashh.lumen.ui.people.PeopleScreen
 import com.subhashh.lumen.ui.components.GlassTabBar
 import com.subhashh.lumen.ui.components.LumenTab
 import com.subhashh.lumen.ui.library.LibraryScreen
@@ -380,6 +381,11 @@ private fun MainScaffold(
     val personOf = { key: String? -> CollectionKeys.personId(key)?.let { id -> people.firstOrNull { it.first.id == id }?.first } }
     var personNameRequest by remember { mutableStateOf<com.subhashh.lumen.data.ai.Person?>(null) }
     var personMenuOpen by remember { mutableStateOf(false) }
+    var peopleMenuOpen by remember { mutableStateOf(false) }
+    var peopleSquare by remember { mutableStateOf(prefs.peopleSquare) }
+    /** The open person came from the People page, so Back returns there. */
+    var personFromPeople by rememberSaveable { mutableStateOf(false) }
+    val peopleGrid = rememberLazyGridState()
     // A new album stops being "created" once something is in it: it's a real folder then.
     LaunchedEffect(folders) {
         val real = folders.filter { it.count > 0 }.mapTo(HashSet()) { it.relativePath }
@@ -561,7 +567,11 @@ private fun MainScaffold(
     BackHandler(enabled = searching && !viewerOpen) { searching = false }
     BackHandler(enabled = inCollection && !viewerOpen) {
         // A folder inside Hidden steps back to Hidden's list, not out of Hidden.
-        openCollection = if (CollectionKeys.hiddenFolderId(openCollection.orEmpty()) != null) CollectionKeys.Hidden else null
+        openCollection = when {
+            CollectionKeys.hiddenFolderId(openCollection.orEmpty()) != null -> CollectionKeys.Hidden
+            CollectionKeys.personId(openCollection) != null && personFromPeople -> CollectionKeys.People
+            else -> null
+        }
     }
     BackHandler(enabled = inSettings && !viewerOpen) { popSettings() }
 
@@ -1287,6 +1297,16 @@ private fun MainScaffold(
                     contentPadding = PaddingValues(top = statusTop + 72.dp, bottom = navBottom + 96.dp),
                     onOpen = { openCollection = it },
                 )
+                openCollection == CollectionKeys.People -> PeopleScreen(
+                    people = people,
+                    square = peopleSquare,
+                    gridState = peopleGrid,
+                    contentPadding = PaddingValues(top = statusTop + 64.dp, bottom = navBottom + 96.dp),
+                    onOpen = { key ->
+                        personFromPeople = true
+                        openCollection = key
+                    },
+                )
                 openCollection != null -> {
                     val key = openCollection!!
                     LibraryScreen(
@@ -1331,7 +1351,10 @@ private fun MainScaffold(
                     people = people,
                     gridState = collectionsGrid,
                     contentPadding = PaddingValues(top = statusTop + 16.dp, bottom = navBottom + 96.dp),
-                    onOpen = { key -> if (key == CollectionKeys.Hidden) openHidden() else openCollection = key },
+                    onOpen = { key ->
+                        personFromPeople = false
+                        if (key == CollectionKeys.Hidden) openHidden() else openCollection = key
+                    },
                 )
             }
         }
@@ -1490,6 +1513,39 @@ private fun MainScaffold(
                 .padding(top = 64.dp, end = 16.dp),
         )
 
+        // The People page: circles or rounded squares.
+        if (inCollection && openCollection == CollectionKeys.People && !viewerOpen) {
+            GlassIconButton(
+                backdrop = backdrop,
+                icon = LumenIcons.Filter,
+                contentDescription = "People options",
+                onClick = { peopleMenuOpen = !peopleMenuOpen },
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .statusBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+            )
+        }
+        BackHandler(enabled = peopleMenuOpen) { peopleMenuOpen = false }
+        GlassMenu(
+            backdrop = backdrop,
+            open = peopleMenuOpen && openCollection == CollectionKeys.People && inCollection,
+            onDismiss = { peopleMenuOpen = false },
+            sections = listOf(
+                listOf(false to "Circles", true to "Squares").map { (square, label) ->
+                    MenuItem(label, checked = peopleSquare == square) {
+                        peopleSquare = square
+                        prefs.peopleSquare = square
+                    }
+                },
+            ),
+            origin = TransformOrigin(1f, 0f),
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .statusBarsPadding()
+                .padding(top = 64.dp, end = 16.dp),
+        )
+
         // A person's album: ⋯ for naming them (merge and hide come next).
         val openPerson = if (inCollection && !viewerOpen && !selecting && pick == null) personOf(openCollection) else null
         if (openPerson != null) {
@@ -1528,6 +1584,7 @@ private fun MainScaffold(
                     when {
                         inSettings -> popSettings()
                         CollectionKeys.hiddenFolderId(openCollection.orEmpty()) != null -> openCollection = CollectionKeys.Hidden
+                        CollectionKeys.personId(openCollection) != null && personFromPeople -> openCollection = CollectionKeys.People
                         else -> openCollection = null
                     }
                 },
