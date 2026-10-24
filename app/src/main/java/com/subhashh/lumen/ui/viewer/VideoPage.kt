@@ -24,6 +24,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.layout.onSizeChanged
 import com.subhashh.lumen.ui.icons.LumenIcons
 import me.saket.telephoto.zoomable.DoubleClickToZoomListener
@@ -87,8 +88,17 @@ fun VideoPage(
     // the outer edges skip back or ahead 10 s, like YouTube. A single tap still shows or hides
     // the controls.
     val zoom = rememberZoomableState(zoomSpec = ZoomSpec(maxZoomFactor = 4f))
-    LaunchedEffect(aspect) {
-        if (aspect != null) zoom.setContentLocation(ZoomableContentLocation.scaledInsideAndCenterAligned(Size(aspect * 1000f, 1000f)))
+    var page by remember { mutableStateOf(IntSize.Zero) }
+    // Where the video sits on the page: its real fitted size, so zoom starts at 1× and panning
+    // stops at the picture's edges, not the black bars'.
+    LaunchedEffect(aspect, page) {
+        if (aspect == null || page.width == 0 || page.height == 0) return@LaunchedEffect
+        val fitted = if (aspect >= page.width.toFloat() / page.height) {
+            Size(page.width.toFloat(), page.width / aspect)
+        } else {
+            Size(page.height * aspect, page.height.toFloat())
+        }
+        zoom.setContentLocation(ZoomableContentLocation.scaledInsideAndCenterAligned(fitted))
     }
     LaunchedEffect(player != null, zoom) {
         // Only the page with the player (the one on screen) locks the pager.
@@ -97,11 +107,11 @@ fun VideoPage(
     }
     // Leaving the page (another becomes current) zooms back out.
     LaunchedEffect(player == null) { if (player == null) zoom.resetZoom(animationSpec = snap()) }
-    var width by remember { mutableIntStateOf(0) }
     val doubleTap = remember(player) {
         object : DoubleClickToZoomListener {
             override suspend fun onDoubleClick(state: ZoomableState, centroid: Offset) {
                 val p = player ?: return
+                val width = page.width
                 val edge = width * EdgeShare
                 val kind = when {
                     centroid.x < edge -> FlashKind.Back
@@ -125,7 +135,7 @@ fun VideoPage(
             }
         }
     }
-    Box(modifier.fillMaxSize().onSizeChanged { width = it.width }, contentAlignment = Alignment.Center) {
+    Box(modifier.fillMaxSize().onSizeChanged { page = it }, contentAlignment = Alignment.Center) {
         Box(
             Modifier
                 .fillMaxSize()
