@@ -78,19 +78,22 @@ object ModelCatalog {
  */
 object OcrModel {
     const val Repo = "subhashhhhhh/lumen-ppocrv6-small"
-    const val Commit = "508f47d58c5f66babaf11c78f902b8cdefa5e5c6"
+    const val Commit = "891518718e7870b86c9e4859404a149c5028e4de"
 
     /** Detection for LiteRT's GPU, 960×960; used where [GpuCheck] passes. */
     const val DetGpu = "det_gpu.tflite"
 
-    /** What text reading needs; the GPU files only make it faster. */
-    private val core = listOf(
-        ModelFile("det.onnx", 9_880_512, "d73e0058b7a8086bbd57f3d10b8bcd4ff95363f67e06e2762b5e814fe9c9410e"),
-        ModelFile("rec.onnx", 21_159_378, "5435fd747c9e0efe15a96d0b378d5bd157e9492ed8fd80edf08f30d02fa24634"),
-        ModelFile("rec.yml", 150_579, "ab078671bb49f06228eadccd34f1bb501e157f7a047095ffb943ba81512c77d1"),
-    )
+    private val det = ModelFile("det.onnx", 9_880_512, "d73e0058b7a8086bbd57f3d10b8bcd4ff95363f67e06e2762b5e814fe9c9410e")
+    /** The line reader with int8 convolutions (tools/ocr/quantize_rec.py): ~1.45× faster, same words. */
+    private val rec = ModelFile("rec_int8.onnx", 13_022_934, "67c0300e647071eac9a0b56de2a1a17dcf04928cab6e3c861049c677d267e686")
+    /** The original line reader, from earlier downloads: read with until [rec] arrives. */
+    private val oldRec = ModelFile("rec.onnx", 21_159_378, "5435fd747c9e0efe15a96d0b378d5bd157e9492ed8fd80edf08f30d02fa24634")
+    private val chars = ModelFile("rec.yml", 150_579, "ab078671bb49f06228eadccd34f1bb501e157f7a047095ffb943ba81512c77d1")
 
-    val files = core + listOf(
+    val files = listOf(
+        det,
+        rec,
+        chars,
         ModelFile(DetGpu, 9_869_976, "8a7676cbc5a01ca47544bf95af2196c8b1b6c7b75beec9ad9b17857dffb71d1e"),
     )
     val bytes: Long get() = files.sumOf { it.bytes }
@@ -99,15 +102,22 @@ object OcrModel {
 
     fun dir(context: Context) = File(context.noBackupFilesDir, "models/ppocrv6-small")
 
-    /** Text can be read: an older download without the newer GPU files still reads, on the CPU. */
-    fun installed(context: Context): Boolean = core.all { File(dir(context), it.name).length() == it.bytes }
+    private fun inPlace(context: Context, file: ModelFile) = File(dir(context), file.name).length() == file.bytes
+
+    /** The line reader to use: the int8 one once downloaded, else an earlier download's. */
+    fun recFile(context: Context): File = File(dir(context), if (inPlace(context, rec) || !inPlace(context, oldRec)) rec.name else oldRec.name)
+
+    /** Text can be read; an earlier download, missing this version's newer files, still reads. */
+    fun installed(context: Context): Boolean =
+        inPlace(context, det) && inPlace(context, chars) && (inPlace(context, rec) || inPlace(context, oldRec))
 
     /** Every file of this version is in place; otherwise Settings offers the rest as an update. */
-    fun complete(context: Context): Boolean = files.all { File(dir(context), it.name).length() == it.bytes }
+    fun complete(context: Context): Boolean = files.all { inPlace(context, it) }
 
-    /** Deletes files this version doesn't use (the GPU line readers, briefly downloaded). */
+    /** Deletes files this version doesn't use: GPU line readers, and the old reader once replaced. */
     fun removeUnused(context: Context) {
         val wanted = files.flatMapTo(HashSet()) { listOf(it.name, it.name + ".part") }
+        if (!inPlace(context, rec)) wanted += oldRec.name
         dir(context).listFiles()?.filter { it.name !in wanted }?.forEach { it.deleteRecursively() }
     }
 }

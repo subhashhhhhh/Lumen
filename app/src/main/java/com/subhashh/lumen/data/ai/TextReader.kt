@@ -26,8 +26,8 @@ import kotlin.math.roundToInt
  * Same steps as tools/ocr/ocr_reference.py, which checks them on the Mac. No OpenCV: every step
  * is a few lines here.
  */
-/** [recFile] swaps in another line reader (Search Lab tests). */
-class TextReader(dir: File, threads: Int, gpu: Boolean = false, recFile: File = File(dir, "rec.onnx")) : AutoCloseable {
+/** [recFile] is the line reader ([OcrModel.recFile]; the Search Lab swaps in others). */
+class TextReader(dir: File, recFile: File, threads: Int, gpu: Boolean = false) : AutoCloseable {
     private val env = OrtEnvironment.getEnvironment()
     private val options = OrtSession.SessionOptions().apply {
         setIntraOpNumThreads(threads)

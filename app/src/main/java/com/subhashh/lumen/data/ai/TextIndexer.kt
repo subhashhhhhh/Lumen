@@ -40,7 +40,7 @@ class TextIndexer(private val context: Context) {
             context, GpuCheck.Target("ppocrv6-det", File(OcrModel.dir(context), OcrModel.DetGpu), 960 * 960 * 3),
         )
         Log.i(Tag, "Reading text with detection on the ${if (gpu) "GPU" else "CPU"}")
-        TextReader(OcrModel.dir(context), Threads, gpu).use { reader ->
+        TextReader(OcrModel.dir(context), OcrModel.recFile(context), Threads, gpu).use { reader ->
             for ((n, item) in todo.withIndex()) {
                 if (n >= limit) return Indexer.Outcome.Partial
                 coroutineContext.ensureActive()
