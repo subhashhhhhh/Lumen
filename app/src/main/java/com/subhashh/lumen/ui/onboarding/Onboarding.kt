@@ -480,22 +480,28 @@ private fun Mosaic(tiles: List<MosaicTile>, modifier: Modifier = Modifier) {
         label = "drift",
     )
     val context = LocalContext.current
+    // Laid out like the Library's grid (its columns, oldest to newest, the newest bottom right),
+    // so each photo flies the short way into its cell.
+    val columns = remember { LumenPrefs(context).gridColumns.coerceIn(3, 6) }
     BoxWithConstraints(modifier) {
-        val columns = 4
         val cell = maxWidth / columns
         val rows = (maxHeight / cell).toInt().coerceAtLeast(1)
-        val shown = tiles.take(columns * rows)
-        val top = (maxHeight - cell * ((shown.size + columns - 1) / columns)) / 2
+        val shown = tiles.takeLast(columns * rows)
+        // A short first row, like the grid's last one filled from the left: here the gap goes first
+        // so the newest still ends the bottom row.
+        val gap = (columns - shown.size % columns) % columns
+        val top = (maxHeight - cell * ((shown.size + gap + columns - 1) / columns)) / 2
         val random = remember(tiles) { java.util.Random(11) }
         val jitter = remember(tiles) { List(tiles.size) { Triple(random.nextFloat() - 0.5f, random.nextFloat() - 0.5f, random.nextFloat() - 0.5f) } }
         for ((i, tile) in shown.withIndex()) {
             val (jx, jy, jr) = jitter[i]
+            val slot = i + gap
             coil3.compose.AsyncImage(
                 model = remember(tile.item.id) { mosaicRequest(context, tile.item) },
                 contentDescription = null,
                 contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                 modifier = Modifier
-                    .offset(cell * (i % columns) + cell * 0.08f + cell * 0.12f * jx, top + cell * (i / columns) + cell * 0.08f + cell * 0.12f * jy)
+                    .offset(cell * (slot % columns) + cell * 0.08f + cell * 0.12f * jx, top + cell * (slot / columns) + cell * 0.08f + cell * 0.12f * jy)
                     .size(cell * 0.84f)
                     .onGloballyPositioned { tile.coordinates = it }
                     .graphicsLayer {

@@ -240,7 +240,8 @@ fun LumenApp(
             com.subhashh.lumen.ui.onboarding.Onboarding(
                 hasAccess = hasAccess,
                 onRequestAccess = { launcher.launch(MediaPermissions) },
-                photos = remember(items) { items.orEmpty().sortedByDescending { it.takenAt }.take(40) },
+                // Oldest to newest, as the grid runs: the newest lands bottom right.
+                photos = remember(items) { items.orEmpty().sortedBy { it.takenAt }.takeLast(40) },
                 onFinish = { exit ->
                     prefs.onboardingDone = true
                     entrance = exit
