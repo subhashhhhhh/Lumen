@@ -7,73 +7,141 @@ import android.os.SystemClock
 import android.util.Log
 import com.subhashh.lumen.data.MediaItem
 import kotlinx.coroutines.CancellationException
+import com.subhashh.lumen.data.LumenPrefs
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.ensureActive
-import kotlin.coroutines.coroutineContext
 
 /**
  * One faces pass: brings [FaceStore] in line with the library, then groups new faces into people
  * ([FaceGrouping]). Photos first, newest first; then videos, read like Smart Search reads them
  * (one frame a second up to two minutes, else 120 spread out, near-identical frames skipped) at
- * photo size. A video keeps one face per person in it, the biggest, with its moment and a saved
- * crop; otherwise one reel would outweigh a whole album. Runs after [TextIndexer] in the same
- * background job, under the same rules.
+ * the Video Detail size, decoded a few frames ahead on another thread. A video keeps one face per
+ * person in it, the biggest, with its moment and a saved crop; otherwise one reel would outweigh
+ * a whole album. The first pass of the background job: it's the fastest.
+ *
+ * Decoding is most of a video's cost, so while a video is open its frames are also saved small
+ * ([FrameCache]) for Smart Search ([model]), if that video still needs its vectors.
  */
-class FaceIndexer(private val context: Context) {
+class FaceIndexer(private val context: Context, private val model: AiModel?) {
+
+    private sealed interface Queued {
+        class Start(val item: MediaItem) : Queued
+        class Frame(val atMs: Long, val bitmap: Bitmap) : Queued
+        class End(val item: MediaItem, val started: Long, val frames: Int) : Queued
+    }
 
     /** Looks at most [limit] photos and videos. */
-    suspend fun run(limit: Int = Int.MAX_VALUE): Indexer.Outcome {
-        if (!FaceModel.installed(context)) return Indexer.Outcome.Done
+    suspend fun run(limit: Int = Int.MAX_VALUE): Indexer.Outcome = coroutineScope {
+        if (!FaceModel.installed(context)) return@coroutineScope Indexer.Outcome.Done
         val store = FaceStore.of(context)
         val library = Indexer.eligible(context)
         val known = store.indexed()
         store.remove(known.keys - library.mapTo(HashSet()) { it.id })
-        val todo = library.filter { known[it.id] != it.modified }
-            .sortedWith(compareBy<MediaItem> { it.isVideo }.thenByDescending { it.takenAt })
+        val todo = library.filter { known[it.id] != it.modified }.sortedByDescending { it.takenAt }
+        val (videos, photos) = todo.partition { it.isVideo }
         var finished = library.size - todo.size
         SmartIndex.reportFaces(context, finished, library.size)
         if (todo.isEmpty()) {
             FaceGrouping.run(store)
-            return Indexer.Outcome.Done
+            return@coroutineScope Indexer.Outcome.Done
         }
         val power = context.getSystemService(PowerManager::class.java)
-        var outcome = Indexer.Outcome.Done
+        fun tooHot() = power.currentThermalStatus >= PowerManager.THERMAL_STATUS_MODERATE
+        var budget = limit
         FaceReader(FaceModel.dir(context), Threads).use { reader ->
-            for ((n, item) in todo.withIndex()) {
-                if (n >= limit) { outcome = Indexer.Outcome.Partial; break }
-                coroutineContext.ensureActive()
-                if (power.currentThermalStatus >= PowerManager.THERMAL_STATUS_MODERATE) { outcome = Indexer.Outcome.TooHot; break }
+            for (item in photos) {
+                if (budget-- <= 0) return@coroutineScope done(store, Indexer.Outcome.Partial)
+                ensureActive()
+                if (tooHot()) return@coroutineScope done(store, Indexer.Outcome.TooHot)
                 val started = SystemClock.elapsedRealtime()
-                if (item.isVideo) {
-                    var frames = 0
-                    val kept = ArrayList<Kept>()
-                    runCatching {
-                        MediaFrames.forEach(context, item, FaceReader.ReadSide) { at, frame ->
-                            frames++
-                            for (face in reader.read(frame)) keep(kept, face, at, frame)
-                            frame.recycle()
-                            true
-                        }
-                    }.onFailure { if (it is CancellationException) throw it; Log.w(Tag, "Couldn't read ${item.name}", it) }
-                    val ids = store.put(item.id, item.modified, kept.map { NewFace(it.face.box, it.face.vector, it.atMs) })
-                    for ((id, k) in ids.zip(kept)) {
-                        runCatching { store.crop(id).outputStream().use { k.crop.compress(Bitmap.CompressFormat.JPEG, 88, it) } }
-                        k.crop.recycle()
-                    }
-                    Log.d(Tag, "${item.name.take(40)}: ${item.durationMs / 1000}s video, $frames frames, ${kept.size} people, " +
-                        "${SystemClock.elapsedRealtime() - started} ms")
-                } else {
-                    val faces = runCatching {
-                        val bitmap = MediaFrames.forReading(context, item, FaceReader.ReadSide)
-                        try { reader.read(bitmap) } finally { bitmap.recycle() }
-                    }.onFailure { Log.w(Tag, "Couldn't read ${item.name}", it) }.getOrDefault(emptyList())
-                    store.put(item.id, item.modified, faces.map { NewFace(it.box, it.vector) })
-                    Log.d(Tag, "${item.name.take(40)}: ${faces.size} faces, ${SystemClock.elapsedRealtime() - started} ms")
-                }
+                val faces = runCatching {
+                    val bitmap = MediaFrames.forReading(context, item, FaceReader.ReadSide)
+                    try { reader.read(bitmap) } finally { bitmap.recycle() }
+                }.onFailure { Log.w(Tag, "Couldn't read ${item.name}", it) }.getOrDefault(emptyList())
+                store.put(item.id, item.modified, faces.map { NewFace(it.box, it.vector) })
                 SmartIndex.reportFaces(context, ++finished, library.size)
-                // Group as we go, so people appear during a long first pass.
+                Log.d(Tag, "${item.name.take(40)}: ${faces.size} faces, ${SystemClock.elapsedRealtime() - started} ms")
                 if (finished % GroupEvery == 0) FaceGrouping.run(store)
             }
+
+            val batch = videos.take(budget.coerceAtLeast(0))
+            if (batch.isEmpty()) return@coroutineScope done(store, if (videos.isEmpty()) Indexer.Outcome.Done else Indexer.Outcome.Partial)
+            val px = LumenPrefs(context).videoDetail.px
+            // Videos Smart Search hasn't done yet get their frames kept for it.
+            val vectorsDone = model?.let { EmbeddingStore.of(context, it).indexed() }
+            val queue = Channel<Queued>(capacity = QueueFrames)
+            val decoder = launch(Dispatchers.IO) {
+                try {
+                    for (item in batch) {
+                        val started = SystemClock.elapsedRealtime()
+                        var frames = 0
+                        queue.send(Queued.Start(item))
+                        try {
+                            MediaFrames.forEach(context, item, px) { at, frame ->
+                                frames++
+                                queue.send(Queued.Frame(at, frame))
+                                true
+                            }
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            Log.w(Tag, "Couldn't read ${item.name}", e)
+                        }
+                        queue.send(Queued.End(item, started, frames))
+                    }
+                } finally {
+                    queue.close()
+                }
+            }
+            try {
+                var kept = ArrayList<Kept>()
+                var cache: java.io.File? = null
+                for (message in queue) {
+                    when (message) {
+                        is Queued.Start -> {
+                            val item = message.item
+                            // Keep its frames for Smart Search if that hasn't done this video yet.
+                            cache = if (vectorsDone != null && vectorsDone[item.id] != item.modified) {
+                                FrameCache.begin(context, item.id, item.modified)
+                            } else null
+                        }
+                        is Queued.Frame -> {
+                            if (tooHot()) {
+                                message.bitmap.recycle()
+                                return@coroutineScope done(store, Indexer.Outcome.TooHot)
+                            }
+                            cache?.let { FrameCache.save(it, message.atMs, message.bitmap) }
+                            for (face in reader.read(message.bitmap)) keep(kept, face, message.atMs, message.bitmap)
+                            message.bitmap.recycle()
+                        }
+                        is Queued.End -> {
+                            val item = message.item
+                            cache?.let(FrameCache::finish)
+                            cache = null
+                            val ids = store.put(item.id, item.modified, kept.map { NewFace(it.face.box, it.face.vector, it.atMs) })
+                            for ((id, k) in ids.zip(kept)) {
+                                runCatching { store.crop(id).outputStream().use { k.crop.compress(Bitmap.CompressFormat.JPEG, 88, it) } }
+                                k.crop.recycle()
+                            }
+                            SmartIndex.reportFaces(context, ++finished, library.size)
+                            Log.d(Tag, "${item.name.take(40)}: ${item.durationMs / 1000}s video, ${message.frames} frames, " +
+                                "${kept.size} people, ${SystemClock.elapsedRealtime() - message.started} ms")
+                            kept = ArrayList()
+                            if (finished % GroupEvery == 0) FaceGrouping.run(store)
+                        }
+                    }
+                }
+            } finally {
+                decoder.cancel()
+            }
+            done(store, if (batch.size < videos.size) Indexer.Outcome.Partial else Indexer.Outcome.Done)
         }
+    }
+
+    private fun done(store: FaceStore, outcome: Indexer.Outcome): Indexer.Outcome {
         FaceGrouping.run(store)
         return outcome
     }
@@ -120,6 +188,8 @@ class FaceIndexer(private val context: Context) {
         val Threads = (Runtime.getRuntime().availableProcessors() / 2).coerceIn(1, 4)
         const val GroupEvery = 200
         const val CropPx = 256
+        /** How far decoding may run ahead of the face models: a few frames, ~4 MB each at 1280. */
+        const val QueueFrames = 6
     }
 }
 

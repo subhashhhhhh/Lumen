@@ -22,6 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import com.subhashh.lumen.data.LumenPrefs
+import com.subhashh.lumen.data.VideoDetail
 import com.subhashh.lumen.data.ai.DownloadNotification.megabytes
 import com.subhashh.lumen.data.ai.DownloadState
 import com.subhashh.lumen.data.ai.HfTokenStore
@@ -82,6 +83,7 @@ internal fun SmartSearchGroup(
     var tokenRemoved by remember { mutableIntStateOf(0) }
     val hasToken = remember(refresh, tokenRemoved) { HfTokenStore(context).token != null }
     var wifiOnly by remember { mutableStateOf(prefs.modelWifiOnly) }
+    var videoDetail by remember { mutableStateOf(prefs.videoDetail) }
 
     // The download's progress notification needs this on Android 13+; it downloads either way.
     val askNotifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
@@ -168,13 +170,28 @@ internal fun SmartSearchGroup(
                 iconColor = Indigo,
             )
         }
+        if (faceProgress != null) {
+            Divider()
+            val (progress, people) = faceProgress
+            val complete = progress.indexed >= progress.total
+            Anchor("faces", highlight) {
+                SettingsRow(
+                    title = "Faces",
+                    subtitle = if (complete) "%,d people found".format(people) else "Continues while your phone charges · %,d people so far".format(people),
+                    value = if (complete) "All ${"%,d".format(progress.total)}" else "%,d of %,d".format(progress.indexed, progress.total),
+                    onClick = null,
+                    icon = LumenIcons.Image,
+                    iconColor = Purple,
+                )
+            }
+        }
         if (progress != null) {
             Divider()
             val complete = progress.indexed >= progress.total
             Anchor("indexed", highlight) {
                 SettingsRow(
                     title = "Indexed",
-                    subtitle = if (complete) "New photos and videos are added as they arrive" else "Continues while your phone charges",
+                    subtitle = if (complete) "New photos and videos are added as they arrive" else "Photos and videos, after Faces",
                     value = if (complete) "All ${"%,d".format(progress.total)}" else "%,d of %,d".format(progress.indexed, progress.total),
                     onClick = null,
                     icon = LumenIcons.Image,
@@ -188,7 +205,7 @@ internal fun SmartSearchGroup(
             Anchor("text-read", highlight) {
                 SettingsRow(
                     title = "Text Read",
-                    subtitle = if (complete) "Words in photos are searchable" else "Photos, after Indexed is done",
+                    subtitle = if (complete) "Words in photos are searchable" else "Photos, after Indexed",
                     value = if (complete) "All ${"%,d".format(textProgress.total)}" else "%,d of %,d".format(textProgress.indexed, textProgress.total),
                     onClick = null,
                     icon = LumenIcons.Search,
@@ -196,20 +213,20 @@ internal fun SmartSearchGroup(
                 )
             }
         }
-        if (faceProgress != null) {
-            Divider()
-            val (progress, people) = faceProgress
-            val complete = progress.indexed >= progress.total
-            Anchor("faces", highlight) {
-                SettingsRow(
-                    title = "Faces",
-                    subtitle = if (complete) "%,d people found".format(people) else "Photos and videos, after Text Read · %,d people so far".format(people),
-                    value = if (complete) "All ${"%,d".format(progress.total)}" else "%,d of %,d".format(progress.indexed, progress.total),
-                    onClick = null,
-                    icon = LumenIcons.Image,
-                    iconColor = Purple,
-                )
-            }
+        Divider()
+        Anchor("video-detail", highlight) {
+            PickerRow(
+                title = "Video Detail",
+                subtitle = "Frame size for faces in videos; lower is faster on older phones",
+                options = VideoDetail.entries.map { "${it.label} · ${it.px} px" },
+                selected = VideoDetail.entries.indexOf(videoDetail),
+                onSelect = {
+                    videoDetail = VideoDetail.entries[it]
+                    prefs.videoDetail = videoDetail
+                },
+                icon = LumenIcons.Video,
+                iconColor = Orange,
+            )
         }
         Divider()
         Anchor("wifi-only", highlight) {

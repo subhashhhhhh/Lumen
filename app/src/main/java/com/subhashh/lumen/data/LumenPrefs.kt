@@ -158,6 +158,11 @@ class LumenPrefs(context: Context) {
         get() = prefs.getBoolean(KeyCurvedEdge, false)
         set(value) = prefs.edit { putBoolean(KeyCurvedEdge, value) }
 
+    /** Settings → Smart Search → Video Detail: frame size for faces (and text) in videos. */
+    var videoDetail: VideoDetail
+        get() = VideoDetail.entries.firstOrNull { it.name == prefs.getString(KeyVideoDetail, null) } ?: VideoDetail.High
+        set(value) = prefs.edit { putString(KeyVideoDetail, value.name) }
+
     /** Collections → People: faces in circles (default) or rounded squares. */
     var peopleSquare: Boolean
         get() = prefs.getBoolean(KeyPeopleSquare, false)
@@ -184,6 +189,7 @@ class LumenPrefs(context: Context) {
         const val KeyAppLockMinutes = "app_lock_minutes"
         const val KeyCurvedEdge = "curved_edge"
         const val KeyPeopleSquare = "people_square"
+        const val KeyVideoDetail = "video_detail"
         const val KeyModelWifiOnly = "model_wifi_only"
         const val KeySearchModel = "search_model"
         const val KeySections = "section_mode"
@@ -214,3 +220,10 @@ class LumenPrefs(context: Context) {
         const val KeyAspect = "aspect_ratio_grid"
     }
 }
+
+/**
+ * How big video frames are when looking for faces and text: small faces in group shots and small
+ * captions need pixels. Smart Search itself looks at 224 px either way. Applies to videos
+ * scanned after a change.
+ */
+enum class VideoDetail(val label: String, val px: Int) { High("High", 1280), Medium("Medium", 960), Low("Low", 640) }

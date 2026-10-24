@@ -96,6 +96,7 @@ object ModelDownloads {
         TextStore.delete(context)
         FaceModel.dir(context).deleteRecursively()
         FaceStore.delete(context)
+        FrameCache.clear(context)
     }
 
     /** What a download fetches: the chosen tier, the text reader and the face models. */

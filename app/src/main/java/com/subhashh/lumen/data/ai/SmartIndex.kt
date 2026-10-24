@@ -155,15 +155,18 @@ object SmartIndex {
             return Result.success()
         }
 
+        /**
+         * Faces first (fastest; while videos are decoded for faces, their frames are kept for
+         * the next step), then Smart Search's vectors, then the words in photos.
+         */
         private suspend fun pass(model: AiModel, limit: Int): Indexer.Outcome {
-            val outcome = Indexer(applicationContext, model).run(limit)
-            if (outcome != Indexer.Outcome.Done) return outcome
+            val faces = FaceIndexer(applicationContext, model).run(limit)
+            if (faces != Indexer.Outcome.Done) return faces
+            val vectors = Indexer(applicationContext, model).run(limit)
+            if (vectors != Indexer.Outcome.Done) return vectors
             // Suggested searches follow what's in the library; refreshed once it's all indexed.
             SearchSuggestions.refreshIfStale(applicationContext, model)
-            // Then the words in photos, once everything has its vectors; then faces.
-            val text = TextIndexer(applicationContext).run(limit)
-            if (text != Indexer.Outcome.Done) return text
-            return FaceIndexer(applicationContext).run(limit)
+            return TextIndexer(applicationContext).run(limit)
         }
     }
 

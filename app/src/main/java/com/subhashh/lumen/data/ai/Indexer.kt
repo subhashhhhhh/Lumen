@@ -41,6 +41,9 @@ class Indexer(private val context: Context, private val model: AiModel) {
         val known = store.indexed()
         store.remove(known.keys - library.mapTo(HashSet()) { it.id })
         val todo = library.filter { known[it.id] != it.modified }.sortedByDescending { it.takenAt }
+        // Frames the faces pass kept are only for videos still waiting here.
+        val waiting = todo.filter { it.isVideo }.associate { it.id to it.modified }
+        FrameCache.prune(context) { id, modified -> waiting[id] == modified }
         val (videos, photos) = todo.partition { it.isVideo }
         var finished = library.size - todo.size
         SmartIndex.report(context, finished, library.size)
@@ -71,9 +74,15 @@ class Indexer(private val context: Context, private val model: AiModel) {
                 try {
                     for (item in batch) {
                         try {
-                            MediaFrames.forEach(context, item) { at, frame ->
-                                queue.send(Queued.Frame(at, frame))
-                                true
+                            // Frames the faces pass already decoded, else decode them here.
+                            val kept = FrameCache.frames(context, item.id, item.modified)
+                            if (kept != null) {
+                                for ((at, file) in kept) FrameCache.read(file)?.let { queue.send(Queued.Frame(at, it)) }
+                            } else {
+                                MediaFrames.forEach(context, item) { at, frame ->
+                                    queue.send(Queued.Frame(at, frame))
+                                    true
+                                }
                             }
                         } catch (e: CancellationException) {
                             throw e
@@ -102,6 +111,7 @@ class Indexer(private val context: Context, private val model: AiModel) {
                         }
                         is Queued.End -> {
                             store.put(message.item.id, message.item.modified, frames)
+                            FrameCache.drop(context, message.item.id, message.item.modified)
                             SmartIndex.report(context, ++finished, library.size)
                             Log.d(Tag, "${message.item.name.take(40)}: ${message.item.durationMs / 1000}s video, " +
                                 "${frames.size} frames kept, ${SystemClock.elapsedRealtime() - started} ms")
