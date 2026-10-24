@@ -54,6 +54,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.subhashh.lumen.data.MediaCollection
 import com.subhashh.lumen.data.MediaItem
+import com.subhashh.lumen.data.CollectionKeys
+import com.subhashh.lumen.data.ai.Person
+import com.subhashh.lumen.ui.people.FaceAvatar
 import com.subhashh.lumen.ui.collections.AlbumCard
 import com.subhashh.lumen.ui.components.pressable
 import com.subhashh.lumen.ui.icons.LumenIcons
@@ -77,20 +80,23 @@ data class SearchSection(
         const val People = "people"
         const val Text = "text"
         const val Smart = "smart"
+        /** Everything in one list: the normal view, without Search Details. */
+        const val All = "all"
     }
 }
 
-/** Sections with something to show; Smart Search's also while it's still looking. */
+/** Sections with something to show; Smart Search's (or the one list) also while it's still looking. */
 fun visibleSections(sections: List<SearchSection>, lookingInside: Boolean) =
-    sections.filter { it.items.isNotEmpty() || (it.id == SearchSection.Smart && lookingInside) }
+    sections.filter { it.items.isNotEmpty() || (lookingInside && (it.id == SearchSection.Smart || it.id == SearchSection.All)) }
 
-/** How many of a section's items are in the grid: one row, or all once expanded. */
+/** How many of a section's items are in the grid: one row, or all once expanded (the one list: all). */
 fun shownCount(section: SearchSection, expanded: Set<String>, columns: Int) =
-    if (section.id in expanded) section.items.size else minOf(columns, section.items.size)
+    if (section.id in expanded || section.id == SearchSection.All) section.items.size else minOf(columns, section.items.size)
 
 /** Where [section]'s item [index] sits in [SearchScreen]'s grid, to scroll back to it. */
 fun searchGridIndex(
     albums: Boolean,
+    people: Boolean,
     sections: List<SearchSection>,
     lookingInside: Boolean,
     expanded: Set<String>,
@@ -98,7 +104,7 @@ fun searchGridIndex(
     section: String,
     index: Int,
 ): Int {
-    var at = if (albums) 2 else 0
+    var at = (if (albums) 2 else 0) + (if (people) 2 else 0)
     for (s in visibleSections(sections, lookingInside)) {
         at++ // header
         if (s.id == section) return at + index
@@ -109,8 +115,9 @@ fun searchGridIndex(
 
 /**
  * Search results under the glass search field (which lives outside the page layer, see
- * LumenApp): matching albums in a row, then a section per way of matching (names and dates,
- * people, text in photos, Smart Search), each one row until See All opens it in place.
+ * LumenApp): matching albums and people in rows, then every matching photo and video in one
+ * list. With Search Details (Developer Options), a section per way of matching instead (names
+ * and dates, people, text in photos, Smart Search), each one row until See All opens it.
  * With nothing typed it offers a few starting points.
  */
 @Composable
@@ -126,6 +133,12 @@ fun SearchScreen(
     /** The section the viewer pages through: only its cells take part in the zoom transition. */
     activeSection: String?,
     albums: List<MediaCollection>,
+    /** People whose names match, each with their cover photo. */
+    people: List<Pair<Person, MediaItem>>,
+    /** A person, not yet named, Smart Search's matches are about: offered to be named. */
+    unnamed: Pair<Person, MediaItem>?,
+    onOpenPerson: (key: String) -> Unit,
+    onNamePerson: (Person) -> Unit,
     /** Recent searches, newest first. */
     recent: List<String>,
     /** Smart Search's suggestions for this library, with each one's best photo. */
@@ -180,6 +193,29 @@ fun SearchScreen(
             .nestedScroll(hideKeyboard)
             .pinchColumns(ColumnSteps, columns, onColumnsChange),
     ) {
+        if (people.isNotEmpty() || unnamed != null) {
+            item(span = { GridItemSpan(maxLineSpan) }) { SectionTitle("People") }
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    modifier = Modifier.padding(bottom = 8.dp),
+                ) {
+                    items(people, key = { it.first.id }) { (person, cover) ->
+                        PersonCell(person, cover, person.name.orEmpty(), MaterialTheme.colorScheme.onBackground) {
+                            onOpenPerson(CollectionKeys.person(person.id))
+                        }
+                    }
+                    if (unnamed != null) {
+                        item(key = "unnamed") {
+                            PersonCell(unnamed.first, unnamed.second, "Add Name", MaterialTheme.colorScheme.primary) {
+                                onNamePerson(unnamed.first)
+                            }
+                        }
+                    }
+                }
+            }
+        }
         if (albums.isNotEmpty()) {
             item(span = { GridItemSpan(maxLineSpan) }) { SectionTitle("Albums") }
             item(span = { GridItemSpan(maxLineSpan) }) {
@@ -197,19 +233,31 @@ fun SearchScreen(
         for (section in shown) {
             val count = shownCount(section, expanded, columns)
             item(key = "header:${section.id}", span = { GridItemSpan(maxLineSpan) }) {
-                SectionTitle(
-                    section.title,
-                    detail = when {
-                        section.items.isEmpty() -> "Looking inside photos…"
-                        else -> "%,d".format(section.items.size)
-                    },
-                    action = when {
-                        section.items.size <= columns -> null
-                        section.id in expanded -> "Show Less"
-                        else -> "See All"
-                    },
-                    onAction = { onToggleSection(section.id) },
-                )
+                if (section.id == SearchSection.All) {
+                    val n = section.items.size
+                    SectionTitle(
+                        when {
+                            n == 0 -> "Looking inside photos…"
+                            n == 1 -> "1 Result"
+                            else -> "%,d Results".format(n)
+                        },
+                        detail = if (lookingInside && n > 0) "Looking inside photos…" else null,
+                    )
+                } else {
+                    SectionTitle(
+                        section.title,
+                        detail = when {
+                            section.items.isEmpty() -> "Looking inside photos…"
+                            else -> "%,d".format(section.items.size)
+                        },
+                        action = when {
+                            section.items.size <= columns -> null
+                            section.id in expanded -> "Show Less"
+                            else -> "See All"
+                        },
+                        onAction = { onToggleSection(section.id) },
+                    )
+                }
             }
             items(count, key = { "${section.id}:${section.items[it].id}" }) { index ->
                 val item = section.items[index]
@@ -245,7 +293,7 @@ fun SearchScreen(
                 }
             }
         }
-        if (sections != null && shown.isEmpty() && albums.isEmpty()) {
+        if (sections != null && shown.isEmpty() && albums.isEmpty() && people.isEmpty() && unnamed == null) {
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Text(
                     "Try describing what's in the photo, like “cat on a sofa” (with Smart Features in " +
@@ -257,6 +305,25 @@ fun SearchScreen(
                 )
             }
         }
+    }
+}
+
+/** A face in the People row: tap to open the person (or, for [label] "Add Name", to name them). */
+@Composable
+private fun PersonCell(person: Person, cover: MediaItem, label: String, labelColor: androidx.compose.ui.graphics.Color, onClick: () -> Unit) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.width(76.dp).pressable(onClick, pressedScale = 0.94f),
+    ) {
+        FaceAvatar(person, cover, Modifier.size(72.dp))
+        Text(
+            label,
+            fontSize = 13.sp,
+            color = labelColor,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(top = 6.dp),
+        )
     }
 }
 

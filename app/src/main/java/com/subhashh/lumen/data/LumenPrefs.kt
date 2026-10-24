@@ -154,6 +154,16 @@ class LumenPrefs(context: Context) {
         get() = prefs.getBoolean(KeyModelWifiOnly, true)
         set(value) = prefs.edit { putBoolean(KeyModelWifiOnly, value) }
 
+    /** Settings → Developer Options is shown (tapping Version seven times in About). */
+    var developerOptions: Boolean
+        get() = prefs.getBoolean(KeyDeveloperOptions, false)
+        set(value) = prefs.edit { putBoolean(KeyDeveloperOptions, value) }
+
+    /** Developer Options → Search Details: results split by how they matched, with scores. */
+    var searchDetails: Boolean
+        get() = prefs.getBoolean(KeySearchDetails, false)
+        set(value) = prefs.edit { putBoolean(KeySearchDetails, value) }
+
     /** Smart Features packs ([com.subhashh.lumen.data.ai.ModelPack] ids) waiting to download, in order. */
     var modelQueue: List<String>
         get() = prefs.getString(KeyModelQueue, null)?.split(',')?.filter { it.isNotEmpty() } ?: emptyList()
@@ -203,6 +213,8 @@ class LumenPrefs(context: Context) {
         const val KeyIndexOnBattery = "index_on_battery"
         const val KeyModelWifiOnly = "model_wifi_only"
         const val KeyModelQueue = "model_queue"
+        const val KeyDeveloperOptions = "developer_options"
+        const val KeySearchDetails = "search_details"
         const val KeySearchModel = "search_model"
         const val KeySections = "section_mode"
         const val KeyReduceMotion = "reduce_motion"

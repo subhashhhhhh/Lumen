@@ -77,7 +77,8 @@ enum class SettingsCategory(val key: String, val title: String) {
     SmartSearch("smart-search", "Smart Features"),
     Permissions("permissions", "Permissions"),
     Backup("backup", "Backup & Import"),
-    About("about", "About");
+    About("about", "About"),
+    Developer("developer", "Developer Options");
 
     companion object {
         fun of(key: String?) = entries.firstOrNull { it.key == key }
@@ -123,6 +124,7 @@ private val Entries = listOf(
     SettingEntry("text-model", "Text Reader", SettingsCategory.SmartSearch, "ocr words text in photos screenshots download remove update"),
     SettingEntry("text-read", "Text Read", SettingsCategory.SmartSearch, "ocr words text in photos screenshots reading progress"),
     SettingEntry("wifi-only", "Download on Wi-Fi Only", SettingsCategory.SmartSearch, "mobile data cellular download"),
+    SettingEntry("search-details", "Search Details", SettingsCategory.Developer, "debug search sections scores developer"),
     SettingEntry("hf-token", "Hugging Face Token", SettingsCategory.SmartSearch, "huggingface token download speed"),
     SettingEntry("media-management", "Media Management", SettingsCategory.Permissions, "delete favorite trash permission confirm"),
     SettingEntry("all-files", "All Files Access", SettingsCategory.Permissions, "storage hidden folders permission rename"),
@@ -135,10 +137,11 @@ private val Entries = listOf(
 )
 
 /** Every query word must appear in the setting's name, page or keywords. */
-private fun search(query: String): List<SettingEntry> {
+private fun search(query: String, developer: Boolean): List<SettingEntry> {
     val words = query.lowercase().split(' ').filter { it.isNotBlank() }
     if (words.isEmpty()) return emptyList()
     return Entries.filter { e ->
+        if (e.category == SettingsCategory.Developer && !developer) return@filter false
         val text = "${e.title} ${e.category.title} ${e.keywords}".lowercase()
         words.all { it in text }
     }
@@ -193,7 +196,7 @@ fun SettingsScreen(
                 var query by rememberSaveable { mutableStateOf("") }
                 SearchBox(query, onQueryChange = { query = it })
                 if (query.isNotBlank()) {
-                    val results = search(query)
+                    val results = search(query, prefs.developerOptions || context.packageName.endsWith(".debug"))
                     if (results.isEmpty()) {
                         Text(
                             "No settings match “${query.trim()}”.",
@@ -241,6 +244,11 @@ fun SettingsScreen(
                         Divider()
                         CategoryRow(SettingsCategory.About, context.versionName(), open)
                     }
+                    // Unlocked from About (Version, seven taps); always there in development builds.
+                    val developer = remember(refresh) { prefs.developerOptions || context.packageName.endsWith(".debug") }
+                    if (developer) {
+                        Group("") { CategoryRow(SettingsCategory.Developer, null, open) }
+                    }
                 }
             }
             else -> {
@@ -257,7 +265,8 @@ fun SettingsScreen(
                         SmartSearchGroup(prefs, refresh + hfTokenVersion, onConfirm, onEnterHfToken, highlight)
                     SettingsCategory.Permissions -> PermissionsPage(status, highlight)
                     SettingsCategory.Backup -> BackupPage(highlight, onExport, onImport, onImportFavorites)
-                    SettingsCategory.About -> AboutPage(highlight, onOpenLicenses)
+                    SettingsCategory.About -> AboutPage(prefs, highlight, onOpenLicenses)
+                    SettingsCategory.Developer -> DeveloperPage(prefs, highlight)
                 }
             }
         }
@@ -279,6 +288,7 @@ private fun SettingsCategory.icon() = when (this) {
     SettingsCategory.Permissions -> LumenIcons.Shield
     SettingsCategory.Backup -> LumenIcons.Export
     SettingsCategory.About -> LumenIcons.Info
+    SettingsCategory.Developer -> LumenIcons.Settings
 }
 
 private fun SettingsCategory.color() = when (this) {
@@ -290,6 +300,7 @@ private fun SettingsCategory.color() = when (this) {
     SettingsCategory.Permissions -> Green
     SettingsCategory.Backup -> Teal
     SettingsCategory.About -> Gray
+    SettingsCategory.Developer -> Gray
 }
 
 /** The search field on Settings' main page. */
@@ -716,8 +727,9 @@ private fun ColumnScope.BackupPage(highlight: String?, onExport: () -> Unit, onI
 }
 
 @Composable
-private fun ColumnScope.AboutPage(highlight: String?, onOpenLicenses: () -> Unit) {
+private fun ColumnScope.AboutPage(prefs: LumenPrefs, highlight: String?, onOpenLicenses: () -> Unit) {
     val context = LocalContext.current
+    var taps by remember { mutableIntStateOf(0) }
     Group("Lumen") {
         Anchor("licenses", highlight) {
             SettingsRow(
@@ -732,8 +744,58 @@ private fun ColumnScope.AboutPage(highlight: String?, onOpenLicenses: () -> Unit
             SettingsRow(
                 title = "Version",
                 value = context.versionName(),
-                onClick = null,
+                // Seven taps show Developer Options, as on Android.
+                onClick = {
+                    taps++
+                    if (taps == 7) {
+                        val already = prefs.developerOptions
+                        prefs.developerOptions = true
+                        android.widget.Toast.makeText(
+                            context,
+                            if (already) "Developer Options are already on" else "Developer Options are on, in Settings",
+                            android.widget.Toast.LENGTH_SHORT,
+                        ).show()
+                    }
+                },
                 icon = LumenIcons.Info,
+                iconColor = Gray,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ColumnScope.DeveloperPage(prefs: LumenPrefs, highlight: String?) {
+    var details by remember { mutableStateOf(prefs.searchDetails) }
+    var shown by remember { mutableStateOf(prefs.developerOptions) }
+    Group(
+        "Search",
+        footer = "Splits results by how they matched (names, folders and dates; people; text in photos; " +
+            "Smart Search), each one row until See All, with Smart Search's rank and score on each photo.",
+    ) {
+        Anchor("search-details", highlight) {
+            ToggleRow(
+                title = "Search Details",
+                checked = details,
+                onCheckedChange = {
+                    details = it
+                    prefs.searchDetails = it
+                },
+                icon = LumenIcons.Search,
+                iconColor = Purple,
+            )
+        }
+    }
+    Group("", footer = "Hides this page from Settings until Version in About is tapped seven times again.") {
+        Anchor("developer-options", highlight) {
+            ToggleRow(
+                title = "Show Developer Options",
+                checked = shown,
+                onCheckedChange = {
+                    shown = it
+                    prefs.developerOptions = it
+                },
+                icon = LumenIcons.Settings,
                 iconColor = Gray,
             )
         }

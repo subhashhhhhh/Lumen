@@ -441,7 +441,7 @@ private fun MainScaffold(
     // Smart Search: by what's in the photos, once a model is downloaded and photos are indexed.
     // A short pause after typing, so the text model runs once per word, not once per letter.
     // Paired with the query it answers, so the screen can tell when it's still working.
-    val smart by produceState<Pair<String, List<SmartHit>?>?>(null, searchQuery) {
+    val smart by produceState<Pair<String, com.subhashh.lumen.data.ai.SmartResult?>?>(null, searchQuery) {
         if (searchQuery.isBlank()) {
             value = null
             return@produceState
@@ -449,7 +449,7 @@ private fun MainScaffold(
         delay(250)
         value = searchQuery to SmartSearch.search(context, searchQuery.trim())
     }
-    val smartHits = smart?.second
+    val smartHits = smart?.second?.hits
     val smartPending = searchQuery.isNotBlank() && smart?.first != searchQuery &&
         remember(searching) { com.subhashh.lumen.data.ai.ModelDownloads.installed(context) != null }
     // People named like the search (every word starts one of the name's words): exact, so
@@ -462,12 +462,22 @@ private fun MainScaffold(
             terms.all { term -> words.any { it.startsWith(term) } }
         }
     }
-    // One section per way of matching, each complete on its own (a photo can be in several):
-    // names, folders and dates; people of that name; words read in photos (newest first); then
-    // Smart Search's, best first.
-    val searchSections = remember(keywordResults, personMatches, textMatches, smartHits, library) {
+    // Settings → Developer Options → Search Details; read again each time Search opens.
+    val searchDetails = remember(searching) { prefs.searchDetails }
+    // Exact name, folder and date matches first, then people of that name and photos with the
+    // words in them (newest first), then Smart Search's, best first; each photo once.
+    // With Search Details, one section per way of matching instead, each complete on its own.
+    val searchSections = remember(keywordResults, personMatches, textMatches, smartHits, library, searchDetails) {
         val keyword = keywordResults ?: return@remember null
         val byId = library.orEmpty().associateBy { it.id }
+        if (!searchDetails) {
+            val seen = keyword.mapTo(HashSet()) { it.id }
+            val ofPeople = personMatches.flatMap { it.first.mediaIds }.mapNotNull { byId[it] }
+                .filter { seen.add(it.id) }.sortedByDescending { it.takenAt }
+            val ofText = textMatches.orEmpty().mapNotNull { byId[it] }.filter { seen.add(it.id) }.sortedByDescending { it.takenAt }
+            val ofSmart = smartHits.orEmpty().mapNotNull { hit -> byId[hit.mediaId]?.takeIf { seen.add(it.id) } }
+            return@remember listOf(SearchSection(SearchSection.All, "", keyword + ofPeople + ofText + ofSmart))
+        }
         listOf(
             SearchSection(SearchSection.Names, "Names, Folders and Dates", keyword),
             SearchSection(
@@ -487,6 +497,13 @@ private fun MainScaffold(
     /** Sections opened with See All; closed again for each new search. */
     var searchExpanded by remember { mutableStateOf(emptySet<String>()) }
     LaunchedEffect(searchQuery) { searchExpanded = emptySet() }
+    // A face group, not yet named, that Smart Search's matches are about: offered in the People row.
+    val unnamedSubject = remember(smart, allPeople) {
+        val id = smart?.second?.unnamedSubject?.id ?: return@remember null
+        allPeople.firstOrNull { it.first.id == id && !it.first.hidden }
+    }
+    /** What "Add Name" from Search fills in: the search, as a name. */
+    var personNameSuggestion by remember { mutableStateOf<String?>(null) }
     /** The section the viewer was opened from: it pages through that section. */
     var searchSection by rememberSaveable { mutableStateOf<String?>(null) }
     val searchAlbums = remember(folders, searchQuery) {
@@ -1112,6 +1129,19 @@ private fun MainScaffold(
                     onToggleSection = { id -> searchExpanded = if (id in searchExpanded) searchExpanded - id else searchExpanded + id },
                     activeSection = searchSection,
                     albums = searchAlbums,
+                    people = personMatches,
+                    unnamed = unnamedSubject,
+                    onOpenPerson = { key ->
+                        rememberSearch(searchQuery)
+                        searching = false
+                        settingsPage = null
+                        tab = LumenTab.Collections
+                        openCollection = key
+                    },
+                    onNamePerson = { person ->
+                        personNameSuggestion = searchQuery.trim().split(Regex("\\s+")).joinToString(" ") { w -> w.replaceFirstChar { it.uppercase() } }
+                        personNameRequest = person
+                    },
                     recent = recentSearches,
                     suggested = smartSuggestions,
                     suggestions = if (smartSuggestions.isEmpty()) searchSuggestions else emptyList(),
@@ -1975,7 +2005,8 @@ private fun MainScaffold(
                                         withFrameNanos { } // lay the opened section out first
                                     }
                                     searchGridIndex(
-                                        searchAlbums.isNotEmpty(), searchSections.orEmpty(), smartPending,
+                                        searchAlbums.isNotEmpty(), personMatches.isNotEmpty() || unnamedSubject != null,
+                                        searchSections.orEmpty(), smartPending,
                                         searchExpanded, searchColumns, section.orEmpty(), exit.index,
                                     )
                                 }
@@ -2125,16 +2156,20 @@ private fun MainScaffold(
         )
 
         RenameDialog(
-            currentName = personNameRequest?.let { it.name ?: "" },
+            currentName = personNameRequest?.let { it.name ?: personNameSuggestion ?: "" },
             title = if (personNameRequest?.name == null) "Add Name" else "Rename",
             confirm = "Done",
             keepExtension = false,
             onRename = { name ->
                 val person = personNameRequest
                 personNameRequest = null
+                personNameSuggestion = null
                 if (person != null) scope.launch(Dispatchers.IO) { com.subhashh.lumen.data.ai.FaceStore.of(context).rename(person.id, name) }
             },
-            onDismiss = { personNameRequest = null },
+            onDismiss = {
+                personNameRequest = null
+                personNameSuggestion = null
+            },
         )
         RenameDialog(
             currentName = albumNameRequest?.let { it.album?.title ?: "" },
