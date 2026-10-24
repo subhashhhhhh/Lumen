@@ -439,19 +439,21 @@ private fun ColumnScope.Schedule(backdrop: Backdrop, onNext: () -> Unit) {
 }
 
 /**
- * A last-screen photo's image: a fixed size and its own cache key, so the flight into the
- * Library ([Entrance]) shows the very same bitmap from its first frame, no blink.
+ * A last-screen photo's image: exactly the Library grid's (same loader, size and cache key; a
+ * video's first frame, not Android's pick), so the photo that lands in the grid is the one that
+ * flew, and the grid's cell already has it.
  */
-internal fun mosaicRequest(context: Context, item: MediaItem) =
-    coil3.request.ImageRequest.Builder(context)
-        .data(MediaThumbnail(item.uri))
-        .size(MosaicPx)
-        .memoryCacheKey("onboarding:${item.id}")
-        .placeholderMemoryCacheKey("onboarding:${item.id}")
+internal fun mosaicRequest(context: Context, item: MediaItem): coil3.request.ImageRequest {
+    val metrics = context.resources.displayMetrics
+    val bucket = com.subhashh.lumen.ui.images.ImageKeys.thumbBucket(metrics.widthPixels / LumenPrefs(context).gridColumns)
+    val key = com.subhashh.lumen.ui.images.ImageKeys.thumb(item, bucket)
+    return coil3.request.ImageRequest.Builder(context)
+        .data(com.subhashh.lumen.data.GridThumbnail(item, bucket))
+        .size(bucket, bucket)
+        .memoryCacheKey(key)
+        .placeholderMemoryCacheKey(key)
         .build()
-
-/** Last-screen photos are decoded this big: sharp at their size, and in the grid cell they land in. */
-private const val MosaicPx = 384
+}
 
 /** A photo on the last screen: where it's laid out, and its tilt and drift right now. */
 private class MosaicTile(val item: MediaItem) {
@@ -477,6 +479,7 @@ private fun Mosaic(tiles: List<MosaicTile>, modifier: Modifier = Modifier) {
         infiniteRepeatable(tween(20_000, easing = LinearEasing), RepeatMode.Restart),
         label = "drift",
     )
+    val context = LocalContext.current
     BoxWithConstraints(modifier) {
         val columns = 4
         val cell = maxWidth / columns
@@ -488,7 +491,7 @@ private fun Mosaic(tiles: List<MosaicTile>, modifier: Modifier = Modifier) {
         for ((i, tile) in shown.withIndex()) {
             val (jx, jy, jr) = jitter[i]
             coil3.compose.AsyncImage(
-                model = mosaicRequest(LocalContext.current, tile.item),
+                model = remember(tile.item.id) { mosaicRequest(context, tile.item) },
                 contentDescription = null,
                 contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                 modifier = Modifier
