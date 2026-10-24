@@ -32,15 +32,17 @@ Java_com_subhashh_lumen_data_ai_Whistle_nativeLoad(JNIEnv* env, jclass, jbyteArr
 // Returns the engine's JSON (text, language, words with start/end/probability) as UTF-8 bytes
 // (JNI's own strings mangle characters outside the BMP), or null on failure (see nativeLastError).
 extern "C" JNIEXPORT jbyteArray JNICALL
-Java_com_subhashh_lumen_data_ai_Whistle_nativeTranscribe(JNIEnv* env, jclass, jfloatArray pcm, jstring language) {
+Java_com_subhashh_lumen_data_ai_Whistle_nativeTranscribe(JNIEnv* env, jclass, jfloatArray pcm, jstring language, jstring keywords) {
     const jsize samples = env->GetArrayLength(pcm);
     std::vector<float> audio(samples);
     env->GetFloatArrayRegion(pcm, 0, samples, audio.data());
     const char* lang = language != nullptr ? env->GetStringUTFChars(language, nullptr) : nullptr;
+    const char* words = keywords != nullptr ? env->GetStringUTFChars(keywords, nullptr) : nullptr;
     // Words with times run long: room for ~100 bytes a word, a few words a second.
     std::vector<char> out(static_cast<size_t>(samples / 16000 + 30) * 1024 + 4096);
-    const int result = needle_transcribe(audio.data(), samples, lang, nullptr, 1, out.data(), static_cast<int>(out.size()));
+    const int result = needle_transcribe(audio.data(), samples, lang, words, 1, out.data(), static_cast<int>(out.size()));
     if (lang != nullptr) env->ReleaseStringUTFChars(language, lang);
+    if (words != nullptr) env->ReleaseStringUTFChars(keywords, words);
     if (result < 0) return nullptr;
     const auto length = static_cast<jsize>(std::strlen(out.data()));
     jbyteArray json = env->NewByteArray(length);

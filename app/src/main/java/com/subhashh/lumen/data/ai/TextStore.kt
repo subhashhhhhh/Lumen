@@ -71,6 +71,12 @@ class TextStore private constructor(context: Context) : SQLiteOpenHelper(context
         }
     }
 
+    /** The words read in one item, or null if none (or not read yet). */
+    fun text(mediaId: Long): String? =
+        readableDatabase.rawQuery("SELECT body FROM texts WHERE docid = ?", arrayOf(mediaId.toString())).use { c ->
+            if (c.moveToFirst()) c.getString(0) else null
+        }
+
     /**
      * Items whose text has every word of [query], the last one as a prefix (it may still be
      * being typed). Empty for a query with no letters or digits.

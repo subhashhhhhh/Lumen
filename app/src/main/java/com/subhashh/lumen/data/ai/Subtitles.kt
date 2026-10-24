@@ -120,6 +120,7 @@ object Subtitles {
         val order = windows.filter { it >= first } + windows.filter { it < first }
         if (order.all { it in done }) return@flow
         check(Whistle.load(File(SpeechModel.dir(context), "whistle.cact"))) { "Speech model unavailable" }
+        val keywords = keywords(context, item)
         SpeechDetector(SpeechModel.dir(context)).use { vad ->
             for (start in order) {
                 if (start in done) continue
@@ -129,7 +130,9 @@ object Subtitles {
                     val from = (range.first * AudioPcm.Rate / 1000).toInt().coerceIn(0, pcm.size)
                     val to = (range.last * AudioPcm.Rate / 1000).toInt().coerceIn(from, pcm.size)
                     if (to - from < AudioPcm.Rate / 4) continue
-                    val transcript = Whistle.transcribe(pcm.copyOfRange(from, to)) ?: continue
+                    val transcript = Whistle.transcribe(pcm.copyOfRange(from, to), keywords = keywords) ?: continue
+                    // A short sound read as one of the model's stock phrases was invented.
+                    if (range.last - range.first < PhantomMs && transcript.text.trim().lowercase().trimEnd('.', '!') in Phantoms) continue
                     val offset = start + range.first
                     cues += lines(transcript.words.map { it.copy(startMs = it.startMs + offset, endMs = it.endMs + offset) })
                 }
@@ -142,6 +145,29 @@ object Subtitles {
         }
     }.flowOn(Dispatchers.Default)
 
+    /**
+     * Names to listen for: the people the user named, and the longer words on screen in this
+     * video (captions often name who's speaking). Keyword biasing turned "Now my bike" into
+     * "Marquez" on the owner's MotoGP edit.
+     */
+    private fun keywords(context: Context, item: MediaItem): List<String> {
+        val people = runCatching { FaceStore.of(context).people().mapNotNull { it.name } }.getOrDefault(emptyList())
+        val onScreen = runCatching { TextStore.of(context).text(item.id) }.getOrNull().orEmpty()
+            .split(Regex("[^\\p{L}'’]+"))
+            .filter { it.length >= 4 }
+            .map { w -> if (w == w.uppercase()) w.lowercase().replaceFirstChar { it.uppercase() } else w }
+            .distinct()
+            .take(MaxScreenWords)
+        return (people + onScreen).distinct()
+    }
+
+    /** Stock phrases Whisper-like models produce from noise or music. */
+    private val Phantoms = setOf("thank you", "thanks for watching", "thank you for watching", "vielen dank", "sous-titrage st'", "bye")
+    private const val PhantomMs = 2_500L
+    private const val MaxScreenWords = 40
+    /** Abbreviations that end with a full stop but don't end a sentence. */
+    private val Abbreviations = setOf("mr.", "mrs.", "ms.", "dr.", "st.", "jr.", "sr.", "vs.", "mt.")
+
     /** Words into lines: a new line after a pause, a sentence's end, or ~42 characters. */
     private fun lines(words: List<SpokenWord>): List<Cue> {
         val out = ArrayList<Cue>()
@@ -153,11 +179,18 @@ object Subtitles {
             }
             line = ArrayList()
         }
-        for (w in words) {
+        fun endsSentence(w: SpokenWord): Boolean {
+            val t = w.text.trim()
+            return (t.endsWith('.') && t.lowercase() !in Abbreviations) || t.endsWith('?') || t.endsWith('!')
+        }
+        for ((i, w) in words.withIndex()) {
             val last = line.lastOrNull()
-            if (last != null && (w.startMs - last.endMs > PauseMs || line.sumOf { it.text.length + 1 } + w.text.length > MaxChars)) flush()
+            val length = line.sumOf { it.text.length + 1 } + w.text.length
+            // A sentence's last word may run a little long rather than sit alone on a line.
+            val overflow = length > MaxChars && !(endsSentence(w) && length <= MaxChars + 12)
+            if (last != null && (w.startMs - last.endMs > PauseMs || overflow)) flush()
             line += w
-            if (w.text.trimEnd().endsWith('.') || w.text.trimEnd().endsWith('?') || w.text.trimEnd().endsWith('!')) flush()
+            if (endsSentence(w)) flush()
         }
         flush()
         // A line stays until the next starts, never longer than its linger.
@@ -170,7 +203,8 @@ object Subtitles {
     private const val MinConfidence = 0.35
 
     private fun file(context: Context, item: MediaItem) =
-        File(context.noBackupFilesDir, "subtitles/${item.id}-${item.modified}.json").apply { parentFile?.mkdirs() }
+        // v2: line breaks, stock-phrase filter and keywords; earlier files are made again.
+        File(context.noBackupFilesDir, "subtitles/v2/${item.id}-${item.modified}.json").apply { parentFile?.mkdirs() }
 
     private fun load(file: File): Pair<Set<Long>, List<Cue>>? = runCatching {
         val o = JSONObject(file.readText())

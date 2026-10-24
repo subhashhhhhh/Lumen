@@ -22,7 +22,7 @@ object Whistle {
         .onFailure { Log.w(Tag, "No speech engine on this device", it) }.isSuccess
 
     @JvmStatic private external fun nativeLoad(model: ByteArray): String?
-    @JvmStatic private external fun nativeTranscribe(pcm: FloatArray, language: String?): ByteArray?
+    @JvmStatic private external fun nativeTranscribe(pcm: FloatArray, language: String?, keywords: String?): ByteArray?
     @JvmStatic private external fun nativeLastError(): String
 
     /** Loads [model] (a .cact file) once; false if this device can't run it. */
@@ -41,12 +41,13 @@ object Whistle {
 
     /**
      * Transcribes 16 kHz mono audio in [-1, 1]; [language] "en" etc., or null to detect it.
-     * Null if the engine failed.
+     * [keywords]: words and names to listen for (keyword biasing); names come out far better
+     * with them. Null if the engine failed.
      */
     @Synchronized
-    fun transcribe(pcm: FloatArray, language: String? = null): Transcript? {
+    fun transcribe(pcm: FloatArray, language: String? = null, keywords: List<String> = emptyList()): Transcript? {
         check(loaded != null) { "Load the model first" }
-        val json = nativeTranscribe(pcm, language) ?: run {
+        val json = nativeTranscribe(pcm, language, keywords.takeIf { it.isNotEmpty() }?.joinToString("\n")) ?: run {
             Log.w(Tag, "Transcription failed: ${nativeLastError()}")
             return null
         }
