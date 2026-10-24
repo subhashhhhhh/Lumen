@@ -174,6 +174,11 @@ class LumenPrefs(context: Context) {
         get() = prefs.getInt(KeyIndexScheduleEnd, 7 * 60)
         set(value) = prefs.edit { putInt(KeyIndexScheduleEnd, value) }
 
+    /** Onboarding finished; null before this version recorded it (existing users decide by access). */
+    var onboardingDone: Boolean?
+        get() = if (prefs.contains(KeyOnboardingDone)) prefs.getBoolean(KeyOnboardingDone, false) else null
+        set(value) = prefs.edit { if (value == null) remove(KeyOnboardingDone) else putBoolean(KeyOnboardingDone, value) }
+
     /** Which way videos' text was read; older ones are read again ([com.subhashh.lumen.data.ai.TextIndexer]). */
     var textVideoVersion: Int
         get() = prefs.getInt(KeyTextVideoVersion, 1)
@@ -241,6 +246,7 @@ class LumenPrefs(context: Context) {
         const val KeyDeveloperOptions = "developer_options"
         const val KeyShowMaps = "show_maps"
         const val KeyTextVideoVersion = "text_video_version"
+        const val KeyOnboardingDone = "onboarding_done"
         const val KeyIndexScheduleOn = "index_schedule_on"
         const val KeyIndexScheduleStart = "index_schedule_start"
         const val KeyIndexScheduleEnd = "index_schedule_end"

@@ -808,6 +808,20 @@ private fun ColumnScope.DeveloperPage(prefs: LumenPrefs, highlight: String?) {
             )
         }
     }
+    Group("Onboarding", footer = "Shows first launch again, from the start. Nothing is reset.") {
+        Anchor("show-onboarding", highlight) {
+            val context = LocalContext.current
+            SettingsRow(
+                title = "Show Onboarding",
+                onClick = {
+                    prefs.onboardingDone = false
+                    (context as? android.app.Activity)?.recreate()
+                },
+                icon = LumenIcons.Restore,
+                iconColor = Purple,
+            )
+        }
+    }
     Group("", footer = "Hides this page from Settings until Version in About is tapped seven times again.") {
         Anchor("developer-options", highlight) {
             ToggleRow(

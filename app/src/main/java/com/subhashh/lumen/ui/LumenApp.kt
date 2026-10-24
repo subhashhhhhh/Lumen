@@ -214,10 +214,28 @@ fun LumenApp(
         onPauseOrDispose { }
     }
 
-    if (hasAccess) {
-        MainScaffold(viewModel, pick, onPicked, onCancelPick)
-    } else {
-        PermissionScreen(onGrant = { launcher.launch(MediaPermissions) })
+    // First launch: onboarding. Someone who already had access before onboarding existed has
+    // been using Lumen, so they skip it.
+    val prefs = remember { com.subhashh.lumen.data.LumenPrefs(context) }
+    var onboarded by rememberSaveable {
+        mutableStateOf(prefs.onboardingDone ?: context.hasMediaAccess().also { prefs.onboardingDone = it })
+    }
+    when {
+        // Another app asking for a photo: straight to the picker (or the access prompt).
+        !onboarded && pick == null -> {
+            val items by viewModel.items.collectAsState()
+            com.subhashh.lumen.ui.onboarding.Onboarding(
+                hasAccess = hasAccess,
+                onRequestAccess = { launcher.launch(MediaPermissions) },
+                photos = remember(items) { items.orEmpty().sortedByDescending { it.takenAt }.take(40) },
+                onFinish = {
+                    prefs.onboardingDone = true
+                    onboarded = true
+                },
+            )
+        }
+        hasAccess -> MainScaffold(viewModel, pick, onPicked, onCancelPick)
+        else -> PermissionScreen(onGrant = { launcher.launch(MediaPermissions) })
     }
 }
 
