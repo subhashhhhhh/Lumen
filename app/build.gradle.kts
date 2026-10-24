@@ -26,8 +26,8 @@ android {
         // Android 11: All files access (hidden folders) and MediaStore trash.
         minSdk = 30
         targetSdk = 37
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "0.1.1"
         // Subtitles' speech engine (src/main/cpp/needle) ships for ARM only.
         externalNativeBuild {
             cmake {
