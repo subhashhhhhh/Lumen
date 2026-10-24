@@ -142,7 +142,6 @@ class CoverTransition {
      */
     suspend fun prepare(context: Context, cover: HeroCover, header: Rect, overViewer: Boolean = false): Boolean {
         val cell = cell(cover.cellKey) ?: return false
-        this.overViewer = overViewer
         withTimeoutOrNull(PrepareTimeoutMs) { SingletonImageLoader.get(context).execute(heroRequest(context, cover)) }
         // Collections isn't scaled yet: it's still its own screen.
         cellRect = cell.coordinates.unscaledRect(1f)
@@ -150,6 +149,9 @@ class CoverTransition {
         heroRect = header
         landless = false
         progress = 0f
+        // Only now, with the flight: set while the image loads, the viewer (which fades by
+        // progress) went see-through for that moment, flashing what was under it.
+        this.overViewer = overViewer
         this.cover = cover
         return true
     }
@@ -202,7 +204,13 @@ class CoverTransition {
     }
 
     /** The open page: invisible at the card, there well before the cover lands in the header. */
-    fun pageAlpha(): Float = if (cover == null) 1f else ((progress - 0.15f) / 0.6f).coerceIn(0f, 1f)
+    fun pageAlpha(): Float = when {
+        cover == null -> 1f
+        // Under the viewer: whole all along, so the viewer fading over it reveals it cleanly
+        // instead of two half-faded screens mixing.
+        overViewer -> 1f
+        else -> ((progress - 0.15f) / 0.6f).coerceIn(0f, 1f)
+    }
 
     /**
      * The top buttons: 0 shows the page underneath's, 1 the open page's. Ahead of the cover a

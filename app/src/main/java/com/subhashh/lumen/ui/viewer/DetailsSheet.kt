@@ -148,6 +148,15 @@ fun DetailsSheet(
         val byId = people.associateBy { it.first.id }
         inPhoto.mapNotNull { (id, _) -> byId[id] }.filterNot { it.first.hidden }
     }
+    // Their pages' header photos, ready before a tap, so the face flies the moment it's touched.
+    LaunchedEffect(shown) {
+        if (coverTransition == null) return@LaunchedEffect
+        val loader = coil3.SingletonImageLoader.get(context)
+        for ((person, cover) in shown) {
+            val crop = if (person.coverInVideo) FaceStore.cropFile(context, person.coverFaceId) else null
+            loader.enqueue(com.subhashh.lumen.ui.transition.heroRequest(context, com.subhashh.lumen.ui.transition.HeroCover("", cover, crop = crop)))
+        }
+    }
 
     Column(
         modifier
