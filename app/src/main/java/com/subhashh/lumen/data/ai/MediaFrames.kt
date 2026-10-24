@@ -6,7 +6,13 @@ import android.graphics.ImageDecoder
 import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.media.MediaMetadataRetriever
+import android.util.Log
 import android.util.Size
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.channels.ClosedSendChannelException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.runBlocking
+import kotlin.coroutines.ContinuationInterceptor
 import com.subhashh.lumen.data.MediaItem
 import kotlin.math.abs
 
@@ -55,23 +61,56 @@ object MediaFrames {
             onFrame(0, thumbnail(context, item))
             return
         }
+        val duration = item.durationMs.takeIf { it > 0 } ?: MediaMetadataRetriever().let { r ->
+            try {
+                r.setDataSource(context, item.uri)
+                r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0L
+            } finally {
+                r.release()
+            }
+        }
+        val wanted = keyframes(context, item, times(duration))
+        var last: IntArray? = null
+        var stop = false
+        /** Skips a frame like the last one kept; else hands it on. False to stop. */
+        suspend fun deliver(at: Long, frame: Bitmap): Boolean {
+            val signature = signature(frame)
+            if (last != null && difference(last!!, signature) < SameFrame) {
+                frame.recycle()
+                return true
+            }
+            last = signature
+            return onFrame(at, frame).also { if (!it) stop = true }
+        }
+        // The hardware decoder, once for the whole video ([KeyframeDecoder]); one call on one
+        // thread, as its GL context needs, handing each frame on before decoding the next.
+        var lastAt = -1L
+        // The hand-off runs as part of this coroutine's job, so stopping the pass stops it too.
+        val job = currentCoroutineContext().minusKey(ContinuationInterceptor)
+        val fast = try {
+            KeyframeDecoder(context, item.uri).forEach(wanted, px) { at, frame ->
+                lastAt = at
+                runBlocking(job) { deliver(at, frame) }
+            }
+            true
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: ClosedSendChannelException) {
+            throw CancellationException("Frames no longer wanted").apply { initCause(e) }
+        } catch (e: Exception) {
+            Log.w("LumenFrames", "Fast decoding failed for ${item.name}; frame by frame instead", e)
+            false
+        }
+        if (fast || stop) return
+        // Frame by frame, from where the fast way stopped.
         val retriever = MediaMetadataRetriever()
         try {
             retriever.setDataSource(context, item.uri)
-            val duration = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull()
-                ?: item.durationMs
             val params = MediaMetadataRetriever.BitmapParams().apply { preferredConfig = Bitmap.Config.ARGB_8888 }
-            var last: IntArray? = null
-            for (at in keyframes(context, item, times(duration))) {
+            for (at in wanted.filter { it > lastAt }) {
                 val frame = retriever.getScaledFrameAtTime(at * 1000, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, px, px, params)
                     ?: continue
-                val signature = signature(frame)
-                if (last != null && difference(last, signature) < SameFrame) {
-                    frame.recycle()
-                    continue
-                }
-                last = signature
-                if (!onFrame(at, frame)) return
+                if (!deliver(at, frame)) return
             }
         } finally {
             retriever.release()

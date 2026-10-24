@@ -30,6 +30,10 @@ class FaceReader(dir: File, threads: Int) : AutoCloseable {
         setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL_OPT)
     }
     private val det = env.createSession(File(dir, "yunet.onnx").path, options)
+    private var argb = IntArray(0)
+    private var detInput = FloatArray(0)
+    private var frameW = 0
+    private var frameH = 0
     private val rec = env.createSession(File(dir, "sface.onnx").path, options)
 
     /**
@@ -72,16 +76,26 @@ class FaceReader(dir: File, threads: Int) : AutoCloseable {
         val ph = (h + 31) / 32 * 32
         val plane = pw * ph
         val input = timed("prepare") {
-            val argb = IntArray(w * h)
+            // Reused between frames of one size: a 1280 frame is ~11 MB of floats.
+            if (argb.size != w * h) argb = IntArray(w * h)
+            if (detInput.size != 3 * plane || frameW != w || frameH != h) {
+                detInput = FloatArray(3 * plane) // The padding stays black (0) from here on.
+                frameW = w
+                frameH = h
+            }
+            val input = detInput
             image.getPixels(argb, 0, w, 0, 0, w, h)
             // BGR, raw 0–255, padded right and bottom with black.
-            val input = FloatArray(3 * plane)
-            for (y in 0 until h) for (x in 0 until w) {
-                val p = argb[y * w + x]
-                val i = y * pw + x
-                input[i] = (p and 0xFF).toFloat()
-                input[plane + i] = (p shr 8 and 0xFF).toFloat()
-                input[2 * plane + i] = (p shr 16 and 0xFF).toFloat()
+            var src = 0
+            for (y in 0 until h) {
+                var i = y * pw
+                for (x in 0 until w) {
+                    val p = argb[src++]
+                    input[i] = (p and 0xFF).toFloat()
+                    input[plane + i] = (p shr 8 and 0xFF).toFloat()
+                    input[2 * plane + i] = (p shr 16 and 0xFF).toFloat()
+                    i++
+                }
             }
             input
         }
