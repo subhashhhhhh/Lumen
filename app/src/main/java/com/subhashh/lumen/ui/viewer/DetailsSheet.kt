@@ -412,7 +412,14 @@ private fun compass(degrees: Double): String {
 
 @Composable
 private fun FileGroup(item: MediaItem, d: MediaDetails, colors: SheetColors, onRename: (MediaItem) -> Unit) {
-    Title(LumenIcons.Document, d.fileName, colors) { Action("Rename", colors) { onRename(item) } }
+    Title(LumenIcons.Document, d.fileName, colors) {
+        Icon(
+            LumenIcons.Edit,
+            contentDescription = "Rename",
+            tint = colors.accent,
+            modifier = Modifier.pressable({ onRename(item) }, pressedScale = 0.9f).padding(4.dp).size(20.dp),
+        )
+    }
     Spacer(Modifier.height(2.dp))
     val where = listOfNotNull(d.volume, d.folder.trimEnd('/').ifEmpty { null }).joinToString("  ·  ").ifEmpty { "Internal storage" }
     Text(where, color = colors.secondary, fontSize = 13.sp, modifier = Modifier.padding(start = 30.dp))

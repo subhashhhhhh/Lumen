@@ -25,7 +25,6 @@ import coil3.SingletonImageLoader
 import coil3.memory.MemoryCache
 import coil3.request.ImageRequest
 import com.subhashh.lumen.ui.images.ImageKeys
-import com.subhashh.lumen.ui.images.version
 import kotlin.math.roundToInt
 import android.os.Handler
 import android.os.Looper
@@ -35,7 +34,6 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.graphics.Shadow
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
@@ -316,10 +314,6 @@ fun ViewerScreen(
         val progress = { (abs(motion.dismissY) / height).coerceIn(0f, 1f) }
         val sheetHeight = height * SheetFraction
         motion.sheetHeight = sheetHeight
-        // Status bar plus the top bar's back button row.
-        val topInset = with(LocalDensity.current) {
-            WindowInsets.statusBars.getTop(this) + 64.dp.toPx()
-        }
         // Read inside graphicsLayer blocks so dragging redraws without recomposing.
         val infoFraction = { (motion.reveal / sheetHeight).coerceIn(0f, 1f) }
         val width = constraints.maxWidth.toFloat()
@@ -349,24 +343,21 @@ fun ViewerScreen(
         }
 
         // Where the current photo is on screen right now — fitted, then moved by any dismiss drag
-        // or open details sheet — so the close transition can fly from exactly there.
+        // (the details sheet slides over it without moving it) — so the close transition can fly
+        // from exactly there.
         val close: (velocity: Velocity) -> Unit = { velocity ->
             val index = pager.currentPage
             val item = items.getOrNull(index)
             val rect = item?.let {
                 val fitted = fittedHeight(it, width, height)
-                val fraction = infoFraction()
-                val available = (height - sheetHeight - topInset).coerceAtLeast(1f)
-                val infoScale = 1f - (1f - (available / fitted).coerceAtMost(1f)) * fraction
-                val infoShift = (topInset + available / 2f - height / 2f) * fraction
-                val scale = (1f - progress() * 0.4f) * infoScale
+                val scale = 1f - progress() * 0.4f
                 // Same transform the page's graphicsLayer applies: scale about the pivot, then move.
                 val origin = pageOrigin()
                 val px = origin.pivotFractionX * width
                 val py = origin.pivotFractionY * height
                 val top = (height - fitted) / 2f
                 val tx = motion.dismissX
-                val ty = motion.dismissY + infoShift
+                val ty = motion.dismissY
                 Rect(
                     left = px + (0f - px) * scale + tx,
                     top = py + (top - py) * scale + ty,
@@ -403,26 +394,6 @@ fun ViewerScreen(
                     onDismiss = close,
                 ),
         ) {
-            // Details open: a heavily blurred copy of the photo fills the screen behind it, for the
-            // glass sheet to pick up its colours (Android 12+, where blur exists).
-            if (current != null && sheetVisible && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                coil3.compose.AsyncImage(
-                    model = remember(current.id, current.version) {
-                        ImageRequest.Builder(context)
-                            .data(com.subhashh.lumen.data.MediaThumbnail(current.uri))
-                            .size(256)
-                            .memoryCacheKey("ambient:${current.version}")
-                            .placeholderMemoryCacheKey(com.subhashh.lumen.ui.images.bestPlaceholderKey(SingletonImageLoader.get(context), current))
-                            .build()
-                    },
-                    contentDescription = null,
-                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .graphicsLayer { alpha = infoFraction() * 0.85f }
-                        .blur(48.dp),
-                )
-            }
             HorizontalPager(
                 state = pager,
                 key = { items[it].id },
@@ -438,17 +409,11 @@ fun ViewerScreen(
                 val isCurrent = page == pager.currentPage
                 val pageModifier = if (isCurrent) {
                     Modifier.graphicsLayer {
-                        // With details open, shrink the photo to fit the space between the top
-                        // bar and the sheet, centered in it — like iOS.
-                        val fitted = fittedHeight(item, size.width, size.height)
-                        val available = (size.height - sheetHeight - topInset).coerceAtLeast(1f)
-                        val fraction = infoFraction()
-                        val infoScale = 1f - (1f - (available / fitted).coerceAtMost(1f)) * fraction
-                        val infoShift = (topInset + available / 2f - size.height / 2f) * fraction
+                        // The details sheet slides up over the photo; the photo stays where it is.
                         transformOrigin = pageOrigin()
                         translationX = motion.dismissX
-                        translationY = motion.dismissY + infoShift
-                        val scale = (1f - progress() * 0.4f) * infoScale
+                        translationY = motion.dismissY
+                        val scale = 1f - progress() * 0.4f
                         scaleX = scale
                         scaleY = scale
                     }
