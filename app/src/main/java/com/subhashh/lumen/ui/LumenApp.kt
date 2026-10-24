@@ -164,6 +164,8 @@ import com.subhashh.lumen.ui.components.LumenTab
 import com.subhashh.lumen.ui.library.LibraryScreen
 import com.subhashh.lumen.ui.library.LibraryViewModel
 import com.subhashh.lumen.ui.search.SearchScreen
+import com.subhashh.lumen.ui.search.SearchSection
+import com.subhashh.lumen.ui.search.searchGridIndex
 import com.subhashh.lumen.ui.search.SearchField
 import com.subhashh.lumen.data.SearchIndex
 import com.subhashh.lumen.data.ai.SmartHit
@@ -450,8 +452,6 @@ private fun MainScaffold(
     val smartHits = smart?.second
     val smartPending = searchQuery.isNotBlank() && smart?.first != searchQuery &&
         remember(searching) { com.subhashh.lumen.data.ai.ModelDownloads.installed(context) != null }
-    // Exact name, folder and date matches first, then people of that name and photos with the
-    // words in them (newest first), then Smart Search's, best first.
     // People named like the search (every word starts one of the name's words): exact, so
     // right after name and date matches.
     val personMatches = remember(people, searchQuery) {
@@ -462,18 +462,30 @@ private fun MainScaffold(
             terms.all { term -> words.any { it.startsWith(term) } }
         }
     }
-    val searchResults = remember(keywordResults, personMatches, textMatches, smartHits, library) {
+    // One section per way of matching, each complete on its own (a photo can be in several):
+    // names, folders and dates; people of that name; words read in photos (newest first); then
+    // Smart Search's, best first.
+    val searchSections = remember(keywordResults, personMatches, textMatches, smartHits, library) {
         val keyword = keywordResults ?: return@remember null
-        val text = textMatches.orEmpty()
-        val hits = smartHits.orEmpty()
-        if (personMatches.isEmpty() && text.isEmpty() && hits.isEmpty()) return@remember keyword
         val byId = library.orEmpty().associateBy { it.id }
-        val seen = keyword.mapTo(HashSet()) { it.id }
-        val ofPeople = personMatches.flatMap { it.first.mediaIds }.mapNotNull { byId[it] }
-            .filter { seen.add(it.id) }.sortedByDescending { it.takenAt }
-        keyword + ofPeople + text.mapNotNull { byId[it] }.filter { seen.add(it.id) }.sortedByDescending { it.takenAt } +
-            hits.mapNotNull { hit -> byId[hit.mediaId]?.takeIf { seen.add(it.id) } }
+        listOf(
+            SearchSection(SearchSection.Names, "Names, Folders and Dates", keyword),
+            SearchSection(
+                SearchSection.People, "People",
+                personMatches.flatMap { it.first.mediaIds }.distinct().mapNotNull { byId[it] }.sortedByDescending { it.takenAt },
+            ),
+            SearchSection(
+                SearchSection.Text, "Text in Photos",
+                textMatches.orEmpty().mapNotNull { byId[it] }.sortedByDescending { it.takenAt },
+            ),
+            SearchSection(SearchSection.Smart, "Smart Search", smartHits.orEmpty().mapNotNull { byId[it.mediaId] }),
+        )
     }
+    /** Sections opened with See All; closed again for each new search. */
+    var searchExpanded by remember { mutableStateOf(emptySet<String>()) }
+    LaunchedEffect(searchQuery) { searchExpanded = emptySet() }
+    /** The section the viewer was opened from: it pages through that section. */
+    var searchSection by rememberSaveable { mutableStateOf<String?>(null) }
     val searchAlbums = remember(folders, searchQuery) {
         val terms = SearchIndex.terms(searchQuery)
         if (terms.isEmpty()) emptyList()
@@ -511,7 +523,7 @@ private fun MainScaffold(
     val itemsOf = { key: String ->
         when (key) {
             CollectionKeys.Library -> libraryItems
-            CollectionKeys.Search -> searchResults.orEmpty()
+            CollectionKeys.Search -> searchSections?.firstOrNull { it.id == searchSection }?.items.orEmpty()
             CollectionKeys.Hidden -> if (hiddenUnlocked) hidden.orEmpty() else emptyList()
             else -> personOf(key)?.let { person ->
                 sort.apply(library.orEmpty().filter { it.id in person.mediaIds }, sortDescending)
@@ -1091,8 +1103,11 @@ private fun MainScaffold(
             when {
                 searching -> SearchScreen(
                     query = searchQuery,
-                    results = searchResults,
+                    sections = searchSections,
                     lookingInside = smartPending,
+                    expanded = searchExpanded,
+                    onToggleSection = { id -> searchExpanded = if (id in searchExpanded) searchExpanded - id else searchExpanded + id },
+                    activeSection = searchSection,
                     albums = searchAlbums,
                     recent = recentSearches,
                     suggested = smartSuggestions,
@@ -1104,8 +1119,9 @@ private fun MainScaffold(
                     gridState = searchGrid,
                     contentPadding = PaddingValues(top = statusTop + 72.dp, bottom = navBottom + 96.dp),
                     transition = transition,
-                    onOpen = { index ->
+                    onOpen = { section, index ->
                         rememberSearch(searchQuery)
+                        searchSection = section
                         openViewer(CollectionKeys.Search, index)
                     },
                     onOpenAlbum = { key ->
@@ -1921,7 +1937,7 @@ private fun MainScaffold(
         )
 
         viewerSource?.let { source ->
-            val list = remember(source, library, trash, searchResults) { itemsOf(source) }
+            val list = remember(source, library, trash, searchSections, searchSection) { itemsOf(source) }
             val grid = when (source) {
                 CollectionKeys.Library -> libraryGrid
                 CollectionKeys.Search -> searchGrid
@@ -1948,7 +1964,18 @@ private fun MainScaffold(
                             // Grids with date headers count them too.
                             val gridIndex = when (source) {
                                 CollectionKeys.Library -> librarySections.gridIndexOf(exit.index)
-                                CollectionKeys.Search -> exit.index
+                                CollectionKeys.Search -> {
+                                    // Paged past the section's first row: open it, so the photo has a cell to land in.
+                                    val section = searchSection
+                                    if (section != null && exit.index >= searchColumns && section !in searchExpanded) {
+                                        searchExpanded = searchExpanded + section
+                                        withFrameNanos { } // lay the opened section out first
+                                    }
+                                    searchGridIndex(
+                                        searchAlbums.isNotEmpty(), searchSections.orEmpty(), smartPending,
+                                        searchExpanded, searchColumns, section.orEmpty(), exit.index,
+                                    )
+                                }
                                 else -> collectionSections?.gridIndexOf(exit.index) ?: exit.index
                             }
                             if (grid.layoutInfo.visibleItemsInfo.none { it.index == gridIndex }) {

@@ -27,7 +27,6 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
@@ -38,6 +37,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
@@ -61,18 +62,61 @@ import com.subhashh.lumen.ui.components.pinchColumns
 import com.subhashh.lumen.ui.transition.PhotoTransition
 import com.subhashh.lumen.ui.transition.transitionCell
 
+/** One way of matching a search, shown as its own section: one row until See All. */
+data class SearchSection(val id: String, val title: String, val items: List<MediaItem>) {
+    companion object {
+        const val Names = "names"
+        const val People = "people"
+        const val Text = "text"
+        const val Smart = "smart"
+    }
+}
+
+/** Sections with something to show; Smart Search's also while it's still looking. */
+fun visibleSections(sections: List<SearchSection>, lookingInside: Boolean) =
+    sections.filter { it.items.isNotEmpty() || (it.id == SearchSection.Smart && lookingInside) }
+
+/** How many of a section's items are in the grid: one row, or all once expanded. */
+fun shownCount(section: SearchSection, expanded: Set<String>, columns: Int) =
+    if (section.id in expanded) section.items.size else minOf(columns, section.items.size)
+
+/** Where [section]'s item [index] sits in [SearchScreen]'s grid, to scroll back to it. */
+fun searchGridIndex(
+    albums: Boolean,
+    sections: List<SearchSection>,
+    lookingInside: Boolean,
+    expanded: Set<String>,
+    columns: Int,
+    section: String,
+    index: Int,
+): Int {
+    var at = if (albums) 2 else 0
+    for (s in visibleSections(sections, lookingInside)) {
+        at++ // header
+        if (s.id == section) return at + index
+        at += shownCount(s, expanded, columns)
+    }
+    return 0
+}
+
 /**
  * Search results under the glass search field (which lives outside the page layer, see
- * LumenApp): matching albums in a row, then matching photos and videos, newest and best first.
+ * LumenApp): matching albums in a row, then a section per way of matching (names and dates,
+ * people, text in photos, Smart Search), each one row until See All opens it in place.
  * With nothing typed it offers a few starting points.
  */
 @Composable
 fun SearchScreen(
     query: String,
     /** null while the index is being built. */
-    results: List<MediaItem>?,
-    /** Smart Search is still working on this query; its matches will follow these. */
+    sections: List<SearchSection>?,
+    /** Smart Search is still working on this query; its section fills in when it's done. */
     lookingInside: Boolean,
+    /** Sections opened with See All. */
+    expanded: Set<String>,
+    onToggleSection: (id: String) -> Unit,
+    /** The section the viewer pages through: only its cells take part in the zoom transition. */
+    activeSection: String?,
     albums: List<MediaCollection>,
     /** Recent searches, newest first. */
     recent: List<String>,
@@ -84,7 +128,7 @@ fun SearchScreen(
     gridState: LazyGridState,
     contentPadding: PaddingValues,
     transition: PhotoTransition,
-    onOpen: (index: Int) -> Unit,
+    onOpen: (section: String, index: Int) -> Unit,
     onOpenAlbum: (key: String) -> Unit,
     onSuggestion: (String) -> Unit,
     /** Picking several: ticks on what's chosen. */
@@ -112,7 +156,9 @@ fun SearchScreen(
         Suggestions(recent, suggested, suggestions, contentPadding, onSuggestion, onClearRecent, modifier)
         return
     }
-    val photos = results.orEmpty()
+    // Where each cell was last placed, so a tap outside the active section can still fly from it.
+    val placed = remember { HashMap<String, LayoutCoordinates>() }
+    val shown = sections?.let { visibleSections(it, lookingInside) }.orEmpty()
     LazyVerticalGrid(
         columns = GridCells.Fixed(columns),
         state = gridState,
@@ -138,34 +184,44 @@ fun SearchScreen(
                 }
             }
         }
-        if (results != null) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
+        for (section in shown) {
+            val count = shownCount(section, expanded, columns)
+            item(key = "header:${section.id}", span = { GridItemSpan(maxLineSpan) }) {
                 SectionTitle(
-                    when {
-                        lookingInside && photos.isEmpty() -> "Looking inside photos…"
-                        photos.isEmpty() -> "No photos or videos"
-                        photos.size == 1 -> "1 Result"
-                        else -> "${photos.size} Results"
+                    section.title,
+                    detail = when {
+                        section.items.isEmpty() -> "Looking inside photos…"
+                        else -> "%,d".format(section.items.size)
                     },
-                    detail = if (lookingInside && photos.isNotEmpty()) "Looking inside photos…" else null,
+                    action = when {
+                        section.items.size <= columns -> null
+                        section.id in expanded -> "Show Less"
+                        else -> "See All"
+                    },
+                    onAction = { onToggleSection(section.id) },
+                )
+            }
+            items(count, key = { "${section.id}:${section.items[it].id}" }) { index ->
+                val item = section.items[index]
+                val cellKey = "${section.id}:${item.id}"
+                Thumbnail(
+                    item = item,
+                    bucket = bucket,
+                    fit = false,
+                    showDuration = columns <= 5,
+                    selected = picked?.let { item.id in it },
+                    onClick = {
+                        keyboard?.hide()
+                        placed[cellKey]?.let { transition.register(item.id, it) }
+                        onOpen(section.id, index)
+                    },
+                    modifier = Modifier
+                        .onPlaced { placed[cellKey] = it }
+                        .then(if (section.id == activeSection) Modifier.transitionCell(transition, item.id) else Modifier),
                 )
             }
         }
-        itemsIndexed(photos, key = { _, item -> item.id }) { index, item ->
-            Thumbnail(
-                item = item,
-                bucket = bucket,
-                fit = false,
-                showDuration = columns <= 5,
-                selected = picked?.let { item.id in it },
-                onClick = {
-                    keyboard?.hide()
-                    onOpen(index)
-                },
-                modifier = Modifier.transitionCell(transition, item.id),
-            )
-        }
-        if (results != null && photos.isEmpty() && albums.isEmpty() && !lookingInside) {
+        if (sections != null && shown.isEmpty() && albums.isEmpty()) {
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Text(
                     "Try describing what's in the photo, like “cat on a sofa” (with Smart Features in " +
@@ -181,15 +237,24 @@ fun SearchScreen(
 }
 
 @Composable
-private fun SectionTitle(text: String, detail: String? = null) {
+private fun SectionTitle(text: String, detail: String? = null, action: String? = null, onAction: () -> Unit = {}) {
     Row(
-        Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 8.dp),
+        Modifier.padding(start = 16.dp, end = 10.dp, top = 12.dp, bottom = 8.dp),
         verticalAlignment = Alignment.Bottom,
     ) {
         Text(text, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
         if (detail != null) {
             Spacer(Modifier.width(8.dp))
             Text(detail, fontSize = 15.sp, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
+        }
+        Spacer(Modifier.weight(1f))
+        if (action != null) {
+            Text(
+                action,
+                fontSize = 15.sp,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.pressable(onAction, pressedScale = 0.94f).padding(6.dp),
+            )
         }
     }
 }
