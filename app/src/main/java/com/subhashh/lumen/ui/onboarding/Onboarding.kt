@@ -135,7 +135,7 @@ fun Onboarding(
     Box(
         Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(MaterialTheme.colorScheme.background)
             .pointerInput(Unit) { awaitPointerEventScope { while (true) awaitPointerEvent().changes.forEach { it.consume() } } },
     ) {
         // Plain: the glass sits on black.
@@ -172,9 +172,9 @@ fun Onboarding(
 @Composable
 private fun ColumnScope.Title(title: String, subtitle: String) {
     Spacer(Modifier.height(24.dp))
-    Text(title, color = Color.White, fontSize = 34.sp, fontWeight = FontWeight.Bold)
+    Text(title, color = ink, fontSize = 34.sp, fontWeight = FontWeight.Bold)
     Spacer(Modifier.height(8.dp))
-    Text(subtitle, color = Color.White.copy(alpha = 0.75f), fontSize = 17.sp)
+    Text(subtitle, color = ink.copy(alpha = 0.75f), fontSize = 17.sp)
     Spacer(Modifier.height(24.dp))
 }
 
@@ -185,11 +185,11 @@ private fun PrimaryButton(backdrop: Backdrop, text: String, enabled: Boolean = t
         Modifier
             .fillMaxWidth()
             .height(56.dp)
-            .glass(backdrop, CircleShape, tint = Color.White.copy(alpha = if (enabled) 0.28f else 0.1f))
+            .glass(backdrop, CircleShape, tint = glassTint(if (enabled) 0.28f else 0.1f))
             .pressable(onClick, enabled = enabled, pressedScale = 0.96f),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text, color = Color.White.copy(alpha = if (enabled) 1f else 0.4f), fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+        Text(text, color = ink.copy(alpha = if (enabled) 1f else 0.4f), fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
     }
 }
 
@@ -197,7 +197,7 @@ private fun PrimaryButton(backdrop: Backdrop, text: String, enabled: Boolean = t
 private fun SecondaryButton(text: String, onClick: () -> Unit) {
     Text(
         text,
-        color = Color.White.copy(alpha = 0.8f),
+        color = ink.copy(alpha = 0.8f),
         fontSize = 16.sp,
         textAlign = TextAlign.Center,
         modifier = Modifier.fillMaxWidth().pressable(onClick, pressedScale = 0.96f).padding(14.dp),
@@ -210,7 +210,7 @@ private fun Card(backdrop: Backdrop, content: @Composable ColumnScope.() -> Unit
     Column(
         Modifier
             .fillMaxWidth()
-            .glass(backdrop, RoundedCornerShape(24.dp), blurRadius = 16.dp, tint = Color.White.copy(alpha = 0.12f))
+            .glass(backdrop, RoundedCornerShape(24.dp), blurRadius = 16.dp, tint = glassTint(0.12f))
             .padding(horizontal = 16.dp, vertical = 8.dp),
         content = content,
     )
@@ -219,11 +219,11 @@ private fun Card(backdrop: Backdrop, content: @Composable ColumnScope.() -> Unit
 @Composable
 private fun Item(icon: ImageVector, title: String, subtitle: String, trailing: @Composable () -> Unit = {}) {
     Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, null, tint = Color.White, modifier = Modifier.size(24.dp))
+        Icon(icon, null, tint = ink, modifier = Modifier.size(24.dp))
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
-            Text(title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-            Text(subtitle, color = Color.White.copy(alpha = 0.65f), fontSize = 13.sp)
+            Text(title, color = ink, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            Text(subtitle, color = ink.copy(alpha = 0.65f), fontSize = 13.sp)
         }
         trailing()
     }
@@ -237,7 +237,7 @@ private fun ColumnScope.Welcome(backdrop: Backdrop, onNext: () -> Unit) {
     Spacer(Modifier.height(18.dp))
     Text(
         "Lumen",
-        color = Color.White,
+        color = ink,
         fontSize = 44.sp,
         fontWeight = FontWeight.Bold,
         modifier = Modifier.align(Alignment.CenterHorizontally),
@@ -245,7 +245,7 @@ private fun ColumnScope.Welcome(backdrop: Backdrop, onNext: () -> Unit) {
     Spacer(Modifier.height(8.dp))
     Text(
         "Your photos, smarter.\nAnd they never leave your phone.",
-        color = Color.White.copy(alpha = 0.8f),
+        color = ink.copy(alpha = 0.8f),
         fontSize = 18.sp,
         textAlign = TextAlign.Center,
         modifier = Modifier.fillMaxWidth(),
@@ -284,7 +284,7 @@ private fun ColumnScope.Photos(backdrop: Backdrop, hasAccess: Boolean, onRequest
     }
     if (hasAccess) {
         Spacer(Modifier.height(16.dp))
-        Text("Optional", color = Color.White.copy(alpha = 0.6f), fontSize = 13.sp, modifier = Modifier.padding(start = 8.dp, bottom = 8.dp))
+        Text("Optional", color = ink.copy(alpha = 0.6f), fontSize = 13.sp, modifier = Modifier.padding(start = 8.dp, bottom = 8.dp))
         Card(backdrop) {
             Item(LumenIcons.Location, "Where Photos Were Taken", "For maps and place names") {
                 Toggle(location) { if (!location) askLocation.launch(Manifest.permission.ACCESS_MEDIA_LOCATION) }
@@ -365,13 +365,13 @@ private fun ColumnScope.Smart(backdrop: Backdrop, onNext: () -> Unit) {
                         val selected = m.id == tier
                         Text(
                             m.label + if (m == recommended) " · Recommended" else "",
-                            color = Color.White,
+                            color = ink,
                             fontSize = 13.sp,
                             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
                             modifier = Modifier
                                 .clip(CircleShape)
-                                .background(Color.White.copy(alpha = if (selected) 0.25f else 0.08f))
-                                .border(1.dp, Color.White.copy(alpha = if (selected) 0.5f else 0f), CircleShape)
+                                .background(ink.copy(alpha = if (selected) 0.25f else 0.08f))
+                                .border(1.dp, ink.copy(alpha = if (selected) 0.5f else 0f), CircleShape)
                                 .pressable({ tier = m.id }, pressedScale = 0.95f)
                                 .padding(horizontal = 12.dp, vertical = 7.dp),
                         )
@@ -389,7 +389,7 @@ private fun ColumnScope.Smart(backdrop: Backdrop, onNext: () -> Unit) {
         Spacer(Modifier.height(10.dp))
         Text(
             "Downloaded from Hugging Face. Your photos are never uploaded; everything runs on this phone.",
-            color = Color.White.copy(alpha = 0.6f),
+            color = ink.copy(alpha = 0.6f),
             fontSize = 13.sp,
             modifier = Modifier.padding(horizontal = 8.dp),
         )
@@ -419,15 +419,15 @@ private fun ColumnScope.Schedule(backdrop: Backdrop, onNext: () -> Unit) {
             Modifier
                 .fillMaxWidth()
                 .padding(bottom = 12.dp)
-                .glass(backdrop, RoundedCornerShape(24.dp), blurRadius = 16.dp, tint = Color.White.copy(alpha = if (selected) 0.26f else 0.1f))
-                .border(1.5.dp, Color.White.copy(alpha = if (selected) 0.7f else 0f), RoundedCornerShape(24.dp))
+                .glass(backdrop, RoundedCornerShape(24.dp), blurRadius = 16.dp, tint = glassTint(if (selected) 0.26f else 0.1f))
+                .border(1.5.dp, ink.copy(alpha = if (selected) 0.7f else 0f), RoundedCornerShape(24.dp))
                 .pressable({ overnight = night }, pressedScale = 0.97f)
                 .padding(18.dp),
         ) {
             Column {
-                Text(title, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                Text(title, color = ink, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.height(4.dp))
-                Text(subtitle, color = Color.White.copy(alpha = 0.7f), fontSize = 14.sp)
+                Text(subtitle, color = ink.copy(alpha = 0.7f), fontSize = 14.sp)
             }
         }
     }
@@ -527,16 +527,17 @@ private fun ColumnScope.Finish(backdrop: Backdrop, photos: List<MediaItem>, onFi
     Mosaic(tiles, Modifier.fillMaxWidth().weight(1f))
     Column(Modifier.graphicsLayer { alpha = fade.value }) {
         Spacer(Modifier.height(16.dp))
-        Text("You're All Set", color = Color.White, fontSize = 40.sp, fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+        Text("You're All Set", color = ink, fontSize = 40.sp, fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
         Spacer(Modifier.height(10.dp))
         Text(
             "Smart Features download in the background.\nYou'll see their progress in your notifications.",
-            color = Color.White.copy(alpha = 0.85f),
+            color = ink.copy(alpha = 0.85f),
             fontSize = 16.sp,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(28.dp))
+        val background = MaterialTheme.colorScheme.background
         Box(Modifier.onGloballyPositioned { button = it.boundsInRoot().center }) {
             PrimaryButton(backdrop, "Let's Go") {
                 if (leaving) return@PrimaryButton
@@ -544,9 +545,18 @@ private fun ColumnScope.Finish(backdrop: Backdrop, photos: List<MediaItem>, onFi
                 scope.launch {
                     // The words step aside first; the photos fly from where they are then.
                     fade.animateTo(0f, tween(120))
-                    onFinish(OnboardingExit(tiles.mapNotNull { it.exit() }, button, Color.Black))
+                    onFinish(OnboardingExit(tiles.mapNotNull { it.exit() }, button, background))
                 }
             }
         }
     }
 }
+
+/** Onboarding's words and icons: white on the dark theme, black on the light one. */
+private val ink: Color
+    @Composable get() = MaterialTheme.colorScheme.onBackground
+
+/** The glass cards' and buttons' tint: white on dark; on light, half as much black. */
+@Composable
+private fun glassTint(alpha: Float): Color =
+    if (com.subhashh.lumen.ui.theme.LocalDarkTheme.current) Color.White.copy(alpha = alpha) else Color.Black.copy(alpha = alpha * 0.5f)
