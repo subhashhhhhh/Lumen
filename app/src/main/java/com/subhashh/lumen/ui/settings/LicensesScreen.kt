@@ -114,7 +114,7 @@ fun LicensesScreen(contentPadding: PaddingValues, modifier: Modifier = Modifier)
     SettingsPage(contentPadding, modifier) {
         LargeTitle("Licenses")
         Text(
-            "Lumen is built on the work of these open-source projects. Tap one to visit it.",
+            "Lumen is free and open source under the Apache License 2.0. It's built on the work of these open-source projects. Tap one to visit it.",
             fontSize = 15.sp,
             color = colors.secondary,
             modifier = Modifier.padding(start = 4.dp, end = 4.dp, bottom = 4.dp),
