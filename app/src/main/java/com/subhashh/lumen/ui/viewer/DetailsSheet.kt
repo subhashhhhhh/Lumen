@@ -90,7 +90,6 @@ fun DetailsSheet(
     locationRefresh: Int,
     people: List<Pair<Person, MediaItem>>,
     onOpenPerson: (Person) -> Unit,
-    onNamePerson: (Person) -> Unit,
     onOpenMap: (GeoPoint) -> Unit,
     onAllowLocation: () -> Unit,
     onRename: (MediaItem) -> Unit,
@@ -152,14 +151,14 @@ fun DetailsSheet(
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier
-                            .width(64.dp)
-                            .pressable({ if (person.name == null) onNamePerson(person) else onOpenPerson(person) }, pressedScale = 0.94f),
+                            .width(80.dp)
+                            .pressable({ onOpenPerson(person) }, pressedScale = 0.94f),
                     ) {
-                        FaceAvatar(person, cover, Modifier.size(56.dp))
+                        FaceAvatar(person, cover, Modifier.size(72.dp))
                         Text(
-                            person.name ?: "Add Name",
-                            color = if (person.name == null) colors.accent else colors.text,
-                            fontSize = 12.sp,
+                            person.name ?: "Unnamed",
+                            color = if (person.name == null) colors.secondary else colors.text,
+                            fontSize = 13.sp,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.padding(top = 4.dp),

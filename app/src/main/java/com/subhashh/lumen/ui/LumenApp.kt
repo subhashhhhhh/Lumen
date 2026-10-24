@@ -1992,7 +1992,6 @@ private fun MainScaffold(
                     tab = LumenTab.Collections
                     openCollection = CollectionKeys.person(person.id)
                 },
-                onNamePerson = { personNameRequest = it },
                 onUnhide = { unhide(listOf(it)) },
                 onDeleteHidden = { deleteHidden(listOf(it)) },
                 onClose = { exit ->

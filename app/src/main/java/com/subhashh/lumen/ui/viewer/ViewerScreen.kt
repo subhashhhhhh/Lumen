@@ -168,7 +168,6 @@ fun ViewerScreen(
     /** Everyone Faces found, with cover photos: the details sheet shows who's in this one. */
     people: List<Pair<com.subhashh.lumen.data.ai.Person, MediaItem>> = emptyList(),
     onOpenPerson: (com.subhashh.lumen.data.ai.Person) -> Unit = {},
-    onNamePerson: (com.subhashh.lumen.data.ai.Person) -> Unit = {},
 ) {
     val context = LocalContext.current
     val pager = rememberPagerState(initialPage = initialIndex) { items.size }
@@ -625,7 +624,6 @@ fun ViewerScreen(
                 locationRefresh = locationRefresh,
                 people = people,
                 onOpenPerson = onOpenPerson,
-                onNamePerson = onNamePerson,
                 onRename = onRename,
                 onAdjustDate = onAdjustDate,
                 onOpenMap = { MediaActions.openInMaps(context, it) },
