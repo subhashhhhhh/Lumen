@@ -16,6 +16,21 @@ android {
         targetSdk = 37
         versionCode = 1
         versionName = "0.1.0"
+        // Subtitles' speech engine (src/main/cpp/needle) ships for ARM only.
+        externalNativeBuild {
+            cmake {
+                abiFilters += listOf("arm64-v8a", "armeabi-v7a")
+                arguments += "-DANDROID_STL=c++_static"
+            }
+        }
+    }
+
+    ndkVersion = "30.0.16248370"
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+            version = "4.1.2"
+        }
     }
 
     buildTypes {
