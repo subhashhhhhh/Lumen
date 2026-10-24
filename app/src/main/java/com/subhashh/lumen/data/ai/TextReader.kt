@@ -26,7 +26,8 @@ import kotlin.math.roundToInt
  * Same steps as tools/ocr/ocr_reference.py, which checks them on the Mac. No OpenCV: every step
  * is a few lines here.
  */
-class TextReader(dir: File, threads: Int, gpu: Boolean = false) : AutoCloseable {
+/** [recFile] swaps in another line reader (Search Lab tests). */
+class TextReader(dir: File, threads: Int, gpu: Boolean = false, recFile: File = File(dir, "rec.onnx")) : AutoCloseable {
     private val env = OrtEnvironment.getEnvironment()
     private val options = OrtSession.SessionOptions().apply {
         setIntraOpNumThreads(threads)
@@ -35,7 +36,7 @@ class TextReader(dir: File, threads: Int, gpu: Boolean = false) : AutoCloseable 
     /** Detection on the GPU ([OcrModel.DetGpu], only after [GpuCheck] passed), else the CPU. */
     private val gpuDet = if (gpu) GpuDetector(File(dir, OcrModel.DetGpu)) else null
     private val det = if (gpuDet == null) env.createSession(File(dir, "det.onnx").path, options) else null
-    private val rec = env.createSession(File(dir, "rec.onnx").path, options)
+    private val rec = env.createSession(recFile.path, options)
     /** Index 0 is CTC's "no character"; the model adds a space after the list. */
     private val chars: Array<String> = loadChars(File(dir, "rec.yml"))
 
