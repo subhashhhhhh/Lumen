@@ -28,7 +28,8 @@ data class IndexProgress(val indexed: Int, val total: Int)
 /**
  * Keeps Smart Search's index current, in the background, with nothing for the user to do:
  * - **Backlog** (everything not indexed yet) runs only while charging and the battery isn't low,
- *   so a first index of thousands of photos and videos never costs battery.
+ *   so a first index of thousands of photos and videos never costs battery; unless the user
+ *   turns on Index on Battery (Settings → Smart Search), which drops the charger rule.
  * - **New items**: MediaStore wakes Lumen shortly after a photo or video is added; up to
  *   [NewLimit] get indexed right away, charging or not. More than that waits for the charger.
  * Both resume where they stopped. Scheduled at app start and when a model finishes downloading.
@@ -71,19 +72,21 @@ object SmartIndex {
      * backlog job waiting out a back-off is replaced by a fresh one, so opening Lumen restarts a
      * stalled index; a running one is left alone.
      */
-    fun schedule(context: Context) {
+    fun schedule(context: Context, replace: Boolean = false) {
         val app = context.applicationContext
         scope.launch {
             if (ModelDownloads.installed(app) == null) return@launch
             val work = WorkManager.getInstance(app)
             val waiting = work.getWorkInfosForUniqueWorkFlow(Backlog).first()
                 .any { it.state == WorkInfo.State.ENQUEUED && it.runAttemptCount > 0 }
+            // Settings → Smart Search → Index on Battery lifts the charger rule, not the low-battery one.
+            val charging = !com.subhashh.lumen.data.LumenPrefs(app).indexOnBattery
             work.enqueueUniqueWork(
                 Backlog,
-                if (waiting) ExistingWorkPolicy.REPLACE else ExistingWorkPolicy.KEEP,
+                if (waiting || replace) ExistingWorkPolicy.REPLACE else ExistingWorkPolicy.KEEP,
                 OneTimeWorkRequestBuilder<IndexWorker>()
                     .setInputData(workDataOf(KeyMode to Backlog))
-                    .setConstraints(Constraints.Builder().setRequiresCharging(true).setRequiresBatteryNotLow(true).build())
+                    .setConstraints(Constraints.Builder().setRequiresCharging(charging).setRequiresBatteryNotLow(true).build())
                     // Android stops a job after ~10 minutes; a long first index carries on a minute
                     // later each time, rather than WorkManager's default doubling wait.
                     .setBackoffCriteria(BackoffPolicy.LINEAR, Duration.ofMinutes(1))

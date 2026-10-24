@@ -163,6 +163,11 @@ class LumenPrefs(context: Context) {
         get() = VideoDetail.entries.firstOrNull { it.name == prefs.getString(KeyVideoDetail, null) } ?: VideoDetail.High
         set(value) = prefs.edit { putString(KeyVideoDetail, value.name) }
 
+    /** Settings → Smart Search → Index on Battery: the backlog runs without the charger too. */
+    var indexOnBattery: Boolean
+        get() = prefs.getBoolean(KeyIndexOnBattery, false)
+        set(value) = prefs.edit { putBoolean(KeyIndexOnBattery, value) }
+
     /** Collections → People: faces in circles (default) or rounded squares. */
     var peopleSquare: Boolean
         get() = prefs.getBoolean(KeyPeopleSquare, false)
@@ -190,6 +195,7 @@ class LumenPrefs(context: Context) {
         const val KeyCurvedEdge = "curved_edge"
         const val KeyPeopleSquare = "people_square"
         const val KeyVideoDetail = "video_detail"
+        const val KeyIndexOnBattery = "index_on_battery"
         const val KeyModelWifiOnly = "model_wifi_only"
         const val KeySearchModel = "search_model"
         const val KeySections = "section_mode"

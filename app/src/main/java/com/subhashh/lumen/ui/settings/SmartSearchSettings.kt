@@ -84,6 +84,7 @@ internal fun SmartSearchGroup(
     val hasToken = remember(refresh, tokenRemoved) { HfTokenStore(context).token != null }
     var wifiOnly by remember { mutableStateOf(prefs.modelWifiOnly) }
     var videoDetail by remember { mutableStateOf(prefs.videoDetail) }
+    var onBattery by remember { mutableStateOf(prefs.indexOnBattery) }
 
     // The download's progress notification needs this on Android 13+; it downloads either way.
     val askNotifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
@@ -177,7 +178,8 @@ internal fun SmartSearchGroup(
             Anchor("faces", highlight) {
                 SettingsRow(
                     title = "Faces",
-                    subtitle = if (complete) "%,d people found".format(people) else "Continues while your phone charges · %,d people so far".format(people),
+                    subtitle = if (complete) "%,d people found".format(people) else (if (onBattery) "Continues in the background" else "Continues while your phone charges") +
+                        " · %,d people so far".format(people),
                     value = if (complete) "All ${"%,d".format(progress.total)}" else "%,d of %,d".format(progress.indexed, progress.total),
                     onClick = null,
                     icon = LumenIcons.Image,
@@ -212,6 +214,21 @@ internal fun SmartSearchGroup(
                     iconColor = Orange,
                 )
             }
+        }
+        Divider()
+        Anchor("index-on-battery", highlight) {
+            ToggleRow(
+                title = "Index on Battery",
+                subtitle = "Keep scanning off the charger; stops when the battery runs low",
+                checked = onBattery,
+                onCheckedChange = {
+                    onBattery = it
+                    prefs.indexOnBattery = it
+                    SmartIndex.schedule(context, replace = true)
+                },
+                icon = LumenIcons.Timer,
+                iconColor = Green,
+            )
         }
         Divider()
         Anchor("video-detail", highlight) {

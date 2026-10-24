@@ -114,6 +114,7 @@ private val Entries = listOf(
     SettingEntry("search-quality", "Search Quality", SettingsCategory.SmartSearch, "accurate fast ai model smart search"),
     SettingEntry("search-model", "Search Model", SettingsCategory.SmartSearch, "download remove update ai smart search"),
     SettingEntry("indexed", "Indexed", SettingsCategory.SmartSearch, "indexing progress smart search"),
+    SettingEntry("index-on-battery", "Index on Battery", SettingsCategory.SmartSearch, "charging battery background scan indexing"),
     SettingEntry("video-detail", "Video Detail", SettingsCategory.SmartSearch, "video frames resolution faces quality speed"),
     SettingEntry("faces", "Faces", SettingsCategory.SmartSearch, "people faces persons grouping progress"),
     SettingEntry("text-read", "Text Read", SettingsCategory.SmartSearch, "ocr words text in photos screenshots reading progress"),
