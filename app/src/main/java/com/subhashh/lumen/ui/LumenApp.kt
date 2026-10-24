@@ -217,7 +217,9 @@ fun LumenApp(
     // First launch: onboarding. Someone who already had access before onboarding existed has
     // been using Lumen, so they skip it.
     val prefs = remember { com.subhashh.lumen.data.LumenPrefs(context) }
-    var onboarded by rememberSaveable {
+    // Read from prefs each time the screen is built (not saved state): Show Onboarding in
+    // Developer Options clears it and restarts the activity.
+    var onboarded by remember {
         mutableStateOf(prefs.onboardingDone ?: context.hasMediaAccess().also { prefs.onboardingDone = it })
     }
     when {
