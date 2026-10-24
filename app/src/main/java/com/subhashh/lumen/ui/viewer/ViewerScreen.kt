@@ -667,6 +667,10 @@ fun ViewerScreen(
                 onAdjustDate = onAdjustDate,
                 onEditCaption = { item, caption -> captionEdit = item to caption.orEmpty() },
                 captionVersion = captionVersion,
+                onSearch = { word ->
+                    motion.closeInfo()
+                    onSearchText(word)
+                },
                 onOpenMap = { if (showMaps) mapOf = it else MediaActions.openInMaps(context, it) },
                 onAllowLocation = { locationPermission.launch(Manifest.permission.ACCESS_MEDIA_LOCATION) },
                 modifier = Modifier

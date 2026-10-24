@@ -1,7 +1,7 @@
 package com.subhashh.lumen.ui.viewer
 
+import androidx.compose.foundation.layout.heightIn
 import com.subhashh.lumen.data.ai.Subtitles
-import com.subhashh.lumen.data.ai.SpeechModel
 import com.subhashh.lumen.data.ai.SearchSuggestions
 import com.subhashh.lumen.data.ai.ModelDownloads
 import com.subhashh.lumen.data.ai.Cue
@@ -10,7 +10,6 @@ import com.subhashh.lumen.data.AllMetadata
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.LaunchedEffect
 import android.widget.Toast
 import android.content.Intent
 import android.content.Context
@@ -118,6 +117,8 @@ fun DetailsSheet(
     onEditCaption: (MediaItem, String?) -> Unit,
     /** Bumped after a caption is saved, to show it. */
     captionVersion: Int,
+    /** A "Looks like" word was tapped: search the library for it. */
+    onSearch: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -228,7 +229,7 @@ fun DetailsSheet(
             }
         }
 
-        WhatLumenSees(item, colors)
+        WhatLumenSees(item, colors, onSearch)
 
         Spacer(Modifier.height(10.dp))
         Group(colors) { FileGroup(item, d, colors, onRename) }
@@ -256,12 +257,12 @@ private fun CaptionRow(caption: String?, colors: SheetColors, onEdit: () -> Unit
 }
 
 /**
- * What Lumen's models found: what it looks like (Smart Search's everyday words it stands out
- * for), and for videos, subtitles to copy or export. Hidden when there's
- * nothing.
+ * What Lumen's models found: the everyday words the item stands out for (tap one to search it),
+ * and a video's subtitles once they've been made with CC. Hidden when there's neither.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun WhatLumenSees(item: MediaItem, colors: SheetColors) {
+private fun WhatLumenSees(item: MediaItem, colors: SheetColors, onSearch: (String) -> Unit) {
     val context = LocalContext.current
     val looks by produceState(emptyList<String>(), item.id) {
         value = withContext(Dispatchers.Default) {
@@ -270,79 +271,77 @@ private fun WhatLumenSees(item: MediaItem, colors: SheetColors) {
             }.getOrNull().orEmpty()
         }
     }
-    val speech = item.isVideo && remember { SpeechModel.installed(context) }
-    if (looks.isEmpty() && !speech) return
-    Spacer(Modifier.height(10.dp))
-    Group(colors) {
-        Title(LumenIcons.Search, "What Lumen Sees", colors)
-        if (looks.isNotEmpty()) {
-            Spacer(Modifier.height(10.dp))
+    val cues by produceState(emptyList<Cue>(), item.id) {
+        if (item.isVideo) value = withContext(Dispatchers.IO) { Subtitles.saved(context, item)?.first.orEmpty() }
+    }
+    if (looks.isNotEmpty()) {
+        Spacer(Modifier.height(10.dp))
+        Group(colors) {
             Line("Looks like", colors, secondary = true)
-            Spacer(Modifier.height(6.dp))
-            Chips(looks.map { w -> w.replaceFirstChar { it.uppercase() } }, colors)
+            Spacer(Modifier.height(8.dp))
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                for (word in looks) {
+                    Text(
+                        word.replaceFirstChar { it.uppercase() },
+                        color = colors.accent,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(colors.secondary.copy(alpha = 0.15f))
+                            .pressable({ onSearch(word) }, pressedScale = 0.94f)
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                    )
+                }
+            }
         }
-        if (speech) {
-            Spacer(Modifier.height(12.dp))
-            SubtitlesPart(item, colors)
-        }
+    }
+    if (cues.isNotEmpty()) {
+        Spacer(Modifier.height(10.dp))
+        Group(colors) { SubtitlesPart(item, cues, colors) }
     }
 }
 
-/** A video's subtitles: copy them (plain or with times), export .srt or .vtt, or make them. */
+/** A video's subtitles, made with CC: scroll through them with times, copy them, or export. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun SubtitlesPart(item: MediaItem, colors: SheetColors) {
+private fun SubtitlesPart(item: MediaItem, cues: List<Cue>, colors: SheetColors) {
     val context = LocalContext.current
-    var making by remember(item.id) { mutableStateOf(false) }
-    var refresh by remember(item.id) { mutableIntStateOf(0) }
-    val saved by produceState<Pair<List<Cue>, Boolean>?>(null, item.id, refresh) {
-        value = withContext(Dispatchers.IO) { Subtitles.saved(context, item) }
-    }
-    if (making) {
-        // Made while the details stay open; what's done is kept if they close.
-        LaunchedEffect(item.id) {
-            runCatching { Subtitles.generate(context, item, 0).collect { refresh++ } }
-            making = false
-            refresh++
+    Title(LumenIcons.Video, "Subtitles", colors)
+    Spacer(Modifier.height(8.dp))
+    Column(Modifier.fillMaxWidth().heightIn(max = 220.dp).verticalScroll(rememberScrollState())) {
+        for (cue in cues) {
+            Row(Modifier.padding(vertical = 3.dp)) {
+                val s = cue.startMs / 1000
+                Text(
+                    "%d:%02d".format(s / 60, s % 60),
+                    color = colors.secondary,
+                    fontSize = 13.sp,
+                    modifier = Modifier.width(48.dp),
+                )
+                Text(cue.text, color = colors.text, fontSize = 14.sp)
+            }
         }
     }
-    val cues = saved?.first.orEmpty()
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(
-            when {
-                making -> "Making subtitles… ${cues.size} lines"
-                cues.isEmpty() && saved != null -> "Subtitles: no speech"
-                cues.isEmpty() -> "Subtitles"
-                saved?.second == false -> "Subtitles: ${cues.size} lines so far"
-                else -> "Subtitles: ${cues.size} lines"
-            },
-            color = colors.secondary,
-            fontSize = 13.sp,
-            modifier = Modifier.weight(1f),
-        )
-        if (!making && saved?.second != true) Action(if (cues.isEmpty()) "Make" else "Finish", colors) { making = true }
-    }
-    if (cues.isNotEmpty() && !making) {
-        Spacer(Modifier.height(8.dp))
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            for ((label, action) in listOf<Pair<String, () -> Unit>>(
-                "Copy" to { copyText(context, cues.joinToString("\n") { it.text }) },
-                "Copy with Times" to { copyText(context, Subtitles.timestamped(cues)) },
-                "Export SRT" to { exportSubtitles(context, item, Subtitles.srt(cues), "srt", "application/x-subrip") },
-                "Export VTT" to { exportSubtitles(context, item, Subtitles.vtt(cues), "vtt", "text/vtt") },
-            )) {
-                Text(
-                    label,
-                    color = colors.accent,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(colors.secondary.copy(alpha = 0.15f))
-                        .pressable(action, pressedScale = 0.94f)
-                        .padding(horizontal = 10.dp, vertical = 6.dp),
-                )
-            }
+    Spacer(Modifier.height(10.dp))
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        for ((label, action) in listOf<Pair<String, () -> Unit>>(
+            "Copy" to { copyText(context, cues.joinToString("\n") { it.text }) },
+            "Copy with Times" to { copyText(context, Subtitles.timestamped(cues)) },
+            "Export SRT" to { exportSubtitles(context, item, Subtitles.srt(cues), "srt", "application/x-subrip") },
+            "Export VTT" to { exportSubtitles(context, item, Subtitles.vtt(cues), "vtt", "text/vtt") },
+        )) {
+            Text(
+                label,
+                color = colors.accent,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(colors.secondary.copy(alpha = 0.15f))
+                    .pressable(action, pressedScale = 0.94f)
+                    .padding(horizontal = 10.dp, vertical = 6.dp),
+            )
         }
     }
 }
