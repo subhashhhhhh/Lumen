@@ -283,7 +283,7 @@ private fun WhatLumenSees(item: MediaItem, colors: SheetColors, onSearch: (Strin
                 for (word in looks) {
                     Text(
                         word.replaceFirstChar { it.uppercase() },
-                        color = colors.accent,
+                        color = colors.text,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
                         modifier = Modifier
@@ -333,7 +333,7 @@ private fun SubtitlesPart(item: MediaItem, cues: List<Cue>, colors: SheetColors)
         )) {
             Text(
                 label,
-                color = colors.accent,
+                color = colors.text,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Medium,
                 modifier = Modifier
