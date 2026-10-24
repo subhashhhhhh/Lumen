@@ -105,7 +105,7 @@ object ModelDownloads {
     /** Downloaded with every tier; a newer version adding to these shows as an update. */
     val ExtrasBytes get() = OcrModel.bytes + FaceModel.bytes
 
-    fun extrasInstalled(context: Context) = OcrModel.installed(context) && FaceModel.installed(context)
+    fun extrasInstalled(context: Context) = OcrModel.complete(context) && FaceModel.installed(context)
 
     /** Bytes still to fetch, counting partial files already on disk. */
     fun remainingBytes(context: Context): Long =

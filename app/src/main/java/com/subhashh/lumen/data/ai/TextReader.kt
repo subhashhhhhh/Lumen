@@ -13,6 +13,7 @@ import android.graphics.Paint
 import java.io.File
 import java.nio.FloatBuffer
 import kotlin.math.ceil
+import kotlin.math.exp
 import kotlin.math.hypot
 import kotlin.math.roundToInt
 
@@ -26,7 +27,7 @@ import kotlin.math.roundToInt
  * Same steps as tools/ocr/ocr_reference.py, which checks them on the Mac. No OpenCV: every step
  * is a few lines here.
  */
-class TextReader(dir: File, threads: Int, gpu: Boolean = false) : AutoCloseable {
+class TextReader(dir: File, threads: Int, gpu: Boolean = false, recGpuWidths: List<Int> = emptyList()) : AutoCloseable {
     private val env = OrtEnvironment.getEnvironment()
     private val options = OrtSession.SessionOptions().apply {
         setIntraOpNumThreads(threads)
@@ -36,6 +37,11 @@ class TextReader(dir: File, threads: Int, gpu: Boolean = false) : AutoCloseable 
     private val gpuDet = if (gpu) GpuDetector(File(dir, OcrModel.DetGpu)) else null
     private val det = if (gpuDet == null) env.createSession(File(dir, "det.onnx").path, options) else null
     private val rec = env.createSession(File(dir, "rec.onnx").path, options)
+    /**
+     * Line reading on the GPU, one model per width that passed [GpuCheck], loaded when first
+     * needed. A batch goes to the narrowest that fits its widest line; wider ones to the CPU.
+     */
+    private val gpuRec = recGpuWidths.sorted().associateWith { w -> lazy { GpuRecognizer(File(dir, OcrModel.recGpu(w)), w) } }
     /** Index 0 is CTC's "no character"; the model adds a space after the list. */
     private val chars: Array<String> = loadChars(File(dir, "rec.yml"))
 
@@ -331,11 +337,20 @@ class TextReader(dir: File, threads: Int, gpu: Boolean = false) : AutoCloseable 
         }
     }
 
-    /** Reads a batch of boxes in one run, each padded on the right to the widest. */
     /** Lines for one batch of boxes, in order; null where a box didn't read as text. */
     private fun recognize(image: Bitmap, boxes: List<Array<Point>>): List<String?> {
         val lines = boxes.map { cut(image, it) }
-        val width = lines.maxOf { it.width }
+        try {
+            val widest = lines.maxOf { it.width }
+            val gpu = gpuRec.entries.firstOrNull { it.key >= widest }?.value?.value
+            return gpu?.read(lines) ?: recognizeCpu(lines, widest)
+        } finally {
+            lines.forEach { it.recycle() }
+        }
+    }
+
+    /** One run of ONNX Runtime, each line padded on the right to the widest. */
+    private fun recognizeCpu(lines: List<Bitmap>, width: Int): List<String?> {
         val plane = RecHeight * width
         val input = FloatArray(lines.size * 3 * plane)
         val argb = IntArray(plane)
@@ -349,7 +364,6 @@ class TextReader(dir: File, threads: Int, gpu: Boolean = false) : AutoCloseable 
                 input[base + plane + i] = (p shr 8 and 0xFF) / 127.5f - 1f
                 input[base + 2 * plane + i] = (p shr 16 and 0xFF) / 127.5f - 1f
             }
-            line.recycle()
         }
         val shape = longArrayOf(lines.size.toLong(), 3, RecHeight.toLong(), width.toLong())
         return OnnxTensor.createTensor(env, FloatBuffer.wrap(input), shape).use { x ->
@@ -359,32 +373,49 @@ class TextReader(dir: File, threads: Int, gpu: Boolean = false) : AutoCloseable 
                 val steps = out.remaining() / (lines.size * classes)
                 val row = FloatArray(classes)
                 List(lines.size) { b ->
-                    val text = StringBuilder()
-                    var confidence = 0.0
-                    var kept = 0
-                    var previous = 0
-                    for (t in 0 until steps) {
-                        out.position((b * steps + t) * classes)
-                        out.get(row)
-                        var best = 0
-                        for (c in 1 until classes) if (row[c] > row[best]) best = c
-                        if (best != 0 && best != previous) {
-                            text.append(if (best < chars.size) chars[best] else " ")
-                            confidence += row[best]
-                            kept++
-                        }
-                        previous = best
-                    }
-                    val line = text.toString().trim()
-                    // Icons read as a stray letter or two; keep lines with some substance.
-                    if (kept > 0 && confidence / kept >= MinLineScore && line.count { it.isLetterOrDigit() } >= 2) line else null
+                    decode(
+                        steps,
+                        best = { t ->
+                            out.position((b * steps + t) * classes)
+                            out.get(row)
+                            var best = 0
+                            for (c in 1 until classes) if (row[c] > row[best]) best = c
+                            best
+                        },
+                        // The model ends in a Softmax: scores are probabilities already.
+                        probability = { _, c -> row[c].toDouble() },
+                    )
                 }
             }
         }
     }
 
+    /**
+     * Greedy CTC: each step's most likely class ([best]), repeats and "no character" dropped.
+     * [probability] is asked right after [best] for the same step, only for kept characters.
+     */
+    private inline fun decode(steps: Int, best: (t: Int) -> Int, probability: (t: Int, c: Int) -> Double): String? {
+        val text = StringBuilder()
+        var confidence = 0.0
+        var kept = 0
+        var previous = 0
+        for (t in 0 until steps) {
+            val c = best(t)
+            if (c != 0 && c != previous) {
+                text.append(if (c < chars.size) chars[c] else " ")
+                confidence += probability(t, c)
+                kept++
+            }
+            previous = c
+        }
+        val line = text.toString().trim()
+        // Icons read as a stray letter or two; keep lines with some substance.
+        return if (kept > 0 && confidence / kept >= MinLineScore && line.count { it.isLetterOrDigit() } >= 2) line else null
+    }
+
     override fun close() {
         gpuDet?.close()
+        gpuRec.values.filter { it.isInitialized() }.forEach { it.value.close() }
         det?.close()
         rec.close()
         options.close()
@@ -429,6 +460,75 @@ class TextReader(dir: File, threads: Int, gpu: Boolean = false) : AutoCloseable 
             inputs[0].writeFloat(input)
             model.run(inputs, outputs, 0)
             return outputs[0].readFloat() to scale
+        }
+
+        override fun close() {
+            inputs.forEach { it.close() }
+            outputs.forEach { it.close() }
+            model.close()
+            environment.close()
+        }
+    }
+
+    /**
+     * The line reader at one fixed [width] for LiteRT's GPU: [Batch] lines, NHWC, unused lines
+     * and the right of short ones left at 0, as ONNX Runtime pads. Its character classifier
+     * comes in two halves (`logits_0`, `logits_1`: 18,710 classes are wider than the GPU's
+     * textures) of raw scores, so the best character and its probability are worked out here.
+     */
+    private inner class GpuRecognizer(file: File, private val width: Int) : AutoCloseable {
+        private val environment = Environment.create()
+        private val model = CompiledModel.create(
+            file.path,
+            CompiledModel.Options(Accelerator.GPU).apply {
+                gpuOptions = CompiledModel.GpuOptions(precision = CompiledModel.GpuOptions.Precision.FP32)
+            },
+            environment,
+        )
+        private val inputs = model.createInputBuffers(0)
+        private val outputs = listOf(model.createOutputBuffer("logits_0"), model.createOutputBuffer("logits_1"))
+        private val input = FloatArray(Batch * RecHeight * width * 3)
+
+        fun read(lines: List<Bitmap>): List<String?> {
+            input.fill(0f)
+            val argb = IntArray(RecHeight * width)
+            for ((b, line) in lines.withIndex()) {
+                line.getPixels(argb, 0, line.width, 0, 0, line.width, RecHeight)
+                for (y in 0 until RecHeight) for (x in 0 until line.width) {
+                    val p = argb[y * line.width + x]
+                    val o = ((b * RecHeight + y) * width + x) * 3
+                    input[o] = (p and 0xFF) / 127.5f - 1f
+                    input[o + 1] = (p shr 8 and 0xFF) / 127.5f - 1f
+                    input[o + 2] = (p shr 16 and 0xFF) / 127.5f - 1f
+                }
+            }
+            inputs[0].writeFloat(input)
+            model.run(inputs, outputs, 0)
+            val low = outputs[0].readFloat()
+            val high = outputs[1].readFloat()
+            val half = low.size / (Batch * (width / 8))
+            val steps = width / 8
+            return List(lines.size) { b ->
+                decode(
+                    steps,
+                    best = { t ->
+                        val at = (b * steps + t) * half
+                        var best = 0
+                        var top = low[at]
+                        for (c in 1 until half) if (low[at + c] > top) { top = low[at + c]; best = c }
+                        for (c in 0 until half) if (high[at + c] > top) { top = high[at + c]; best = half + c }
+                        best
+                    },
+                    // Softmax over both halves, for the winner only.
+                    probability = { t, c ->
+                        val at = (b * steps + t) * half
+                        val top = if (c < half) low[at + c] else high[at + c - half]
+                        var sum = 0.0
+                        for (k in 0 until half) sum += exp((low[at + k] - top).toDouble()) + exp((high[at + k] - top).toDouble())
+                        1 / sum
+                    },
+                )
+            }
         }
 
         override fun close() {

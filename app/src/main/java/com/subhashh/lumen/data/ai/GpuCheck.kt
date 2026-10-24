@@ -118,7 +118,12 @@ object GpuCheck {
         try {
             inputs[0].writeFloat(input)
             model.run(inputs, outputs, 0)
-            return outputs[0].readFloat()
+            // Every output, end to end: the split line reader's second half can be the wrong one.
+            val parts = outputs.map { it.readFloat() }
+            return FloatArray(parts.sumOf { it.size }).also { all ->
+                var at = 0
+                for (part in parts) { part.copyInto(all, at); at += part.size }
+            }
         } finally {
             inputs.forEach { it.close() }
             outputs.forEach { it.close() }
