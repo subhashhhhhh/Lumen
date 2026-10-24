@@ -43,10 +43,9 @@ object SmartSearch {
         withContext(Dispatchers.Default) {
             val installed = ModelDownloads.installed(context) ?: return@withContext
             lock.withLock { ready(context, installed).also { embedder?.warmText() } }
-            // First time after an update or a fresh index: work out suggestions in the background.
-            if (SearchSuggestions.load(context, installed).isEmpty()) {
-                background.launch { SearchSuggestions.refreshIfStale(context, installed) }
-            }
+            // After an update or a fresh index: suggestions (and Details' "Looks like" words) are
+            // worked out in the background. Cheap when they're current.
+            background.launch { SearchSuggestions.refreshIfStale(context, installed) }
         }
     }
 
