@@ -1,5 +1,8 @@
 package com.subhashh.lumen.ui.onboarding
 
+import androidx.core.graphics.drawable.toBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalDensity
 import android.Manifest
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
@@ -229,11 +232,21 @@ private fun Item(icon: ImageVector, title: String, subtitle: String, trailing: @
 @Composable
 private fun ColumnScope.Welcome(backdrop: Backdrop, onNext: () -> Unit) {
     Spacer(Modifier.weight(1f))
-    Image(
-        painterResource(R.drawable.ic_launcher_foreground),
-        contentDescription = null,
-        modifier = Modifier.size(160.dp).align(Alignment.CenterHorizontally),
-    )
+    // The app icon as the home screen shows it: background, flare and the phone's icon shape.
+    val context = LocalContext.current
+    val iconPx = with(LocalDensity.current) { 132.dp.roundToPx() }
+    val icon = remember(iconPx) {
+        androidx.core.content.ContextCompat.getDrawable(context, R.mipmap.ic_launcher)
+            ?.toBitmap(iconPx, iconPx)?.asImageBitmap()
+    }
+    if (icon != null) {
+        Image(
+            icon,
+            contentDescription = null,
+            modifier = Modifier.size(132.dp).align(Alignment.CenterHorizontally),
+        )
+    }
+    Spacer(Modifier.height(18.dp))
     Text(
         "Lumen",
         color = Color.White,
