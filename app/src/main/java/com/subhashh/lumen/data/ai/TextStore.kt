@@ -90,6 +90,21 @@ class TextStore private constructor(context: Context) : SQLiteOpenHelper(context
         }
     }
 
+    /**
+     * Items whose text has every phrase word for word (full-text phrase queries skip
+     * punctuation: "so baby, come" matches "so baby come"); the last word is a prefix while its
+     * quote is still being typed.
+     */
+    fun searchPhrases(p: com.subhashh.lumen.data.QueryParts.Phrases): List<Long> {
+        val match = p.phrases.withIndex().joinToString(" ") { (i, words) ->
+            val last = if (p.open && i == p.phrases.lastIndex) "*" else ""
+            "\"" + words.joinToString(" ") + last + "\""
+        }
+        return readableDatabase.rawQuery("SELECT docid FROM texts WHERE texts MATCH ?", arrayOf(match)).use { c ->
+            List(c.count) { c.moveToNext(); c.getLong(0) }
+        }
+    }
+
     companion object {
         @Volatile
         private var open: TextStore? = null

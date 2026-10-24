@@ -56,6 +56,14 @@ class CaptionStore private constructor(context: Context) : SQLiteOpenHelper(cont
         }
     }
 
+    /** Items whose caption has every phrase word for word. */
+    fun searchPhrases(p: QueryParts.Phrases): List<Long> =
+        readableDatabase.rawQuery("SELECT media_id, text FROM captions", null).use { c ->
+            buildList {
+                while (c.moveToNext()) if (QueryParts.contains(c.getString(1), p)) add(c.getLong(0))
+            }
+        }
+
     companion object {
         @Volatile private var open: CaptionStore? = null
 
