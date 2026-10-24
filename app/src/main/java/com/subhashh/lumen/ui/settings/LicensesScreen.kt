@@ -75,6 +75,31 @@ private val Credits = listOf(
         "The ONNX exports Lumen's search models are converted from; no Immich code is used",
         "https://huggingface.co/immich-app",
     ),
+    Credit(
+        "PP-OCRv6 small",
+        "PaddlePaddle authors (Baidu)",
+        "Apache 2.0",
+        "Reading text in photos and videos",
+        "https://huggingface.co/PaddlePaddle/PP-OCRv6_small_det_onnx",
+    ),
+    Credit("YuNet", "Shiqi Yu (OpenCV Zoo)", "MIT", "Finding faces", "https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet"),
+    Credit(
+        "SFace",
+        "Zhong et al. (OpenCV Zoo)",
+        "Apache 2.0",
+        "Telling faces apart, to group them into people",
+        "https://github.com/opencv/opencv_zoo/tree/main/models/face_recognition_sface",
+    ),
+    Credit(
+        "Whistle and the needle engine",
+        "Cactus Compute",
+        "Apache 2.0",
+        "Subtitles: speech to text on the phone",
+        "https://huggingface.co/Cactus-Compute/whistle",
+    ),
+    Credit("Silero VAD", "Silero Team", "MIT", "Subtitles: finding where people speak", "https://github.com/snakers4/silero-vad"),
+    Credit("ONNX Runtime", "Microsoft", "MIT", "Runs most of Lumen's models on the phone", "https://github.com/microsoft/onnxruntime"),
+    Credit("LiteRT", "Google", "Apache 2.0", "Runs models on the phone's GPU", "https://github.com/google-ai-edge/LiteRT"),
 )
 
 @Composable

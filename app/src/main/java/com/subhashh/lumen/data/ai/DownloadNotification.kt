@@ -21,7 +21,7 @@ object DownloadNotification {
         if (manager.getNotificationChannel(Channel) == null) {
             manager.createNotificationChannel(
                 NotificationChannel(Channel, "Downloads", NotificationManager.IMPORTANCE_LOW).apply {
-                    description = "Downloading Smart Search models"
+                    description = "Downloading Smart Features models"
                 },
             )
         }
@@ -34,7 +34,7 @@ object DownloadNotification {
         val percent = if (total > 0) (done * 100 / total).toInt() else 0
         return NotificationCompat.Builder(context, Channel)
             .setSmallIcon(R.drawable.ic_launcher_monochrome)
-            .setContentTitle("Downloading Smart Search")
+            .setContentTitle("Downloading Smart Features")
             .setContentText("${megabytes(done)} of ${megabytes(total)}")
             .setProgress(100, percent, total == 0L)
             .setOngoing(true)

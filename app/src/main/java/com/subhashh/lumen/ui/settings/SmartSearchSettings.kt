@@ -29,6 +29,7 @@ import com.subhashh.lumen.data.ai.HfTokenStore
 import com.subhashh.lumen.data.ai.ModelCatalog
 import com.subhashh.lumen.data.ai.ModelDownloads
 import com.subhashh.lumen.data.ai.OcrModel
+import com.subhashh.lumen.data.ai.SpeechModel
 import com.subhashh.lumen.data.ai.FaceModel
 import com.subhashh.lumen.data.ai.FaceStore
 import com.subhashh.lumen.ui.components.Confirmation
@@ -154,8 +155,8 @@ internal fun SmartSearchGroup(
                         "Cancel" -> ModelDownloads.cancel(context)
                         "Remove" -> onConfirm(
                             Confirmation(
-                                title = "Remove the Search Model?",
-                                message = "Smart Search stops working until you download it again ($size).",
+                                title = "Remove All Models?",
+                                message = "Search by what's in photos, text reading, faces and subtitles stop working until you download them again ($size).",
                                 confirm = "Remove",
                                 destructive = true,
                                 onConfirm = {
@@ -287,4 +288,35 @@ internal fun SmartSearchGroup(
             )
         }
     }
+
+    // Subtitles: made on the phone when CC is tapped on a video.
+    val speechReady = remember(refresh, state, removed) { SpeechModel.installed(context) }
+    Group(
+        "Subtitles",
+        footer = "Tap CC on a video to make subtitles on this phone. Works for English, German, " +
+            "French, Spanish, Italian, Dutch and Polish speech; music without speech gets none.",
+    ) {
+        Anchor("subtitle-quality", highlight) {
+            PickerRow(
+                title = "Subtitle Quality",
+                options = SpeechModel.tiers.map { "${it.label} · ${megabytes(SpeechModel.bytes)}" },
+                selected = 0,
+                onSelect = {},
+                icon = LumenIcons.Video,
+                iconColor = Purple,
+            )
+        }
+        Divider()
+        Anchor("subtitles-model", highlight) {
+            SettingsRow(
+                title = "Subtitles Model",
+                subtitle = if (speechReady) "Ready · ${megabytes(SpeechModel.bytes)} on this phone" else "Not downloaded yet",
+                value = null,
+                onClick = null,
+                icon = LumenIcons.Import,
+                iconColor = Indigo,
+            )
+        }
+    }
+
 }

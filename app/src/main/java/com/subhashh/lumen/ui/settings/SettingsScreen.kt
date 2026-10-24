@@ -74,7 +74,7 @@ enum class SettingsCategory(val key: String, val title: String) {
     Library("library", "Library"),
     PhotosVideos("photos", "Photos & Videos"),
     Privacy("privacy", "Privacy & Security"),
-    SmartSearch("smart-search", "Smart Search"),
+    SmartSearch("smart-search", "Smart Features"),
     Permissions("permissions", "Permissions"),
     Backup("backup", "Backup & Import"),
     About("about", "About");
@@ -114,6 +114,8 @@ private val Entries = listOf(
     SettingEntry("search-quality", "Search Quality", SettingsCategory.SmartSearch, "accurate fast ai model smart search"),
     SettingEntry("search-model", "Search Model", SettingsCategory.SmartSearch, "download remove update ai smart search"),
     SettingEntry("indexed", "Indexed", SettingsCategory.SmartSearch, "indexing progress smart search"),
+    SettingEntry("subtitle-quality", "Subtitle Quality", SettingsCategory.SmartSearch, "subtitles captions cc transcription speech model"),
+    SettingEntry("subtitles-model", "Subtitles Model", SettingsCategory.SmartSearch, "subtitles captions cc transcription speech download"),
     SettingEntry("index-on-battery", "Index on Battery", SettingsCategory.SmartSearch, "charging battery background scan indexing"),
     SettingEntry("video-detail", "Video Detail", SettingsCategory.SmartSearch, "video frames resolution faces quality speed"),
     SettingEntry("faces", "Faces", SettingsCategory.SmartSearch, "people faces persons grouping progress"),

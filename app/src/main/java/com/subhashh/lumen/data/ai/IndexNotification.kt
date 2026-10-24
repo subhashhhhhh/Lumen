@@ -41,8 +41,8 @@ object IndexNotification {
         lastShown = now
         if (manager.getNotificationChannel(Channel) == null) {
             manager.createNotificationChannel(
-                NotificationChannel(Channel, "Smart Search indexing", NotificationManager.IMPORTANCE_LOW).apply {
-                    description = "Progress while Smart Search reads your library"
+                NotificationChannel(Channel, "Smart Features indexing", NotificationManager.IMPORTANCE_LOW).apply {
+                    description = "Progress while Smart Features read your library"
                 },
             )
         }

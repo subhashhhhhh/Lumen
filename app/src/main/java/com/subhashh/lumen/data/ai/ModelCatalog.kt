@@ -126,6 +126,10 @@ object FaceModel {
  * people speak, MIT), so music isn't "transcribed" into invented lines.
  */
 object SpeechModel {
+    /** Settings' choices, by quality: Whistle for now; Whisper or Parakeet if they earn a place. */
+    class Tier(val id: String, val label: String)
+    val tiers = listOf(Tier("whistle", "Fast"))
+
     val files = listOf(
         ModelFile("whistle.cact", 16_919_407, "b6e02f048568ac5d01a2042556c658061e699acbc0aa2a1439f52f3d461dffeb"),
         ModelFile("vad.onnx", 1_289_603, "7ed98ddbad84ccac4cd0aeb3099049280713df825c610a8ed34543318f1b2c49"),
