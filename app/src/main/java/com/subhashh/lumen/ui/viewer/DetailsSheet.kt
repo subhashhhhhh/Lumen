@@ -80,6 +80,7 @@ import com.subhashh.lumen.ui.components.pressable
 import com.subhashh.lumen.ui.icons.LumenIcons
 import com.subhashh.lumen.ui.map.MapPreview
 import com.subhashh.lumen.ui.people.FaceAvatar
+import com.subhashh.lumen.ui.transition.coverCell
 import com.subhashh.lumen.ui.theme.LocalGlassColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -115,6 +116,8 @@ fun DetailsSheet(
     locationRefresh: Int,
     people: List<Pair<Person, MediaItem>>,
     onOpenPerson: (Person) -> Unit,
+    /** Lets a face grow into its person's page (and land back here on the way back). */
+    coverTransition: com.subhashh.lumen.ui.transition.CoverTransition? = null,
     /** Settings → Photos & Videos → Maps: a map of the spot; off, its name and coordinates only. */
     showMaps: Boolean,
     /** Opens the full map of the spot (Maps on) or another app's (off). */
@@ -194,7 +197,15 @@ fun DetailsSheet(
                             .width(98.dp)
                             .pressable({ onOpenPerson(person) }, pressedScale = 0.94f),
                     ) {
-                        FaceAvatar(person, cover, Modifier.size(90.dp))
+                        FaceAvatar(
+                            person, cover,
+                            Modifier
+                                .size(90.dp)
+                                .then(
+                                    if (coverTransition == null) Modifier
+                                    else Modifier.coverCell(coverTransition, com.subhashh.lumen.ui.transition.viewerFaceKey(com.subhashh.lumen.data.CollectionKeys.person(person.id)), circle = true),
+                                ),
+                        )
                         Text(
                             person.name ?: "Unnamed",
                             color = if (person.name == null) colors.secondary else colors.text,

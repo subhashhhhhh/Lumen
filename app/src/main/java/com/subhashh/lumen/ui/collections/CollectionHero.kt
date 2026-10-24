@@ -19,7 +19,7 @@ fun Modifier.coverUnderlay(transition: CoverTransition): Modifier = this
         }
     }
     .graphicsLayer {
-        alpha = transition.parentAlpha()
+        alpha = transition.underlayAlpha()
         scaleX = transition.parentScale()
         scaleY = transition.parentScale()
     }

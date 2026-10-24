@@ -30,6 +30,8 @@ import com.subhashh.lumen.ui.collections.coverUnderlay
 import com.subhashh.lumen.ui.collections.heroSubtitle
 import com.subhashh.lumen.ui.transition.CoverHeader
 import com.subhashh.lumen.ui.transition.coverPage
+import com.subhashh.lumen.ui.transition.viewerFaceKey
+import com.subhashh.lumen.ui.transition.parkedViewer
 import com.subhashh.lumen.ui.components.GlassMorphButton
 import com.subhashh.lumen.ui.people.MergePeopleDialog
 import com.subhashh.lumen.ui.people.MergeProposal
@@ -334,6 +336,10 @@ private fun MainScaffold(
         tab = LumenTab.Library
     }
     var viewerStart by rememberSaveable { mutableIntStateOf(0) }
+    /** A new viewer each time one opens (a parked one is replaced, not reused). */
+    var viewerSession by remember { mutableIntStateOf(0) }
+    /** A person opened from the viewer's details sheet: the viewer waits, parked, to come back to. */
+    var viewerReturn by remember { mutableStateOf<ViewerReturn?>(null) }
 
     val backdrop = rememberLayerBackdrop()
     // Hoisted so grids keep their position across tab switches and while the viewer is open.
@@ -716,6 +722,27 @@ private fun MainScaffold(
     /** Leaves the open album or person for [target], shrinking its cover back into its card. */
     val closeCollection: (target: String?) -> Unit = close@{ target ->
         if (coverTransition.flying || coverOpening) return@close
+        val back = viewerReturn
+        if (back != null && openCollection == back.person) {
+            // Opened from the viewer's details sheet: back into its face there, the viewer as it was.
+            val cover = heroWithLabel(openCollection)?.let { it.copy(cellKey = viewerFaceKey(it.key)) }
+            coverOpening = true
+            coverTransition.overViewer = true
+            scope.launch {
+                try {
+                    if (cover != null) coverTransition.close(cover, heroRect())
+                } finally {
+                    tab = back.tab
+                    openCollection = back.openCollection
+                    searching = back.searching
+                    personFromPeople = back.personFromPeople
+                    viewerReturn = null
+                    coverTransition.finish()
+                    coverOpening = false
+                }
+            }
+            return@close
+        }
         val cover = heroWithLabel(openCollection) ?: run {
             openCollection = target
             return@close
@@ -753,7 +780,15 @@ private fun MainScaffold(
         if (years.isNotEmpty()) yearsList.scrollToItem(years.lastIndex)
     }
 
-    val viewerOpen = viewerSource != null
+    val viewerOpen = viewerSource != null && viewerReturn == null
+    // Gone somewhere else from the person opened in the viewer: the parked viewer isn't coming back.
+    LaunchedEffect(tab, openCollection, searching) {
+        val back = viewerReturn ?: return@LaunchedEffect
+        if (!coverOpening && (tab != LumenTab.Collections || openCollection != back.person || searching)) {
+            viewerReturn = null
+            viewerSource = null
+        }
+    }
     val inCollection = tab == LumenTab.Collections && openCollection != null && !searching
     // Settings opens from either tab and covers it; Back returns to where it was opened.
     val inSettings = settingsPage != null && !searching
@@ -1256,6 +1291,11 @@ private fun MainScaffold(
         }
         if (transition.item != null) return@open
         val item = itemsOf(key).getOrNull(index) ?: return@open
+        if (viewerReturn != null) {
+            viewerReturn = null
+            viewerSource = null
+        }
+        viewerSession++
         // Reduce Motion: the viewer just appears, no flight out of the cell.
         if (reduceMotion) {
             viewerStart = index
@@ -1644,7 +1684,7 @@ private fun MainScaffold(
                 }
             }
             screens()
-            CoverTransitionOverlay(coverTransition)
+            if (!coverTransition.overViewer) CoverTransitionOverlay(coverTransition)
         }
 
 
@@ -1768,7 +1808,7 @@ private fun MainScaffold(
 
         // While an album's or person's cover flies, Collections' buttons go with the page under it.
         val coverFromPeople = CollectionKeys.personId(openCollection) != null && personFromPeople
-        val coverOverCollections = coverTransition.flying && !coverFromPeople
+        val coverOverCollections = coverTransition.flying && !coverFromPeople && !coverTransition.overViewer
         if (tab == LumenTab.Collections && (openCollection == null || coverOverCollections) && settingsPage == null && !searching && !viewerOpen && !selecting && pick == null) {
             val leaving = Modifier.graphicsLayer {
                 val c = if (openCollection == null) 0f else coverTransition.chrome()
@@ -1856,7 +1896,7 @@ private fun MainScaffold(
 
         // A person's album: ⋯ for naming, merging and hiding them.
         val openPerson = if (inCollection && !viewerOpen && !selecting && pick == null) personOf(openCollection) else null
-        if (openPerson != null && coverTransition.flying) {
+        if (openPerson != null && coverTransition.flying && !coverTransition.overViewer) {
             // The page underneath's rightmost button (Settings, or People's options) turns into ⋯.
             GlassMorphButton(
                 backdrop = backdrop,
@@ -1936,7 +1976,7 @@ private fun MainScaffold(
                     .padding(horizontal = 16.dp, vertical = 8.dp)
                     // Collections has no Back: it comes and goes with an album's or person's flight.
                     .graphicsLayer {
-                        val c = if (coverOverCollections) coverTransition.chrome() else 1f
+                        val c = if (coverOverCollections || coverTransition.overViewer) coverTransition.chrome() else 1f
                         alpha = c
                         scaleX = 0.7f + 0.3f * c
                         scaleY = 0.7f + 0.3f * c
@@ -2199,7 +2239,7 @@ private fun MainScaffold(
                 .padding(bottom = navBottom + 12.dp + 48.dp + 12.dp, end = 16.dp),
         )
 
-        viewerSource?.let { source ->
+        viewerSource?.let { source -> key(viewerSession) {
             val list = remember(source, library, trash, searchSections, searchSection) { itemsOf(source) }
             val grid = when (source) {
                 CollectionKeys.Library -> libraryGrid
@@ -2221,14 +2261,29 @@ private fun MainScaffold(
                     searchQuery = query
                     searching = true
                 },
-                onOpenPerson = { person ->
-                    // Leave the viewer for that person's album, from wherever it was opened.
-                    viewerSource = null
-                    slideshowOf = null
-                    searching = false
-                    settingsPage = null
-                    tab = LumenTab.Collections
-                    openCollection = CollectionKeys.person(person.id)
+                onOpenPerson = open@{ person ->
+                    // That person's page over the viewer, its face growing into the header. The
+                    // viewer waits underneath (parked) for Back, from wherever it was opened.
+                    if (coverTransition.flying || coverOpening) return@open
+                    val key = CollectionKeys.person(person.id)
+                    val cover = heroWithLabel(key)?.let { it.copy(cellKey = viewerFaceKey(key)) }
+                    coverOpening = true
+                    scope.launch {
+                        try {
+                            val flies = cover != null && coverTransition.prepare(context, cover, heroRect(), overViewer = true)
+                            viewerReturn = ViewerReturn(key, tab, openCollection, searching, personFromPeople)
+                            slideshowOf = null
+                            searching = false
+                            settingsPage = null
+                            tab = LumenTab.Collections
+                            personFromPeople = false
+                            openCollection = key
+                            if (flies) coverTransition.open()
+                        } finally {
+                            coverTransition.finish()
+                            coverOpening = false
+                        }
+                    }
                 },
                 onUnhide = { unhide(listOf(it)) },
                 onDeleteHidden = { deleteHidden(listOf(it)) },
@@ -2300,8 +2355,11 @@ private fun MainScaffold(
                 onHide = { hide(listOf(it)) },
                 onHideFolder = { hideFolders(listOf(it)) },
                 slideshowOf = slideshowOf,
+                coverTransition = coverTransition,
+                parked = viewerReturn != null,
+                modifier = Modifier.parkedViewer(coverTransition, parked = viewerReturn != null),
             )
-        }
+        } }
 
         AlbumPicker(
             open = albumRequest != null,
@@ -2370,6 +2428,9 @@ private fun MainScaffold(
                 onForgot = resetLock,
             )
         }
+
+        // A face in the viewer's sheet flying to or from its person's page: above the viewer.
+        if (coverTransition.overViewer) CoverTransitionOverlay(coverTransition)
 
         ConfirmDialog(confirmation, onDismiss = { confirmation = null })
 
@@ -2570,6 +2631,15 @@ private fun mergeProposalFor(
     val cover = people.firstOrNull { it.first.id == person.id }?.second ?: return null
     return MergeProposal(person, cover, match.first, match.second, match.first.name!!.trim())
 }
+
+/** Where a person opened from the viewer's details sheet goes back to: the viewer, over this. */
+private data class ViewerReturn(
+    val person: String,
+    val tab: LumenTab,
+    val openCollection: String?,
+    val searching: Boolean,
+    val personFromPeople: Boolean,
+)
 
 /** Share of the screen's height an album's or person's cover takes at the top of its page. */
 private const val HeroShare = 0.46f

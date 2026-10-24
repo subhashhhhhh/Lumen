@@ -177,6 +177,15 @@ fun ViewerScreen(
     onOpenPerson: (com.subhashh.lumen.data.ai.Person) -> Unit = {},
     /** Live Text's Search: look for the selected words in Lumen. */
     onSearchText: (String) -> Unit = {},
+    /** Faces in the details sheet grow into their person's page. */
+    coverTransition: com.subhashh.lumen.ui.transition.CoverTransition? = null,
+    /**
+     * Kept, out of sight, under a person's page opened from the details sheet, to come back to
+     * just as it was: video paused, HDR, brightness and system bars back to normal, Back left
+     * to the page.
+     */
+    parked: Boolean = false,
+    modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     val pager = rememberPagerState(initialPage = initialIndex) { items.size }
@@ -283,11 +292,12 @@ fun ViewerScreen(
     // Full HDR turns the screen all the way up while an HDR photo or video is shown, like
     // Chrome: HDR needs brightness to work with. (desiredHdrHeadroom can only lower Android's
     // default, never raise the panel.) Your own brightness comes back as soon as it's gone.
-    val fullBrightness = hdrMode == HdrMode.Full && (hdrRatio != null || current?.hdrVideo == true)
-    DisposableEffect(hdrRatio, fullBrightness, activity) {
+    val fullBrightness = !parked && hdrMode == HdrMode.Full && (hdrRatio != null || current?.hdrVideo == true)
+    val hdrShown = hdrRatio != null && !parked
+    DisposableEffect(hdrShown, fullBrightness, activity) {
         val window = activity?.window
         if (window != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            window.colorMode = if (hdrRatio != null) ActivityInfo.COLOR_MODE_HDR else ActivityInfo.COLOR_MODE_DEFAULT
+            window.colorMode = if (hdrShown) ActivityInfo.COLOR_MODE_HDR else ActivityInfo.COLOR_MODE_DEFAULT
         }
         window?.attributes = window?.attributes?.apply {
             screenBrightness = if (fullBrightness) 1f else WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
@@ -307,9 +317,15 @@ fun ViewerScreen(
 
     // Everything was deleted out from under us.
 
-    SystemBarsVisibility(visible = chromeVisible)
+    SystemBarsVisibility(visible = chromeVisible || parked)
 
     val player = rememberViewerPlayer(current)
+    LaunchedEffect(parked) {
+        if (parked) {
+            player?.pause()
+            slideshow = false
+        }
+    }
 
     // The screen stays on while a video plays or a slideshow runs, then times out as usual.
     var playing by remember(player) { mutableStateOf(player?.isPlaying == true) }
@@ -344,7 +360,7 @@ fun ViewerScreen(
         label = "viewerBackground",
     )
 
-    BoxWithConstraints(Modifier.fillMaxSize()) {
+    BoxWithConstraints(modifier.fillMaxSize()) {
         val height = constraints.maxHeight.toFloat()
         // Lambdas, read only inside draw/layer blocks: a drag then redraws the photo without
         // recomposing the viewer (pager, image, chrome) on every frame.
@@ -415,10 +431,10 @@ fun ViewerScreen(
 
         // Everything was deleted out from under us.
         LaunchedEffect(items.isEmpty()) { if (items.isEmpty()) close(Velocity.Zero) }
-        BackHandler { close(Velocity.Zero) }
-        BackHandler(enabled = motion.infoOpen) { motion.closeInfo() }
-        BackHandler(enabled = moreOpen) { moreOpen = false }
-        BackHandler(enabled = liveText.showAll || liveText.selection != null) {
+        BackHandler(enabled = !parked) { close(Velocity.Zero) }
+        BackHandler(enabled = !parked && motion.infoOpen) { motion.closeInfo() }
+        BackHandler(enabled = !parked && moreOpen) { moreOpen = false }
+        BackHandler(enabled = !parked && (liveText.showAll || liveText.selection != null)) {
             if (liveText.selection != null) liveText.clear() else liveText.showAll = false
         }
 
@@ -685,6 +701,7 @@ fun ViewerScreen(
                 locationRefresh = locationRefresh,
                 people = people,
                 onOpenPerson = onOpenPerson,
+                coverTransition = coverTransition,
                 onRename = onRename,
                 onAdjustDate = onAdjustDate,
                 onEditCaption = { item, caption -> captionEdit = item to caption.orEmpty() },

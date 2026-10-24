@@ -77,7 +77,12 @@ data class HeroCover(
     /** The name and count shown over it. */
     val title: String = "",
     val subtitle: String = "",
+    /** The card it flies from and back to, when not the page's own key (a face in the viewer). */
+    val cellKey: String = key,
 )
+
+/** The key a face in the viewer's details sheet registers under, apart from Collections' faces. */
+fun viewerFaceKey(personKey: String) = "viewer:$personKey"
 
 /**
  * Opening an album or person: its cover grows out of its card into the big photo across the top
@@ -101,6 +106,13 @@ class CoverTransition {
         private set
 
     val flying: Boolean get() = cover != null
+
+    /**
+     * The flight is between the viewer's details sheet and a person's page: the viewer is what
+     * fades under the page (drawn above it), Collections stays out of sight, and the cover flies
+     * above the viewer.
+     */
+    var overViewer by mutableStateOf(false)
 
     /** 0 at its card, 1 as the page's header. Read in layout/draw only. */
     private var progress by mutableFloatStateOf(1f)
@@ -128,8 +140,9 @@ class CoverTransition {
      * first frame, then pins it to its card. False when the card isn't on screen: open plainly.
      * Call right before the page opens, in the same frame.
      */
-    suspend fun prepare(context: Context, cover: HeroCover, header: Rect): Boolean {
-        val cell = cell(cover.key) ?: return false
+    suspend fun prepare(context: Context, cover: HeroCover, header: Rect, overViewer: Boolean = false): Boolean {
+        val cell = cell(cover.cellKey) ?: return false
+        this.overViewer = overViewer
         withTimeoutOrNull(PrepareTimeoutMs) { SingletonImageLoader.get(context).execute(heroRequest(context, cover)) }
         // Collections isn't scaled yet: it's still its own screen.
         cellRect = cell.coordinates.unscaledRect(1f)
@@ -162,7 +175,13 @@ class CoverTransition {
         this.cover = cover
         withFrameNanos { }
         withFrameNanos { }
-        val cell = cell(cover.key)
+        var cell = cell(cover.cellKey)
+        // A parked viewer is placed again only now: give its sheet a few frames to report in.
+        var frames = 0
+        while (cell == null && overViewer && frames++ < 6) {
+            withFrameNanos { }
+            cell = cell(cover.cellKey)
+        }
         if (cell != null) {
             // Measured while the page under the flight is scaled down: undo that, then follow
             // the page as it grows back, so the cover lands where the card ends up.
@@ -179,6 +198,7 @@ class CoverTransition {
     fun finish() {
         cover = null
         progress = 1f
+        overViewer = false
     }
 
     /** The open page: invisible at the card, there well before the cover lands in the header. */
@@ -197,7 +217,10 @@ class CoverTransition {
     fun parentAlpha(): Float = 1f - (progress / 0.7f).coerceIn(0f, 1f)
     fun parentScale(): Float = 1f - 0.05f * progress
 
-    internal fun hides(key: String) = cover?.key == key
+    /** Collections under a person's page: hidden when the viewer is what's underneath. */
+    fun underlayAlpha(): Float = if (overViewer) 0f else parentAlpha()
+
+    internal fun hides(key: String) = cover?.let { it.key == key || it.cellKey == key } == true
 
     internal fun frame(): Frame {
         val p = progress.coerceIn(0f, 1.05f)
@@ -240,6 +263,26 @@ class CoverTransition {
         val CloseSpring = spring(dampingRatio = 0.9f, stiffness = 340f, visibilityThreshold = 0.002f)
     }
 }
+
+/**
+ * The viewer, parked under a person's page opened from its details sheet: kept composed (so it
+ * comes back as it was) but not placed, so it neither draws nor takes touches. While a face
+ * flies between them it's placed again, fading and scaling like Collections does.
+ */
+fun Modifier.parkedViewer(transition: CoverTransition, parked: Boolean): Modifier = this
+    .layout { measurable, constraints ->
+        val placeable = measurable.measure(constraints)
+        layout(placeable.width, placeable.height) {
+            if (!parked || transition.flying) placeable.place(0, 0)
+        }
+    }
+    .graphicsLayer {
+        if (transition.overViewer) {
+            alpha = transition.parentAlpha()
+            scaleX = transition.parentScale()
+            scaleY = transition.parentScale()
+        }
+    }
 
 /** The open album's or person's page, faded in and out with its cover's flight. */
 fun Modifier.coverPage(transition: CoverTransition): Modifier = graphicsLayer { alpha = transition.pageAlpha() }
