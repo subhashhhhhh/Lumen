@@ -27,8 +27,9 @@
         android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
         tools:ignore="ScopedStorage" />
     <!-- The network: model downloads from Hugging Face (only when the user taps Download in
-         Settings), and map tiles from OpenFreeMap for photos with a location (Settings → Maps
-         turns them off). Nothing else in Lumen uses it. -->
+         Settings or onboarding), map tiles from OpenFreeMap for photos with a location (Settings →
+         Maps turns them off), and Software Update asking GitHub for the latest release (About →
+         Check Automatically turns the daily check off). Nothing else in Lumen uses it. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Software Update: installing a newer Lumen from its GitHub releases (Android asks first). -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
