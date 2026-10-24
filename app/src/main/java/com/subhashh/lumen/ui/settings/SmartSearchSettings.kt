@@ -28,6 +28,8 @@ import com.subhashh.lumen.data.ai.HfTokenStore
 import com.subhashh.lumen.data.ai.ModelCatalog
 import com.subhashh.lumen.data.ai.ModelDownloads
 import com.subhashh.lumen.data.ai.OcrModel
+import com.subhashh.lumen.data.ai.FaceModel
+import com.subhashh.lumen.data.ai.FaceStore
 import com.subhashh.lumen.ui.components.Confirmation
 import com.subhashh.lumen.ui.icons.LumenIcons
 
@@ -52,6 +54,7 @@ internal fun SmartSearchGroup(
     var removed by remember { mutableIntStateOf(0) }
     val installed = remember(refresh, state, removed, chosenId) { ModelDownloads.installed(context) }
     val readerMissing = remember(refresh, state, removed) { !OcrModel.installed(context) }
+    val extrasMissing = remember(refresh, state, removed) { !ModelDownloads.extrasInstalled(context) }
     val live by SmartIndex.progress.collectAsState()
     val counted by produceState<IndexProgress?>(null, refresh, installed) {
         val model = installed
@@ -67,6 +70,15 @@ internal fun SmartSearchGroup(
         }
     }
     val textProgress = if (installed == null || readerMissing) null else liveText ?: countedText
+    val facesMissing = remember(refresh, state, removed) { !FaceModel.installed(context) }
+    val liveFaces by SmartIndex.faceProgress.collectAsState()
+    val countedFaces by produceState<Pair<IndexProgress, Int>?>(null, refresh, installed, facesMissing, liveFaces) {
+        value = if (installed == null || facesMissing) null else withContext(Dispatchers.IO) {
+            val store = FaceStore.of(context)
+            IndexProgress(store.count(), Indexer.eligible(context).count { !it.isVideo }) to store.peopleCount()
+        }
+    }
+    val faceProgress = countedFaces?.let { (counted, people) -> (liveFaces ?: counted) to people }
     var tokenRemoved by remember { mutableIntStateOf(0) }
     val hasToken = remember(refresh, tokenRemoved) { HfTokenStore(context).token != null }
     var wifiOnly by remember { mutableStateOf(prefs.modelWifiOnly) }
@@ -83,17 +95,17 @@ internal fun SmartSearchGroup(
         }
     }
 
-    val size = megabytes(chosen.bytes + OcrModel.bytes)
+    val size = megabytes(chosen.bytes + ModelDownloads.ExtrasBytes)
     val remaining = remember(state, refresh, removed, chosenId) { ModelDownloads.remainingBytes(context) }
-    val update = if (remaining < chosen.bytes + OcrModel.bytes) "Update available · ${megabytes(remaining)}" to "Update"
+    val update = if (remaining < chosen.bytes + ModelDownloads.ExtrasBytes) "Update available · ${megabytes(remaining)}" to "Update"
         else "Not downloaded · $size" to "Download"
     val (status, action) = when (val s = state) {
         is DownloadState.Running -> "Downloading · ${megabytes(s.done)} of ${megabytes(s.total)}" to "Cancel"
         DownloadState.Waiting -> (if (wifiOnly) "Waiting for Wi-Fi…" else "Waiting for a connection…") to "Cancel"
         is DownloadState.Failed -> "Couldn't download: ${s.message}" to "Retry"
         DownloadState.Idle -> when (installed) {
-            // A newer version added the text reader: search keeps working until it's fetched.
-            chosen -> if (readerMissing) update else "Ready · $size on this phone" to "Remove"
+            // A newer version added the text reader or face models: search works until they're fetched.
+            chosen -> if (extrasMissing) update else "Ready · $size on this phone" to "Remove"
             // Part of it is here already: a newer version changed some files (Accurate's image model).
             null -> update
             // Switching tiers: the current one keeps working until the new one is in.
@@ -181,6 +193,21 @@ internal fun SmartSearchGroup(
                     onClick = null,
                     icon = LumenIcons.Search,
                     iconColor = Orange,
+                )
+            }
+        }
+        if (faceProgress != null) {
+            Divider()
+            val (progress, people) = faceProgress
+            val complete = progress.indexed >= progress.total
+            Anchor("faces", highlight) {
+                SettingsRow(
+                    title = "Faces",
+                    subtitle = if (complete) "%,d people found".format(people) else "Photos, after Text Read · %,d people so far".format(people),
+                    value = if (complete) "All ${"%,d".format(progress.total)}" else "%,d of %,d".format(progress.indexed, progress.total),
+                    onClick = null,
+                    icon = LumenIcons.Image,
+                    iconColor = Purple,
                 )
             }
         }

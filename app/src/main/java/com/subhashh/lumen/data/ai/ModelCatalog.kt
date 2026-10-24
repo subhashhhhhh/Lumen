@@ -97,3 +97,26 @@ object OcrModel {
 
     fun installed(context: Context): Boolean = files.all { File(dir(context), it.name).length() == it.bytes }
 }
+
+/**
+ * Grouping photos by person: YuNet finds faces and their landmarks (MIT), SFace turns each
+ * straightened face into a 128-number fingerprint (Apache 2.0). From OpenCV Zoo, unchanged;
+ * chosen on the owner's photos over AuraFace and InsightFace's (tools/faces/). Downloaded with
+ * either Smart Search tier.
+ */
+object FaceModel {
+    const val Repo = "subhashhhhhh/lumen-faces"
+    const val Commit = "009b05388d32e9d7d487fa2a78fb9e4a3c30b6f3"
+
+    val files = listOf(
+        ModelFile("yunet.onnx", 229_738, "ebafce4e3c118d6554634be5c27ab333b4c047a9a8c3faf1d7cf93101c22f0f0"),
+        ModelFile("sface.onnx", 38_696_353, "0ba9fbfa01b5270c96627c4ef784da859931e02f04419c829e83484087c34e79"),
+    )
+    val bytes: Long get() = files.sumOf { it.bytes }
+
+    fun url(file: ModelFile) = "https://huggingface.co/$Repo/resolve/$Commit/${file.name}"
+
+    fun dir(context: Context) = File(context.noBackupFilesDir, "models/faces")
+
+    fun installed(context: Context): Boolean = files.all { File(dir(context), it.name).length() == it.bytes }
+}

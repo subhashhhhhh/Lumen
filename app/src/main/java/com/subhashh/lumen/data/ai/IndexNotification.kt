@@ -12,7 +12,7 @@ import com.subhashh.lumen.R
 
 /**
  * A quiet progress notification while Smart Search works through a backlog: vectors first, then
- * text. Gone when the pass finishes; one that stops early (unplugged, too warm, Android's
+ * text, then faces. Gone when the pass finishes; one that stops early (unplugged, too warm, Android's
  * 10-minute job limit) clears itself a few minutes after its last update unless the next run
  * picks it up.
  */
@@ -26,6 +26,7 @@ object IndexNotification {
     enum class Pass(val title: String) {
         Vectors("Indexing photos and videos"),
         Text("Reading text in photos"),
+        Faces("Finding faces in photos"),
     }
 
     fun update(context: Context, pass: Pass, done: Int, total: Int) {

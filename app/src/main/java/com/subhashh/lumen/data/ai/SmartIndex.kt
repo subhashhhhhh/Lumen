@@ -52,6 +52,15 @@ object SmartIndex {
         IndexNotification.update(context, IndexNotification.Pass.Vectors, indexed, total)
     }
 
+    private val mutableFaceProgress = MutableStateFlow<IndexProgress?>(null)
+    /** The same for finding faces ([FaceIndexer]). */
+    val faceProgress: StateFlow<IndexProgress?> = mutableFaceProgress.asStateFlow()
+
+    fun reportFaces(context: Context, done: Int, total: Int) {
+        mutableFaceProgress.value = IndexProgress(done, total)
+        IndexNotification.update(context, IndexNotification.Pass.Faces, done, total)
+    }
+
     fun reportText(context: Context, read: Int, total: Int) {
         mutableTextProgress.value = IndexProgress(read, total)
         IndexNotification.update(context, IndexNotification.Pass.Text, read, total)
@@ -103,6 +112,7 @@ object SmartIndex {
         }
         mutableProgress.value = null
         mutableTextProgress.value = null
+        mutableFaceProgress.value = null
         IndexNotification.cancel(context)
     }
 
@@ -150,8 +160,10 @@ object SmartIndex {
             if (outcome != Indexer.Outcome.Done) return outcome
             // Suggested searches follow what's in the library; refreshed once it's all indexed.
             SearchSuggestions.refreshIfStale(applicationContext, model)
-            // Then the words in photos, once everything has its vectors.
-            return TextIndexer(applicationContext).run(limit)
+            // Then the words in photos, once everything has its vectors; then faces.
+            val text = TextIndexer(applicationContext).run(limit)
+            if (text != Indexer.Outcome.Done) return text
+            return FaceIndexer(applicationContext).run(limit)
         }
     }
 

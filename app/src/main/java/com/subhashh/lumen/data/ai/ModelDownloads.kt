@@ -94,14 +94,22 @@ object ModelDownloads {
         }
         OcrModel.dir(context).deleteRecursively()
         TextStore.delete(context)
+        FaceModel.dir(context).deleteRecursively()
+        FaceStore.delete(context)
     }
 
-    /** What a download fetches: the chosen tier and the text reader. */
-    fun totalBytes(context: Context): Long = model(context).bytes + OcrModel.bytes
+    /** What a download fetches: the chosen tier, the text reader and the face models. */
+    fun totalBytes(context: Context): Long = model(context).bytes + ExtrasBytes
+
+    /** Downloaded with every tier; a newer version adding to these shows as an update. */
+    val ExtrasBytes get() = OcrModel.bytes + FaceModel.bytes
+
+    fun extrasInstalled(context: Context) = OcrModel.installed(context) && FaceModel.installed(context)
 
     /** Bytes still to fetch, counting partial files already on disk. */
     fun remainingBytes(context: Context): Long =
-        remaining(model(context).files, model(context).dir(context)) + remaining(OcrModel.files, OcrModel.dir(context))
+        remaining(model(context).files, model(context).dir(context)) +
+            remaining(OcrModel.files, OcrModel.dir(context)) + remaining(FaceModel.files, FaceModel.dir(context))
 
     private fun remaining(files: List<ModelFile>, dir: File): Long = files.sumOf { file ->
         if (File(dir, file.name).length() == file.bytes) 0L
@@ -115,7 +123,7 @@ object ModelDownloads {
     suspend fun run(context: Context, onProgress: (done: Long, total: Long) -> Unit): Boolean? {
         val model = model(context)
         val token = HfTokenStore(context).token
-        val total = model.bytes + OcrModel.bytes
+        val total = totalBytes(context)
         var lastPercent = -1L
         val report = { done: Long, all: Long ->
             mutableState.value = DownloadState.Running(done, all)
@@ -129,6 +137,8 @@ object ModelDownloads {
         return try {
             ModelDownloader(model.files, model::url, model.dir(context), token).run(0, total, report)
             ModelDownloader(OcrModel.files, OcrModel::url, OcrModel.dir(context), token).run(model.bytes, total, report)
+            ModelDownloader(FaceModel.files, FaceModel::url, FaceModel.dir(context), token)
+                .run(model.bytes + OcrModel.bytes, total, report)
             // Files a newer version no longer uses (Accurate's ONNX image model, before LiteRT).
             val wanted = model.files.mapTo(HashSet()) { it.name }
             model.dir(context).listFiles()?.filter { it.name !in wanted }?.forEach { it.deleteRecursively() }
