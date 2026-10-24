@@ -25,6 +25,8 @@ data class Suggestion(val term: String, val coverId: Long)
 object SearchSuggestions {
     private const val Tag = "LumenSuggest"
     private const val Keep = 24
+    /** Bumped when the stats file's layout changes, so it's worked out again. */
+    private const val StatsVersion = "v2"
 
     private fun file(context: Context, model: AiModel) = File(context.noBackupFilesDir, "search/suggestions-${model.id}.json")
 
@@ -39,7 +41,7 @@ object SearchSuggestions {
 
     /** Which vocabulary the stats were made from: the shipped file (by size) or the built-in list. */
     private fun source(context: Context, model: AiModel): String =
-        shipped(context, model).takeIf { it.isFile }?.let { "shipped:${it.length()}" } ?: "builtin:${Vocabulary.size}"
+        StatsVersion + ";" + (shipped(context, model).takeIf { it.isFile }?.let { "shipped:${it.length()}" } ?: "builtin:${Vocabulary.size}")
 
     /** Recomputes when missing, when the vocabulary changed, or when the index grew or shrank noticeably. */
     fun refreshIfStale(context: Context, model: AiModel) {
@@ -102,9 +104,22 @@ object SearchSuggestions {
             }.apply { start() }
         }
         threads.forEach { it.join() }
-        // Strongest first; one suggestion per cover photo (cat and kitten would share one).
+        // When two words name the same thing: this model's text vectors are all fairly alike (an
+        // unrelated pair is ~0.84 for SigLIP 2, ~0.70 for CLIP), so 80% of the way from a typical
+        // pair to identical: "chicken" and "poultry" are one, "tennis" and "badminton" aren't.
+        val sample = java.util.Random(7).let { r -> FloatArray(2000) { cosine(vectors[r.nextInt(n)], vectors[r.nextInt(n)]) } }.sortedArray()
+        val typical = sample[sample.size / 2]
+        val same = typical + 0.8f * (1f - typical)
+        // Strongest first; one suggestion per cover photo (cat and kitten would share one), and a
+        // word only once ("group" after "group photo", "poultry" after "chicken").
         val covers = HashSet<Long>()
-        val best = (0 until n).sortedByDescending { strength[it] }.filter { covers.add(cover[it]) }.take(Keep)
+        val best = ArrayList<Int>()
+        for (t in (0 until n).sortedByDescending { strength[it] }) {
+            if (best.size >= Keep) break
+            if (cover[t] in covers || best.any { similar(words[it], vectors[it], words[t], vectors[t], same) }) continue
+            covers += cover[t]
+            best += t
+        }
         val json = JSONObject()
             .put("indexed", indexed)
             .put("suggestions", JSONArray().apply {
@@ -116,7 +131,7 @@ object SearchSuggestions {
         val tops = itemTop.sortedArray()
         val floor = tops[(tops.size * 0.3).toInt().coerceIn(0, tops.lastIndex)]
         val margin = 0.3f * (tops[(tops.size * 0.75).toInt().coerceIn(0, tops.lastIndex)] - tops[(tops.size * 0.25).toInt()])
-        saveStats(context, model, Stats(source, floor, margin, words, vectors, median))
+        saveStats(context, model, Stats(source, floor, margin, same, words, vectors, median))
         Log.i(Tag, "Suggestions for ${model.id} from $n words in ${SystemClock.elapsedRealtime() - start} ms: " +
             best.take(12).joinToString { "${words[it]} %.1f".format(strength[it]) })
     }
@@ -126,6 +141,8 @@ object SearchSuggestions {
         val source: String,
         val floor: Float,
         val margin: Float,
+        /** Text vectors at least this alike name the same thing. */
+        val same: Float,
         val words: List<String>,
         val vectors: List<FloatArray>,
         val median: FloatArray,
@@ -138,6 +155,7 @@ object SearchSuggestions {
             out.writeUTF(s.source)
             out.writeFloat(s.floor)
             out.writeFloat(s.margin)
+            out.writeFloat(s.same)
             out.writeInt(s.words.size)
             out.writeInt(s.vectors.firstOrNull()?.size ?: 0)
             for (i in s.words.indices) {
@@ -158,6 +176,8 @@ object SearchSuggestions {
                 val source = input.readUTF()
                 val floor = input.readFloat()
                 val margin = input.readFloat()
+                if (!source.startsWith("$StatsVersion;")) return@use null
+                val same = input.readFloat()
                 val n = input.readInt()
                 val dim = input.readInt()
                 val words = ArrayList<String>(n)
@@ -168,7 +188,7 @@ object SearchSuggestions {
                     median[i] = input.readFloat()
                     vectors += FloatArray(dim) { android.util.Half.toFloat(input.readShort()) }
                 }
-                Stats(source, floor, margin, words, vectors, median)
+                Stats(source, floor, margin, same, words, vectors, median)
             }
         }.getOrNull()
         cachedStats = model.id to stats
@@ -196,13 +216,15 @@ object SearchSuggestions {
         val picked = ArrayList<Int>()
         for (t in order) {
             if (picked.size >= max || score[t] < maxOf(s.floor, top - s.margin)) break
-            val words = s.words[t].lowercase().split(' ').toSet()
-            val same = picked.any { p ->
-                s.words[p].lowercase().split(' ').any { it in words } || cosine(s.vectors[p], s.vectors[t]) > 0.85f
-            }
-            if (!same) picked += t
+            if (picked.none { similar(s.words[it], s.vectors[it], s.words[t], s.vectors[t], s.same) }) picked += t
         }
         return picked.map { s.words[it] }
+    }
+
+    /** The same thing named twice: a shared word ("tennis", "tennis match") or near-identical meaning. */
+    private fun similar(a: String, va: FloatArray, b: String, vb: FloatArray, same: Float): Boolean {
+        val words = a.lowercase().split(' ').toSet()
+        return b.lowercase().split(' ').any { it in words } || cosine(va, vb) >= same
     }
 
     private fun cosine(a: FloatArray, b: FloatArray): Float {
