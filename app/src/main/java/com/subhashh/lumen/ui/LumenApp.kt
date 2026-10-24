@@ -304,6 +304,16 @@ private fun MainScaffold(
     var settingsHighlight by remember { mutableStateOf<String?>(null) }
     /** Which collection the viewer pages through, and where it started. */
     var viewerSource by rememberSaveable { mutableStateOf<String?>(null) }
+    // Out of onboarding: always the Library's root, whatever was open before it restarted (Show
+    // Onboarding comes from Settings), so the photos have their cells to land in.
+    LaunchedEffect(entrance) {
+        if (entrance == null) return@LaunchedEffect
+        settingsPage = null
+        openCollection = null
+        searching = false
+        viewerSource = null
+        tab = LumenTab.Library
+    }
     var viewerStart by rememberSaveable { mutableIntStateOf(0) }
 
     val backdrop = rememberLayerBackdrop()
