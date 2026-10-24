@@ -219,6 +219,8 @@ fun LumenApp(
     val prefs = remember { com.subhashh.lumen.data.LumenPrefs(context) }
     // Read from prefs each time the screen is built (not saved state): Show Onboarding in
     // Developer Options clears it and restarts the activity.
+    /** Onboarding just ended: its photos fly into the Library's grid. */
+    var entrance by remember { mutableStateOf<com.subhashh.lumen.ui.onboarding.OnboardingExit?>(null) }
     var onboarded by remember {
         mutableStateOf(prefs.onboardingDone ?: context.hasMediaAccess().also { prefs.onboardingDone = it })
     }
@@ -230,13 +232,14 @@ fun LumenApp(
                 hasAccess = hasAccess,
                 onRequestAccess = { launcher.launch(MediaPermissions) },
                 photos = remember(items) { items.orEmpty().sortedByDescending { it.takenAt }.take(40) },
-                onFinish = {
+                onFinish = { exit ->
                     prefs.onboardingDone = true
+                    entrance = exit
                     onboarded = true
                 },
             )
         }
-        hasAccess -> MainScaffold(viewModel, pick, onPicked, onCancelPick)
+        hasAccess -> MainScaffold(viewModel, pick, onPicked, onCancelPick, entrance, onEntranceDone = { entrance = null })
         else -> PermissionScreen(onGrant = { launcher.launch(MediaPermissions) })
     }
 }
@@ -247,6 +250,9 @@ private fun MainScaffold(
     pick: PickRequest?,
     onPicked: (List<MediaItem>) -> Unit,
     onCancelPick: () -> Unit,
+    /** Onboarding's last screen, to fly from into the grid; null otherwise. */
+    entrance: com.subhashh.lumen.ui.onboarding.OnboardingExit? = null,
+    onEntranceDone: () -> Unit = {},
 ) {
     val loadedLibrary by viewModel.items.collectAsState()
     // A picker shows only the asked-for types, everywhere: grids, albums, search.
@@ -2354,6 +2360,9 @@ private fun MainScaffold(
         )
 
         PhotoTransitionOverlay(transition)
+        entrance?.let { exit ->
+            com.subhashh.lumen.ui.onboarding.Entrance(exit, cellOf = { transition.cellRect(it) }, onDone = onEntranceDone)
+        }
     }
 }
 

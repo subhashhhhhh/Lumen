@@ -1,10 +1,17 @@
 package com.subhashh.lumen.ui.onboarding
 
 import android.Manifest
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.LayoutCoordinates
 import com.subhashh.lumen.data.MediaThumbnail
 import com.subhashh.lumen.data.MediaItem
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.draw.blur
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.BoxWithConstraints
 import android.app.ActivityManager
@@ -106,26 +113,23 @@ private enum class Step { Welcome, Photos, Smart, Schedule, Done }
  * First launch: what Lumen is, photo access, which Smart Features to download (they download in
  * the background, with a notification, so this stays quick), when to index, and in. [hasAccess]
  * and [onRequestAccess] are the app's media permission; [done] is the last screen's content
- * [photos] are the newest in the library: the last screen floats them behind its glass.
- * [onFinish] when the user is through.
+ * [photos] are the newest in the library: the last screen shows them, and [onFinish] hands
+ * where each one is to the Library, which flies them into its grid ([Entrance]).
  */
 @Composable
 fun Onboarding(
     hasAccess: Boolean,
     onRequestAccess: () -> Unit,
     photos: List<MediaItem>,
-    onFinish: () -> Unit,
+    onFinish: (OnboardingExit) -> Unit,
 ) {
     var step by rememberSaveable { mutableStateOf(Step.Welcome) }
     val backdrop = rememberLayerBackdrop()
     BackHandler(enabled = step != Step.Welcome) { step = Step.entries[step.ordinal - 1] }
 
     Box(Modifier.fillMaxSize().background(Color.Black)) {
-        // What the glass refracts: slow light, or on the last screen the user's own photos.
-        Box(Modifier.fillMaxSize().layerBackdrop(backdrop)) {
-            Aurora()
-            if (step == Step.Done) Mosaic(photos)
-        }
+        // Plain: the glass sits on black.
+        Box(Modifier.fillMaxSize().layerBackdrop(backdrop))
         AnimatedContent(
             targetState = step,
             transitionSpec = {
@@ -148,84 +152,11 @@ fun Onboarding(
                     Step.Photos -> Photos(backdrop, hasAccess, onRequestAccess) { step = Step.Smart }
                     Step.Smart -> Smart(backdrop) { step = Step.Schedule }
                     Step.Schedule -> Schedule(backdrop) { step = Step.Done }
-                    Step.Done -> Finish(backdrop, onFinish)
+                    Step.Done -> Finish(backdrop, photos, onFinish)
                 }
             }
         }
     }
-}
-
-/**
- * The user's newest photos, scattered, tilted and softly blurred, drifting: what the last
- * screen's glass sits on, and where the move into the Library starts from.
- */
-@Composable
-private fun Mosaic(photos: List<MediaItem>) {
-    val drift by rememberInfiniteTransition(label = "mosaic").animateFloat(
-        0f, (2 * Math.PI).toFloat(),
-        infiniteRepeatable(tween(24_000, easing = LinearEasing), RepeatMode.Restart),
-        label = "drift",
-    )
-    val shown = remember(photos) { photos.take(MosaicCount) }
-    BoxWithConstraints(Modifier.fillMaxSize()) {
-        val columns = 4
-        val cell = maxWidth / columns
-        val rows = (shown.size + columns - 1) / columns
-        val random = remember(shown) { java.util.Random(11) }
-        val jitter = remember(shown) { List(shown.size) { Triple(random.nextFloat() - 0.5f, random.nextFloat() - 0.5f, random.nextFloat() - 0.5f) } }
-        for ((i, item) in shown.withIndex()) {
-            val (jx, jy, jr) = jitter[i]
-            val col = i % columns
-            val row = i / columns
-            coil3.compose.AsyncImage(
-                model = MediaThumbnail(item.uri),
-                contentDescription = null,
-                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                modifier = Modifier
-                    .offset(cell * col + cell * 0.3f * jx, (maxHeight - cell * rows) / 2 + cell * row + cell * 0.3f * jy)
-                    .size(cell * 1.05f)
-                    .graphicsLayer {
-                        rotationZ = 14f * jr + 3f * sin(drift + i)
-                        translationY = 10.dp.toPx() * cos(drift + i * 0.7f)
-                        alpha = 0.85f
-                    }
-                    .clip(RoundedCornerShape(10.dp))
-                    .then(if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) Modifier.blur(14.dp) else Modifier),
-            )
-        }
-        // Darkened a little, so the white text on top reads on any photos.
-        Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.35f)))
-    }
-}
-
-/** How many photos the last screen scatters: enough to fill the screen. */
-private const val MosaicCount = 28
-
-/** Soft coloured light drifting behind the glass. */
-@Composable
-private fun Aurora() {
-    val t by rememberInfiniteTransition(label = "aurora").animateFloat(
-        0f, (2 * Math.PI).toFloat(),
-        infiniteRepeatable(tween(18_000, easing = LinearEasing), RepeatMode.Restart),
-        label = "phase",
-    )
-    Box(
-        Modifier.fillMaxSize().drawBehind {
-            val blobs = listOf(
-                Triple(Color(0xFFFFB347), 0.25f, 0.30f),
-                Triple(Color(0xFF5E5CE6), 0.75f, 0.45f),
-                Triple(Color(0xFFFF375F), 0.40f, 0.75f),
-            )
-            for ((i, b) in blobs.withIndex()) {
-                val (color, x, y) = b
-                val c = Offset(
-                    size.width * (x + 0.12f * cos(t + i * 2.1f)),
-                    size.height * (y + 0.08f * sin(t * 1.3f + i)),
-                )
-                drawCircle(Brush.radialGradient(listOf(color.copy(alpha = 0.55f), Color.Transparent), c, size.width * 0.75f), size.width * 0.75f, c)
-            }
-        },
-    )
 }
 
 @Composable
@@ -500,18 +431,90 @@ private fun ColumnScope.Schedule(backdrop: Backdrop, onNext: () -> Unit) {
     }
 }
 
+/** A photo on the last screen: where it's laid out, and its tilt and drift right now. */
+private class MosaicTile(val item: MediaItem) {
+    var coordinates: LayoutCoordinates? = null
+    var rotation = 0f
+    var drift = 0f
+
+    fun exit(): ExitTile? {
+        val c = coordinates?.takeIf { it.isAttached } ?: return null
+        val at = c.positionInRoot()
+        return ExitTile(item, Rect(Offset(at.x, at.y + drift), Size(c.size.width.toFloat(), c.size.height.toFloat())), rotation)
+    }
+}
+
+/**
+ * The user's newest photos, loosely tilted and gently drifting, filling the space they get:
+ * the last screen's welcome, and where the move into the Library starts from.
+ */
 @Composable
-private fun ColumnScope.Finish(backdrop: Backdrop, onFinish: () -> Unit) {
-    Spacer(Modifier.weight(1f))
-    Text("You're All Set", color = Color.White, fontSize = 40.sp, fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
-    Spacer(Modifier.height(10.dp))
-    Text(
-        "Smart Features download in the background.\nYou'll see their progress in your notifications.",
-        color = Color.White.copy(alpha = 0.85f),
-        fontSize = 16.sp,
-        textAlign = TextAlign.Center,
-        modifier = Modifier.fillMaxWidth(),
+private fun Mosaic(tiles: List<MosaicTile>, modifier: Modifier = Modifier) {
+    val wave by rememberInfiniteTransition(label = "mosaic").animateFloat(
+        0f, (2 * Math.PI).toFloat(),
+        infiniteRepeatable(tween(20_000, easing = LinearEasing), RepeatMode.Restart),
+        label = "drift",
     )
-    Spacer(Modifier.weight(1f))
-    PrimaryButton(backdrop, "Let's Go", onClick = onFinish)
+    BoxWithConstraints(modifier) {
+        val columns = 4
+        val cell = maxWidth / columns
+        val rows = (maxHeight / cell).toInt().coerceAtLeast(1)
+        val shown = tiles.take(columns * rows)
+        val top = (maxHeight - cell * ((shown.size + columns - 1) / columns)) / 2
+        val random = remember(tiles) { java.util.Random(11) }
+        val jitter = remember(tiles) { List(tiles.size) { Triple(random.nextFloat() - 0.5f, random.nextFloat() - 0.5f, random.nextFloat() - 0.5f) } }
+        for ((i, tile) in shown.withIndex()) {
+            val (jx, jy, jr) = jitter[i]
+            coil3.compose.AsyncImage(
+                model = MediaThumbnail(tile.item.uri),
+                contentDescription = null,
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                modifier = Modifier
+                    .offset(cell * (i % columns) + cell * 0.08f + cell * 0.12f * jx, top + cell * (i / columns) + cell * 0.08f + cell * 0.12f * jy)
+                    .size(cell * 0.84f)
+                    .onGloballyPositioned { tile.coordinates = it }
+                    .graphicsLayer {
+                        tile.rotation = 9f * jr + 2f * sin(wave + i)
+                        tile.drift = 6.dp.toPx() * cos(wave + i * 0.7f)
+                        rotationZ = tile.rotation
+                        translationY = tile.drift
+                    }
+                    .clip(RoundedCornerShape(10.dp)),
+            )
+        }
+    }
+}
+
+@Composable
+private fun ColumnScope.Finish(backdrop: Backdrop, photos: List<MediaItem>, onFinish: (OnboardingExit) -> Unit) {
+    val tiles = remember(photos) { photos.map { MosaicTile(it) } }
+    val fade = remember { androidx.compose.animation.core.Animatable(1f) }
+    val scope = rememberCoroutineScope()
+    var button by remember { mutableStateOf(Offset.Zero) }
+    var leaving by remember { mutableStateOf(false) }
+    Mosaic(tiles, Modifier.fillMaxWidth().weight(1f))
+    Column(Modifier.graphicsLayer { alpha = fade.value }) {
+        Spacer(Modifier.height(16.dp))
+        Text("You're All Set", color = Color.White, fontSize = 40.sp, fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+        Spacer(Modifier.height(10.dp))
+        Text(
+            "Smart Features download in the background.\nYou'll see their progress in your notifications.",
+            color = Color.White.copy(alpha = 0.85f),
+            fontSize = 16.sp,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(28.dp))
+        Box(Modifier.onGloballyPositioned { button = it.boundsInRoot().center }) {
+            PrimaryButton(backdrop, "Let's Go") {
+                if (leaving) return@PrimaryButton
+                leaving = true
+                scope.launch {
+                    // The words step aside first; the photos fly from where they are then.
+                    fade.animateTo(0f, tween(160))
+                    onFinish(OnboardingExit(tiles.mapNotNull { it.exit() }, button, Color.Black))
+                }
+            }
+        }
+    }
 }
