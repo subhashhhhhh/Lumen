@@ -1983,6 +1983,14 @@ private fun MainScaffold(
                 inHidden = CollectionKeys.isHidden(source),
                 onShareHidden = { shareHidden(listOf(it)) },
                 people = allPeople,
+                onSearchText = { query ->
+                    // Live Text's Search: the selected words, in Lumen's search.
+                    viewerSource = null
+                    slideshowOf = null
+                    settingsPage = null
+                    searchQuery = query
+                    searching = true
+                },
                 onOpenPerson = { person ->
                     // Leave the viewer for that person's album, from wherever it was opened.
                     viewerSource = null

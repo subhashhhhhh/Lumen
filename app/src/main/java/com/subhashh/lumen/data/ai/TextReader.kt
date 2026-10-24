@@ -65,6 +65,50 @@ class TextReader(dir: File, recFile: File, threads: Int, gpu: Boolean = false) :
     }
 
     /**
+     * A line of text and where it is, for Live Text: [corners] in the image's pixels (top-left,
+     * top-right, bottom-right, bottom-left, in reading direction: x, y pairs), and where each
+     * character of [text] starts and ends along the line, 0 to 1.
+     */
+    class Line(val text: String, val corners: FloatArray, val starts: FloatArray, val ends: FloatArray)
+
+    /** Every line of text with its place, top to bottom. */
+    fun readLines(original: Bitmap): List<Line> {
+        val image = if (original.config == Bitmap.Config.HARDWARE) original.copy(Bitmap.Config.ARGB_8888, false) else original
+        try {
+            val boxes = detect(image).sortedBy { box -> box.sumOf { it.y.toDouble() } }
+            val read = readDecoded(image, boxes)
+            return boxes.indices.mapNotNull { i ->
+                val (d, stepPx) = read[i] ?: return@mapNotNull null
+                val o = orient(boxes[i])
+                val starts = FloatArray(d.text.length)
+                val ends = FloatArray(d.text.length)
+                // Each character spans from its column to the next one's; a token of several
+                // characters (rare) shares its span evenly.
+                for (k in d.offsets.indices) {
+                    val from = d.offsets[k]
+                    val to = if (k + 1 < d.offsets.size) d.offsets[k + 1] else d.text.length
+                    val x0 = d.steps[k] * stepPx / o.outW
+                    val x1 = (if (k + 1 < d.steps.size) d.steps[k + 1] else d.steps[k] + 1) * stepPx / o.outW
+                    val n = (to - from).coerceAtLeast(1)
+                    for (j in from until to) {
+                        starts[j] = (x0 + (x1 - x0) * (j - from) / n).coerceIn(0f, 1f)
+                        ends[j] = (x0 + (x1 - x0) * (j - from + 1) / n).coerceIn(0f, 1f)
+                    }
+                }
+                val corners = floatArrayOf(
+                    o.tlx.toFloat(), o.tly.toFloat(),
+                    (o.tlx + o.ax).toFloat(), (o.tly + o.ay).toFloat(),
+                    (o.tlx + o.ax + o.bx).toFloat(), (o.tly + o.ay + o.by).toFloat(),
+                    (o.tlx + o.bx).toFloat(), (o.tly + o.by).toFloat(),
+                )
+                Line(d.text, corners, starts, ends)
+            }
+        } finally {
+            if (image !== original) image.recycle()
+        }
+    }
+
+    /**
      * One video frame's text: its boxes, a small greyscale thumbnail of each, and each box's line
      * (null where it didn't read as text).
      */
@@ -106,8 +150,14 @@ class TextReader(dir: File, recFile: File, threads: Int, gpu: Boolean = false) :
         }
     }
 
-    /** Lines for [boxes] in their order; batched by width so short lines aren't padded to long ones. */
-    private fun readBoxes(image: Bitmap, boxes: List<Array<Point>>): List<String?> {
+    /** Lines for [boxes] in their order; null where a box didn't read as text. */
+    private fun readBoxes(image: Bitmap, boxes: List<Array<Point>>): List<String?> = readDecoded(image, boxes).map { it?.first?.text }
+
+    /**
+     * [boxes] read in their order, each with the width in line pixels of one model step; batched
+     * by width so short lines aren't padded to long ones.
+     */
+    private fun readDecoded(image: Bitmap, boxes: List<Array<Point>>): List<Pair<Decoded, Float>?> {
         if (boxes.isEmpty()) return emptyList()
         // A line's width once cut to the reader's height: its long side over its short side.
         val order = boxes.indices.sortedBy { i ->
@@ -115,7 +165,7 @@ class TextReader(dir: File, recFile: File, threads: Int, gpu: Boolean = false) :
             val b = edge(boxes[i], 3)
             maxOf(a, b) / minOf(a, b)
         }
-        val lines = arrayOfNulls<String>(boxes.size)
+        val lines = arrayOfNulls<Pair<Decoded, Float>>(boxes.size)
         for (batch in order.chunked(Batch)) {
             val read = recognize(image, batch.map { boxes[it] })
             for ((k, i) in batch.withIndex()) lines[i] = read[k]
@@ -319,8 +369,10 @@ class TextReader(dir: File, recFile: File, threads: Int, gpu: Boolean = false) :
         return lower.dropLast(1) + upper.dropLast(1)
     }
 
-    /** Cuts out a box, straightened and scaled to the recognizer's height, reading left to right. */
-    private fun cut(image: Bitmap, box: Array<Point>): Bitmap {
+    /** A box in reading order: its top-left corner, the edge along the text, the edge across it, and its width once cut. */
+    private class Oriented(val tlx: Double, val tly: Double, val ax: Double, val ay: Double, val bx: Double, val by: Double, val outW: Int)
+
+    private fun orient(box: Array<Point>): Oriented {
         // Corners in reading order: along the long side (so vertical text is read turned on
         // its side), then across it.
         val cx = box.sumOf { it.x.toDouble() } / 4
@@ -330,8 +382,15 @@ class TextReader(dir: File, recFile: File, threads: Int, gpu: Boolean = false) :
         if (hypot(ax, ay) < hypot(bx, by)) { ax = bx.also { bx = ax }; ay = by.also { by = ay } }
         if (ax < 0 || (ax == 0.0 && ay < 0)) { ax = -ax; ay = -ay }
         if (ax * by - ay * bx < 0) { bx = -bx; by = -by }
-        val tlx = cx - ax / 2 - bx / 2; val tly = cy - ay / 2 - by / 2
         val outW = ceil(RecHeight * hypot(ax, ay) / hypot(bx, by)).toInt().coerceIn(8, RecMaxWidth)
+        return Oriented(cx - ax / 2 - bx / 2, cy - ay / 2 - by / 2, ax, ay, bx, by, outW)
+    }
+
+    /** Cuts out a box, straightened and scaled to the recognizer's height, reading left to right. */
+    private fun cut(image: Bitmap, box: Array<Point>): Bitmap {
+        val o = orient(box)
+        val tlx = o.tlx; val tly = o.tly; val ax = o.ax; val ay = o.ay; val bx = o.bx; val by = o.by
+        val outW = o.outW
         val src = floatArrayOf(
             tlx.toFloat(), tly.toFloat(),
             (tlx + ax).toFloat(), (tly + ay).toFloat(),
@@ -345,7 +404,7 @@ class TextReader(dir: File, recFile: File, threads: Int, gpu: Boolean = false) :
     }
 
     /** Lines for one batch of boxes, in order; null where a box didn't read as text. */
-    private fun recognize(image: Bitmap, boxes: List<Array<Point>>): List<String?> {
+    private fun recognize(image: Bitmap, boxes: List<Array<Point>>): List<Pair<Decoded, Float>?> {
         val lines = timed("cut") { boxes.map { cut(image, it) } }
         try {
             timings?.let { it["batches"] = (it["batches"] ?: 0L) + 1 }
@@ -360,7 +419,7 @@ class TextReader(dir: File, recFile: File, threads: Int, gpu: Boolean = false) :
      * LiteRT's GPU needs fixed sizes, and padding every batch to 8 lines at a fixed width cost
      * more than the GPU saved (Search Lab's reader check: 56 s vs 57 s on 30 screenshots).
      */
-    private fun recognize(lines: List<Bitmap>, width: Int): List<String?> {
+    private fun recognize(lines: List<Bitmap>, width: Int): List<Pair<Decoded, Float>?> {
         val plane = RecHeight * width
         val input = FloatArray(lines.size * 3 * plane)
         val argb = IntArray(plane)
@@ -382,6 +441,8 @@ class TextReader(dir: File, recFile: File, threads: Int, gpu: Boolean = false) :
                 val classes = chars.size + 1
                 val steps = out.remaining() / (lines.size * classes)
                 val row = FloatArray(classes)
+                // Each step reads this many pixels of the (padded) line.
+                val stepPx = width.toFloat() / steps
                 List(lines.size) { b ->
                     decode(
                         steps,
@@ -394,33 +455,48 @@ class TextReader(dir: File, recFile: File, threads: Int, gpu: Boolean = false) :
                         },
                         // The model ends in a Softmax: scores are probabilities already.
                         probability = { _, c -> row[c].toDouble() },
-                    )
+                    )?.let { it to stepPx }
                 }
             } }
         }
     }
 
     /**
+     * A line read: its text, and for each character token, where in [text] it starts
+     * ([offsets]) and the model step it was read at ([steps]): its column along the line.
+     */
+    private class Decoded(val text: String, val offsets: IntArray, val steps: IntArray)
+
+    /**
      * Greedy CTC: each step's most likely class ([best]), repeats and "no character" dropped.
      * [probability] is asked right after [best] for the same step, only for kept characters.
      */
-    private inline fun decode(steps: Int, best: (t: Int) -> Int, probability: (t: Int, c: Int) -> Double): String? {
+    private inline fun decode(steps: Int, best: (t: Int) -> Int, probability: (t: Int, c: Int) -> Double): Decoded? {
         val text = StringBuilder()
+        val offsets = ArrayList<Int>()
+        val at = ArrayList<Int>()
         var confidence = 0.0
         var kept = 0
         var previous = 0
         for (t in 0 until steps) {
             val c = best(t)
             if (c != 0 && c != previous) {
+                offsets += text.length
+                at += t
                 text.append(if (c < chars.size) chars[c] else " ")
                 confidence += probability(t, c)
                 kept++
             }
             previous = c
         }
-        val line = text.toString().trim()
+        val raw = text.toString()
+        val line = raw.trim()
         // Icons read as a stray letter or two; keep lines with some substance.
-        return if (kept > 0 && confidence / kept >= MinLineScore && line.count { it.isLetterOrDigit() } >= 2) line else null
+        if (kept == 0 || confidence / kept < MinLineScore || line.count { it.isLetterOrDigit() } < 2) return null
+        // Trimming moves the text; keep the tokens inside it, shifted to match.
+        val lead = raw.indexOf(line)
+        val keep = offsets.indices.filter { offsets[it] >= lead && offsets[it] < lead + line.length }
+        return Decoded(line, IntArray(keep.size) { offsets[keep[it]] - lead }, IntArray(keep.size) { at[keep[it]] })
     }
 
     override fun close() {

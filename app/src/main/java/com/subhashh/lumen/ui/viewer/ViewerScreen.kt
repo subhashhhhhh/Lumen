@@ -1,5 +1,11 @@
 package com.subhashh.lumen.ui.viewer
 
+import androidx.compose.ui.unit.IntOffset
+
+import androidx.compose.foundation.layout.offset
+
+import androidx.compose.ui.layout.onSizeChanged
+
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import com.subhashh.lumen.data.vault.VaultDataSource
 import com.subhashh.lumen.ui.theme.LocalMotion
@@ -168,6 +174,8 @@ fun ViewerScreen(
     /** Everyone Faces found, with cover photos: the details sheet shows who's in this one. */
     people: List<Pair<com.subhashh.lumen.data.ai.Person, MediaItem>> = emptyList(),
     onOpenPerson: (com.subhashh.lumen.data.ai.Person) -> Unit = {},
+    /** Live Text's Search: look for the selected words in Lumen. */
+    onSearchText: (String) -> Unit = {},
 ) {
     val context = LocalContext.current
     val pager = rememberPagerState(initialPage = initialIndex) { items.size }
@@ -196,6 +204,19 @@ fun ViewerScreen(
     val sheetVisible by remember { derivedStateOf { motion.reveal > 0f } }
     // Settings → Photos & Videos → Maps, read each time the viewer opens.
     val showMaps = remember { com.subhashh.lumen.data.LumenPrefs(context).showMaps }
+    // Live Text: the photo on screen is read once it settles (a few hundred ms, then cached).
+    val liveText = remember { LiveTextState() }
+    LaunchedEffect(current?.id, current?.modified) {
+        val item = current?.takeIf { !it.isVideo }
+        liveText.show(item, item?.let { com.subhashh.lumen.data.ai.LiveText.cached(it) })
+        if (item == null || liveText.result != null) return@LaunchedEffect
+        delay(300)
+        liveText.show(item, com.subhashh.lumen.data.ai.LiveText.read(context, item))
+    }
+    // The text models are only kept while the viewer is open.
+    DisposableEffect(Unit) {
+        onDispose { kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default).launch { com.subhashh.lumen.data.ai.LiveText.release() } }
+    }
     /** The spot shown on the full-screen map, from the details sheet; null when it's closed. */
     var mapOf by remember { mutableStateOf<com.subhashh.lumen.data.GeoPoint?>(null) }
     // Composition only cares whether the photo is displaced, not by how much.
@@ -384,6 +405,9 @@ fun ViewerScreen(
         BackHandler { close(Velocity.Zero) }
         BackHandler(enabled = motion.infoOpen) { motion.closeInfo() }
         BackHandler(enabled = moreOpen) { moreOpen = false }
+        BackHandler(enabled = liveText.showAll || liveText.selection != null) {
+            if (liveText.selection != null) liveText.clear() else liveText.showAll = false
+        }
 
         Box(
             Modifier
@@ -443,6 +467,7 @@ fun ViewerScreen(
                         isCurrent = isCurrent,
                         onZoomedChange = { zoomed = it },
                         onTap = toggleChrome,
+                        liveText = if (isCurrent) liveText else null,
                         modifier = pageModifier,
                     )
                 }
@@ -474,6 +499,12 @@ fun ViewerScreen(
                     onBack = { close(Velocity.Zero) },
                     // Recently Deleted items only get restore / delete forever.
                     onMore = if (inTrash || inHidden) null else ({ moreOpen = !moreOpen }),
+                    // Live Text's button: only when the photo has text.
+                    liveTextOn = if (liveText.hasText && liveText.item?.id == current.id) liveText.showAll else null,
+                    onLiveText = {
+                        liveText.showAll = !liveText.showAll
+                        liveText.clear()
+                    },
                     modifier = Modifier.align(Alignment.TopCenter),
                 )
                 Column(
@@ -640,6 +671,41 @@ fun ViewerScreen(
                     .nestedScroll(motion.sheetScroll),
             )
         }
+        // Live Text's menu: above the selection (below it when that's too close to the top), or
+        // at the bottom with all text shown and nothing selected.
+        if (current != null && liveText.item?.id == current.id && atRest && !sheetVisible) {
+            val density = LocalDensity.current
+            val bounds = liveText.selectionBounds
+            val topLimit = with(density) { (WindowInsets.statusBars.getTop(this) + 72.dp.roundToPx()).toFloat() }
+            var menuHeight by remember { mutableIntStateOf(0) }
+            var menuWidth by remember { mutableIntStateOf(0) }
+            LiveTextMenu(
+                liveText,
+                backdrop,
+                onSearch = { query ->
+                    liveText.clear()
+                    onSearchText(query)
+                },
+                modifier = Modifier
+                    .onSizeChanged {
+                        menuHeight = it.height
+                        menuWidth = it.width
+                    }
+                    .then(
+                        if (bounds != null) {
+                            Modifier.offset {
+                                val gap = 12.dp.roundToPx()
+                                val above = bounds.top - menuHeight - gap
+                                val y = if (above > topLimit) above else bounds.bottom + gap + 24.dp.roundToPx()
+                                val x = (bounds.center.x - menuWidth / 2f).coerceIn(8.dp.toPx(), (width - menuWidth - 8.dp.toPx()).coerceAtLeast(8.dp.toPx()))
+                                IntOffset(x.roundToInt(), y.roundToInt())
+                            }
+                        } else {
+                            Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 96.dp)
+                        },
+                    ),
+            )
+        }
         mapOf?.let { point ->
             com.subhashh.lumen.ui.map.PhotoMapScreen(
                 point = point,
@@ -758,6 +824,9 @@ private fun TopBar(
     item: MediaItem,
     onBack: () -> Unit,
     onMore: (() -> Unit)?,
+    /** Live Text's state when the photo has text (on: all text shown); null hides the button. */
+    liveTextOn: Boolean? = null,
+    onLiveText: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalGlassColors.current
@@ -781,6 +850,16 @@ private fun TopBar(
                 contentDescription = "More",
                 onClick = onMore,
                 modifier = Modifier.align(Alignment.CenterEnd),
+            )
+        }
+        if (liveTextOn != null) {
+            GlassIconButton(
+                backdrop = backdrop,
+                icon = if (liveTextOn) LumenIcons.LiveTextFilled else LumenIcons.LiveText,
+                contentDescription = "Live Text",
+                onClick = onLiveText,
+                tint = if (liveTextOn) MaterialTheme.colorScheme.primary else colors.content,
+                modifier = Modifier.align(Alignment.CenterEnd).padding(end = if (onMore != null) 56.dp else 0.dp),
             )
         }
         // Plain text like iOS, not a glass capsule. A soft glow in the background color keeps it

@@ -1,6 +1,9 @@
 package com.subhashh.lumen.ui.viewer
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -24,6 +27,8 @@ fun PhotoPage(
     isCurrent: Boolean,
     onZoomedChange: (Boolean) -> Unit,
     onTap: () -> Unit,
+    /** Live Text for this page, when it's the one on screen. */
+    liveText: LiveTextState? = null,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -38,6 +43,8 @@ fun PhotoPage(
             .collect(onZoomedChange)
     }
 
+    val haptics = LocalHapticFeedback.current
+    Box(modifier.fillMaxSize()) {
     ZoomableAsyncImage(
         model = remember(item.version) {
             ImageRequest.Builder(context)
@@ -50,7 +57,25 @@ fun PhotoPage(
         },
         contentDescription = null,
         state = state,
-        onClick = { onTap() },
-        modifier = modifier.fillMaxSize(),
+        onClick = { p ->
+            val bounds = state.zoomableState.transformedContentBounds
+            when {
+                // A tap away from a selection drops it, like iOS.
+                liveText?.selection != null -> liveText.clear()
+                liveText?.showAll == true && liveText.openAt(context, bounds, p) -> Unit
+                else -> onTap()
+            }
+        },
+        // Long-press on text selects the word there.
+        onLongClick = { p ->
+            if (liveText?.selectAt(state.zoomableState.transformedContentBounds, p) == true) {
+                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+            }
+        },
+        modifier = Modifier.fillMaxSize(),
     )
+    if (liveText != null && liveText.item?.id == item.id) {
+        LiveTextLayer(liveText, state.zoomableState.transformedContentBounds)
+    }
+    }
 }

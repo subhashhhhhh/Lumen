@@ -45,6 +45,8 @@ ICONS = [
     ("Unhide", "eye", "regular"),
     ("Hide", "eye_off", "regular"),
     ("Edit", "edit", "regular"),
+    ("LiveText", "scan_text", "regular"),
+    ("LiveTextFilled", "scan_text", "filled"),
 ]
 
 src_dir, out = sys.argv[1], sys.argv[2]
