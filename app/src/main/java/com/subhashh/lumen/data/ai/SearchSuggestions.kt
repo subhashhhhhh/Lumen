@@ -36,7 +36,8 @@ object SearchSuggestions {
         val count = EmbeddingStore.of(context, model).count()
         if (count == 0) return
         val previous = runCatching { JSONObject(file(context, model).readText()).getInt("indexed") }.getOrNull()
-            ?.takeIf { vocabFile(context, model).isFile }
+            // The word list changed with an update: work it out again.
+            ?.takeIf { vocab(context, model).size == Vocabulary.size }
         if (previous != null && kotlin.math.abs(count - previous) < maxOf(50, previous / 50)) return
         refresh(context, model, count)
     }
@@ -67,10 +68,9 @@ object SearchSuggestions {
                 val top = order.take(10).map { itemScores[it].toDouble() }.average()
                 val mean = itemScores.average()
                 val sd = sqrt(itemScores.sumOf { (it - mean) * (it - mean) } / itemScores.size)
-                if (sd > 0) {
-                    scored += Triple(term, (top - mean) / sd, itemIds[order.first()])
-                    vocab += Term(term, q, mean.toFloat(), sd.toFloat())
-                }
+                if (sd > 0) scored += Triple(term, (top - mean) / sd, itemIds[order.first()])
+                // Every word is kept, so the saved list always matches [Vocabulary].
+                vocab += Term(term, q, mean.toFloat(), maxOf(sd, 1e-6).toFloat())
             }
         }
         // Strongest first; one suggestion per cover photo (cat and kitten would share one).
@@ -127,20 +127,26 @@ object SearchSuggestions {
     }
 
     /**
-     * What an item looks like: the everyday words it matches far better than the library
-     * usually does ([Standout] spreads above the mean), best first, at most [max].
+     * What an item looks like: each word scored against how the library usually does on it
+     * (spreads above its mean), then compared within the item: its best word, and any close
+     * behind ([Margin]), each at least [Floor]; at most [max]. Comparing within the item matters
+     * for what a library is full of: tennis videos in a tennis-heavy library don't stand out
+     * from the library on "tennis", but "tennis" still beats every other word for them.
      */
     fun looksLike(context: Context, model: AiModel, mediaId: Long, max: Int = 3): List<String> {
         val vectors = EmbeddingStore.of(context, model).vectorsOf(mediaId)
         if (vectors.isEmpty()) return emptyList()
-        return vocab(context, model).mapNotNull { t ->
+        val ranked = vocab(context, model).map { t ->
             val best = vectors.maxOf { v -> var dot = 0f; for (d in v.indices) dot += v[d] * t.vector[d]; dot }
-            ((best - t.mean) / t.sd).takeIf { it >= Standout }?.let { t.word to it }
-        }.sortedByDescending { it.second }.take(max).map { it.first }
+            t.word to (best - t.mean) / t.sd
+        }.sortedByDescending { it.second }
+        val top = ranked.firstOrNull()?.second ?: return emptyList()
+        return ranked.take(max).filter { it.second >= maxOf(Floor, top - Margin) }.map { it.first }
     }
 
-    /** How unusual a match must be to name it: spreads above the library's mean for that word. */
-    private const val Standout = 3.5f
+    /** Tuned on the owner's library (2026-10-24): 65% of items get a word; tennis, bikes, cats right. */
+    private const val Floor = 2.3f
+    private const val Margin = 0.6f
 
     /** Everyday things people photograph and search for. */
     private val Vocabulary = listOf(
@@ -152,6 +158,7 @@ object SearchSuggestions {
         "party", "birthday", "wedding", "concert", "festival", "fireworks", "christmas tree", "diwali lights", "holi colors",
         "selfie", "group photo", "friends", "family", "baby", "kids", "couple", "dancing", "people laughing",
         "football", "cricket", "tennis", "basketball", "formula 1 car", "racing", "gym", "running", "swimming pool",
+        "motorcycle racing", "cycling race", "car racing", "badminton", "golf", "boxing",
         "temple", "church", "mosque", "monument", "museum", "painting", "drawing", "book", "document", "receipt",
         "ticket", "id card", "money", "laptop", "computer screen", "code on a screen", "phone", "screenshot of a chat",
         "meme", "tweet", "map", "whiteboard", "classroom", "office", "bedroom", "kitchen", "restaurant", "market",
