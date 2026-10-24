@@ -1,5 +1,12 @@
 package com.subhashh.lumen.ui.viewer
 
+import kotlinx.coroutines.delay
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.media3.common.Player
 import androidx.compose.foundation.layout.heightIn
 import com.subhashh.lumen.data.ai.Subtitles
 import com.subhashh.lumen.data.ai.SearchSuggestions
@@ -119,6 +126,8 @@ fun DetailsSheet(
     captionVersion: Int,
     /** A "Looks like" word was tapped: search the library for it. */
     onSearch: (String) -> Unit,
+    /** The video's player, for live subtitles; null for photos. */
+    player: Player? = null,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -229,7 +238,7 @@ fun DetailsSheet(
             }
         }
 
-        WhatLumenSees(item, colors, onSearch)
+        WhatLumenSees(item, colors, onSearch, player)
 
         Spacer(Modifier.height(10.dp))
         Group(colors) { FileGroup(item, d, colors, onRename) }
@@ -262,7 +271,7 @@ private fun CaptionRow(caption: String?, colors: SheetColors, onEdit: () -> Unit
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun WhatLumenSees(item: MediaItem, colors: SheetColors, onSearch: (String) -> Unit) {
+private fun WhatLumenSees(item: MediaItem, colors: SheetColors, onSearch: (String) -> Unit, player: Player?) {
     val context = LocalContext.current
     val looks by produceState(emptyList<String>(), item.id) {
         value = withContext(Dispatchers.Default) {
@@ -298,28 +307,61 @@ private fun WhatLumenSees(item: MediaItem, colors: SheetColors, onSearch: (Strin
     }
     if (cues.isNotEmpty()) {
         Spacer(Modifier.height(10.dp))
-        Group(colors) { SubtitlesPart(item, cues, colors) }
+        Group(colors) { SubtitlesPart(item, cues, colors, player) }
     }
 }
 
-/** A video's subtitles, made with CC: scroll through them with times, copy them, or export. */
+/**
+ * A video's subtitles, made with CC, following the video: the line being spoken is lit and kept
+ * in view (unless the list is being scrolled), and tapping a line plays from there. Copy or
+ * export below.
+ */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun SubtitlesPart(item: MediaItem, cues: List<Cue>, colors: SheetColors) {
+private fun SubtitlesPart(item: MediaItem, cues: List<Cue>, colors: SheetColors, player: Player?) {
     val context = LocalContext.current
+    var position by remember(item.id) { mutableLongStateOf(-1L) }
+    LaunchedEffect(player, item.id) {
+        while (player != null) {
+            position = player.currentPosition
+            delay(200)
+        }
+    }
+    // The line on screen now: the last one started, while it lasts.
+    val active = cues.indexOfLast { it.startMs <= position }.takeIf { it >= 0 && position < cues[it].endMs }
+    val list = rememberLazyListState()
+    LaunchedEffect(active) {
+        if (active != null && !list.isScrollInProgress) list.animateScrollToItem((active - 1).coerceAtLeast(0))
+    }
     Title(LumenIcons.Video, "Subtitles", colors)
     Spacer(Modifier.height(8.dp))
-    Column(Modifier.fillMaxWidth().heightIn(max = 220.dp).verticalScroll(rememberScrollState())) {
-        for (cue in cues) {
-            Row(Modifier.padding(vertical = 3.dp)) {
+    LazyColumn(state = list, modifier = Modifier.fillMaxWidth().heightIn(max = 220.dp)) {
+        itemsIndexed(cues) { i, cue ->
+            val on = i == active
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(if (on) colors.secondary.copy(alpha = 0.15f) else Color.Transparent)
+                    .pressable({
+                        player?.seekTo(cue.startMs)
+                        player?.play()
+                    }, pressedScale = 0.98f)
+                    .padding(horizontal = 6.dp, vertical = 4.dp),
+            ) {
                 val s = cue.startMs / 1000
                 Text(
                     "%d:%02d".format(s / 60, s % 60),
                     color = colors.secondary,
                     fontSize = 13.sp,
-                    modifier = Modifier.width(48.dp),
+                    modifier = Modifier.width(44.dp),
                 )
-                Text(cue.text, color = colors.text, fontSize = 14.sp)
+                Text(
+                    cue.text,
+                    color = if (on || active == null) colors.text else colors.text.copy(alpha = 0.6f),
+                    fontSize = 14.sp,
+                    fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal,
+                )
             }
         }
     }

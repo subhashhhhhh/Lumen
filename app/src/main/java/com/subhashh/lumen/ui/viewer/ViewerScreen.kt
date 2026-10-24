@@ -671,6 +671,7 @@ fun ViewerScreen(
                     motion.closeInfo()
                     onSearchText(word)
                 },
+                player = player?.takeIf { current.isVideo },
                 onOpenMap = { if (showMaps) mapOf = it else MediaActions.openInMaps(context, it) },
                 onAllowLocation = { locationPermission.launch(Manifest.permission.ACCESS_MEDIA_LOCATION) },
                 modifier = Modifier
