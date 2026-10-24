@@ -24,9 +24,12 @@ import java.nio.FloatBuffer
 import kotlin.math.roundToInt
 
 /**
- * Decodes chosen keyframes of a video fast: one hardware decoder for the whole video, fed only
- * those keyframes, its output drawn by the GPU at the size we want (colour conversion, scaling
- * and rotation in one pass) and read back as a bitmap.
+ * Decodes chosen moments of a video fast: one hardware decoder for the whole video, fed from the
+ * keyframe before each moment up to it, and only those moments drawn by the GPU at the size we
+ * want (colour conversion, scaling and rotation in one pass) and read back as a bitmap.
+ *
+ * Exact moments, not just the nearest keyframes: edits from TikTok and Instagram can go five
+ * seconds between keyframes, and everything shown in between (captions, faces) was missed.
  *
  * MediaMetadataRetriever.getScaledFrameAtTime did the same one frame at a time, setting up and
  * converting on the CPU for each: ~150 ms a frame on the edge 50, half the faces pass. Anything
@@ -38,9 +41,9 @@ import kotlin.math.roundToInt
 internal class KeyframeDecoder(private val context: Context, private val uri: Uri) {
 
     /**
-     * Calls [onFrame] with each decoded keyframe at or after the requested [timesMs] (as the
-     * extractor finds them), at most [px] on its long side, the right way up. Stops early if it
-     * returns false. Returns how many frames it delivered.
+     * Calls [onFrame] with the first frame at or after each of [timesMs] (ascending), at most
+     * [px] on its long side, the right way up. Stops early if it returns false. Returns how many
+     * frames it delivered.
      */
     fun forEach(timesMs: List<Long>, px: Int, onFrame: (atMs: Long, frame: Bitmap) -> Boolean): Int {
         val extractor = MediaExtractor()
@@ -78,23 +81,40 @@ internal class KeyframeDecoder(private val context: Context, private val uri: Ur
                 start()
             }
             val info = MediaCodec.BufferInfo()
-            val times = timesMs.iterator()
-            var inputDone = false
+            // Keyframe times, from the sample table (no decoding): where decoding can start.
+            val keyframes = ArrayList<Long>()
+            while (extractor.sampleTime >= 0) {
+                if (extractor.sampleFlags and MediaExtractor.SAMPLE_FLAG_SYNC != 0) keyframes += extractor.sampleTime
+                extractor.advance()
+            }
+            fun syncFor(us: Long) = keyframes.lastOrNull { it <= us } ?: keyframes.firstOrNull() ?: 0L
+            val targets = timesMs.map { it * 1000 }.sorted()
+            // Input: the target being fed toward; output: the next target waiting for its frame.
+            var feeding = 0
+            var waiting = 0
+            if (targets.isNotEmpty()) extractor.seekTo(syncFor(targets[0]), MediaExtractor.SEEK_TO_PREVIOUS_SYNC)
+            var inputDone = targets.isEmpty()
             var lastOutput = SystemClock.elapsedRealtime()
             while (true) {
                 if (!inputDone) {
                     val index = codec.dequeueInputBuffer(TimeoutUs)
                     if (index >= 0) {
                         val buffer = codec.getInputBuffer(index)!!
-                        val size = if (times.hasNext()) {
-                            extractor.seekTo(times.next() * 1000, MediaExtractor.SEEK_TO_CLOSEST_SYNC)
-                            extractor.readSampleData(buffer, 0)
-                        } else -1
+                        // Fed a little past this target (frames arrive out of order): on to the
+                        // next, jumping ahead to its keyframe when that's further on.
+                        while (feeding < targets.size && extractor.sampleTime >= targets[feeding] + PastUs) {
+                            feeding++
+                            if (feeding < targets.size && syncFor(targets[feeding]) > extractor.sampleTime) {
+                                extractor.seekTo(syncFor(targets[feeding]), MediaExtractor.SEEK_TO_PREVIOUS_SYNC)
+                            }
+                        }
+                        val size = if (feeding < targets.size) extractor.readSampleData(buffer, 0) else -1
                         if (size < 0) {
                             codec.queueInputBuffer(index, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM)
                             inputDone = true
                         } else {
                             codec.queueInputBuffer(index, 0, size, extractor.sampleTime, 0)
+                            extractor.advance()
                         }
                     }
                 }
@@ -106,7 +126,11 @@ internal class KeyframeDecoder(private val context: Context, private val uri: Ur
                 } else if (out >= 0) {
                     lastOutput = SystemClock.elapsedRealtime()
                     val end = info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0
-                    val render = info.size > 0
+                    // Only the first frame at or after a target is drawn; the rest are decoded
+                    // (later frames need them) and dropped.
+                    val wanted = info.size > 0 && waiting < targets.size && info.presentationTimeUs >= targets[waiting]
+                    if (wanted) while (waiting < targets.size && targets[waiting] <= info.presentationTimeUs) waiting++
+                    val render = wanted
                     codec.releaseOutputBuffer(out, render)
                     if (render) {
                         if (!gl.awaitFrame(FrameTimeoutMs)) error("No frame from the decoder")
@@ -148,6 +172,8 @@ internal class KeyframeDecoder(private val context: Context, private val uri: Ur
         }
 
         const val TimeoutUs = 10_000L
+        /** How far past a target to keep feeding: B-frames come out after frames fed later. */
+        const val PastUs = 300_000L
         const val FrameTimeoutMs = 2_000L
         const val StallMs = 5_000L
     }

@@ -18,7 +18,7 @@ import kotlin.math.abs
 
 /**
  * The stills Smart Search looks at. A photo: Android's cached thumbnail. A video: one frame a
- * second up to two minutes (at the nearest keyframes), then [MaxFrames] spread evenly, so a long
+ * second up to two minutes (exact moments, not just keyframes), then [MaxFrames] spread evenly, so a long
  * video costs about what a two-minute one does. Frames that look like the last one kept are
  * skipped before the model ever sees them: a talking head or a still shot doesn't fill the index
  * with copies.
@@ -28,6 +28,8 @@ object MediaFrames {
     private const val Px = 320
     private const val MaxFrames = 120
     private const val EverySecondUpTo = 120_000L
+    /** Videos up to this long can be read more than once a second ([forEach]'s perSecond). */
+    private const val DenseUpTo = 60_000L
     /** Mean absolute difference of 16×16 grey thumbnails (0–255) below which a frame is "the same". */
     private const val SameFrame = 6
 
@@ -54,9 +56,19 @@ object MediaFrames {
 
     /**
      * Calls [onFrame] with each frame's time (0 for a photo) and pixels, at most [px] on their
-     * long side; stops if it returns false.
+     * long side; stops if it returns false. [skipSame]: leave out frames that look like the last
+     * one (Smart Search, faces); the text pass wants them all, since a new caption over the same
+     * shot barely changes a small thumbnail, and it skips unchanged lines itself.
      */
-    suspend fun forEach(context: Context, item: MediaItem, px: Int = Px, onFrame: suspend (atMs: Long, frame: Bitmap) -> Boolean) {
+    suspend fun forEach(
+        context: Context,
+        item: MediaItem,
+        px: Int = Px,
+        skipSame: Boolean = true,
+        /** Frames a second for videos up to [DenseUpTo]: the text pass reads captions twice a second. */
+        perSecond: Int = 1,
+        onFrame: suspend (atMs: Long, frame: Bitmap) -> Boolean,
+    ) {
         if (!item.isVideo) {
             onFrame(0, thumbnail(context, item))
             return
@@ -69,13 +81,14 @@ object MediaFrames {
                 r.release()
             }
         }
-        val wanted = keyframes(context, item, times(duration))
+        // Exact moments: the hardware decoder runs forward from each keyframe ([KeyframeDecoder]).
+        val wanted = times(duration, perSecond)
         var last: IntArray? = null
         var stop = false
         /** Skips a frame like the last one kept; else hands it on. False to stop. */
         suspend fun deliver(at: Long, frame: Bitmap): Boolean {
             val signature = signature(frame)
-            if (last != null && difference(last!!, signature) < SameFrame) {
+            if (skipSame && last != null && difference(last!!, signature) < SameFrame) {
                 frame.recycle()
                 return true
             }
@@ -107,7 +120,8 @@ object MediaFrames {
         try {
             retriever.setDataSource(context, item.uri)
             val params = MediaMetadataRetriever.BitmapParams().apply { preferredConfig = Bitmap.Config.ARGB_8888 }
-            for (at in wanted.filter { it > lastAt }) {
+            // Frame by frame is slow to decode exact moments (~0.8 s each): nearest keyframes here.
+            for (at in keyframes(context, item, wanted.filter { it > lastAt })) {
                 val frame = retriever.getScaledFrameAtTime(at * 1000, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, px, px, params)
                     ?: continue
                 if (!deliver(at, frame)) return
@@ -118,17 +132,18 @@ object MediaFrames {
     }
 
     /** Frame times in ms: every second for short videos, else evenly spread mid-segment points. */
-    fun times(durationMs: Long): List<Long> = when {
+    fun times(durationMs: Long, perSecond: Int = 1): List<Long> = when {
         durationMs <= 0 -> listOf(0L)
+        // Captions in edits come in word by word: twice a second catches whole lines.
+        perSecond > 1 && durationMs <= DenseUpTo -> (0 until durationMs step 1000L / perSecond).toList()
         durationMs <= EverySecondUpTo -> (0 until durationMs step 1000).toList()
         else -> List(MaxFrames) { i -> (durationMs * (2 * i + 1)) / (2 * MaxFrames) }
     }
 
     /**
-     * The keyframes nearest [times], each once. Frames are taken at keyframes, not the exact
-     * moment: decoding forward to the exact frame took ~0.8 s a frame, twice the model. Phone
-     * videos have a keyframe every 1–3 s, so a one-a-second plan lands on the same keyframe
-     * repeatedly; the extractor reads that from the file's index without decoding anything.
+     * The keyframes nearest [times], each once: for the slow frame-by-frame fallback, where
+     * decoding forward to the exact frame took ~0.8 s a frame. The extractor reads them from the
+     * file's index without decoding anything.
      */
     private fun keyframes(context: Context, item: MediaItem, times: List<Long>): List<Long> {
         val extractor = MediaExtractor()

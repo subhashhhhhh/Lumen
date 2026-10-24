@@ -159,6 +159,11 @@ class LumenPrefs(context: Context) {
         get() = prefs.getBoolean(KeyShowMaps, true)
         set(value) = prefs.edit { putBoolean(KeyShowMaps, value) }
 
+    /** Which way videos' text was read; older ones are read again ([com.subhashh.lumen.data.ai.TextIndexer]). */
+    var textVideoVersion: Int
+        get() = prefs.getInt(KeyTextVideoVersion, 1)
+        set(value) = prefs.edit { putInt(KeyTextVideoVersion, value) }
+
     /** Settings → Developer Options is shown (tapping Version seven times in About). */
     var developerOptions: Boolean
         get() = prefs.getBoolean(KeyDeveloperOptions, false)
@@ -220,6 +225,7 @@ class LumenPrefs(context: Context) {
         const val KeyModelQueue = "model_queue"
         const val KeyDeveloperOptions = "developer_options"
         const val KeyShowMaps = "show_maps"
+        const val KeyTextVideoVersion = "text_video_version"
         const val KeySearchDetails = "search_details"
         const val KeySearchModel = "search_model"
         const val KeySections = "section_mode"

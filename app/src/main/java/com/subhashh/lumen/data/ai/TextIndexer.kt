@@ -26,6 +26,13 @@ class TextIndexer(private val context: Context) {
         OcrModel.removeUnused(context)
         val store = TextStore.of(context)
         val library = Indexer.eligible(context)
+        // Videos read before 2026-10-24 saw only keyframes (up to 5 s apart in edits) once a
+        // second: captions between them were missed. Read them again, once.
+        val prefs = LumenPrefs(context)
+        if (prefs.textVideoVersion < TextVideoVersion) {
+            store.remove(library.filter { it.isVideo }.map { it.id })
+            prefs.textVideoVersion = TextVideoVersion
+        }
         val known = store.indexed()
         store.remove(known.keys - library.mapTo(HashSet()) { it.id })
         val todo = library.filter { known[it.id] != it.modified }
@@ -52,7 +59,7 @@ class TextIndexer(private val context: Context) {
                     var read = 0
                     var previous: TextReader.FrameText? = null
                     runCatching {
-                        MediaFrames.forEach(context, item, px) { _, frame ->
+                        MediaFrames.forEach(context, item, px, skipSame = false, perSecond = 2) { _, frame ->
                             frames++
                             val text = reader.readChanged(frame, previous)
                             frame.recycle()
@@ -84,6 +91,8 @@ class TextIndexer(private val context: Context) {
 
     private companion object {
         const val Tag = "LumenText"
+        /** 2: exact moments, twice a second for videos up to a minute. */
+        const val TextVideoVersion = 2
         /** Same share of the phone as [Indexer]. */
         val Threads = (Runtime.getRuntime().availableProcessors() / 2).coerceIn(1, 4)
         /** Long side photos are read at: chat-sized letters keep ~30 px of height. */
