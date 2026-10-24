@@ -1,38 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- A glowing orb of light: a wide soft halo, then a bright core shading from white to amber.
-     Kept inside the 66dp safe zone so every launcher mask shows all of it. -->
+<!--
+    A point of light, like a lens flare: a warm white core with a long horizontal streak and a
+    shorter vertical one (the horizontal runs past the mask's edge on purpose), and two small lens
+    ghosts below right. Concept source: ~/Developer/gallery/lumen-icons/make_sheet.py.
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Halo -->
-    <path android:pathData="M54,22a32,32 0,1 1,0 64a32,32 0,1 1,0 -64z">
-        <aapt:attr name="android:fillColor">
-            <gradient
-                android:type="radial"
-                android:centerX="54"
-                android:centerY="54"
-                android:gradientRadius="32">
-                <item android:offset="0" android:color="#66FFD9A0" />
-                <item android:offset="0.55" android:color="#26FF9F6A" />
-                <item android:offset="1" android:color="#00FF7A59" />
-            </gradient>
-        </aapt:attr>
-    </path>
-    <!-- Core -->
-    <path android:pathData="M54,37a17,17 0,1 1,0 34a17,17 0,1 1,0 -34z">
-        <aapt:attr name="android:fillColor">
-            <gradient
-                android:type="radial"
-                android:centerX="49"
-                android:centerY="48"
-                android:gradientRadius="22">
-                <item android:offset="0" android:color="#FFFFFFFF" />
-                <item android:offset="0.45" android:color="#FFFFE7B0" />
-                <item android:offset="1" android:color="#FFFF9F0A" />
-            </gradient>
-        </aapt:attr>
-    </path>
+    <path
+        android:fillColor="#FFFFF3D9"
+        android:pathData="M15,54Q54,50.6 93,54Q54,57.4 15,54Z" />
+    <path
+        android:fillColor="#FFFFF3D9"
+        android:pathData="M54,31Q51.9,54 54,77Q56.1,54 54,31Z" />
+    <path
+        android:fillColor="#FFFFF3D9"
+        android:pathData="M54,47a7,7 0,1 1,0 14a7,7 0,1 1,0 -14z" />
+    <path
+        android:fillColor="#FFFFB34D"
+        android:pathData="M72,67.2a2.8,2.8 0,1 1,0 5.6a2.8,2.8 0,1 1,0 -5.6z" />
+    <path
+        android:fillColor="#FF6FA8FF"
+        android:pathData="M79.5,75.3a1.7,1.7 0,1 1,0 3.4a1.7,1.7 0,1 1,0 -3.4z" />
 </vector>

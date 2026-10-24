@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Themed icons (Android 13+): the orb as a solid disc with a soft ring around it. -->
+<!-- Themed icons (Android 13+) and notifications: the lens flare in one colour. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
@@ -7,11 +7,17 @@
     android:viewportHeight="108">
     <path
         android:fillColor="#FFFFFFFF"
-        android:pathData="M54,37a17,17 0,1 1,0 34a17,17 0,1 1,0 -34z" />
+        android:pathData="M15,54Q54,50.6 93,54Q54,57.4 15,54Z" />
     <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FFFFFFFF"
-        android:strokeWidth="3"
-        android:strokeAlpha="0.55"
-        android:pathData="M54,26a28,28 0,1 1,0 56a28,28 0,1 1,0 -56z" />
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M54,31Q51.9,54 54,77Q56.1,54 54,31Z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M54,47a7,7 0,1 1,0 14a7,7 0,1 1,0 -14z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M72,67.2a2.8,2.8 0,1 1,0 5.6a2.8,2.8 0,1 1,0 -5.6z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M79.5,75.3a1.7,1.7 0,1 1,0 3.4a1.7,1.7 0,1 1,0 -3.4z" />
 </vector>

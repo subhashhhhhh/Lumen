@@ -1,22 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Night sky: deep indigo at the top fading to near-black. -->
+<!-- Night blue, flat. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <path android:pathData="M0,0h108v108h-108z">
-        <aapt:attr name="android:fillColor">
-            <gradient
-                android:type="linear"
-                android:startX="54"
-                android:startY="0"
-                android:endX="54"
-                android:endY="108">
-                <item android:offset="0" android:color="#FF2B2A6E" />
-                <item android:offset="1" android:color="#FF0A0A1C" />
-            </gradient>
-        </aapt:attr>
-    </path>
+    <path
+        android:fillColor="#FF0E1526"
+        android:pathData="M0,0h108v108h-108z" />
 </vector>
