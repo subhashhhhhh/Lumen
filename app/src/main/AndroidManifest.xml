@@ -30,6 +30,8 @@
          Settings), and map tiles from OpenFreeMap for photos with a location (Settings → Maps
          turns them off). Nothing else in Lumen uses it. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Software Update: installing a newer Lumen from its GitHub releases (Android asks first). -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Android 14+: the download runs as a user-initiated data transfer job. -->
@@ -113,6 +115,9 @@
             tools:node="merge" />
         <receiver
             android:name=".data.ai.DownloadNotification$CancelReceiver"
+            android:exported="false" />
+        <receiver
+            android:name=".data.UpdateReceiver"
             android:exported="false" />
 
         <!-- "Open with Lumen" from other apps, and the camera's review button. -->

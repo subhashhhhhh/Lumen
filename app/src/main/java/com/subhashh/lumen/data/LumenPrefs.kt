@@ -191,6 +191,20 @@ class LumenPrefs(context: Context) {
         get() = prefs.getInt(KeyTextVideoVersion, 1)
         set(value) = prefs.edit { putInt(KeyTextVideoVersion, value) }
 
+    /** About → Software Update → Check Automatically: once a day, on launch. */
+    var autoUpdateCheck: Boolean
+        get() = prefs.getBoolean(KeyAutoUpdate, true)
+        set(value) = prefs.edit { putBoolean(KeyAutoUpdate, value) }
+
+    var lastUpdateCheck: Long
+        get() = prefs.getLong(KeyLastUpdateCheck, 0L)
+        set(value) = prefs.edit { putLong(KeyLastUpdateCheck, value) }
+
+    /** A newer version found by the last check, shown at the top of Settings; null when none. */
+    var availableUpdate: String?
+        get() = prefs.getString(KeyAvailableUpdate, null)
+        set(value) = prefs.edit { putString(KeyAvailableUpdate, value) }
+
     /** Settings → Developer Options is shown (tapping Version seven times in About). */
     var developerOptions: Boolean
         get() = prefs.getBoolean(KeyDeveloperOptions, false)
@@ -251,6 +265,9 @@ class LumenPrefs(context: Context) {
         const val KeyModelWifiOnly = "model_wifi_only"
         const val KeyModelQueue = "model_queue"
         const val KeyDeveloperOptions = "developer_options"
+        const val KeyAutoUpdate = "auto_update_check"
+        const val KeyLastUpdateCheck = "last_update_check"
+        const val KeyAvailableUpdate = "available_update"
         const val KeyShowMaps = "show_maps"
         const val KeyTextVideoVersion = "text_video_version"
         const val KeyOnboardingDone = "onboarding_done"

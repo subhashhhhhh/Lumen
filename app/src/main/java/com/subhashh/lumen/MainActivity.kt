@@ -14,6 +14,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val pick = PickRequest.from(intent)
+        // Software Update: once a day, if it's on (Settings → About).
+        if (savedInstanceState == null) com.subhashh.lumen.ui.settings.UpdateSession.checkIfDue(applicationContext)
         setLumenContent {
             LumenApp(
                 pick = pick,
