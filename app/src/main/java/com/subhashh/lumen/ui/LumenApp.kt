@@ -83,6 +83,7 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.geometry.Offset
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.Dispatchers
 import com.subhashh.lumen.ui.components.RenameDialog
 import com.subhashh.lumen.data.ai.HfTokenStore
@@ -406,13 +407,17 @@ private fun MainScaffold(
     // People (Settings → Smart Search → Faces), reloaded as the face pass finds them: at most
     // every couple of seconds, since it saves after every photo.
     val peopleRows by produceState(emptyList<com.subhashh.lumen.data.ai.Person>()) {
-        @OptIn(kotlinx.coroutines.FlowPreview::class)
-        com.subhashh.lumen.data.ai.FaceStore.changes.debounce(1_500).collect {
-            value = withContext(Dispatchers.IO) {
+        val load = suspend {
+            withContext(Dispatchers.IO) {
                 if (!com.subhashh.lumen.data.ai.FaceModel.installed(context)) emptyList()
                 else com.subhashh.lumen.data.ai.FaceStore.of(context).people()
             }
         }
+        // Right away at launch, so Collections has People from its first frame; after that only
+        // once the face pass pauses its saving (it saves after every photo).
+        value = load()
+        @OptIn(kotlinx.coroutines.FlowPreview::class)
+        com.subhashh.lumen.data.ai.FaceStore.changes.drop(1).debounce(1_500).collect { value = load() }
     }
     // Only photos the library shows (no excluded folders, Hidden or trash); named people first.
     val allPeople = remember(peopleRows, library) {
