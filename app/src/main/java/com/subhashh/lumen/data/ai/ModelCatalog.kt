@@ -72,8 +72,8 @@ object ModelCatalog {
 
 /**
  * Reading text in photos: Baidu's PP-OCRv6 small (Apache 2.0), text detection and recognition,
- * 50 languages (Chinese, English, Japanese, Latin scripts), plus our GPU conversions of both
- * (tools/ocr/). Downloaded with either Smart Search tier. `rec.yml` carries the recognizer's
+ * 50 languages (Chinese, English, Japanese, Latin scripts), plus our GPU conversion of the detector
+ * (tools/ocr/; the repo also has GPU line readers, tried and left out: no faster on real lines). Downloaded with either Smart Search tier. `rec.yml` carries the recognizer's
  * character list.
  */
 object OcrModel {
@@ -82,14 +82,6 @@ object OcrModel {
 
     /** Detection for LiteRT's GPU, 960×960; used where [GpuCheck] passes. */
     const val DetGpu = "det_gpu.tflite"
-
-    /**
-     * Line reading for LiteRT's GPU at fixed widths (it can't resize a model): 8 lines of 48 px
-     * by each width. Wider lines stay on the CPU.
-     */
-    val RecGpuWidths = listOf(320, 640, 1280)
-
-    fun recGpu(width: Int) = "rec_gpu_$width.tflite"
 
     /** What text reading needs; the GPU files only make it faster. */
     private val core = listOf(
@@ -100,9 +92,6 @@ object OcrModel {
 
     val files = core + listOf(
         ModelFile(DetGpu, 9_869_976, "8a7676cbc5a01ca47544bf95af2196c8b1b6c7b75beec9ad9b17857dffb71d1e"),
-        ModelFile(recGpu(320), 21_118_256, "36e6ee2cd6dd974c7ef61690fd1c39e2f44c47e737a531026b1cac4a4b0bec68"),
-        ModelFile(recGpu(640), 21_118_260, "405c14d18826829798d0474433df7f680fe5afd73297b513d43eea2f3ce9ac12"),
-        ModelFile(recGpu(1280), 21_118_260, "cf90f712424781611fb82bc5295b500e2f50949ce52cb3e3b5adb9205e6a0dc2"),
     )
     val bytes: Long get() = files.sumOf { it.bytes }
 
@@ -115,6 +104,12 @@ object OcrModel {
 
     /** Every file of this version is in place; otherwise Settings offers the rest as an update. */
     fun complete(context: Context): Boolean = files.all { File(dir(context), it.name).length() == it.bytes }
+
+    /** Deletes files this version doesn't use (the GPU line readers, briefly downloaded). */
+    fun removeUnused(context: Context) {
+        val wanted = files.flatMapTo(HashSet()) { listOf(it.name, it.name + ".part") }
+        dir(context).listFiles()?.filter { it.name !in wanted }?.forEach { it.deleteRecursively() }
+    }
 }
 
 /**

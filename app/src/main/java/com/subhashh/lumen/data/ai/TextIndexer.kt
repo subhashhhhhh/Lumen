@@ -23,6 +23,7 @@ class TextIndexer(private val context: Context) {
     /** Reads at most [limit] photos and videos. */
     suspend fun run(limit: Int = Int.MAX_VALUE): Indexer.Outcome {
         if (!OcrModel.installed(context)) return Indexer.Outcome.Done
+        OcrModel.removeUnused(context)
         val store = TextStore.of(context)
         val library = Indexer.eligible(context)
         val known = store.indexed()
@@ -38,12 +39,8 @@ class TextIndexer(private val context: Context) {
         val gpu = GpuCheck.useGpu(
             context, GpuCheck.Target("ppocrv6-det", File(OcrModel.dir(context), OcrModel.DetGpu), 960 * 960 * 3),
         )
-        // Each line-reader width is its own GPU model, so each gets its own check.
-        val recWidths = OcrModel.RecGpuWidths.filter { w ->
-            GpuCheck.useGpu(context, GpuCheck.Target("ppocrv6-rec-$w", File(OcrModel.dir(context), OcrModel.recGpu(w)), 8 * 48 * w * 3))
-        }
-        Log.i(Tag, "Reading text with detection on the ${if (gpu) "GPU" else "CPU"}, lines on the GPU at widths $recWidths")
-        TextReader(OcrModel.dir(context), Threads, gpu, recWidths).use { reader ->
+        Log.i(Tag, "Reading text with detection on the ${if (gpu) "GPU" else "CPU"}")
+        TextReader(OcrModel.dir(context), Threads, gpu).use { reader ->
             for ((n, item) in todo.withIndex()) {
                 if (n >= limit) return Indexer.Outcome.Partial
                 coroutineContext.ensureActive()
