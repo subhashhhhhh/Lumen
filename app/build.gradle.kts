@@ -4,6 +4,10 @@ plugins {
     alias(libs.plugins.baselineprofile)
 }
 
+/** Lumen Lab's repository, when it's checked out next to this one (see sourceSets below). */
+val lab: File = rootProject.file("../lumen-lab")
+val hasLab = lab.resolve("src/java").isDirectory
+
 android {
     namespace = "com.subhashh.lumen"
     compileSdk = 37
@@ -41,9 +45,8 @@ android {
         }
         debug {
             applicationIdSuffix = ".debug"
-            // Only the owner's phone runs these; skipping x86/armv7 keeps the Search Lab's
-            // native runtimes from adding ~150 MB.
-            ndk { abiFilters += "arm64-v8a" }
+            // With the Lab: arm64 only, or its native runtimes add ~150 MB.
+            if (hasLab) ndk { abiFilters += "arm64-v8a" }
         }
         // Release-optimized (R8, not debuggable) but debug-signed, for judging smoothness on the
         // phone: Compose debug builds run several times slower. Same app id as debug, so it
@@ -53,15 +56,22 @@ android {
             signingConfig = signingConfigs.getByName("debug")
             applicationIdSuffix = ".debug"
             matchingFallbacks += listOf("release")
-            proguardFiles("lab-rules.pro")
-            ndk { abiFilters += "arm64-v8a" }
+            if (hasLab) {
+                proguardFiles(lab.resolve("lab-rules.pro"))
+                ndk { abiFilters += "arm64-v8a" }
+            }
         }
     }
 
-    // Search Lab (model head-to-head), in debug and profile builds only; never in release.
-    sourceSets {
-        getByName("debug").kotlin.directories.add("src/lab/java")
-        getByName("profile").kotlin.directories.add("src/lab/java")
+    // Lumen Lab (model head-to-heads and speed tests) lives in its own repository. Checked out
+    // next to this one as ../lumen-lab, it's built into debug and profile builds; never release.
+    if (hasLab) {
+        sourceSets {
+            getByName("debug").kotlin.directories.add(lab.resolve("src/java").path)
+            getByName("profile").kotlin.directories.add(lab.resolve("src/java").path)
+            getByName("debug").manifest.srcFile(lab.resolve("manifests/debug/AndroidManifest.xml"))
+            getByName("profile").manifest.srcFile(lab.resolve("manifests/profile/AndroidManifest.xml"))
+        }
     }
 
     compileOptions {
@@ -125,8 +135,10 @@ dependencies {
     implementation(libs.onnxruntime.android)
     implementation(libs.litert) { exclude(group = "com.google.android.play") }
     implementation(libs.litert.gpu) { exclude(group = "com.google.android.play") }
-    // Search Lab only (EmbeddingGemma 2); not in release.
-    debugImplementation(libs.litertlm.android)
-    "profileImplementation"(libs.litertlm.android)
+    // Lumen Lab only (EmbeddingGemma 2); not in release.
+    if (hasLab) {
+        debugImplementation(libs.litertlm.android)
+        "profileImplementation"(libs.litertlm.android)
+    }
 
 }

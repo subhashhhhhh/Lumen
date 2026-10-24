@@ -146,5 +146,10 @@
                 <data android:mimeType="video/*" />
             </intent-filter>
         </activity>
+        <!-- The phone's GPU drivers (OpenCL) for LiteRT's GPU delegate (Smart Search's Accurate
+             image model). Android 12+ hides vendor libraries unless they're named here; optional,
+             so phones without them still install and run on the CPU. -->
+        <uses-native-library android:name="libOpenCL.so" android:required="false" />
+        <uses-native-library android:name="libvndksupport.so" android:required="false" />
     </application>
 </manifest>

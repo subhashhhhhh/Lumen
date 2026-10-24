@@ -187,8 +187,8 @@ Do these steps:
 The debug app has a different app ID, `com.subhashh.lumen.debug`. It does not replace a release
 version of Lumen.
 
-The `tools` folder has the Python scripts that make the model files. You do not need them to
-build the app.
+The `tools` folder has scripts for the place names, the icons, and the speed checks. You do not
+need them to build the app. The scripts that make the model files are in a different repository.
 
 ## Report a bug
 
