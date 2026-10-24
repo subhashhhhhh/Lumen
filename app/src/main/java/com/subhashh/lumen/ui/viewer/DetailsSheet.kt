@@ -1,5 +1,7 @@
 package com.subhashh.lumen.ui.viewer
 
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.animateFloatAsState
 import kotlinx.coroutines.delay
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableLongStateOf
@@ -327,8 +329,9 @@ private fun SubtitlesPart(item: MediaItem, cues: List<Cue>, colors: SheetColors,
             delay(200)
         }
     }
-    // The line on screen now: the last one started, while it lasts.
-    val active = cues.indexOfLast { it.startMs <= position }.takeIf { it >= 0 && position < cues[it].endMs }
+    // The line being spoken, or in a pause the last one spoken, until the next starts: the
+    // highlight never drops out between lines.
+    val active = cues.indexOfLast { it.startMs <= position }.takeIf { it >= 0 }
     val list = rememberLazyListState()
     LaunchedEffect(active) {
         if (active != null && !list.isScrollInProgress) list.animateScrollToItem((active - 1).coerceAtLeast(0))
@@ -338,11 +341,13 @@ private fun SubtitlesPart(item: MediaItem, cues: List<Cue>, colors: SheetColors,
     LazyColumn(state = list, modifier = Modifier.fillMaxWidth().heightIn(max = 220.dp)) {
         itemsIndexed(cues) { i, cue ->
             val on = i == active
+            // Fades between lines; the same weight throughout, so a long line never re-wraps.
+            val lit by animateFloatAsState(if (on) 1f else 0f, tween(220), label = "line")
             Row(
                 Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(8.dp))
-                    .background(if (on) colors.secondary.copy(alpha = 0.15f) else Color.Transparent)
+                    .background(colors.secondary.copy(alpha = 0.15f * lit))
                     .pressable({
                         player?.seekTo(cue.startMs)
                         player?.play()
@@ -358,9 +363,8 @@ private fun SubtitlesPart(item: MediaItem, cues: List<Cue>, colors: SheetColors,
                 )
                 Text(
                     cue.text,
-                    color = if (on || active == null) colors.text else colors.text.copy(alpha = 0.6f),
+                    color = colors.text.copy(alpha = if (active == null) 1f else 0.55f + 0.45f * lit),
                     fontSize = 14.sp,
-                    fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal,
                 )
             }
         }
