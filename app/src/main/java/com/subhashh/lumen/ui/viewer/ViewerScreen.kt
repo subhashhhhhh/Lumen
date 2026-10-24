@@ -184,6 +184,8 @@ fun ViewerScreen(
     val scope = rememberCoroutineScope()
 
     var chromeVisible by rememberSaveable { mutableStateOf(true) }
+    /** The bottom controls' height (px, inside the navigation bar), so subtitles clear them. */
+    var bottomChromeHeight by remember { mutableIntStateOf(0) }
     /** CC: subtitles made on the phone for videos, on until turned off again. */
     var captions by rememberSaveable { mutableStateOf(false) }
     val speechReady = remember { com.subhashh.lumen.data.ai.SpeechModel.installed(context) }
@@ -489,8 +491,12 @@ fun ViewerScreen(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .navigationBarsPadding()
-                    // Above the controls when they're up, near the bottom when they're not.
-                    .padding(bottom = if (chromeVisible) 150.dp else 40.dp, start = 24.dp, end = 24.dp),
+                    // Above the controls (their real height) when they're up, near the bottom when not.
+                    .padding(
+                        bottom = if (chromeVisible) with(LocalDensity.current) { bottomChromeHeight.toDp() } + 8.dp else 40.dp,
+                        start = 24.dp,
+                        end = 24.dp,
+                    ),
             )
         }
 
@@ -520,6 +526,7 @@ fun ViewerScreen(
                         .align(Alignment.BottomCenter)
                         .graphicsLayer { alpha = 1f - infoFraction() }
                         .navigationBarsPadding()
+                        .onSizeChanged { bottomChromeHeight = it.height }
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                 ) {
                     if (current.isVideo) {
@@ -530,6 +537,10 @@ fun ViewerScreen(
                             Spacer(Modifier.height(8.dp))
                         }
                         if (player != null) VideoControls(backdrop, player)
+                        Spacer(Modifier.height(12.dp))
+                    }
+                    if (items.size > 1 && !external) {
+                        FilmStrip(items, pager)
                         Spacer(Modifier.height(12.dp))
                     }
                     val launch = { sender: android.content.IntentSender ->
