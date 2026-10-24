@@ -89,7 +89,25 @@ internal fun SmartSearchGroup(
     var wifiOnly by remember { mutableStateOf(prefs.modelWifiOnly) }
     var videoDetail by remember { mutableStateOf(prefs.videoDetail) }
     var onBattery by remember { mutableStateOf(prefs.indexOnBattery) }
-    val waitingText = if (onBattery) "Continues in the background" else "Continues while your phone charges"
+    var scheduleOn by remember { mutableStateOf(prefs.indexScheduleOn) }
+    var scheduleStart by remember { mutableIntStateOf(prefs.indexScheduleStart) }
+    var scheduleEnd by remember { mutableIntStateOf(prefs.indexScheduleEnd) }
+    val waitingText = when {
+        scheduleOn -> "Continues ${clock(context, scheduleStart)} – ${clock(context, scheduleEnd)}"
+        onBattery -> "Continues in the background"
+        else -> "Continues while your phone charges"
+    }
+    /** Android's own time picker, in the phone's 12- or 24-hour style. */
+    fun pickTime(minute: Int, onPicked: (Int) -> Unit) {
+        android.app.TimePickerDialog(
+            context,
+            { _, h, m -> onPicked(h * 60 + m) },
+            minute / 60,
+            minute % 60,
+            android.text.format.DateFormat.is24HourFormat(context),
+        ).show()
+    }
+
 
     // The download's progress notification needs this on Android 13+; it downloads either way.
     var asked by remember { mutableStateOf<ModelPack?>(null) }
@@ -272,24 +290,82 @@ internal fun SmartSearchGroup(
     }
 
     Group(
-        "Indexing and Downloads",
-        footer = "Models download once from Hugging Face; your photos and searches never leave this phone.",
+        "Scheduled Indexing",
+        footer = if (scheduleOn) {
+            "Photos and videos are indexed only in these hours, plugged in or not (it stops if the battery " +
+                "runs low or the phone gets warm). New photos are still added as they arrive. Unplugged, " +
+                "Android lets background work run only now and then at night, so it's fastest on the charger."
+        } else {
+            "Index the backlog at a time you choose, like overnight, instead of whenever the phone charges."
+        },
     ) {
-        Anchor("index-on-battery", highlight) {
+        Anchor("scheduled-indexing", highlight) {
             ToggleRow(
-                title = "Index on Battery",
-                subtitle = "Keep scanning off the charger; stops when the battery runs low",
-                checked = onBattery,
+                title = "Scheduled Indexing",
+                checked = scheduleOn,
                 onCheckedChange = {
-                    onBattery = it
-                    prefs.indexOnBattery = it
+                    scheduleOn = it
+                    prefs.indexScheduleOn = it
                     SmartIndex.schedule(context, replace = true)
                 },
                 icon = LumenIcons.Timer,
-                iconColor = Green,
+                iconColor = Indigo,
             )
         }
-        Divider()
+        if (scheduleOn) {
+            Divider()
+            SettingsRow(
+                title = "Starts",
+                value = clock(context, scheduleStart),
+                onClick = {
+                    pickTime(scheduleStart) {
+                        scheduleStart = it
+                        prefs.indexScheduleStart = it
+                        SmartIndex.schedule(context, replace = true)
+                    }
+                },
+                icon = LumenIcons.Timer,
+                iconColor = Indigo,
+            )
+            Divider()
+            SettingsRow(
+                title = "Ends",
+                value = clock(context, scheduleEnd),
+                onClick = {
+                    pickTime(scheduleEnd) {
+                        scheduleEnd = it
+                        prefs.indexScheduleEnd = it
+                        SmartIndex.schedule(context, replace = true)
+                    }
+                },
+                icon = LumenIcons.Timer,
+                iconColor = Indigo,
+            )
+        }
+    }
+
+    Group(
+        "Indexing and Downloads",
+        footer = "Models download once from Hugging Face; your photos and searches never leave this phone.",
+    ) {
+        // With a schedule, its hours decide when indexing runs; this applies without one.
+        if (!scheduleOn) {
+            Anchor("index-on-battery", highlight) {
+                ToggleRow(
+                    title = "Index on Battery",
+                    subtitle = "Keep scanning off the charger; stops when the battery runs low",
+                    checked = onBattery,
+                    onCheckedChange = {
+                        onBattery = it
+                        prefs.indexOnBattery = it
+                        SmartIndex.schedule(context, replace = true)
+                    },
+                    icon = LumenIcons.Timer,
+                    iconColor = Green,
+                )
+            }
+            Divider()
+        }
         Anchor("video-detail", highlight) {
             PickerRow(
                 title = "Video Detail",
@@ -347,6 +423,15 @@ internal fun SmartSearchGroup(
         }
     }
 }
+
+/** "1:00 AM" or "01:00", as the phone shows times. */
+private fun clock(context: Context, minute: Int): String =
+    android.text.format.DateFormat.getTimeFormat(context).format(
+        java.util.Calendar.getInstance().apply {
+            set(java.util.Calendar.HOUR_OF_DAY, minute / 60)
+            set(java.util.Calendar.MINUTE, minute % 60)
+        }.time,
+    )
 
 /** A pack's status line and its action, from the download state and the files on the phone. */
 private fun packStatus(context: Context, pack: ModelPack, state: DownloadState, wifiOnly: Boolean): Pair<String, String> {

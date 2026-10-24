@@ -32,6 +32,8 @@ data class IndexProgress(val indexed: Int, val total: Int)
  *   turns on Index on Battery (Settings → Smart Search), which drops the charger rule.
  * - **New items**: MediaStore wakes Lumen shortly after a photo or video is added; up to
  *   [NewLimit] get indexed right away, charging or not. More than that waits for the charger.
+ * - **Scheduled Indexing** (Settings): the backlog runs only in the user's hours (overnight,
+ *   say), plugged in or not; a small job wakes Lumen at the window's start and end.
  * Both resume where they stopped. Scheduled at app start and when a model finishes downloading.
  */
 object SmartIndex {
@@ -41,6 +43,7 @@ object SmartIndex {
 
     private const val Backlog = "index-backlog"
     private const val New = "index-new"
+    private const val Window = "index-window"
     private const val NewLimit = 30
     private const val KeyMode = "mode"
 
@@ -77,10 +80,30 @@ object SmartIndex {
         scope.launch {
             if (!anythingToIndex(app)) return@launch
             val work = WorkManager.getInstance(app)
+            val prefs = com.subhashh.lumen.data.LumenPrefs(app)
+            var charging = !prefs.indexOnBattery
+            if (prefs.indexScheduleOn) {
+                val inside = inWindow(prefs.indexScheduleStart, prefs.indexScheduleEnd)
+                // Wake at the window's next edge: its end while inside it, else its start.
+                val edge = if (inside) prefs.indexScheduleEnd else prefs.indexScheduleStart
+                work.enqueueUniqueWork(
+                    Window,
+                    ExistingWorkPolicy.REPLACE,
+                    OneTimeWorkRequestBuilder<WindowWorker>().setInitialDelay(untilMinute(edge)).build(),
+                )
+                if (!inside) {
+                    // Outside the hours: no backlog; new items still come in.
+                    work.cancelUniqueWork(Backlog)
+                    watchForNew(app, ExistingWorkPolicy.KEEP)
+                    return@launch
+                }
+                // Inside them: plugged in or not (still never on a low battery).
+                charging = false
+            } else {
+                work.cancelUniqueWork(Window)
+            }
             val waiting = work.getWorkInfosForUniqueWorkFlow(Backlog).first()
                 .any { it.state == WorkInfo.State.ENQUEUED && it.runAttemptCount > 0 }
-            // Settings → Smart Search → Index on Battery lifts the charger rule, not the low-battery one.
-            val charging = !com.subhashh.lumen.data.LumenPrefs(app).indexOnBattery
             work.enqueueUniqueWork(
                 Backlog,
                 if (waiting || replace) ExistingWorkPolicy.REPLACE else ExistingWorkPolicy.KEEP,
@@ -182,4 +205,26 @@ object SmartIndex {
     }
 
     private val passes = Mutex()
+
+    /** Whether now is between [start] and [end], minutes after midnight (a window may cross it). */
+    private fun inWindow(start: Int, end: Int): Boolean {
+        val now = java.time.LocalTime.now().let { it.hour * 60 + it.minute }
+        return if (start <= end) now in start until end else now >= start || now < end
+    }
+
+    /** From now until the next [minute] after midnight (today or tomorrow). */
+    private fun untilMinute(minute: Int): Duration {
+        val now = java.time.LocalDateTime.now()
+        var at = now.toLocalDate().atStartOfDay().plusMinutes(minute.toLong())
+        if (!at.isAfter(now)) at = at.plusDays(1)
+        return Duration.between(now, at)
+    }
+
+    /** Wakes at a Scheduled Indexing edge: starts or stops the backlog, and arms the next edge. */
+    class WindowWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
+        override suspend fun doWork(): Result {
+            schedule(applicationContext, replace = true)
+            return Result.success()
+        }
+    }
 }

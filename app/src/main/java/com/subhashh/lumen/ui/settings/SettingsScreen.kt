@@ -118,6 +118,7 @@ private val Entries = listOf(
     SettingEntry("indexed", "Indexed", SettingsCategory.SmartSearch, "indexing progress smart search"),
     SettingEntry("subtitle-quality", "Subtitle Quality", SettingsCategory.SmartSearch, "subtitles captions cc transcription speech model"),
     SettingEntry("subtitles-model", "Subtitles Model", SettingsCategory.SmartSearch, "subtitles captions cc transcription speech download"),
+    SettingEntry("scheduled-indexing", "Scheduled Indexing", SettingsCategory.SmartSearch, "overnight night time schedule hours indexing background sleep"),
     SettingEntry("index-on-battery", "Index on Battery", SettingsCategory.SmartSearch, "charging battery background scan indexing"),
     SettingEntry("video-detail", "Video Detail", SettingsCategory.SmartSearch, "video frames resolution faces quality speed"),
     SettingEntry("face-model", "Face Models", SettingsCategory.SmartSearch, "people faces persons download remove update"),

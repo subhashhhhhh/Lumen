@@ -159,6 +159,21 @@ class LumenPrefs(context: Context) {
         get() = prefs.getBoolean(KeyShowMaps, true)
         set(value) = prefs.edit { putBoolean(KeyShowMaps, value) }
 
+    /**
+     * Settings → Smart Features → Scheduled Indexing: the backlog runs only between
+     * [indexScheduleStart] and [indexScheduleEnd] (minutes after midnight; may cross it), on
+     * the charger or not.
+     */
+    var indexScheduleOn: Boolean
+        get() = prefs.getBoolean(KeyIndexScheduleOn, false)
+        set(value) = prefs.edit { putBoolean(KeyIndexScheduleOn, value) }
+    var indexScheduleStart: Int
+        get() = prefs.getInt(KeyIndexScheduleStart, 60)
+        set(value) = prefs.edit { putInt(KeyIndexScheduleStart, value) }
+    var indexScheduleEnd: Int
+        get() = prefs.getInt(KeyIndexScheduleEnd, 7 * 60)
+        set(value) = prefs.edit { putInt(KeyIndexScheduleEnd, value) }
+
     /** Which way videos' text was read; older ones are read again ([com.subhashh.lumen.data.ai.TextIndexer]). */
     var textVideoVersion: Int
         get() = prefs.getInt(KeyTextVideoVersion, 1)
@@ -226,6 +241,9 @@ class LumenPrefs(context: Context) {
         const val KeyDeveloperOptions = "developer_options"
         const val KeyShowMaps = "show_maps"
         const val KeyTextVideoVersion = "text_video_version"
+        const val KeyIndexScheduleOn = "index_schedule_on"
+        const val KeyIndexScheduleStart = "index_schedule_start"
+        const val KeyIndexScheduleEnd = "index_schedule_end"
         const val KeySearchDetails = "search_details"
         const val KeySearchModel = "search_model"
         const val KeySections = "section_mode"
