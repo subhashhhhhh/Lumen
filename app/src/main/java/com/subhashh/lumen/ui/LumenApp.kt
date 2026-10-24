@@ -436,6 +436,13 @@ private fun MainScaffold(
             else com.subhashh.lumen.data.ai.TextStore.of(context).search(query)
         }
     }
+    // Captions the user wrote (Details → Add a Caption): their own words, so exact matches.
+    val captionMatches by produceState<List<Long>?>(null, searchQuery) {
+        val query = searchQuery.trim()
+        value = if (query.length < 2) null else withContext(Dispatchers.IO) {
+            com.subhashh.lumen.data.CaptionStore.of(context).search(query)
+        }
+    }
     // Opening Search loads Smart Search's text model and vectors while the user types.
     LaunchedEffect(searching) { if (searching) SmartSearch.prepare(context) }
     // Smart Search: by what's in the photos, once a model is downloaded and photos are indexed.
@@ -467,19 +474,21 @@ private fun MainScaffold(
     // Exact name, folder and date matches first, then people of that name and photos with the
     // words in them (newest first), then Smart Search's, best first; each photo once.
     // With Search Details, one section per way of matching instead, each complete on its own.
-    val searchSections = remember(keywordResults, personMatches, textMatches, smartHits, library, searchDetails) {
+    val searchSections = remember(keywordResults, captionMatches, personMatches, textMatches, smartHits, library, searchDetails) {
         val keyword = keywordResults ?: return@remember null
         val byId = library.orEmpty().associateBy { it.id }
         if (!searchDetails) {
             val seen = keyword.mapTo(HashSet()) { it.id }
+            val ofCaptions = captionMatches.orEmpty().mapNotNull { byId[it] }.filter { seen.add(it.id) }.sortedByDescending { it.takenAt }
             val ofPeople = personMatches.flatMap { it.first.mediaIds }.mapNotNull { byId[it] }
                 .filter { seen.add(it.id) }.sortedByDescending { it.takenAt }
             val ofText = textMatches.orEmpty().mapNotNull { byId[it] }.filter { seen.add(it.id) }.sortedByDescending { it.takenAt }
             val ofSmart = smartHits.orEmpty().mapNotNull { hit -> byId[hit.mediaId]?.takeIf { seen.add(it.id) } }
-            return@remember listOf(SearchSection(SearchSection.All, "", keyword + ofPeople + ofText + ofSmart))
+            return@remember listOf(SearchSection(SearchSection.All, "", keyword + ofCaptions + ofPeople + ofText + ofSmart))
         }
         listOf(
             SearchSection(SearchSection.Names, "Names, Folders and Dates", keyword),
+            SearchSection("captions", "Captions", captionMatches.orEmpty().mapNotNull { byId[it] }.sortedByDescending { it.takenAt }),
             SearchSection(
                 SearchSection.People, "People",
                 personMatches.flatMap { it.first.mediaIds }.distinct().mapNotNull { byId[it] }.sortedByDescending { it.takenAt },

@@ -217,6 +217,9 @@ fun ViewerScreen(
     DisposableEffect(Unit) {
         onDispose { kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default).launch { com.subhashh.lumen.data.ai.LiveText.release() } }
     }
+    /** The caption being edited from the details sheet: the item and its caption so far. */
+    var captionEdit by remember { mutableStateOf<Pair<MediaItem, String>?>(null) }
+    var captionVersion by remember { mutableIntStateOf(0) }
     /** The spot shown on the full-screen map, from the details sheet; null when it's closed. */
     var mapOf by remember { mutableStateOf<com.subhashh.lumen.data.GeoPoint?>(null) }
     // Composition only cares whether the photo is displaced, not by how much.
@@ -662,6 +665,8 @@ fun ViewerScreen(
                 onOpenPerson = onOpenPerson,
                 onRename = onRename,
                 onAdjustDate = onAdjustDate,
+                onEditCaption = { item, caption -> captionEdit = item to caption.orEmpty() },
+                captionVersion = captionVersion,
                 onOpenMap = { if (showMaps) mapOf = it else MediaActions.openInMaps(context, it) },
                 onAllowLocation = { locationPermission.launch(Manifest.permission.ACCESS_MEDIA_LOCATION) },
                 modifier = Modifier
@@ -706,6 +711,24 @@ fun ViewerScreen(
                     ),
             )
         }
+        com.subhashh.lumen.ui.components.RenameDialog(
+            currentName = captionEdit?.second,
+            title = "Caption",
+            confirm = "Save",
+            keepExtension = false,
+            freeText = true,
+            onRename = { text ->
+                val item = captionEdit?.first
+                captionEdit = null
+                if (item != null) {
+                    kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                        com.subhashh.lumen.data.CaptionStore.of(context).set(item.id, text)
+                        captionVersion++
+                    }
+                }
+            },
+            onDismiss = { captionEdit = null },
+        )
         mapOf?.let { point ->
             com.subhashh.lumen.ui.map.PhotoMapScreen(
                 point = point,

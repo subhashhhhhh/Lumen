@@ -202,6 +202,40 @@ object Subtitles {
     private const val LingerMs = 400L
     private const val MinConfidence = 0.35
 
+    /** Subtitles made so far for [item], and whether they cover the whole video; null if none. */
+    fun saved(context: Context, item: MediaItem): Pair<List<Cue>, Boolean>? {
+        val (done, cues) = load(file(context, item)) ?: return null
+        val windows = ((item.durationMs + WindowMs - 1) / WindowMs).coerceAtLeast(1)
+        return cues to (done.size >= windows)
+    }
+
+    /** The cues as SubRip (.srt), which nearly every player and editor reads. */
+    fun srt(cues: List<Cue>): String = buildString {
+        cues.forEachIndexed { i, c ->
+            append(i + 1).append('\n')
+            append(time(c.startMs, ',')).append(" --> ").append(time(c.endMs, ',')).append('\n')
+            append(c.text).append("\n\n")
+        }
+    }
+
+    /** The cues as WebVTT (.vtt), for browsers and web players. */
+    fun vtt(cues: List<Cue>): String = buildString {
+        append("WEBVTT\n\n")
+        for (c in cues) {
+            append(time(c.startMs, '.')).append(" --> ").append(time(c.endMs, '.')).append('\n')
+            append(c.text).append("\n\n")
+        }
+    }
+
+    /** "[0:12] Hello there", one line per cue. */
+    fun timestamped(cues: List<Cue>): String = cues.joinToString("\n") { c ->
+        val s = c.startMs / 1000
+        "[%d:%02d] %s".format(s / 60, s % 60, c.text)
+    }
+
+    private fun time(ms: Long, separator: Char) =
+        "%02d:%02d:%02d%c%03d".format(ms / 3_600_000, ms / 60_000 % 60, ms / 1000 % 60, separator, ms % 1000)
+
     private fun file(context: Context, item: MediaItem) =
         // v2: line breaks, stock-phrase filter and keywords; earlier files are made again.
         File(context.noBackupFilesDir, "subtitles/v2/${item.id}-${item.modified}.json").apply { parentFile?.mkdirs() }

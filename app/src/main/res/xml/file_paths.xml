@@ -4,4 +4,6 @@
 <paths>
     <external-path name="storage" path="." />
     <cache-path name="vault_share" path="vault-share/" />
+    <!-- Files Lumen makes to share, like exported subtitles. -->
+    <cache-path name="exports" path="exports/" />
 </paths>

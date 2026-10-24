@@ -1,5 +1,24 @@
 package com.subhashh.lumen.ui.viewer
 
+import com.subhashh.lumen.data.ai.TextStore
+import com.subhashh.lumen.data.ai.Subtitles
+import com.subhashh.lumen.data.ai.SpeechModel
+import com.subhashh.lumen.data.ai.SearchSuggestions
+import com.subhashh.lumen.data.ai.OcrModel
+import com.subhashh.lumen.data.ai.ModelDownloads
+import com.subhashh.lumen.data.ai.LiveText
+import com.subhashh.lumen.data.ai.Cue
+import com.subhashh.lumen.data.CaptionStore
+import com.subhashh.lumen.data.AllMetadata
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.LaunchedEffect
+import android.widget.Toast
+import android.content.Intent
+import android.content.Context
+import android.content.ClipboardManager
+import android.content.ClipData
 import android.text.format.Formatter
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
@@ -98,6 +117,10 @@ fun DetailsSheet(
     onAllowLocation: () -> Unit,
     onRename: (MediaItem) -> Unit,
     onAdjustDate: (MediaItem) -> Unit,
+    /** Opens the caption editor with the current caption (null: none yet). */
+    onEditCaption: (MediaItem, String?) -> Unit,
+    /** Bumped after a caption is saved, to show it. */
+    captionVersion: Int,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -144,6 +167,10 @@ fun DetailsSheet(
 
         val d = details
         WhenHeader(item, d, colors, onAdjustDate)
+        val caption by produceState<String?>(null, item.id, captionVersion) {
+            value = withContext(Dispatchers.IO) { CaptionStore.of(context).get(item.id) }
+        }
+        CaptionRow(caption, colors) { onEditCaption(item, caption) }
         Spacer(Modifier.height(14.dp))
 
         if (shown.isNotEmpty()) {
@@ -204,8 +231,191 @@ fun DetailsSheet(
             }
         }
 
+        WhatLumenSees(item, colors)
+
         Spacer(Modifier.height(10.dp))
         Group(colors) { FileGroup(item, d, colors, onRename) }
+
+        Spacer(Modifier.height(10.dp))
+        Group(colors) { AllMetadataGroup(item, d.locationReadable, colors) }
+    }
+}
+
+/** The caption, or a prompt to add one; tap to edit. */
+@Composable
+private fun CaptionRow(caption: String?, colors: SheetColors, onEdit: () -> Unit) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp).pressable(onEdit, pressedScale = 0.98f).padding(horizontal = 4.dp, vertical = 4.dp),
+    ) {
+        Text(
+            caption ?: "Add a Caption",
+            color = if (caption == null) colors.secondary else colors.text,
+            fontSize = 15.sp,
+            modifier = Modifier.weight(1f),
+        )
+        Icon(LumenIcons.Edit, contentDescription = "Edit caption", tint = colors.accent, modifier = Modifier.size(18.dp))
+    }
+}
+
+/**
+ * What Lumen's models found: what it looks like (Smart Search's everyday words it stands out
+ * for), the words read in it, and for videos, subtitles to copy or export. Hidden when there's
+ * nothing.
+ */
+@Composable
+private fun WhatLumenSees(item: MediaItem, colors: SheetColors) {
+    val context = LocalContext.current
+    val looks by produceState(emptyList<String>(), item.id) {
+        value = withContext(Dispatchers.Default) {
+            runCatching {
+                ModelDownloads.installed(context)?.let { SearchSuggestions.looksLike(context, it, item.id) }
+            }.getOrNull().orEmpty()
+        }
+    }
+    val text by produceState<String?>(null, item.id) {
+        value = withContext(Dispatchers.IO) {
+            runCatching { if (OcrModel.installed(context)) TextStore.of(context).text(item.id) else null }.getOrNull()?.takeIf { it.isNotBlank() }
+                ?: LiveText.cached(item)?.lines?.joinToString("\n") { it.text }?.takeIf { it.isNotBlank() }
+        }
+    }
+    val speech = item.isVideo && remember { SpeechModel.installed(context) }
+    if (looks.isEmpty() && text == null && !speech) return
+    Spacer(Modifier.height(10.dp))
+    Group(colors) {
+        Title(LumenIcons.Search, "What Lumen Sees", colors)
+        if (looks.isNotEmpty()) {
+            Spacer(Modifier.height(10.dp))
+            Line("Looks like", colors, secondary = true)
+            Spacer(Modifier.height(6.dp))
+            Chips(looks.map { w -> w.replaceFirstChar { it.uppercase() } }, colors)
+        }
+        text?.let { words ->
+            Spacer(Modifier.height(12.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Text", color = colors.secondary, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                Action("Copy All", colors) { copyText(context, words) }
+            }
+            Text(
+                words,
+                color = colors.text,
+                fontSize = 14.sp,
+                maxLines = 4,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        if (speech) {
+            Spacer(Modifier.height(12.dp))
+            SubtitlesPart(item, colors)
+        }
+    }
+}
+
+/** A video's subtitles: copy them (plain or with times), export .srt or .vtt, or make them. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun SubtitlesPart(item: MediaItem, colors: SheetColors) {
+    val context = LocalContext.current
+    var making by remember(item.id) { mutableStateOf(false) }
+    var refresh by remember(item.id) { mutableIntStateOf(0) }
+    val saved by produceState<Pair<List<Cue>, Boolean>?>(null, item.id, refresh) {
+        value = withContext(Dispatchers.IO) { Subtitles.saved(context, item) }
+    }
+    if (making) {
+        // Made while the details stay open; what's done is kept if they close.
+        LaunchedEffect(item.id) {
+            runCatching { Subtitles.generate(context, item, 0).collect { refresh++ } }
+            making = false
+            refresh++
+        }
+    }
+    val cues = saved?.first.orEmpty()
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            when {
+                making -> "Making subtitles… ${cues.size} lines"
+                cues.isEmpty() && saved != null -> "Subtitles: no speech"
+                cues.isEmpty() -> "Subtitles"
+                saved?.second == false -> "Subtitles: ${cues.size} lines so far"
+                else -> "Subtitles: ${cues.size} lines"
+            },
+            color = colors.secondary,
+            fontSize = 13.sp,
+            modifier = Modifier.weight(1f),
+        )
+        if (!making && saved?.second != true) Action(if (cues.isEmpty()) "Make" else "Finish", colors) { making = true }
+    }
+    if (cues.isNotEmpty() && !making) {
+        Spacer(Modifier.height(8.dp))
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            for ((label, action) in listOf<Pair<String, () -> Unit>>(
+                "Copy" to { copyText(context, cues.joinToString("\n") { it.text }) },
+                "Copy with Times" to { copyText(context, Subtitles.timestamped(cues)) },
+                "Export SRT" to { exportSubtitles(context, item, Subtitles.srt(cues), "srt", "application/x-subrip") },
+                "Export VTT" to { exportSubtitles(context, item, Subtitles.vtt(cues), "vtt", "text/vtt") },
+            )) {
+                Text(
+                    label,
+                    color = colors.accent,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(colors.secondary.copy(alpha = 0.15f))
+                        .pressable(action, pressedScale = 0.94f)
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                )
+            }
+        }
+    }
+}
+
+private fun copyText(context: Context, text: String) {
+    context.getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("Text", text))
+    // Android 13+ confirms copies itself.
+    if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.TIRAMISU) {
+        Toast.makeText(context, "Copied", Toast.LENGTH_SHORT).show()
+    }
+}
+
+/** Writes the subtitles next to nothing else (Lumen's cache) and offers them to the share sheet. */
+private fun exportSubtitles(context: Context, item: MediaItem, body: String, extension: String, mime: String) {
+    val dir = java.io.File(context.cacheDir, "exports").apply { mkdirs() }
+    val file = java.io.File(dir, item.name.substringBeforeLast('.').ifEmpty { "subtitles" } + ".$extension")
+    file.writeText(body)
+    val uri = androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.files", file)
+    val send = Intent(Intent.ACTION_SEND).setType(mime).putExtra(Intent.EXTRA_STREAM, uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    runCatching { context.startActivity(Intent.createChooser(send, file.name).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+}
+
+/** Every tag in the file, folded away until asked for. */
+@Composable
+private fun AllMetadataGroup(item: MediaItem, canReadLocation: Boolean, colors: SheetColors) {
+    val context = LocalContext.current
+    var open by remember(item.id) { mutableStateOf(false) }
+    val tags by produceState(emptyList<Pair<String, String>>(), item.id, open) {
+        if (open) value = AllMetadata.read(context, item, canReadLocation)
+    }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth().pressable({ open = !open }, pressedScale = 0.98f),
+    ) {
+        Text("All Metadata", color = colors.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+        if (open && tags.isNotEmpty()) {
+            Action("Copy", colors) { copyText(context, tags.joinToString("\n") { (k, v) -> "$k: $v" }) }
+        } else {
+            Text(if (open) "" else "Show", color = colors.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        }
+    }
+    if (open) {
+        Spacer(Modifier.height(8.dp))
+        if (tags.isEmpty()) Line("Nothing readable in this file", colors, secondary = true)
+        for ((key, value) in tags) {
+            Row(Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
+                Text(key, color = colors.secondary, fontSize = 12.sp, modifier = Modifier.weight(0.42f))
+                Text(value, color = colors.text, fontSize = 12.sp, modifier = Modifier.weight(0.58f))
+            }
+        }
     }
 }
 
@@ -451,10 +661,6 @@ private fun FileGroup(item: MediaItem, d: MediaDetails, colors: SheetColors, onR
     if (lines.isNotEmpty()) {
         Spacer(Modifier.height(10.dp))
         lines.forEach { Line(it, colors, secondary = true) }
-    }
-    d.path?.let {
-        Spacer(Modifier.height(6.dp))
-        Text(it, color = colors.secondary, fontSize = 12.sp)
     }
 }
 

@@ -36,6 +36,7 @@ object SearchSuggestions {
         val count = EmbeddingStore.of(context, model).count()
         if (count == 0) return
         val previous = runCatching { JSONObject(file(context, model).readText()).getInt("indexed") }.getOrNull()
+            ?.takeIf { vocabFile(context, model).isFile }
         if (previous != null && kotlin.math.abs(count - previous) < maxOf(50, previous / 50)) return
         refresh(context, model, count)
     }
@@ -50,6 +51,7 @@ object SearchSuggestions {
         val itemOf = IntArray(all.size) { i -> index.getOrPut(all.mediaIds[i]) { itemIds.add(all.mediaIds[i]); itemIds.size - 1 } }
         val dim = all.dim
         val scored = ArrayList<Triple<String, Double, Long>>()
+        val vocab = ArrayList<Term>()
         OnnxEmbedder(model.dir(context), model.spec, threads = 2).use { embedder ->
             val itemScores = FloatArray(itemIds.size)
             for (term in Vocabulary) {
@@ -65,7 +67,10 @@ object SearchSuggestions {
                 val top = order.take(10).map { itemScores[it].toDouble() }.average()
                 val mean = itemScores.average()
                 val sd = sqrt(itemScores.sumOf { (it - mean) * (it - mean) } / itemScores.size)
-                if (sd > 0) scored += Triple(term, (top - mean) / sd, itemIds[order.first()])
+                if (sd > 0) {
+                    scored += Triple(term, (top - mean) / sd, itemIds[order.first()])
+                    vocab += Term(term, q, mean.toFloat(), sd.toFloat())
+                }
             }
         }
         // Strongest first; one suggestion per cover photo (cat and kitten would share one).
@@ -77,9 +82,65 @@ object SearchSuggestions {
                 best.forEach { put(JSONObject().put("term", it.first).put("cover", it.third).put("strength", it.second)) }
             })
         file(context, model).apply { parentFile?.mkdirs() }.writeText(json.toString())
+        saveVocab(context, model, vocab)
         Log.i(Tag, "Suggestions for ${model.id} in ${SystemClock.elapsedRealtime() - start} ms: " +
             best.take(12).joinToString { "${it.first} %.1f".format(it.second) })
     }
+
+    /** A word's vector, and how the library's items score on it: their mean and spread. */
+    private class Term(val word: String, val vector: FloatArray, val mean: Float, val sd: Float)
+
+    private fun vocabFile(context: Context, model: AiModel) = File(context.noBackupFilesDir, "search/vocabulary-${model.id}.bin")
+
+    private fun saveVocab(context: Context, model: AiModel, terms: List<Term>) {
+        java.io.DataOutputStream(vocabFile(context, model).outputStream().buffered()).use { out ->
+            out.writeInt(terms.size)
+            out.writeInt(terms.firstOrNull()?.vector?.size ?: 0)
+            for (t in terms) {
+                out.writeUTF(t.word)
+                out.writeFloat(t.mean)
+                out.writeFloat(t.sd)
+                t.vector.forEach(out::writeFloat)
+            }
+        }
+        cachedVocab = null
+    }
+
+    @Volatile private var cachedVocab: Pair<String, List<Term>>? = null
+
+    private fun vocab(context: Context, model: AiModel): List<Term> {
+        cachedVocab?.takeIf { it.first == model.id }?.let { return it.second }
+        val terms = runCatching {
+            java.io.DataInputStream(vocabFile(context, model).inputStream().buffered()).use { input ->
+                val n = input.readInt()
+                val dim = input.readInt()
+                List(n) {
+                    val word = input.readUTF()
+                    val mean = input.readFloat()
+                    val sd = input.readFloat()
+                    Term(word, FloatArray(dim) { input.readFloat() }, mean, sd)
+                }
+            }
+        }.getOrDefault(emptyList())
+        cachedVocab = model.id to terms
+        return terms
+    }
+
+    /**
+     * What an item looks like: the everyday words it matches far better than the library
+     * usually does ([Standout] spreads above the mean), best first, at most [max].
+     */
+    fun looksLike(context: Context, model: AiModel, mediaId: Long, max: Int = 3): List<String> {
+        val vectors = EmbeddingStore.of(context, model).vectorsOf(mediaId)
+        if (vectors.isEmpty()) return emptyList()
+        return vocab(context, model).mapNotNull { t ->
+            val best = vectors.maxOf { v -> var dot = 0f; for (d in v.indices) dot += v[d] * t.vector[d]; dot }
+            ((best - t.mean) / t.sd).takeIf { it >= Standout }?.let { t.word to it }
+        }.sortedByDescending { it.second }.take(max).map { it.first }
+    }
+
+    /** How unusual a match must be to name it: spreads above the library's mean for that word. */
+    private const val Standout = 3.5f
 
     /** Everyday things people photograph and search for. */
     private val Vocabulary = listOf(

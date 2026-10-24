@@ -93,6 +93,16 @@ class EmbeddingStore private constructor(context: Context, private val model: Ai
         }
     }
 
+    /** One item's vectors: a photo's one, or a video's frames. */
+    fun vectorsOf(mediaId: Long): List<FloatArray> = ArrayList<FloatArray>().apply {
+        val dim = model.spec.dim
+        readableDatabase.rawQuery("SELECT vec FROM vectors WHERE media_id = ?", arrayOf(mediaId.toString())).use { c ->
+            while (c.moveToNext()) {
+                add(FloatArray(dim).also { ByteBuffer.wrap(c.getBlob(0)).order(ByteOrder.LITTLE_ENDIAN).asFloatBuffer().get(it) })
+            }
+        }
+    }
+
     /** Everything, for searching. */
     fun loadAll(): Embeddings {
         val dim = model.spec.dim
