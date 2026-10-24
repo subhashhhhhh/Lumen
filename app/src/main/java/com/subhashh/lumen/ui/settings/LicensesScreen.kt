@@ -100,6 +100,10 @@ private val Credits = listOf(
     Credit("Silero VAD", "Silero Team", "MIT", "Subtitles: finding where people speak", "https://github.com/snakers4/silero-vad"),
     Credit("ONNX Runtime", "Microsoft", "MIT", "Runs most of Lumen's models on the phone", "https://github.com/microsoft/onnxruntime"),
     Credit("LiteRT", "Google", "Apache 2.0", "Runs models on the phone's GPU", "https://github.com/google-ai-edge/LiteRT"),
+    Credit("MapLibre Native", "MapLibre contributors", "BSD 2-Clause", "Draws the maps in photo details", "https://github.com/maplibre/maplibre-native"),
+    Credit("OpenFreeMap", "Zsolt Ero", "MIT (styles), free tile hosting", "The map tiles and styles", "https://openfreemap.org"),
+    Credit("OpenMapTiles", "MapTiler and contributors", "BSD 3-Clause / CC-BY 4.0", "The map tiles' schema and style design", "https://openmaptiles.org"),
+    Credit("OpenStreetMap", "OpenStreetMap contributors", "ODbL", "The map data", "https://www.openstreetmap.org/copyright"),
 )
 
 @Composable

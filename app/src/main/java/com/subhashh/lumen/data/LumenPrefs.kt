@@ -154,6 +154,11 @@ class LumenPrefs(context: Context) {
         get() = prefs.getBoolean(KeyModelWifiOnly, true)
         set(value) = prefs.edit { putBoolean(KeyModelWifiOnly, value) }
 
+    /** Details → Location shows a map (tiles from OpenFreeMap); off: place name and coordinates only. */
+    var showMaps: Boolean
+        get() = prefs.getBoolean(KeyShowMaps, true)
+        set(value) = prefs.edit { putBoolean(KeyShowMaps, value) }
+
     /** Settings → Developer Options is shown (tapping Version seven times in About). */
     var developerOptions: Boolean
         get() = prefs.getBoolean(KeyDeveloperOptions, false)
@@ -214,6 +219,7 @@ class LumenPrefs(context: Context) {
         const val KeyModelWifiOnly = "model_wifi_only"
         const val KeyModelQueue = "model_queue"
         const val KeyDeveloperOptions = "developer_options"
+        const val KeyShowMaps = "show_maps"
         const val KeySearchDetails = "search_details"
         const val KeySearchModel = "search_model"
         const val KeySections = "section_mode"

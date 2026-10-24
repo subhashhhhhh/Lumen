@@ -117,6 +117,7 @@ dependencies {
 
     // Liquid glass — Kyant0/backdrop, Apache 2.0.
     implementation(libs.backdrop)
+    implementation(libs.maplibre.android)
 
     // Smart Search: ONNX Runtime for the text models and Fast's image model (CPU); LiteRT for
     // Accurate's image model, on the GPU where it works. Excluded from LiteRT: Google Play's

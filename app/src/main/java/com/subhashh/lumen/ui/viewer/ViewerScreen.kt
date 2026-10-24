@@ -194,6 +194,10 @@ fun ViewerScreen(
         preloadNeighbors = true
     }
     val sheetVisible by remember { derivedStateOf { motion.reveal > 0f } }
+    // Settings → Photos & Videos → Maps, read each time the viewer opens.
+    val showMaps = remember { com.subhashh.lumen.data.LumenPrefs(context).showMaps }
+    /** The spot shown on the full-screen map, from the details sheet; null when it's closed. */
+    var mapOf by remember { mutableStateOf<com.subhashh.lumen.data.GeoPoint?>(null) }
     // Composition only cares whether the photo is displaced, not by how much.
     val atRest by remember { derivedStateOf { motion.dismissX == 0f && motion.dismissY == 0f } }
     var locationRefresh by remember { mutableIntStateOf(0) }
@@ -621,18 +625,27 @@ fun ViewerScreen(
             DetailsSheet(
                 item = current,
                 backdrop = backdrop,
+                showMaps = showMaps,
                 locationRefresh = locationRefresh,
                 people = people,
                 onOpenPerson = onOpenPerson,
                 onRename = onRename,
                 onAdjustDate = onAdjustDate,
-                onOpenMap = { MediaActions.openInMaps(context, it) },
+                onOpenMap = { if (showMaps) mapOf = it else MediaActions.openInMaps(context, it) },
                 onAllowLocation = { locationPermission.launch(Manifest.permission.ACCESS_MEDIA_LOCATION) },
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .height(with(LocalDensity.current) { sheetHeight.toDp() })
                     .graphicsLayer { translationY = sheetHeight - motion.reveal }
                     .nestedScroll(motion.sheetScroll),
+            )
+        }
+        mapOf?.let { point ->
+            com.subhashh.lumen.ui.map.PhotoMapScreen(
+                point = point,
+                title = null,
+                onBack = { mapOf = null },
+                onOpenInMaps = { MediaActions.openInMaps(context, point) },
             )
         }
     }

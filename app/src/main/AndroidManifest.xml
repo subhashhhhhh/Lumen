@@ -26,8 +26,9 @@
     <uses-permission
         android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
         tools:ignore="ScopedStorage" />
-    <!-- Smart Search: the one-time model download from Hugging Face, only when the user taps
-         Download in Settings. Nothing else in Lumen uses the network. -->
+    <!-- The network: model downloads from Hugging Face (only when the user taps Download in
+         Settings), and map tiles from OpenFreeMap for photos with a location (Settings → Maps
+         turns them off). Nothing else in Lumen uses it. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -36,6 +37,11 @@
     <!-- Android 11–13: as a WorkManager foreground worker. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <!-- MapLibre asks for these for its "my location" layer, which Lumen never uses: maps only
+         show where photos were taken, never where the phone is. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" tools:node="remove" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" tools:node="remove" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" tools:node="remove" />
 
     <application
         android:name=".LumenApplication"

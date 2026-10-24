@@ -100,6 +100,7 @@ private val Entries = listOf(
     SettingEntry("excluded", "Excluded Folders", SettingsCategory.Library, "ignore folders hide whatsapp junk"),
     SettingEntry("curved-edge", "Curved Edge Display", SettingsCategory.Library, "fast scroll scrollbar handle edge"),
     SettingEntry("ultra-hdr", "Ultra HDR", SettingsCategory.PhotosVideos, "hdr brightness glow"),
+    SettingEntry("maps", "Maps", SettingsCategory.PhotosVideos, "map location openstreetmap openfreemap network privacy"),
     SettingEntry("autoplay", "Autoplay Videos", SettingsCategory.PhotosVideos, "video play automatically"),
     SettingEntry("loop", "Loop Videos", SettingsCategory.PhotosVideos, "repeat video"),
     SettingEntry("slide-time", "Slideshow: Each Photo For", SettingsCategory.PhotosVideos, "slideshow seconds duration timing"),
@@ -444,6 +445,7 @@ private fun ColumnScope.PhotosPage(prefs: LumenPrefs, highlight: String?) {
     var hdrMode by remember { mutableStateOf(prefs.hdrMode) }
     var autoplay by remember { mutableStateOf(prefs.videoAutoplay) }
     var loop by remember { mutableStateOf(prefs.videoLoop) }
+    var maps by remember { mutableStateOf(prefs.showMaps) }
     val hdrSupported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
     if (hdrSupported) {
         Group(
@@ -464,6 +466,25 @@ private fun ColumnScope.PhotosPage(prefs: LumenPrefs, highlight: String?) {
                     iconColor = Orange,
                 )
             }
+        }
+    }
+    Group(
+        "Location",
+        footer = "Shows where photos were taken on a map in their details. Map tiles download from " +
+            "OpenFreeMap (OpenStreetMap data): it sees which area is shown, nothing else. Off: the place " +
+            "name and coordinates only, and Lumen doesn't contact it.",
+    ) {
+        Anchor("maps", highlight) {
+            ToggleRow(
+                title = "Maps",
+                checked = maps,
+                onCheckedChange = {
+                    maps = it
+                    prefs.showMaps = it
+                },
+                icon = LumenIcons.Location,
+                iconColor = Green,
+            )
         }
     }
     Group("Videos") {

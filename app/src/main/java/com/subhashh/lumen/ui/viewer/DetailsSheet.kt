@@ -54,6 +54,7 @@ import com.subhashh.lumen.data.isRaw
 import com.subhashh.lumen.ui.components.glass
 import com.subhashh.lumen.ui.components.pressable
 import com.subhashh.lumen.ui.icons.LumenIcons
+import com.subhashh.lumen.ui.map.MapPreview
 import com.subhashh.lumen.ui.people.FaceAvatar
 import com.subhashh.lumen.ui.theme.LocalGlassColors
 import kotlinx.coroutines.Dispatchers
@@ -90,6 +91,9 @@ fun DetailsSheet(
     locationRefresh: Int,
     people: List<Pair<Person, MediaItem>>,
     onOpenPerson: (Person) -> Unit,
+    /** Settings → Photos & Videos → Maps: a map of the spot; off, its name and coordinates only. */
+    showMaps: Boolean,
+    /** Opens the full map of the spot (Maps on) or another app's (off). */
     onOpenMap: (GeoPoint) -> Unit,
     onAllowLocation: () -> Unit,
     onRename: (MediaItem) -> Unit,
@@ -179,7 +183,7 @@ fun DetailsSheet(
         when {
             d.location != null -> {
                 Spacer(Modifier.height(10.dp))
-                Group(colors) { LocationGroup(d, d.location, colors, onOpenMap) }
+                Group(colors) { LocationGroup(d, d.location, showMaps, colors, onOpenMap) }
             }
             !d.locationReadable -> {
                 Spacer(Modifier.height(10.dp))
@@ -391,10 +395,20 @@ private fun audioLine(v: VideoInfo): String? {
 }
 
 @Composable
-private fun LocationGroup(d: MediaDetails, location: GeoPoint, colors: SheetColors, onOpenMap: (GeoPoint) -> Unit) {
+private fun LocationGroup(d: MediaDetails, location: GeoPoint, showMaps: Boolean, colors: SheetColors, onOpenMap: (GeoPoint) -> Unit) {
     val context = LocalContext.current
     val place by produceState<String?>(null, location) { value = PlaceLookup.describe(context, location) }
-    Title(LumenIcons.Location, place ?: "Location", colors) { Action("Open in Maps", colors) { onOpenMap(location) } }
+    if (showMaps) {
+        MapPreview(
+            location,
+            onOpen = { onOpenMap(location) },
+            modifier = Modifier.fillMaxWidth().height(160.dp).clip(RoundedCornerShape(14.dp)),
+        )
+        Spacer(Modifier.height(12.dp))
+        Title(LumenIcons.Location, place ?: "Location", colors)
+    } else {
+        Title(LumenIcons.Location, place ?: "Location", colors) { Action("Open in Maps", colors) { onOpenMap(location) } }
+    }
     Spacer(Modifier.height(2.dp))
     val extra = listOfNotNull(
         formatCoordinates(location),
