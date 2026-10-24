@@ -32,6 +32,18 @@ class FaceReader(dir: File, threads: Int) : AutoCloseable {
     private val det = env.createSession(File(dir, "yunet.onnx").path, options)
     private val rec = env.createSession(File(dir, "sface.onnx").path, options)
 
+    /**
+     * Time spent per step, in ns, when set (Search Lab's profile); null in normal use. Keys:
+     * prepare, detect, decodeOutput, straighten, embedPrepare, embed.
+     */
+    var timings: MutableMap<String, Long>? = null
+
+    private inline fun <T> timed(step: String, block: () -> T): T {
+        val t = timings ?: return block()
+        val start = System.nanoTime()
+        return block().also { t[step] = (t[step] ?: 0L) + (System.nanoTime() - start) }
+    }
+
     /** A face: its box as fractions of the photo ([left, top, right, bottom]) and fingerprint. */
     class Found(val box: FloatArray, val vector: FloatArray)
 
@@ -39,7 +51,7 @@ class FaceReader(dir: File, threads: Int) : AutoCloseable {
         val image = if (original.config == Bitmap.Config.HARDWARE) original.copy(Bitmap.Config.ARGB_8888, false) else original
         try {
             return detect(image).map { (box, landmarks) ->
-                val face = straighten(image, landmarks)
+                val face = timed("straighten") { straighten(image, landmarks) }
                 val vector = embed(face)
                 face.recycle()
                 Found(
@@ -58,21 +70,24 @@ class FaceReader(dir: File, threads: Int) : AutoCloseable {
         val h = image.height
         val pw = (w + 31) / 32 * 32
         val ph = (h + 31) / 32 * 32
-        val argb = IntArray(w * h)
-        image.getPixels(argb, 0, w, 0, 0, w, h)
-        // BGR, raw 0–255, padded right and bottom with black.
         val plane = pw * ph
-        val input = FloatArray(3 * plane)
-        for (y in 0 until h) for (x in 0 until w) {
-            val p = argb[y * w + x]
-            val i = y * pw + x
-            input[i] = (p and 0xFF).toFloat()
-            input[plane + i] = (p shr 8 and 0xFF).toFloat()
-            input[2 * plane + i] = (p shr 16 and 0xFF).toFloat()
+        val input = timed("prepare") {
+            val argb = IntArray(w * h)
+            image.getPixels(argb, 0, w, 0, 0, w, h)
+            // BGR, raw 0–255, padded right and bottom with black.
+            val input = FloatArray(3 * plane)
+            for (y in 0 until h) for (x in 0 until w) {
+                val p = argb[y * w + x]
+                val i = y * pw + x
+                input[i] = (p and 0xFF).toFloat()
+                input[plane + i] = (p shr 8 and 0xFF).toFloat()
+                input[2 * plane + i] = (p shr 16 and 0xFF).toFloat()
+            }
+            input
         }
         val candidates = ArrayList<Candidate>()
         OnnxTensor.createTensor(env, FloatBuffer.wrap(input), longArrayOf(1, 3, ph.toLong(), pw.toLong())).use { x ->
-            det.run(mapOf("input" to x)).use { result ->
+            timed("detect") { det.run(mapOf("input" to x)) }.use { result -> timed("decodeOutput") {
                 fun out(name: String): FloatBuffer = (result.get(name).get() as OnnxTensor).floatBuffer
                 for (stride in intArrayOf(8, 16, 32)) {
                     val cols = pw / stride
@@ -96,7 +111,7 @@ class FaceReader(dir: File, threads: Int) : AutoCloseable {
                         candidates += Candidate(floatArrayOf(cx - bw / 2, cy - bh / 2, cx + bw / 2, cy + bh / 2), score, landmarks)
                     }
                 }
-            }
+            } }
         }
         // Overlapping boxes for one face: keep the most confident.
         val kept = ArrayList<Candidate>()
@@ -143,18 +158,21 @@ class FaceReader(dir: File, threads: Int) : AutoCloseable {
     /** RGB, raw 0–255; unit length out. */
     private fun embed(face: Bitmap): FloatArray {
         val plane = FaceSize * FaceSize
-        val argb = IntArray(plane)
-        face.getPixels(argb, 0, FaceSize, 0, 0, FaceSize, FaceSize)
-        val input = FloatArray(3 * plane)
-        for (i in 0 until plane) {
-            val p = argb[i]
-            input[i] = (p shr 16 and 0xFF).toFloat()
-            input[plane + i] = (p shr 8 and 0xFF).toFloat()
-            input[2 * plane + i] = (p and 0xFF).toFloat()
+        val input = timed("embedPrepare") {
+            val argb = IntArray(plane)
+            face.getPixels(argb, 0, FaceSize, 0, 0, FaceSize, FaceSize)
+            val input = FloatArray(3 * plane)
+            for (i in 0 until plane) {
+                val p = argb[i]
+                input[i] = (p shr 16 and 0xFF).toFloat()
+                input[plane + i] = (p shr 8 and 0xFF).toFloat()
+                input[2 * plane + i] = (p and 0xFF).toFloat()
+            }
+            input
         }
         val shape = longArrayOf(1, 3, FaceSize.toLong(), FaceSize.toLong())
         return OnnxTensor.createTensor(env, FloatBuffer.wrap(input), shape).use { x ->
-            rec.run(mapOf("data" to x)).use { result ->
+            timed("embed") { rec.run(mapOf("data" to x)) }.use { result ->
                 val out = (result[0] as OnnxTensor).floatBuffer
                 normalize(FloatArray(out.remaining()).also { out.get(it) })
             }
