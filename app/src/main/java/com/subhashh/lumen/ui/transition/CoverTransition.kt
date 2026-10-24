@@ -20,6 +20,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.center
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.clipPath
@@ -30,6 +31,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.layout.findRootCoordinates
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
@@ -77,7 +79,9 @@ class CoverTransition {
 
     /** 0 at its card, 1 as the page's header. Read in layout/draw only. */
     private var progress by mutableFloatStateOf(1f)
+    /** The card at full size; on screen it's scaled with the page under the flight ([parentScale]). */
     private var cellRect = Rect.Zero
+    private var pivot = Offset.Zero
     private var heroRect = Rect.Zero
     private var circle = false
 
@@ -102,7 +106,8 @@ class CoverTransition {
     suspend fun prepare(context: Context, cover: HeroCover, header: Rect): Boolean {
         val cell = cell(cover.key) ?: return false
         withTimeoutOrNull(PrepareTimeoutMs) { SingletonImageLoader.get(context).execute(heroRequest(context, cover)) }
-        cellRect = cell.coordinates.rect()
+        // Collections isn't scaled yet: it's still its own screen.
+        cellRect = cell.coordinates.unscaledRect(1f)
         circle = cell.circle
         heroRect = header
         landless = false
@@ -134,11 +139,14 @@ class CoverTransition {
         withFrameNanos { }
         val cell = cell(cover.key)
         if (cell != null) {
-            cellRect = cell.coordinates.rect()
+            // Measured while the page under the flight is scaled down: undo that, then follow
+            // the page as it grows back, so the cover lands where the card ends up.
+            cellRect = cell.coordinates.unscaledRect(parentScale())
             circle = cell.circle
             landless = false
         } else {
             cellRect = shrunk(heroRect)
+            pivot = heroRect.center
         }
         animate(progress, 0f, animationSpec = CloseSpring) { v, _ -> progress = v }
     }
@@ -159,10 +167,11 @@ class CoverTransition {
 
     internal fun frame(): Frame {
         val p = progress.coerceIn(0f, 1.05f)
+        val cell = if (landless) cellRect else cellRect.scaledAbout(pivot, parentScale())
         return Frame(
-            cell = cellRect,
+            cell = cell,
             hero = heroRect,
-            clip = lerp(cellRect, heroRect, p),
+            clip = lerp(cell, heroRect, p),
             fraction = p,
             circle = circle,
             alpha = if (landless) progress.coerceIn(0f, 1f) else 1f,
@@ -172,6 +181,17 @@ class CoverTransition {
     internal class Frame(val cell: Rect, val hero: Rect, val clip: Rect, val fraction: Float, val circle: Boolean, val alpha: Float)
 
     private fun LayoutCoordinates.rect() = Rect(positionInRoot(), size.toSize())
+
+    /** Where this would be with the page under the flight at full size ([scale] about its centre). */
+    private fun LayoutCoordinates.unscaledRect(scale: Float): Rect {
+        pivot = findRootCoordinates().size.toSize().center
+        val p = positionInRoot()
+        val topLeft = pivot + (p - pivot) / scale
+        return Rect(topLeft, size.toSize())
+    }
+
+    private fun Rect.scaledAbout(c: Offset, s: Float): Rect =
+        Rect(c + (topLeft - c) * s, c + (bottomRight - c) * s)
 
     private fun shrunk(r: Rect): Rect {
         val w = r.width * 0.6f
