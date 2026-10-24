@@ -591,9 +591,12 @@ private fun MainScaffold(
     var selection by remember { mutableStateOf<Set<Long>?>(null) }
     /** Album multi-select on Collections and Hidden's folder list: selected album keys. */
     var albumSelection by remember { mutableStateOf<Set<String>?>(null) }
+    /** People page multi-select (to merge or hide several): selected person keys. */
+    var peopleSelection by remember { mutableStateOf<Set<String>?>(null) }
     val endSelection = {
         selection = null
         albumSelection = null
+        peopleSelection = null
     }
     val selectableKey = when {
         searching -> null
@@ -621,7 +624,8 @@ private fun MainScaffold(
         val keys = albumKeys.toHashSet()
         albumSelection = albumSelection?.filterTo(HashSet()) { it in keys }
     }
-    val selecting = selection != null || albumSelection != null
+    val selecting = selection != null || albumSelection != null || peopleSelection != null
+    LaunchedEffect(openCollection, tab) { if (openCollection != CollectionKeys.People || tab != LumenTab.Collections) peopleSelection = null }
     /** Where the selection is: a grid's key, or the album list's scope. */
     val selectionScope = if (albumSelection != null) albumScope else selectableKey
     // Leaving the screen ends selection; refreshes drop ids that no longer exist.
@@ -1316,7 +1320,13 @@ private fun MainScaffold(
                             showHiddenPeople -> allPeople
                             else -> people
                         },
-                        title = if (from != null) "Merge with…" else "People",
+                        title = when {
+                            from != null -> "Merge with…"
+                            peopleSelection.isNullOrEmpty() -> if (peopleSelection != null) "Select People" else "People"
+                            else -> "${peopleSelection!!.size} Selected"
+                        },
+                        selection = if (from == null) peopleSelection else null,
+                        onSelectionChange = { if (from == null && pick == null) peopleSelection = it },
                         square = peopleSquare,
                         gridState = peopleGrid,
                         contentPadding = PaddingValues(top = statusTop + 64.dp, bottom = navBottom + 96.dp),
@@ -1400,12 +1410,19 @@ private fun MainScaffold(
 
         if (selecting && !viewerOpen) {
             val albums = albumSelection
+            val chosenPeople = peopleSelection
+            val peopleKeys = (if (showHiddenPeople) allPeople else people).map { CollectionKeys.person(it.first.id) }
             SelectionTopControls(
                 backdrop = backdrop,
-                allSelected = if (albums != null) albums.size == albumKeys.size && albumKeys.isNotEmpty()
-                else selectedItems.size == selectableItems.size && selectableItems.isNotEmpty(),
+                allSelected = when {
+                    chosenPeople != null -> chosenPeople.size == peopleKeys.size && peopleKeys.isNotEmpty()
+                    albums != null -> albums.size == albumKeys.size && albumKeys.isNotEmpty()
+                    else -> selectedItems.size == selectableItems.size && selectableItems.isNotEmpty()
+                },
                 onToggleAll = {
-                    if (albums != null) {
+                    if (chosenPeople != null) {
+                        peopleSelection = if (chosenPeople.size == peopleKeys.size) emptySet() else peopleKeys.toHashSet()
+                    } else if (albums != null) {
                         albumSelection = if (albums.size == albumKeys.size) emptySet() else albumKeys.toHashSet()
                     } else {
                         selection = if (selectedItems.size == selectableItems.size) emptySet()
@@ -1552,7 +1569,7 @@ private fun MainScaffold(
         )
 
         // The People page: circles or rounded squares.
-        if (inCollection && openCollection == CollectionKeys.People && !viewerOpen) {
+        if (inCollection && openCollection == CollectionKeys.People && !viewerOpen && !selecting) {
             GlassIconButton(
                 backdrop = backdrop,
                 icon = LumenIcons.Filter,
@@ -1726,7 +1743,54 @@ private fun MainScaffold(
         )
 
         AnimatedVisibility(
-            visible = selecting && !viewerOpen,
+            visible = peopleSelection != null && !viewerOpen,
+            enter = fadeIn(tween(180)) + slideInVertically(tween(220)) { it / 2 },
+            exit = fadeOut(tween(150)) + slideOutVertically(tween(180)) { it / 2 },
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = navBottom + 12.dp),
+        ) {
+            val chosen = peopleSelection.orEmpty().mapNotNull { personOf(it) }
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            ) {
+                GlassTextButton(backdrop, "Merge", onClick = merge@{
+                    if (chosen.size < 2) {
+                        toast("Select two or more people to merge")
+                        return@merge
+                    }
+                    // The named one stays (else whoever has the most photos); the rest join them.
+                    val keep = chosen.sortedWith(compareBy<com.subhashh.lumen.data.ai.Person> { it.name == null }.thenByDescending { it.mediaIds.size }).first()
+                    val names = chosen.mapNotNull { it.name }.distinct()
+                    confirmation = Confirmation(
+                        title = "Merge ${chosen.size} People?",
+                        message = "Their photos will show as one person" + (keep.name?.let { ", named $it." } ?: ".") +
+                            if (names.size > 1) " The other names (${names.filter { it != keep.name }.joinToString()}) go." else "",
+                        confirm = "Merge",
+                        onConfirm = {
+                            endSelection()
+                            scope.launch(Dispatchers.IO) {
+                                val store = com.subhashh.lumen.data.ai.FaceStore.of(context)
+                                for (p in chosen) if (p.id != keep.id) store.merge(keep = keep.id, gone = p.id)
+                            }
+                        },
+                    )
+                })
+                GlassTextButton(backdrop, if (chosen.isNotEmpty() && chosen.all { it.hidden }) "Unhide" else "Hide", onClick = hide@{
+                    if (chosen.isEmpty()) return@hide
+                    val hide = !chosen.all { it.hidden }
+                    endSelection()
+                    scope.launch(Dispatchers.IO) {
+                        val store = com.subhashh.lumen.data.ai.FaceStore.of(context)
+                        for (p in chosen) store.setHidden(p.id, hide)
+                    }
+                })
+            }
+        }
+
+        AnimatedVisibility(
+            visible = selecting && peopleSelection == null && !viewerOpen,
             enter = fadeIn(tween(180)) + slideInVertically(tween(220)) { it / 2 },
             exit = fadeOut(tween(150)) + slideOutVertically(tween(180)) { it / 2 },
             modifier = Modifier

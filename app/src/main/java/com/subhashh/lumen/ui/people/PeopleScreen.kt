@@ -27,6 +27,12 @@ import com.subhashh.lumen.data.CollectionKeys
 import com.subhashh.lumen.data.MediaItem
 import com.subhashh.lumen.data.ai.Person
 import com.subhashh.lumen.ui.collections.ScreenTitle
+import com.subhashh.lumen.ui.collections.rememberAlbumGridGestures
+import com.subhashh.lumen.ui.library.SelectionMark
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.layout.Box
+import androidx.compose.runtime.getValue
 import com.subhashh.lumen.ui.components.pressable
 
 /**
@@ -41,26 +47,52 @@ fun PeopleScreen(
     gridState: LazyGridState,
     contentPadding: PaddingValues,
     onOpen: (key: String) -> Unit,
+    /** Selected person keys (long-press, then tap or drag); null when not selecting. */
+    selection: Set<String>? = null,
+    onSelectionChange: (Set<String>?) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val onBackground = MaterialTheme.colorScheme.onBackground
+    // Long-press and drag to select, as for albums; three across, so no pinch.
+    val gestures = rememberAlbumGridGestures(
+        gridState = gridState,
+        keys = { listOf<String?>(null) + people.map { CollectionKeys.person(it.first.id) } },
+        columns = 3,
+        onColumnsChange = {},
+        selection = selection,
+        onSelectionChange = onSelectionChange,
+        contentPadding = contentPadding,
+    )
     LazyVerticalGrid(
         columns = GridCells.Fixed(3),
         state = gridState,
         contentPadding = contentPadding,
         horizontalArrangement = Arrangement.spacedBy(14.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
-        modifier = modifier.fillMaxSize().padding(horizontal = 16.dp),
+        modifier = modifier.fillMaxSize().padding(horizontal = 16.dp).then(gestures.modifier),
     ) {
         item(span = { GridItemSpan(maxLineSpan) }) { ScreenTitle(title) }
         items(people, key = { it.first.id }) { (person, cover) ->
+            val key = CollectionKeys.person(person.id)
+            val selected = selection?.let { key in it }
+            val scale by animateFloatAsState(if (selected == true) 0.9f else 1f, spring(dampingRatio = 0.7f, stiffness = 700f), label = "selectScale")
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
-                    .pressable({ onOpen(CollectionKeys.person(person.id)) }, pressedScale = 0.95f)
+                    .pressable({ gestures.click(key) { onOpen(key) } }, pressedScale = 0.95f)
                     .graphicsLayer { alpha = if (person.hidden) 0.45f else 1f },
             ) {
-                FaceAvatar(person, cover, Modifier.fillMaxWidth(), square = square)
+                Box {
+                    FaceAvatar(
+                        person, cover,
+                        Modifier.fillMaxWidth().graphicsLayer {
+                            scaleX = scale
+                            scaleY = scale
+                        },
+                        square = square,
+                    )
+                    if (selected != null) SelectionMark(selected, Modifier.align(Alignment.BottomEnd).padding(4.dp))
+                }
                 Spacer(Modifier.height(6.dp))
                 Text(
                     person.name ?: "%,d photos".format(person.mediaIds.size),
