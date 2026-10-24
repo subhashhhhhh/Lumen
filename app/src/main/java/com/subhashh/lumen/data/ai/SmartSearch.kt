@@ -92,7 +92,7 @@ object SmartSearch {
         val byMedia = HashMap<Long, MutableList<Person>>()
         for (p in people) for (m in p.mediaIds) byMedia.getOrPut(m) { ArrayList(2) } += p
         val terms = com.subhashh.lumen.data.SearchIndex.terms(query)
-        // Named in the query: every word of a name word-starts some query word ("djokovic", "novak djokovic").
+        // Named in the query: a query word (3+ letters) starts a word of their name ("verstappen", "max").
         val named = people.filter { it.name != null }.firstOrNull { p ->
             val words = com.subhashh.lumen.data.SearchIndex.terms(p.name!!)
             words.isNotEmpty() && words.any { w -> terms.any { t -> t.length >= 3 && w.startsWith(t) } }
