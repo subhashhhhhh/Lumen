@@ -74,7 +74,8 @@ object ModelCatalog {
 /**
  * Reading text in photos: Baidu's PP-OCRv6 small (Apache 2.0), text detection and recognition,
  * 50 languages (Chinese, English, Japanese, Latin scripts). Downloaded with either Smart Search
- * tier, straight from PaddlePaddle's own repos at pinned commits. `rec.yml` carries the
+ * tier, straight from PaddlePaddle's own repos at pinned commits, plus our GPU conversion of
+ * the detector (huggingface.co/subhashhhhhh/lumen-ppocrv6-small). `rec.yml` carries the
  * recognizer's character list.
  */
 object OcrModel {
@@ -91,6 +92,11 @@ object OcrModel {
         ModelFile(
             "rec.yml", 150_579, "ab078671bb49f06228eadccd34f1bb501e157f7a047095ffb943ba81512c77d1",
             "$Hf/PP-OCRv6_small_rec_onnx/resolve/b8f84f0b80c529de40b4fbb3544b84fa7233a513/inference.yml",
+        ),
+        // Our LiteRT conversion of the detector, for the GPU (tools/ocr/).
+        ModelFile(
+            DetGpu, 9_869_976, "8a7676cbc5a01ca47544bf95af2196c8b1b6c7b75beec9ad9b17857dffb71d1e",
+            "https://huggingface.co/subhashhhhhh/lumen-ppocrv6-small/resolve/f5a6e3fc293abbf453f9c28ec785fe43d967d3e2/det_gpu.tflite",
         ),
     )
     val bytes: Long get() = files.sumOf { it.bytes }
