@@ -67,7 +67,7 @@ internal fun SmartSearchGroup(
     val liveText by SmartIndex.textProgress.collectAsState()
     val countedText by produceState<IndexProgress?>(null, refresh, installed, readerMissing) {
         value = if (installed == null || readerMissing) null else withContext(Dispatchers.IO) {
-            IndexProgress(TextStore.of(context).count(), Indexer.eligible(context).count { !it.isVideo })
+            IndexProgress(TextStore.of(context).count(), Indexer.eligible(context).size)
         }
     }
     val textProgress = if (installed == null || readerMissing) null else liveText ?: countedText
@@ -205,7 +205,7 @@ internal fun SmartSearchGroup(
             Anchor("text-read", highlight) {
                 SettingsRow(
                     title = "Text Read",
-                    subtitle = if (complete) "Words in photos are searchable" else "Photos, after Indexed",
+                    subtitle = if (complete) "Words in photos and videos are searchable" else "Photos and videos, after Indexed",
                     value = if (complete) "All ${"%,d".format(textProgress.total)}" else "%,d of %,d".format(textProgress.indexed, textProgress.total),
                     onClick = null,
                     icon = LumenIcons.Search,
@@ -217,7 +217,7 @@ internal fun SmartSearchGroup(
         Anchor("video-detail", highlight) {
             PickerRow(
                 title = "Video Detail",
-                subtitle = "Frame size for faces in videos; lower is faster on older phones",
+                subtitle = "Frame size for faces and text in videos; lower is faster on older phones",
                 options = VideoDetail.entries.map { "${it.label} · ${it.px} px" },
                 selected = VideoDetail.entries.indexOf(videoDetail),
                 onSelect = {

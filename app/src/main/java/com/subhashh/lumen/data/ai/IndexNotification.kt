@@ -25,7 +25,7 @@ object IndexNotification {
 
     enum class Pass(val title: String) {
         Vectors("Indexing photos and videos"),
-        Text("Reading text in photos"),
+        Text("Reading text in photos and videos"),
         Faces("Finding faces in photos"),
     }
 

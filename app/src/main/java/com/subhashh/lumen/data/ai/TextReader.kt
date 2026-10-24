@@ -45,10 +45,96 @@ class TextReader(dir: File, threads: Int, gpu: Boolean = false) : AutoCloseable 
         val image = if (original.config == Bitmap.Config.HARDWARE) original.copy(Bitmap.Config.ARGB_8888, false) else original
         try {
             val boxes = detect(image).sortedBy { box -> box.sumOf { it.y.toDouble() } }
-            return boxes.chunked(Batch).flatMap { batch -> recognize(image, batch) }
+            return readBoxes(image, boxes).filterNotNull()
         } finally {
             if (image !== original) image.recycle()
         }
+    }
+
+    /**
+     * One video frame's text: its boxes, a small greyscale thumbnail of each, and each box's line
+     * (null where it didn't read as text).
+     */
+    class FrameText internal constructor(
+        internal val boxes: List<FloatArray>,
+        internal val looks: List<IntArray>,
+        val lines: List<String?>,
+        /** How many boxes were actually read for this frame; the rest repeated the frame before. */
+        val read: Int,
+    )
+
+    /**
+     * Reads a video frame, but only the text that changed since [previous]: a box in about the
+     * same place that also looks the same (a caption still on screen) keeps its earlier line.
+     * A new subtitle in the same spot looks different, so it's read. Reading lines is most of
+     * the cost; finding them is cheap.
+     */
+    fun readChanged(original: Bitmap, previous: FrameText?): FrameText {
+        val image = if (original.config == Bitmap.Config.HARDWARE) original.copy(Bitmap.Config.ARGB_8888, false) else original
+        try {
+            val boxes = detect(image).sortedBy { box -> box.sumOf { it.y.toDouble() } }
+            val bounds = boxes.map { box -> floatArrayOf(box.minOf { it.x }, box.minOf { it.y }, box.maxOf { it.x }, box.maxOf { it.y }) }
+            val looks = boxes.map { look(image, it) }
+            val lines = arrayOfNulls<String>(boxes.size)
+            val unread = ArrayList<Int>()
+            for (i in boxes.indices) {
+                val same = previous?.let { prev ->
+                    prev.boxes.indices.firstOrNull { j -> iou(prev.boxes[j], bounds[i]) >= SamePlace && difference(prev.looks[j], looks[i]) < SameLook }
+                }
+                if (same != null) lines[i] = previous.lines[same] else unread += i
+            }
+            if (unread.isNotEmpty()) {
+                val read = readBoxes(image, unread.map { boxes[it] })
+                for ((k, i) in unread.withIndex()) lines[i] = read[k]
+            }
+            return FrameText(bounds, looks, lines.toList(), unread.size)
+        } finally {
+            if (image !== original) image.recycle()
+        }
+    }
+
+    /** Lines for [boxes] in their order; batched by width so short lines aren't padded to long ones. */
+    private fun readBoxes(image: Bitmap, boxes: List<Array<Point>>): List<String?> {
+        if (boxes.isEmpty()) return emptyList()
+        // A line's width once cut to the reader's height: its long side over its short side.
+        val order = boxes.indices.sortedBy { i ->
+            val a = edge(boxes[i], 1)
+            val b = edge(boxes[i], 3)
+            maxOf(a, b) / minOf(a, b)
+        }
+        val lines = arrayOfNulls<String>(boxes.size)
+        for (batch in order.chunked(Batch)) {
+            val read = recognize(image, batch.map { boxes[it] })
+            for ((k, i) in batch.withIndex()) lines[i] = read[k]
+        }
+        return lines.toList()
+    }
+
+    /** Length of the edge from the first corner to corner [k]. */
+    private fun edge(box: Array<Point>, k: Int) = maxOf(hypot((box[k].x - box[0].x).toDouble(), (box[k].y - box[0].y).toDouble()), 1.0)
+
+    /** A box's content as 32×8 greys: enough to tell a caption that's still there from a new one. */
+    private fun look(image: Bitmap, box: Array<Point>): IntArray {
+        val line = cut(image, box)
+        val small = Bitmap.createScaledBitmap(line, 32, 8, true)
+        line.recycle()
+        val px = IntArray(256)
+        small.getPixels(px, 0, 32, 0, 0, 32, 8)
+        small.recycle()
+        return IntArray(256) { i -> (px[i] shr 16 and 0xFF) * 299 / 1000 + (px[i] shr 8 and 0xFF) * 587 / 1000 + (px[i] and 0xFF) * 114 / 1000 }
+    }
+
+    private fun difference(a: IntArray, b: IntArray): Int {
+        var sum = 0
+        for (i in a.indices) sum += kotlin.math.abs(a[i] - b[i])
+        return sum / a.size
+    }
+
+    private fun iou(a: FloatArray, b: FloatArray): Float {
+        val w = maxOf(0f, minOf(a[2], b[2]) - maxOf(a[0], b[0]))
+        val h = maxOf(0f, minOf(a[3], b[3]) - maxOf(a[1], b[1]))
+        val inter = w * h
+        return inter / ((a[2] - a[0]) * (a[3] - a[1]) + (b[2] - b[0]) * (b[3] - b[1]) - inter + 1e-9f)
     }
 
     private class Point(val x: Float, val y: Float)
@@ -246,7 +332,8 @@ class TextReader(dir: File, threads: Int, gpu: Boolean = false) : AutoCloseable 
     }
 
     /** Reads a batch of boxes in one run, each padded on the right to the widest. */
-    private fun recognize(image: Bitmap, boxes: List<Array<Point>>): List<String> {
+    /** Lines for one batch of boxes, in order; null where a box didn't read as text. */
+    private fun recognize(image: Bitmap, boxes: List<Array<Point>>): List<String?> {
         val lines = boxes.map { cut(image, it) }
         val width = lines.maxOf { it.width }
         val plane = RecHeight * width
@@ -291,7 +378,7 @@ class TextReader(dir: File, threads: Int, gpu: Boolean = false) : AutoCloseable 
                     val line = text.toString().trim()
                     // Icons read as a stray letter or two; keep lines with some substance.
                     if (kept > 0 && confidence / kept >= MinLineScore && line.count { it.isLetterOrDigit() } >= 2) line else null
-                }.filterNotNull()
+                }
             }
         }
     }
@@ -365,6 +452,10 @@ class TextReader(dir: File, threads: Int, gpu: Boolean = false) : AutoCloseable 
         const val RecMaxWidth = 3200
         const val Batch = 8
         const val MinLineScore = 0.5
+        /** A box in about the same place as one in the frame before… */
+        const val SamePlace = 0.6f
+        /** …that also looks the same (mean grey difference, 0–255) is the same text. */
+        const val SameLook = 12
 
         /** The `character_dict` list in rec.yml, plain or single-quoted YAML scalars. */
         fun loadChars(yml: File): Array<String> {
