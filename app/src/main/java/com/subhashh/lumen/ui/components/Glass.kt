@@ -15,10 +15,13 @@ import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
 import com.kyant.backdrop.effects.vibrancy
 import com.subhashh.lumen.ui.theme.LocalGlassColors
+import com.subhashh.lumen.ui.theme.LocalGlass
 
 /**
  * Liquid glass surface. Android 13+ gets blur plus lens refraction, Android 12 gets blur only
  * (backdrop skips effects the OS can't render), and Android 11 falls back to an opaque tint.
+ * Settings → Appearance: Liquid Glass off drops the lens, Reduce Blur draws the opaque tint
+ * everywhere (still through the backdrop, so a lens drawn above can record this surface).
  */
 @Composable
 fun Modifier.glass(
@@ -33,8 +36,11 @@ fun Modifier.glass(
     exportedBackdrop: LayerBackdrop? = null,
 ): Modifier {
     val colors = LocalGlassColors.current
+    val setting = LocalGlass.current
+    val solid = setting.reduceBlur || Build.VERSION.SDK_INT < Build.VERSION_CODES.S
+    val lens = setting.lens
     val surface = when {
-        Build.VERSION.SDK_INT < Build.VERSION_CODES.S -> colors.fallbackTint
+        solid -> colors.fallbackTint
         tint != null -> tint
         else -> colors.tint
     }
@@ -42,9 +48,11 @@ fun Modifier.glass(
         backdrop = backdrop,
         shape = { shape },
         effects = {
-            vibrancy()
-            blur(blurRadius.toPx())
-            lens(refractionHeight.toPx(), refractionAmount.toPx())
+            if (!solid) {
+                vibrancy()
+                blur(blurRadius.toPx())
+                if (lens) lens(refractionHeight.toPx(), refractionAmount.toPx())
+            }
         },
         exportedBackdrop = exportedBackdrop,
         onDrawSurface = { drawRect(surface) },

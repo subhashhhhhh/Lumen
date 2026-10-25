@@ -139,6 +139,16 @@ class LumenPrefs(context: Context) {
         get() = prefs.getBoolean(KeySlideRepeat, false)
         set(value) = prefs.edit { putBoolean(KeySlideRepeat, value) }
 
+    /** Settings → Appearance → Liquid Glass: glass that bends what's behind it. */
+    var liquidGlass: Boolean
+        get() = prefs.getBoolean(KeyLiquidGlass, true)
+        set(value) = prefs.edit { putBoolean(KeyLiquidGlass, value) }
+
+    /** Settings → Appearance → Reduce Blur: solid fills instead of frosted glass. */
+    var reduceBlur: Boolean
+        get() = prefs.getBoolean(KeyReduceBlur, false)
+        set(value) = prefs.edit { putBoolean(KeyReduceBlur, value) }
+
     /** Reduce Motion as chosen in Settings; null until the user picks (then Android's setting decides). */
     var reduceMotion: Boolean?
         get() = if (prefs.contains(KeyReduceMotion)) prefs.getBoolean(KeyReduceMotion, false) else null
@@ -295,6 +305,8 @@ class LumenPrefs(context: Context) {
         const val KeyCovers = "album_covers"
         const val KeyCreated = "created_albums"
         const val KeyAppearance = "appearance"
+        const val KeyLiquidGlass = "liquid_glass"
+        const val KeyReduceBlur = "reduce_blur"
         const val KeyExcluded = "excluded_folders"
         const val KeyColumns = "grid_columns"
         const val KeyAlbumColumns = "album_columns"

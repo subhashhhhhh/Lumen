@@ -111,7 +111,7 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 /** The onboarding's steps, in order. */
-private enum class Step { Welcome, Photos, Smart, Schedule, Done }
+private enum class Step { Welcome, Look, Photos, Smart, Schedule, Done }
 
 /**
  * First launch: what Lumen is, photo access, which Smart Features to download (they download in
@@ -158,7 +158,8 @@ fun Onboarding(
                     .padding(horizontal = 24.dp, vertical = 16.dp),
             ) {
                 when (s) {
-                    Step.Welcome -> Welcome(backdrop) { step = Step.Photos }
+                    Step.Welcome -> Welcome(backdrop) { step = Step.Look }
+                    Step.Look -> Look(backdrop) { step = Step.Photos }
                     Step.Photos -> Photos(backdrop, hasAccess, onRequestAccess) { step = Step.Smart }
                     Step.Smart -> Smart(backdrop) { step = Step.Schedule }
                     Step.Schedule -> Schedule(backdrop) { step = Step.Done }
@@ -301,6 +302,47 @@ private fun ColumnScope.Photos(backdrop: Backdrop, hasAccess: Boolean, onRequest
     }
     Spacer(Modifier.weight(1f))
     PrimaryButton(backdrop, if (hasAccess) "Continue" else "Allow Access") { if (hasAccess) onNext() else onRequestAccess() }
+}
+
+/** Appearance: theme and glass, taking effect as they're tapped (it's the same look Settings sets). */
+@Composable
+private fun ColumnScope.Look(backdrop: Backdrop, onNext: () -> Unit) {
+    val appearance = com.subhashh.lumen.ui.theme.LocalAppearance.current
+    val glass = com.subhashh.lumen.ui.theme.LocalGlass.current
+    Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+        Title("Appearance", "Pick how Lumen looks. You can change it any time in Settings.")
+        Card(backdrop) {
+            Item(LumenIcons.DarkTheme, "Theme", "Follow your phone, or always light or dark")
+            Row(Modifier.fillMaxWidth().padding(start = 38.dp, bottom = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                for (a in com.subhashh.lumen.ui.theme.Appearance.entries) {
+                    val selected = a == appearance.current
+                    Text(
+                        a.label,
+                        color = ink,
+                        fontSize = 13.sp,
+                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(ink.copy(alpha = if (selected) 0.25f else 0.08f))
+                            .border(1.dp, ink.copy(alpha = if (selected) 0.5f else 0f), CircleShape)
+                            .pressable({ appearance.onChange(a) }, pressedScale = 0.95f)
+                            .padding(horizontal = 12.dp, vertical = 7.dp),
+                    )
+                }
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+        Card(backdrop) {
+            Item(LumenIcons.Image, "Liquid Glass", "Buttons and bars bend what's behind them. Uses more of the GPU") {
+                Switch(glass.liquid && !glass.reduceBlur, glass.onLiquid, enabled = !glass.reduceBlur)
+            }
+            Item(LumenIcons.Hide, "Reduce Blur", "Solid colours instead of frosted glass. Easier to read, lighter on the battery") {
+                Switch(glass.reduceBlur, glass.onReduceBlur)
+            }
+        }
+    }
+    Spacer(Modifier.height(12.dp))
+    PrimaryButton(backdrop, "Continue", onClick = onNext)
 }
 
 @Composable

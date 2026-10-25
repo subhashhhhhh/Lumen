@@ -18,6 +18,8 @@ import com.subhashh.lumen.ui.theme.Appearance
 import com.subhashh.lumen.ui.theme.AppearanceSetting
 import com.subhashh.lumen.ui.theme.LocalAppearance
 import com.subhashh.lumen.ui.theme.LocalMotion
+import com.subhashh.lumen.ui.theme.GlassSetting
+import com.subhashh.lumen.ui.theme.LocalGlass
 import com.subhashh.lumen.ui.theme.MotionSetting
 import android.provider.Settings
 import com.subhashh.lumen.ui.theme.LumenTheme
@@ -43,6 +45,8 @@ fun ComponentActivity.setLumenContent(content: @Composable () -> Unit) {
             Settings.Global.getFloat(contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
         }
         var reduceMotion by remember { mutableStateOf(prefs.reduceMotion ?: systemReduce) }
+        var liquidGlass by remember { mutableStateOf(prefs.liquidGlass) }
+        var reduceBlur by remember { mutableStateOf(prefs.reduceBlur) }
         val dark = when (appearance) {
             Appearance.System -> isSystemInDarkTheme()
             Appearance.Light -> false
@@ -63,6 +67,18 @@ fun ComponentActivity.setLumenContent(content: @Composable () -> Unit) {
                 reduceMotion = it
                 prefs.reduceMotion = it
             },
+            LocalGlass provides GlassSetting(
+                liquid = liquidGlass,
+                reduceBlur = reduceBlur,
+                onLiquid = {
+                    liquidGlass = it
+                    prefs.liquidGlass = it
+                },
+                onReduceBlur = {
+                    reduceBlur = it
+                    prefs.reduceBlur = it
+                },
+            ),
         ) {
             LumenTheme(darkTheme = dark) {
                 Box(Modifier.fillMaxSize()) {

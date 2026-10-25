@@ -98,6 +98,8 @@ private data class SettingEntry(
 private val Entries = listOf(
     SettingEntry("theme", "Theme", SettingsCategory.Appearance, "dark mode light mode night appearance"),
     SettingEntry("reduce-motion", "Reduce Motion", SettingsCategory.Appearance, "animations accessibility springs"),
+    SettingEntry("liquid-glass", "Liquid Glass", SettingsCategory.Appearance, "glass refraction lens effect gpu"),
+    SettingEntry("reduce-blur", "Reduce Blur", SettingsCategory.Appearance, "blur transparency solid frosted readability battery"),
     SettingEntry("date-headers", "Date Headers", SettingsCategory.Library, "sections days months years grouping"),
     SettingEntry("excluded", "Excluded Folders", SettingsCategory.Library, "ignore folders hide whatsapp junk"),
     SettingEntry("curved-edge", "Curved Edge Display", SettingsCategory.Library, "fast scroll scrollbar handle edge"),
@@ -410,6 +412,33 @@ private fun ColumnScope.AppearancePage(highlight: String?) {
                 onCheckedChange = motion.onChange,
                 icon = LumenIcons.Accessibility,
                 iconColor = Blue,
+            )
+        }
+    }
+    val glass = com.subhashh.lumen.ui.theme.LocalGlass.current
+    Group(
+        "Glass",
+        footer = "Liquid Glass bends what's behind buttons and bars, and uses more of the GPU. " +
+            "Reduce Blur swaps the frosted glass for solid colours everywhere: easier to read, lighter on the battery.",
+    ) {
+        Anchor("liquid-glass", highlight) {
+            ToggleRow(
+                title = "Liquid Glass",
+                subtitle = if (glass.reduceBlur) "Off while Reduce Blur is on" else null,
+                checked = glass.liquid,
+                onCheckedChange = glass.onLiquid,
+                icon = LumenIcons.Image,
+                iconColor = Teal,
+            )
+        }
+        Divider()
+        Anchor("reduce-blur", highlight) {
+            ToggleRow(
+                title = "Reduce Blur",
+                checked = glass.reduceBlur,
+                onCheckedChange = glass.onReduceBlur,
+                icon = LumenIcons.Hide,
+                iconColor = Purple,
             )
         }
     }

@@ -299,6 +299,8 @@ internal fun ToggleRow(
 @Composable
 private fun LiquidSwitch(checked: Boolean, pressed: Boolean) {
     val dark = LocalDarkTheme.current
+    // Settings → Appearance: the knob only bends the track behind it with Liquid Glass on.
+    val liquid = com.subhashh.lumen.ui.theme.LocalGlass.current.lens
     val reduce = com.subhashh.lumen.ui.theme.LocalMotion.current.reduce
     val track by animateColorAsState(
         if (checked) Color(0xFF34C759) else if (dark) Color(0xFF39393D) else Color(0xFFE9E9EA),
@@ -344,7 +346,7 @@ private fun LiquidSwitch(checked: Boolean, pressed: Boolean) {
                     backdrop = lensBackdrop,
                     shape = { CircleShape },
                     effects = {
-                        if (glass > 0.01f) lens(10.dp.toPx() * glass, 16.dp.toPx() * glass, chromaticAberration = true)
+                        if (glass > 0.01f && liquid) lens(10.dp.toPx() * glass, 16.dp.toPx() * glass, chromaticAberration = true)
                     },
                     highlight = { if (glass > 0.01f) com.kyant.backdrop.highlight.Highlight.Default.copy(alpha = glass) else null },
                     shadow = {

@@ -58,6 +58,24 @@ class MotionSetting(val reduce: Boolean, val onChange: (Boolean) -> Unit)
 
 val LocalMotion = staticCompositionLocalOf { MotionSetting(false) {} }
 
+/**
+ * Settings → Appearance → Liquid Glass and Reduce Blur. [liquid] off keeps the frosted blur but
+ * drops the lens that bends what's behind the glass (lighter on the GPU); [reduceBlur] swaps the
+ * glass for solid fills everywhere (easiest to read, lightest of all), whatever [liquid] says.
+ */
+@Immutable
+class GlassSetting(
+    val liquid: Boolean,
+    val reduceBlur: Boolean,
+    val onLiquid: (Boolean) -> Unit,
+    val onReduceBlur: (Boolean) -> Unit,
+) {
+    /** Lens refraction is drawn. */
+    val lens: Boolean get() = liquid && !reduceBlur
+}
+
+val LocalGlass = staticCompositionLocalOf { GlassSetting(liquid = true, reduceBlur = false, onLiquid = {}, onReduceBlur = {}) }
+
 private val DarkScheme = darkColorScheme(
     primary = Color(0xFF0A84FF),
     background = Color.Black,

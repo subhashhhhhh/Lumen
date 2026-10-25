@@ -507,6 +507,8 @@ fun LiquidPillLens(
     modifier: Modifier = Modifier,
 ) {
     if (!state.lifts || state.isFlat) return
+    // Settings → Appearance: the pill only bends what's under it with Liquid Glass on.
+    val lens = com.subhashh.lumen.ui.theme.LocalGlass.current.lens
     val backdrop = remember(page, bar, items, fillColor) {
         PillBackdrop(page, bar, items) { fillColor.copy(alpha = fillColor.alpha * (1f - state.material)) }
     }
@@ -517,7 +519,7 @@ fun LiquidPillLens(
                 backdrop = backdrop,
                 shape = { CircleShape },
                 effects = {
-                    lens(
+                    if (lens) lens(
                         LensHeight.toPx() * state.glassPresence,
                         LensAmount.toPx() * state.material,
                         chromaticAberration = true,
