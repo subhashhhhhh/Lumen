@@ -55,6 +55,32 @@ class TextStore private constructor(context: Context) : SQLiteOpenHelper(context
             if (c.moveToFirst()) StoredLines(c.getInt(0), c.getInt(1), c.getBlob(2)) else null
         }
 
+    /**
+     * Adds the [lines] [mediaId]'s words don't have yet, if it's already been read at [modified]
+     * (a frame read in the viewer, from a video the indexer sampled); an item not read yet is
+     * left for its full read. Returns how many lines were new.
+     */
+    fun addLines(mediaId: Long, modified: Long, lines: List<String>): Int {
+        if (known(mediaId, modified) == Known.NotRead) return 0
+        val old = text(mediaId)
+        val have = old.orEmpty().lines().mapTo(HashSet()) { it.trim().lowercase() }
+        val new = lines.map { it.trim() }.filter { it.isNotEmpty() && have.add(it.lowercase()) }
+        if (new.isEmpty()) return 0
+        val db = writableDatabase
+        db.beginTransaction()
+        try {
+            db.delete("texts", "docid = ?", arrayOf(mediaId.toString()))
+            db.insert("texts", null, ContentValues().apply {
+                put("docid", mediaId)
+                put("body", listOfNotNull(old?.takeIf { it.isNotBlank() }, new.joinToString("\n")).joinToString("\n"))
+            })
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+        return new.size
+    }
+
     /** What the index knows about [mediaId] at [modified]: not read yet, read with no words, or read with words. */
     enum class Known { NotRead, NoText, HasText }
 

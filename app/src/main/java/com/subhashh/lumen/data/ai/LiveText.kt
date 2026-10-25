@@ -84,8 +84,9 @@ object LiveText {
     }
 
     /**
-     * The text in [item] (a video) at [atMs]: the frame on screen while paused. Not kept on
-     * disk (every moment is a different frame); the last few stay in memory.
+     * The text in [item] (a video) at [atMs]: the frame on screen while paused. Its positions
+     * aren't kept on disk (every moment is a different frame; the last few stay in memory), but
+     * lines the video's search index lacks are added to it: the indexer only samples frames.
      */
     suspend fun readVideoFrame(context: Context, item: MediaItem, atMs: Long): Result? = withContext(Dispatchers.Default) {
         if (!item.isVideo || !OcrModel.installed(context)) return@withContext null
@@ -100,7 +101,12 @@ object LiveText {
                 } finally {
                     frame.recycle()
                 }
-            }.getOrNull()?.also { cache.put(key, it) }
+            }.getOrNull()?.also { result ->
+                cache.put(key, result)
+                withContext(Dispatchers.IO) {
+                    runCatching { TextStore.of(context).addLines(item.id, item.modified, result.lines.map { it.text }) }
+                }
+            }
         }
     }
 
