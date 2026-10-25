@@ -347,6 +347,27 @@ fun ViewerScreen(
         player?.addListener(listener)
         onDispose { player?.removeListener(listener) }
     }
+    // Live Text on a paused video: the frame on screen is read once the pause settles, and again
+    // if a scrub lands somewhere else while paused; playing clears it.
+    LaunchedEffect(current?.id, playing, player) {
+        val item = current?.takeIf { it.isVideo } ?: return@LaunchedEffect
+        val p = player ?: return@LaunchedEffect
+        liveText.clear()
+        liveText.show(item, null)
+        if (playing) return@LaunchedEffect
+        var readAt = -1L
+        while (true) {
+            delay(350)
+            if (p.playbackState == Player.STATE_IDLE || p.playbackState == Player.STATE_BUFFERING) continue
+            val at = p.currentPosition
+            if (at == readAt) continue
+            readAt = at
+            liveText.clear()
+            liveText.show(item, null)
+            val result = com.subhashh.lumen.data.ai.LiveText.readVideoFrame(context, item, at)
+            if (p.currentPosition == at && !p.isPlaying) liveText.show(item, result)
+        }
+    }
     val view = LocalView.current
     DisposableEffect(playing, slideshow) {
         view.keepScreenOn = playing || slideshow
@@ -498,6 +519,7 @@ fun ViewerScreen(
                         player = player?.takeIf { isCurrent },
                         onTap = toggleChrome,
                         onZoomedChange = { zoomed = it },
+                        liveText = if (isCurrent) liveText else null,
                         modifier = pageModifier,
                     )
                 } else {

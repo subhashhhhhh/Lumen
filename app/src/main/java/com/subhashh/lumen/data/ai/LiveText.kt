@@ -83,6 +83,30 @@ object LiveText {
         }
     }
 
+    /**
+     * The text in [item] (a video) at [atMs]: the frame on screen while paused. Not kept on
+     * disk (every moment is a different frame); the last few stay in memory.
+     */
+    suspend fun readVideoFrame(context: Context, item: MediaItem, atMs: Long): Result? = withContext(Dispatchers.Default) {
+        if (!item.isVideo || !OcrModel.installed(context)) return@withContext null
+        val key = "${key(item)}#$atMs"
+        cache.get(key)?.let { return@withContext it }
+        lock.withLock {
+            cache.get(key)?.let { return@withLock it }
+            runCatching {
+                val frame = MediaFrames.videoFrameAt(context, item, atMs, VideoSide) ?: return@runCatching null
+                try {
+                    Result(loadedReader(context).readLines(frame), frame.width, frame.height)
+                } finally {
+                    frame.recycle()
+                }
+            }.getOrNull()?.also { cache.put(key, it) }
+        }
+    }
+
+    /** Paused frames are read at most this big: 1080p and 4K video both read well at it. */
+    private const val VideoSide = 2048
+
     private suspend fun loadedReader(context: Context): TextReader = reader ?: run {
         val gpu = GpuCheck.useGpu(
             context, GpuCheck.Target("ppocrv6-det", File(OcrModel.dir(context), OcrModel.DetGpu), 960 * 960 * 3),

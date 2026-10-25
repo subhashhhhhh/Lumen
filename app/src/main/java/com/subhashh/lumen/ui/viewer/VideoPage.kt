@@ -44,6 +44,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -67,6 +68,8 @@ fun VideoPage(
     onTap: () -> Unit,
     /** Pinch-zoomed in: the pager and swipe-to-dismiss stay still meanwhile. */
     onZoomedChange: (Boolean) -> Unit = {},
+    /** Live Text of the paused frame, when this is the page on screen. */
+    liveText: LiveTextState? = null,
     modifier: Modifier = Modifier,
 ) {
     // Size the video area to the video's shape from the start. Until the player decodes a first
@@ -76,6 +79,9 @@ fun VideoPage(
     val playerAspect = player?.let { rememberVideoAspect(it) }
     val aspect = playerAspect ?: item.aspectRatio()
     val haptics = LocalHapticFeedback.current
+    val context = LocalContext.current
+    val currentLiveText by rememberUpdatedState(liveText)
+    val currentOnTap by rememberUpdatedState(onTap)
     /** The last double-tap, for its flash ("−10 s", play, pause…); a new id restarts it. */
     var flash by remember { mutableStateOf<Flash?>(null) }
     LaunchedEffect(flash) {
@@ -139,7 +145,26 @@ fun VideoPage(
         Box(
             Modifier
                 .fillMaxSize()
-                .zoomable(zoom, onClick = { onTap() }, onDoubleClick = doubleTap),
+                .zoomable(
+                    zoom,
+                    // Read at tap time, not captured: a page built off screen (no Live Text)
+                    // keeps the handlers it was first given.
+                    onClick = { p ->
+                        val live = currentLiveText
+                        when {
+                            live?.selection != null -> live.clear()
+                            live?.showAll == true && live.openAt(context, zoom.transformedContentBounds, p) -> Unit
+                            else -> currentOnTap()
+                        }
+                    },
+                    // Long-press on text in a paused frame selects the word there, as on photos.
+                    onLongClick = { p ->
+                        if (currentLiveText?.selectAt(zoom.transformedContentBounds, p) == true) {
+                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        }
+                    },
+                    onDoubleClick = doubleTap,
+                ),
             contentAlignment = Alignment.Center,
         ) {
         val frame = if (aspect != null) Modifier.aspectRatio(aspect) else Modifier.fillMaxSize()
@@ -158,6 +183,7 @@ fun VideoPage(
             Box(frame) { StillFrame(item) }
         }
         }
+        if (liveText != null && liveText.item?.id == item.id) LiveTextLayer(liveText, zoom.transformedContentBounds)
         // Remembered while it fades out, so it doesn't jump to the middle as it goes.
         var shown by remember { mutableStateOf(FlashKind.Play) }
         flash?.let { shown = it.kind }

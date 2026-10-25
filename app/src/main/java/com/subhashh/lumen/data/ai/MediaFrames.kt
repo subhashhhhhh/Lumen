@@ -50,6 +50,30 @@ object MediaFrames {
             decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
         }
 
+    /**
+     * The video frame showing at [atMs] (the exact one, not the nearest keyframe), at most
+     * [maxSide] on its long side. Plain, hidden and encrypted videos alike; HDR comes out tone
+     * mapped, which reads fine.
+     */
+    fun videoFrameAt(context: Context, item: MediaItem, atMs: Long, maxSide: Int): Bitmap? {
+        val vault = if (com.subhashh.lumen.data.vault.Vault.isVault(item)) com.subhashh.lumen.data.vault.Vault.reader(item) ?: return null else null
+        return try {
+            MediaMetadataRetriever().use { r ->
+                when {
+                    vault != null -> r.setDataSource(com.subhashh.lumen.data.vault.VaultMediaDataSource(vault))
+                    item.uri.scheme == "file" -> r.setDataSource(item.uri.path)
+                    else -> r.setDataSource(context, item.uri)
+                }
+                // Box both sides at maxSide: the frame keeps its shape inside it, rotated or not.
+                r.getScaledFrameAtTime(atMs * 1000, MediaMetadataRetriever.OPTION_CLOSEST, maxSide, maxSide)
+            }
+        } catch (e: Exception) {
+            null
+        } finally {
+            vault?.close()
+        }
+    }
+
     /** A photo's one still: Android's cached thumbnail. */
     fun thumbnail(context: Context, item: MediaItem): Bitmap =
         context.contentResolver.loadThumbnail(item.uri, Size(Px, Px), null)
