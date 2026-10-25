@@ -163,8 +163,8 @@ dependencies {
     implementation(libs.backdrop)
     implementation(libs.maplibre.android)
 
-    // Smart Search, text, faces and subtitles: Lumen AI, from ../lumen-ai (see settings.gradle.kts).
-    implementation("com.subhashh.lumen:lumen-ai")
+    // Smart Search, text, faces and subtitles: Lumen AI (Maven Central, or ../lumen-ai: see settings.gradle.kts).
+    implementation(libs.lumen.ai)
     // The Lab drives LiteRT directly for its head-to-heads.
     if (hasLab) {
         debugImplementation(libs.litert) { exclude(group = "com.google.android.play") }

@@ -175,10 +175,10 @@ You need these tools:
 Do these steps:
 
 1. Get the source code. The smart features come from [Lumen AI](https://github.com/subhashhhhhh/lumen-ai),
-   which is a submodule, so clone with `--recurse-submodules`:
+   which Gradle downloads from Maven Central:
 
    ```sh
-   git clone --recurse-submodules https://github.com/subhashhhhhh/Lumen.git
+   git clone https://github.com/subhashhhhhh/Lumen.git
    cd Lumen
    ```
 

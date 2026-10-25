@@ -14,14 +14,13 @@ dependencyResolutionManagement {
     }
 }
 
-// Lumen AI (search, text, faces, subtitles) lives in its own repository, built from source here
-// until it's published. A checkout next to this one (../lumen-ai) wins, for working on both at
-// once; otherwise the lumen-ai submodule (git clone --recurse-submodules).
-val lumenAi = listOf("../lumen-ai", "lumen-ai").firstOrNull { file("$it/settings.gradle.kts").exists() }
-    ?: error("Lumen AI is missing: run `git submodule update --init`")
-includeBuild(lumenAi) {
-    dependencySubstitution {
-        substitute(module("com.subhashh.lumen:lumen-ai")).using(project(":ai"))
+// Lumen AI (search, text, faces, subtitles) comes from Maven Central (app.lumen-photos:lumen-ai).
+// A checkout next to this repository (../lumen-ai) replaces it, for working on both at once.
+if (file("../lumen-ai/settings.gradle.kts").exists()) {
+    includeBuild("../lumen-ai") {
+        dependencySubstitution {
+            substitute(module("app.lumen-photos:lumen-ai")).using(project(":ai"))
+        }
     }
 }
 

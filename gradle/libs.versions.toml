@@ -1,4 +1,5 @@
 [versions]
+lumenAi = "0.1.0"
 testRunner = "1.7.0"
 orgJson = "20260814"
 avifCoder = "3.0.0"
@@ -32,6 +33,7 @@ work = "2.12.0"
 maplibre = "13.7.1"
 
 [libraries]
+lumen-ai = { module = "app.lumen-photos:lumen-ai", version.ref = "lumenAi" }
 maplibre-android = { module = "org.maplibre.gl:android-sdk-opengl", version.ref = "maplibre" }
 litert = { module = "com.google.ai.edge.litert:litert", version.ref = "litert" }
 litert-gpu = { module = "com.google.ai.edge.litert:litert-gpu", version.ref = "litert" }

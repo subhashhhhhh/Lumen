@@ -7,7 +7,7 @@ This product includes software developed by third parties:
 
 - The tab bar's selection pill motion is ported from liquid_glass_easy (MIT License);
   its copyright notice is kept in the header of LiquidPill.kt.
-- needle (Apache License 2.0), through Lumen AI (../lumen-ai), with its own LICENSE file there.
+- needle (Apache License 2.0), through Lumen AI (app.lumen-photos:lumen-ai), with its own LICENSE file there.
 
 Every library, model and data set Lumen uses, with its license, is listed in the app under
 Settings → Licenses.
