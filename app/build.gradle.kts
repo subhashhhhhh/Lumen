@@ -106,6 +106,14 @@ android {
     }
 }
 
+// Lumen drives Lumen AI's engine directly (its own search screen, settings, Lab), not just the
+// simple LumenAi calls.
+kotlin {
+    compilerOptions {
+        optIn.add("com.subhashh.lumen.ai.LumenAiEngine")
+    }
+}
+
 composeCompiler {
     stabilityConfigurationFiles.add(rootProject.layout.projectDirectory.file("app/compose-stability.conf"))
 }
