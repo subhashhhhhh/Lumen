@@ -20,8 +20,8 @@ import com.subhashh.lumen.ui.theme.LocalGlass
 /**
  * Liquid glass surface. Android 13+ gets blur plus lens refraction, Android 12 gets blur only
  * (backdrop skips effects the OS can't render), and Android 11 falls back to an opaque tint.
- * Settings → Appearance: Liquid Glass off drops the lens, Reduce Blur draws the opaque tint
- * everywhere (still through the backdrop, so a lens drawn above can record this surface).
+ * Settings → Appearance: Liquid Glass off draws a solid surface instead (still through the
+ * backdrop, so whatever records this surface keeps working); Reduce Blur keeps less blur.
  */
 @Composable
 fun Modifier.glass(
@@ -37,9 +37,11 @@ fun Modifier.glass(
 ): Modifier {
     val colors = LocalGlassColors.current
     val setting = LocalGlass.current
-    val solid = setting.reduceBlur || Build.VERSION.SDK_INT < Build.VERSION_CODES.S
-    val lens = setting.lens
+    // Liquid Glass off: solid, fully opaque; Android 11 (no blur) keeps its near-opaque tint.
+    val off = !setting.liquid
+    val solid = off || Build.VERSION.SDK_INT < Build.VERSION_CODES.S
     val surface = when {
+        off -> colors.fallbackTint.copy(alpha = 1f)
         solid -> colors.fallbackTint
         tint != null -> tint
         else -> colors.tint
@@ -50,8 +52,8 @@ fun Modifier.glass(
         effects = {
             if (!solid) {
                 vibrancy()
-                blur(blurRadius.toPx())
-                if (lens) lens(refractionHeight.toPx(), refractionAmount.toPx())
+                blur(blurRadius.toPx() * setting.blurScale)
+                lens(refractionHeight.toPx(), refractionAmount.toPx())
             }
         },
         exportedBackdrop = exportedBackdrop,

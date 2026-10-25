@@ -333,11 +333,11 @@ private fun ColumnScope.Look(backdrop: Backdrop, onNext: () -> Unit) {
         }
         Spacer(Modifier.height(12.dp))
         Card(backdrop) {
-            Item(LumenIcons.Image, "Liquid Glass", "Buttons and bars bend what's behind them. Uses more of the GPU") {
-                Switch(glass.liquid && !glass.reduceBlur, glass.onLiquid, enabled = !glass.reduceBlur)
+            Item(LumenIcons.Image, "Liquid Glass", "Buttons, bars and menus made of glass. Off, they're solid") {
+                Switch(glass.liquid, glass.onLiquid)
             }
-            Item(LumenIcons.Hide, "Reduce Blur", "Solid colours instead of frosted glass. Easier to read, lighter on the battery") {
-                Switch(glass.reduceBlur, glass.onReduceBlur)
+            Item(LumenIcons.Hide, "Reduce Blur", "Clearer glass with less blur, lighter on the GPU") {
+                Switch(glass.reduceBlur && glass.liquid, glass.onReduceBlur, enabled = glass.liquid)
             }
         }
     }

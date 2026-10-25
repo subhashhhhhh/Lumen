@@ -418,13 +418,12 @@ private fun ColumnScope.AppearancePage(highlight: String?) {
     val glass = com.subhashh.lumen.ui.theme.LocalGlass.current
     Group(
         "Glass",
-        footer = "Liquid Glass bends what's behind buttons and bars, and uses more of the GPU. " +
-            "Reduce Blur swaps the frosted glass for solid colours everywhere: easier to read, lighter on the battery.",
+        footer = "Liquid Glass: buttons, bars, menus and switches made of glass that bends what's behind it. " +
+            "Off, they're solid. Reduce Blur keeps the glass with much less blur: clearer, and lighter on the GPU.",
     ) {
         Anchor("liquid-glass", highlight) {
             ToggleRow(
                 title = "Liquid Glass",
-                subtitle = if (glass.reduceBlur) "Off while Reduce Blur is on" else null,
                 checked = glass.liquid,
                 onCheckedChange = glass.onLiquid,
                 icon = LumenIcons.Image,
@@ -435,8 +434,9 @@ private fun ColumnScope.AppearancePage(highlight: String?) {
         Anchor("reduce-blur", highlight) {
             ToggleRow(
                 title = "Reduce Blur",
-                checked = glass.reduceBlur,
-                onCheckedChange = glass.onReduceBlur,
+                subtitle = if (!glass.liquid) "Only with Liquid Glass" else null,
+                checked = glass.reduceBlur && glass.liquid,
+                onCheckedChange = { if (glass.liquid) glass.onReduceBlur(it) },
                 icon = LumenIcons.Hide,
                 iconColor = Purple,
             )

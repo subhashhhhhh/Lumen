@@ -315,7 +315,8 @@ private fun LiquidSwitch(checked: Boolean, pressed: Boolean) {
         travelling = false
     }
     val glass by androidx.compose.animation.core.animateFloatAsState(
-        if (!reduce && (pressed || travelling)) 1f else 0f,
+        // Liquid Glass off: a plain switch, its knob never turning to glass.
+        if (!reduce && liquid && (pressed || travelling)) 1f else 0f,
         spring(dampingRatio = 0.8f, stiffness = 700f),
         label = "switchGlass",
     )
@@ -346,7 +347,7 @@ private fun LiquidSwitch(checked: Boolean, pressed: Boolean) {
                     backdrop = lensBackdrop,
                     shape = { CircleShape },
                     effects = {
-                        if (glass > 0.01f && liquid) lens(10.dp.toPx() * glass, 16.dp.toPx() * glass, chromaticAberration = true)
+                        if (glass > 0.01f) lens(10.dp.toPx() * glass, 16.dp.toPx() * glass, chromaticAberration = true)
                     },
                     highlight = { if (glass > 0.01f) com.kyant.backdrop.highlight.Highlight.Default.copy(alpha = glass) else null },
                     shadow = {
