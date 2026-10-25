@@ -20,6 +20,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -40,10 +43,16 @@ data class Confirmation(
     val message: String,
     val confirm: String,
     val destructive: Boolean = false,
+    /** Longer Markdown under the message (release notes): left-aligned and scrollable. */
+    val details: String? = null,
     val onConfirm: () -> Unit,
 )
 
-/** iOS-style alert: title, message, Cancel and one action. Shown while [confirmation] is non-null. */
+/**
+ * iOS-style alert: title, message, Cancel and one action. Shown while [confirmation] is non-null.
+ * It stays inside the screen's safe area, and only its middle scrolls, so the buttons are always
+ * on screen (on a small phone with three-button navigation too).
+ */
 @Composable
 fun ConfirmDialog(confirmation: Confirmation?, onDismiss: () -> Unit) {
     val open = confirmation != null
@@ -66,10 +75,10 @@ fun ConfirmDialog(confirmation: Confirmation?, onDismiss: () -> Unit) {
         val card = if (dark) Color(0xFF2C2C2E) else Color.White
         val text = if (dark) Color.White else Color.Black
         val secondary = if (dark) Color(0x99EBEBF5) else Color(0x993C3C43)
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxSize().safeDrawingPadding().padding(vertical = 24.dp), contentAlignment = Alignment.Center) {
             Column(
                 Modifier
-                    .width(290.dp)
+                    .width(if (c.details != null) 320.dp else 290.dp)
                     .clip(RoundedCornerShape(22.dp))
                     .background(card)
                     .clickable(remember { MutableInteractionSource() }, indication = null) {}
@@ -79,8 +88,15 @@ fun ConfirmDialog(confirmation: Confirmation?, onDismiss: () -> Unit) {
                 Text(c.title, color = text, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center,
                     modifier = Modifier.padding(horizontal = 18.dp))
                 Spacer(Modifier.height(6.dp))
-                Text(c.message, color = secondary, fontSize = 14.sp, textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(horizontal = 18.dp))
+                // The middle takes what's left of the screen and scrolls; title and buttons stay put.
+                Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) {
+                    Text(c.message, color = secondary, fontSize = 14.sp, textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp))
+                    c.details?.let { details ->
+                        Spacer(Modifier.height(14.dp))
+                        Markdown(details, color = secondary, headingColor = text, modifier = Modifier.padding(horizontal = 18.dp))
+                    }
+                }
                 Spacer(Modifier.height(18.dp))
                 Box(Modifier.fillMaxWidth().height(0.5.dp).background(secondary.copy(alpha = 0.3f)))
                 Row(Modifier.fillMaxWidth().height(48.dp)) {

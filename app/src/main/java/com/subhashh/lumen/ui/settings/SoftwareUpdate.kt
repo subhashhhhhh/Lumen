@@ -14,6 +14,7 @@ import androidx.compose.ui.platform.LocalContext
 import com.subhashh.lumen.data.LumenPrefs
 import com.subhashh.lumen.data.Updater
 import com.subhashh.lumen.ui.components.Confirmation
+import com.subhashh.lumen.ui.components.releaseChanges
 import com.subhashh.lumen.ui.icons.LumenIcons
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -119,12 +120,11 @@ internal fun ColumnScope.SoftwareUpdateGroup(highlight: String?, onConfirm: (Con
                 onClick = {
                     if (available != null) {
                         val size = if (available.apkBytes > 0) " (%.0f MB)".format(available.apkBytes / 1_000_000f) else ""
-                        val notes = available.notes.take(600).let { if (available.notes.length > 600) "$it…" else it }
                         onConfirm(
                             Confirmation(
                                 title = "Install Lumen ${available.version}?",
-                                message = (notes.ifBlank { "A new version of Lumen is out." }) +
-                                    "\n\nDownloads the update$size from GitHub, then Android asks to install it.",
+                                message = "Downloads the update$size from GitHub, then Android asks to install it.",
+                                details = releaseChanges(available.notes).ifBlank { null },
                                 confirm = "Install",
                                 onConfirm = { UpdateSession.install(context, available) },
                             ),
