@@ -170,13 +170,15 @@ You need these tools:
 
 - The Java Development Kit (JDK) 17 or later.
 - The Android Software Development Kit (SDK) with Android platform 37.
+- The Android Native Development Kit (NDK) 30, for the speech engine.
 
 Do these steps:
 
-1. Get the source code:
+1. Get the source code. The smart features come from [Lumen AI](https://github.com/subhashhhhhh/lumen-ai),
+   which is a submodule, so clone with `--recurse-submodules`:
 
    ```sh
-   git clone https://github.com/subhashhhhhh/Lumen.git
+   git clone --recurse-submodules https://github.com/subhashhhhhh/Lumen.git
    cd Lumen
    ```
 
