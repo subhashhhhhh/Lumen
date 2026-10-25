@@ -27,7 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.subhashh.lumen.data.CollectionKeys
 import com.subhashh.lumen.data.MediaItem
-import com.subhashh.lumen.data.ai.Person
+import com.subhashh.lumen.ai.Person
 import com.subhashh.lumen.ui.collections.ScreenTitle
 import com.subhashh.lumen.ui.collections.rememberAlbumGridGestures
 import com.subhashh.lumen.ui.library.SelectionMark

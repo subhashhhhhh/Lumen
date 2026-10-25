@@ -22,8 +22,8 @@ import coil3.size.Size
 import coil3.transform.Transformation
 import com.subhashh.lumen.data.GridThumbnail
 import com.subhashh.lumen.data.MediaItem
-import com.subhashh.lumen.data.ai.FaceStore
-import com.subhashh.lumen.data.ai.Person
+import com.subhashh.lumen.ai.FaceStore
+import com.subhashh.lumen.ai.Person
 import com.subhashh.lumen.ui.images.version
 import kotlin.math.ceil
 import kotlin.math.roundToInt

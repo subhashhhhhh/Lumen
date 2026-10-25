@@ -196,10 +196,9 @@ class LumenPrefs(context: Context) {
         get() = if (prefs.contains(KeyOnboardingDone)) prefs.getBoolean(KeyOnboardingDone, false) else null
         set(value) = prefs.edit { if (value == null) remove(KeyOnboardingDone) else putBoolean(KeyOnboardingDone, value) }
 
-    /** Which way videos' text was read; older ones are read again ([com.subhashh.lumen.data.ai.TextIndexer]). */
-    var textVideoVersion: Int
+    /** Before Lumen AI kept it: which way videos' text was read. Only read once, to hand over. */
+    val legacyTextVideoVersion: Int
         get() = prefs.getInt(KeyTextVideoVersion, 1)
-        set(value) = prefs.edit { putInt(KeyTextVideoVersion, value) }
 
     /** About → Software Update → Check Automatically: once a day, on launch. */
     var autoUpdateCheck: Boolean
@@ -225,10 +224,14 @@ class LumenPrefs(context: Context) {
         get() = prefs.getBoolean(KeySearchDetails, false)
         set(value) = prefs.edit { putBoolean(KeySearchDetails, value) }
 
-    /** Smart Features packs ([com.subhashh.lumen.data.ai.ModelPack] ids) waiting to download, in order. */
-    var modelQueue: List<String>
+    /** Before Lumen AI kept it: packs waiting to download. Only read once, to hand over. */
+    val legacyModelQueue: List<String>
         get() = prefs.getString(KeyModelQueue, null)?.split(',')?.filter { it.isNotEmpty() } ?: emptyList()
-        set(value) = prefs.edit { putString(KeyModelQueue, value.joinToString(",")) }
+
+    /** Lumen AI moved out of the app (25 Oct 2026): background work queued before then is redone once. */
+    var aiMoved: Boolean
+        get() = prefs.getBoolean(KeyAiMoved, false)
+        set(value) = prefs.edit { putBoolean(KeyAiMoved, value) }
 
     var curvedEdge: Boolean
         get() = prefs.getBoolean(KeyCurvedEdge, false)
@@ -274,6 +277,7 @@ class LumenPrefs(context: Context) {
         const val KeyIndexOnBattery = "index_on_battery"
         const val KeyModelWifiOnly = "model_wifi_only"
         const val KeyModelQueue = "model_queue"
+        const val KeyAiMoved = "ai_moved"
         const val KeyDeveloperOptions = "developer_options"
         const val KeyAutoUpdate = "auto_update_check"
         const val KeyLastUpdateCheck = "last_update_check"

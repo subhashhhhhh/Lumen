@@ -232,7 +232,7 @@ fun SettingsScreen(
                 } else {
                     val appearance = LocalAppearance.current
                     val smartSearchOn = remember(refresh) {
-                        com.subhashh.lumen.data.ai.ModelPack.entries.any { com.subhashh.lumen.data.ai.ModelDownloads.usable(context, it) }
+                        com.subhashh.lumen.ai.ModelPack.entries.any { com.subhashh.lumen.ai.ModelDownloads.usable(context, it) }
                     }
                     val granted = listOf(status.manageMedia || Build.VERSION.SDK_INT < Build.VERSION_CODES.S, status.allFiles, status.mediaLocation)
                     val open = { c: SettingsCategory -> onOpenCategory(c, null) }

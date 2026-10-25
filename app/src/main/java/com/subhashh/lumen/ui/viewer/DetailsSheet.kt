@@ -1,5 +1,6 @@
 package com.subhashh.lumen.ui.viewer
 
+import com.subhashh.lumen.data.toRef
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.animateFloatAsState
 import kotlinx.coroutines.delay
@@ -10,10 +11,10 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.media3.common.Player
 import androidx.compose.foundation.layout.heightIn
-import com.subhashh.lumen.data.ai.Subtitles
-import com.subhashh.lumen.data.ai.SearchSuggestions
-import com.subhashh.lumen.data.ai.ModelDownloads
-import com.subhashh.lumen.data.ai.Cue
+import com.subhashh.lumen.ai.Subtitles
+import com.subhashh.lumen.ai.SearchSuggestions
+import com.subhashh.lumen.ai.ModelDownloads
+import com.subhashh.lumen.ai.Cue
 import com.subhashh.lumen.data.CaptionStore
 import com.subhashh.lumen.data.AllMetadata
 import androidx.compose.runtime.setValue
@@ -72,8 +73,8 @@ import com.subhashh.lumen.data.MediaSource
 import com.subhashh.lumen.data.PlaceLookup
 import com.subhashh.lumen.data.RawExtensions
 import com.subhashh.lumen.data.VideoInfo
-import com.subhashh.lumen.data.ai.FaceStore
-import com.subhashh.lumen.data.ai.Person
+import com.subhashh.lumen.ai.FaceStore
+import com.subhashh.lumen.ai.Person
 import com.subhashh.lumen.data.isRaw
 import com.subhashh.lumen.ui.components.glass
 import com.subhashh.lumen.ui.components.pressable
@@ -303,7 +304,7 @@ private fun WhatLumenSees(item: MediaItem, colors: SheetColors, onSearch: (Strin
         }
     }
     val cues by produceState(emptyList<Cue>(), item.id) {
-        if (item.isVideo) value = withContext(Dispatchers.IO) { Subtitles.saved(context, item)?.first.orEmpty() }
+        if (item.isVideo) value = withContext(Dispatchers.IO) { Subtitles.saved(context, item.toRef())?.first.orEmpty() }
     }
     if (looks.isNotEmpty()) {
         Spacer(Modifier.height(10.dp))

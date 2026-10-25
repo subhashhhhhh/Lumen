@@ -1,5 +1,6 @@
 package com.subhashh.lumen.data
 
+import com.subhashh.lumen.ai.QueryParts
 import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase

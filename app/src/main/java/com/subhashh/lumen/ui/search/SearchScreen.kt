@@ -55,7 +55,7 @@ import androidx.compose.ui.unit.sp
 import com.subhashh.lumen.data.MediaCollection
 import com.subhashh.lumen.data.MediaItem
 import com.subhashh.lumen.data.CollectionKeys
-import com.subhashh.lumen.data.ai.Person
+import com.subhashh.lumen.ai.Person
 import com.subhashh.lumen.ui.people.FaceAvatar
 import com.subhashh.lumen.ui.collections.AlbumCard
 import com.subhashh.lumen.ui.components.pressable

@@ -62,7 +62,7 @@ import com.subhashh.lumen.data.MediaCollection
 import com.subhashh.lumen.data.MediaCollections
 import com.subhashh.lumen.data.MediaItem
 import com.subhashh.lumen.data.GridThumbnail
-import com.subhashh.lumen.data.ai.Person
+import com.subhashh.lumen.ai.Person
 import com.subhashh.lumen.ui.people.FaceAvatar
 import com.subhashh.lumen.ui.transition.CoverTransition
 import com.subhashh.lumen.ui.transition.coverCell

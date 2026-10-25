@@ -38,7 +38,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.subhashh.lumen.data.MediaItem
-import com.subhashh.lumen.data.ai.Person
+import com.subhashh.lumen.ai.Person
 import com.subhashh.lumen.ui.theme.LocalDarkTheme
 
 /** Naming [person] [name], which [match] already has: offer to make them one person. */

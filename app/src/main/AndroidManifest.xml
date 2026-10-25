@@ -46,6 +46,8 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" tools:node="remove" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" tools:node="remove" />
 
+    <!-- Lumen AI's manifest adds its services (GPU check, model downloads) and the GPU driver
+         libraries. -->
     <application
         android:name=".LumenApplication"
         android:allowBackup="true"
@@ -93,30 +95,6 @@
             </intent-filter>
         </activity>
 
-        <!-- ONNX Runtime 1.29+ starts Microsoft telemetry from this provider at app launch. Lumen
-             pins 1.28 (none); this removes it too, should the version ever move. -->
-        <provider
-            android:name="ai.onnxruntime.TelemetryInitializer"
-            android:authorities="${applicationId}.onnxruntime_telemetry_initializer"
-            tools:node="remove" />
-
-        <!-- Smart Search's one-time GPU check, in its own process: a GPU driver that can't run
-             the model aborts the process, and this way that's not Lumen's. -->
-        <service
-            android:name=".data.ai.GpuCheckService"
-            android:exported="false"
-            android:process=":gpucheck" />
-        <service
-            android:name=".data.ai.ModelDownloadJob"
-            android:exported="false"
-            android:permission="android.permission.BIND_JOB_SERVICE" />
-        <service
-            android:name="androidx.work.impl.foreground.SystemForegroundService"
-            android:foregroundServiceType="dataSync"
-            tools:node="merge" />
-        <receiver
-            android:name=".data.ai.DownloadNotification$CancelReceiver"
-            android:exported="false" />
         <receiver
             android:name=".data.UpdateReceiver"
             android:exported="false" />
@@ -146,10 +124,5 @@
                 <data android:mimeType="video/*" />
             </intent-filter>
         </activity>
-        <!-- The phone's GPU drivers (OpenCL) for LiteRT's GPU delegate (Smart Search's Accurate
-             image model). Android 12+ hides vendor libraries unless they're named here; optional,
-             so phones without them still install and run on the CPU. -->
-        <uses-native-library android:name="libOpenCL.so" android:required="false" />
-        <uses-native-library android:name="libvndksupport.so" android:required="false" />
     </application>
 </manifest>

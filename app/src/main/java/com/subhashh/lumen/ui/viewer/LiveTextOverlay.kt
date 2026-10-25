@@ -47,7 +47,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import com.kyant.backdrop.Backdrop
 import com.subhashh.lumen.data.MediaItem
-import com.subhashh.lumen.data.ai.LiveText
+import com.subhashh.lumen.ai.LiveText
 import com.subhashh.lumen.ui.components.glass
 import com.subhashh.lumen.ui.components.pressable
 import com.subhashh.lumen.ui.theme.LocalGlassColors

@@ -1,5 +1,6 @@
 package com.subhashh.lumen.ui.viewer
 
+import com.subhashh.lumen.data.toRef
 import androidx.compose.ui.unit.IntOffset
 
 import androidx.compose.foundation.layout.offset
@@ -173,8 +174,8 @@ fun ViewerScreen(
     /** Hidden's Share: encrypted items need a decrypted copy first. */
     onShareHidden: (MediaItem) -> Unit = {},
     /** Everyone Faces found, with cover photos: the details sheet shows who's in this one. */
-    people: List<Pair<com.subhashh.lumen.data.ai.Person, MediaItem>> = emptyList(),
-    onOpenPerson: (com.subhashh.lumen.data.ai.Person) -> Unit = {},
+    people: List<Pair<com.subhashh.lumen.ai.Person, MediaItem>> = emptyList(),
+    onOpenPerson: (com.subhashh.lumen.ai.Person) -> Unit = {},
     /** Live Text's Search: look for the selected words in Lumen. */
     onSearchText: (String) -> Unit = {},
     /** Faces in the details sheet grow into their person's page. */
@@ -198,7 +199,7 @@ fun ViewerScreen(
     var bottomChromeHeight by remember { mutableIntStateOf(0) }
     /** CC: subtitles made on the phone for videos, on until turned off again. */
     var captions by rememberSaveable { mutableStateOf(false) }
-    val speechReady = remember { com.subhashh.lumen.data.ai.SpeechModel.installed(context) }
+    val speechReady = remember { com.subhashh.lumen.ai.SpeechModel.installed(context) }
     var zoomed by remember { mutableStateOf(false) }
     val flingVelocity = with(LocalDensity.current) { FlingVelocity.toPx() }
     val haptics = LocalHapticFeedback.current
@@ -224,21 +225,21 @@ fun ViewerScreen(
     val liveText = remember { LiveTextState() }
     LaunchedEffect(current?.id, current?.modified) {
         val item = current?.takeIf { !it.isVideo }
-        liveText.show(item, item?.let { com.subhashh.lumen.data.ai.LiveText.cached(it) })
+        liveText.show(item, item?.let { com.subhashh.lumen.ai.LiveText.cached(it.toRef()) })
         if (item == null || liveText.result != null) return@LaunchedEffect
-        val (stored, known) = com.subhashh.lumen.data.ai.LiveText.stored(context, item)
-        if (stored != null || known == com.subhashh.lumen.data.ai.TextStore.Known.NoText) {
+        val (stored, known) = com.subhashh.lumen.ai.LiveText.stored(context, item.toRef())
+        if (stored != null || known == com.subhashh.lumen.ai.TextStore.Known.NoText) {
             liveText.show(item, stored)
             return@LaunchedEffect
         }
-        if (known == com.subhashh.lumen.data.ai.TextStore.Known.NotRead) delay(300)
-        liveText.show(item, com.subhashh.lumen.data.ai.LiveText.read(context, item))
+        if (known == com.subhashh.lumen.ai.TextStore.Known.NotRead) delay(300)
+        liveText.show(item, com.subhashh.lumen.ai.LiveText.read(context, item.toRef()))
     }
     // The text models load as the viewer opens, not on its first photo, and stay a little after
     // it closes, so opening the next photo doesn't wait for them.
     DisposableEffect(Unit) {
-        com.subhashh.lumen.data.ai.LiveText.warm(context)
-        onDispose { com.subhashh.lumen.data.ai.LiveText.release() }
+        com.subhashh.lumen.ai.LiveText.warm(context)
+        onDispose { com.subhashh.lumen.ai.LiveText.release() }
     }
     /** The caption being edited from the details sheet: the item and its caption so far. */
     var captionEdit by remember { mutableStateOf<Pair<MediaItem, String>?>(null) }
@@ -364,7 +365,7 @@ fun ViewerScreen(
             readAt = at
             liveText.clear()
             liveText.show(item, null)
-            val result = com.subhashh.lumen.data.ai.LiveText.readVideoFrame(context, item, at)
+            val result = com.subhashh.lumen.ai.LiveText.readVideoFrame(context, item.toRef(), at)
             if (p.currentPosition == at && !p.isPlaying) liveText.show(item, result)
         }
     }
@@ -1091,20 +1092,20 @@ private fun CaptionsButton(backdrop: Backdrop, on: Boolean, onClick: () -> Unit)
 }
 
 /**
- * The line being spoken now, made on the phone ([com.subhashh.lumen.data.ai.Subtitles]): the
+ * The line being spoken now, made on the phone ([com.subhashh.lumen.ai.Subtitles]): the
  * part being watched first. "Making subtitles…" until the first lines arrive; "No speech" if
  * the video turns out to have none.
  */
 @Composable
 private fun SubtitleOverlay(item: MediaItem, player: Player, modifier: Modifier = Modifier) {
     val context = LocalContext.current
-    var cues by remember(item.id) { mutableStateOf<List<com.subhashh.lumen.data.ai.Cue>>(emptyList()) }
+    var cues by remember(item.id) { mutableStateOf<List<com.subhashh.lumen.ai.Cue>>(emptyList()) }
     var finished by remember(item.id) { mutableStateOf(false) }
     var failed by remember(item.id) { mutableStateOf(false) }
     var position by remember(item.id) { mutableLongStateOf(0L) }
     LaunchedEffect(item.id) {
         try {
-            com.subhashh.lumen.data.ai.Subtitles.generate(context, item, player.currentPosition).collect { cues = it }
+            com.subhashh.lumen.ai.Subtitles.generate(context, item.toRef(), player.currentPosition).collect { cues = it }
             finished = true
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e

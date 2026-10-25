@@ -16,18 +16,34 @@ import coil3.video.VideoFrameDecoder
 import com.subhashh.lumen.data.GridThumbnailFetcher
 import com.subhashh.lumen.data.MediaThumbnailFetcher
 import com.subhashh.lumen.ui.AppLock
-import com.subhashh.lumen.data.ai.SmartIndex
+import androidx.work.WorkManager
+import com.subhashh.lumen.ai.LumenAi
+import com.subhashh.lumen.ai.SmartIndex
+import com.subhashh.lumen.data.AiHost
+import com.subhashh.lumen.data.LumenPrefs
 import com.subhashh.lumen.data.vault.VaultFetcher
 
 /** App-wide image loader, shared by the main app and the viewer other apps open. */
 class LumenApplication : Application(), SingletonImageLoader.Factory {
     override fun onCreate() {
         super.onCreate()
+        // Before anything else, in every process: Lumen AI's jobs and its GPU check look it up.
+        LumenAi.install(AiHost(this))
         // Smart Search's GPU check runs in its own process; it needs none of the app's setup.
         if (getProcessName() != packageName) return
         AppLock.install(this)
-        // Keeps Smart Search's background indexing queued (no-op until a model is downloaded).
-        SmartIndex.schedule(this)
+        val prefs = LumenPrefs(this)
+        if (!prefs.aiMoved) {
+            // The download queue and video-text version used to live in Lumen's own settings.
+            LumenAi.adoptState(this, prefs.legacyModelQueue, prefs.legacyTextVideoVersion)
+            // Work queued before the move names classes that no longer exist: queue it afresh.
+            WorkManager.getInstance(this).cancelAllWork()
+            prefs.aiMoved = true
+            SmartIndex.schedule(this, replace = true)
+        } else {
+            // Keeps Smart Search's background indexing queued (no-op until a model is downloaded).
+            SmartIndex.schedule(this)
+        }
     }
 
     override fun newImageLoader(context: PlatformContext): ImageLoader =

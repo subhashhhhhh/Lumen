@@ -98,7 +98,7 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.Dispatchers
 import com.subhashh.lumen.ui.components.RenameDialog
-import com.subhashh.lumen.data.ai.HfTokenStore
+import com.subhashh.lumen.ai.HfTokenStore
 import com.subhashh.lumen.ui.components.DateTimeDialog
 import com.subhashh.lumen.data.MediaDates
 import com.subhashh.lumen.data.vault.Vault
@@ -181,8 +181,8 @@ import com.subhashh.lumen.ui.search.SearchSection
 import com.subhashh.lumen.ui.search.searchGridIndex
 import com.subhashh.lumen.ui.search.SearchField
 import com.subhashh.lumen.data.SearchIndex
-import com.subhashh.lumen.data.ai.SmartHit
-import com.subhashh.lumen.data.ai.SmartSearch
+import com.subhashh.lumen.ai.SmartHit
+import com.subhashh.lumen.ai.SmartSearch
 
 private val MediaPermissions = when {
     Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE -> arrayOf(
@@ -424,18 +424,18 @@ private fun MainScaffold(
     val folders = remember(library, albumSettings) { MediaCollections.folders(library.orEmpty(), albumSettings) }
     // People (Settings → Smart Search → Faces), reloaded as the face pass finds them: at most
     // every couple of seconds, since it saves after every photo.
-    val peopleRows by produceState(emptyList<com.subhashh.lumen.data.ai.Person>()) {
+    val peopleRows by produceState(emptyList<com.subhashh.lumen.ai.Person>()) {
         val load = suspend {
             withContext(Dispatchers.IO) {
-                if (!com.subhashh.lumen.data.ai.FaceModel.installed(context)) emptyList()
-                else com.subhashh.lumen.data.ai.FaceStore.of(context).people()
+                if (!com.subhashh.lumen.ai.FaceModel.installed(context)) emptyList()
+                else com.subhashh.lumen.ai.FaceStore.of(context).people()
             }
         }
         // Right away at launch, so Collections has People from its first frame; after that only
         // once the face pass pauses its saving (it saves after every photo).
         value = load()
         @OptIn(kotlinx.coroutines.FlowPreview::class)
-        com.subhashh.lumen.data.ai.FaceStore.changes.drop(1).debounce(1_500).collect { value = load() }
+        com.subhashh.lumen.ai.FaceStore.changes.drop(1).debounce(1_500).collect { value = load() }
     }
     // Only photos the library shows (no excluded folders, Hidden or trash); named people first.
     val allPeople = remember(peopleRows, library) {
@@ -443,7 +443,7 @@ private fun MainScaffold(
         peopleRows.asSequence()
             .mapNotNull { p -> byId[p.coverMediaId]?.let { p.copy(mediaIds = p.mediaIds.filterTo(HashSet()) { it in byId }) to it } }
             .filter { it.first.mediaIds.isNotEmpty() }
-            .sortedWith(compareBy<Pair<com.subhashh.lumen.data.ai.Person, MediaItem>> { it.first.name == null }.thenByDescending { it.first.mediaIds.size })
+            .sortedWith(compareBy<Pair<com.subhashh.lumen.ai.Person, MediaItem>> { it.first.name == null }.thenByDescending { it.first.mediaIds.size })
             .toList()
     }
     val people = remember(allPeople) { allPeople.filterNot { it.first.hidden } }
@@ -454,7 +454,7 @@ private fun MainScaffold(
             key == null -> null
             CollectionKeys.isFolder(key) -> folders.firstOrNull { it.key == key }?.cover?.let { HeroCover(key, it) }
             else -> CollectionKeys.personId(key)?.let { id -> allPeople.firstOrNull { it.first.id == id } }?.let { (person, cover) ->
-                if (person.coverInVideo) HeroCover(key, cover, crop = com.subhashh.lumen.data.ai.FaceStore.cropFile(context, person.coverFaceId))
+                if (person.coverInVideo) HeroCover(key, cover, crop = com.subhashh.lumen.ai.FaceStore.cropFile(context, person.coverFaceId))
                 else HeroCover(key, cover, face = person.coverBox)
             }
         }
@@ -462,7 +462,7 @@ private fun MainScaffold(
     /** Merge with…: the People page picks who [mergeFrom] joins. */
     var mergeFrom by rememberSaveable { mutableStateOf<Long?>(null) }
     var showHiddenPeople by rememberSaveable { mutableStateOf(false) }
-    var personNameRequest by remember { mutableStateOf<com.subhashh.lumen.data.ai.Person?>(null) }
+    var personNameRequest by remember { mutableStateOf<com.subhashh.lumen.ai.Person?>(null) }
     /** A name that another person already has: merge them, or keep both with it. */
     var mergeProposal by remember { mutableStateOf<MergeProposal?>(null) }
     var personMenuOpen by remember { mutableStateOf(false) }
@@ -508,16 +508,16 @@ private fun MainScaffold(
         value = withContext(Dispatchers.Default) { index.search(searchQuery) }
     }
     // "Quoted phrases": only items whose read text or caption has exactly that, like Google Photos.
-    val queryPhrases = remember(searchQuery) { com.subhashh.lumen.data.QueryParts.phrases(searchQuery) }
+    val queryPhrases = remember(searchQuery) { com.subhashh.lumen.ai.QueryParts.phrases(searchQuery) }
     // Words read in photos (Settings → Smart Search → Text Read): exact, so right after the
     // name and date matches. A full-text lookup, a few ms, so no typing pause.
     val textMatches by produceState<List<Long>?>(null, searchQuery) {
         val query = searchQuery.trim()
         val phrases = queryPhrases
         value = if (query.length < 2) null else withContext(Dispatchers.IO) {
-            if (!com.subhashh.lumen.data.ai.OcrModel.installed(context)) null
-            else if (phrases != null) com.subhashh.lumen.data.ai.TextStore.of(context).searchPhrases(phrases)
-            else com.subhashh.lumen.data.ai.TextStore.of(context).search(query)
+            if (!com.subhashh.lumen.ai.OcrModel.installed(context)) null
+            else if (phrases != null) com.subhashh.lumen.ai.TextStore.of(context).searchPhrases(phrases)
+            else com.subhashh.lumen.ai.TextStore.of(context).search(query)
         }
     }
     // Captions the user wrote (Details → Add a Caption): their own words, so exact matches.
@@ -535,8 +535,8 @@ private fun MainScaffold(
     // A short pause after typing, so the text model runs once per word, not once per letter.
     // Paired with the query it answers, so the screen can tell when it's still working.
     // Several people named ("hamilton and rosberg"): only items with all of them.
-    val peopleGroup = remember(people, searchQuery) { com.subhashh.lumen.data.QueryParts.people(searchQuery, people.map { it.first }) }
-    val smart by produceState<Pair<String, com.subhashh.lumen.data.ai.SmartResult?>?>(null, searchQuery, peopleGroup) {
+    val peopleGroup = remember(people, searchQuery) { com.subhashh.lumen.ai.QueryParts.people(searchQuery, people.map { it.first }) }
+    val smart by produceState<Pair<String, com.subhashh.lumen.ai.SmartResult?>?>(null, searchQuery, peopleGroup) {
         if (searchQuery.isBlank()) {
             value = null
             return@produceState
@@ -551,7 +551,7 @@ private fun MainScaffold(
     }
     val smartHits = smart?.second?.hits
     val smartPending = searchQuery.isNotBlank() && smart?.first != searchQuery &&
-        remember(searching) { com.subhashh.lumen.data.ai.ModelDownloads.installed(context) != null }
+        remember(searching) { com.subhashh.lumen.ai.ModelDownloads.installed(context) != null }
     // People named like the search (every word starts one of the name's words): exact, so
     // right after name and date matches.
     val personMatches = remember(people, searchQuery, peopleGroup) {
@@ -638,9 +638,9 @@ private fun MainScaffold(
     val smartSuggestions by produceState<List<Pair<String, MediaItem>>>(emptyList(), searching, library) {
         if (!searching) return@produceState
         value = withContext(Dispatchers.IO) {
-            val model = com.subhashh.lumen.data.ai.ModelDownloads.installed(context) ?: return@withContext emptyList()
+            val model = com.subhashh.lumen.ai.ModelDownloads.installed(context) ?: return@withContext emptyList()
             val byId = library.orEmpty().associateBy { it.id }
-            com.subhashh.lumen.data.ai.SearchSuggestions.load(context, model)
+            com.subhashh.lumen.ai.SearchSuggestions.load(context, model)
                 .mapNotNull { s -> byId[s.coverId]?.let { s.term to it } }
                 .shuffled()
                 .take(8)
@@ -1348,7 +1348,7 @@ private fun MainScaffold(
                                 personFromPeople = false
                                 openCollection = key
                                 scope.launch(Dispatchers.IO) {
-                                    com.subhashh.lumen.data.ai.FaceStore.of(context).merge(keep = target.id, gone = from.id)
+                                    com.subhashh.lumen.ai.FaceStore.of(context).merge(keep = target.id, gone = from.id)
                                 }
                             },
                         )
@@ -1938,11 +1938,11 @@ private fun MainScaffold(
                 listOf(
                     if (openPerson?.hidden == true) MenuItem("Unhide Person") {
                         val id = openPerson.id
-                        scope.launch(Dispatchers.IO) { com.subhashh.lumen.data.ai.FaceStore.of(context).setHidden(id, false) }
+                        scope.launch(Dispatchers.IO) { com.subhashh.lumen.ai.FaceStore.of(context).setHidden(id, false) }
                     } else MenuItem("Hide Person") {
                         val id = openPerson?.id ?: return@MenuItem
                         openCollection = if (personFromPeople) CollectionKeys.People else null
-                        scope.launch(Dispatchers.IO) { com.subhashh.lumen.data.ai.FaceStore.of(context).setHidden(id, true) }
+                        scope.launch(Dispatchers.IO) { com.subhashh.lumen.ai.FaceStore.of(context).setHidden(id, true) }
                     },
                 ),
             ),
@@ -2074,7 +2074,7 @@ private fun MainScaffold(
                         return@merge
                     }
                     // The named one stays (else whoever has the most photos); the rest join them.
-                    val keep = chosen.sortedWith(compareBy<com.subhashh.lumen.data.ai.Person> { it.name == null }.thenByDescending { it.mediaIds.size }).first()
+                    val keep = chosen.sortedWith(compareBy<com.subhashh.lumen.ai.Person> { it.name == null }.thenByDescending { it.mediaIds.size }).first()
                     val names = chosen.mapNotNull { it.name }.distinct()
                     confirmation = Confirmation(
                         title = "Merge ${chosen.size} People?",
@@ -2084,7 +2084,7 @@ private fun MainScaffold(
                         onConfirm = {
                             endSelection()
                             scope.launch(Dispatchers.IO) {
-                                val store = com.subhashh.lumen.data.ai.FaceStore.of(context)
+                                val store = com.subhashh.lumen.ai.FaceStore.of(context)
                                 for (p in chosen) if (p.id != keep.id) store.merge(keep = keep.id, gone = p.id)
                             }
                         },
@@ -2095,7 +2095,7 @@ private fun MainScaffold(
                     val hide = !chosen.all { it.hidden }
                     endSelection()
                     scope.launch(Dispatchers.IO) {
-                        val store = com.subhashh.lumen.data.ai.FaceStore.of(context)
+                        val store = com.subhashh.lumen.ai.FaceStore.of(context)
                         for (p in chosen) store.setHidden(p.id, hide)
                     }
                 })
@@ -2205,7 +2205,7 @@ private fun MainScaffold(
                         MenuItem(notPersonLabel(person)) {
                             val ids = selectedItems.map { it.id }
                             endSelection()
-                            scope.launch(Dispatchers.IO) { com.subhashh.lumen.data.ai.FaceStore.of(context).notThisPerson(person.id, ids) }
+                            scope.launch(Dispatchers.IO) { com.subhashh.lumen.ai.FaceStore.of(context).notThisPerson(person.id, ids) }
                         },
                     )
                 },
@@ -2340,7 +2340,7 @@ private fun MainScaffold(
                     }
                     personOf(source) != null -> { item ->
                         val id = personOf(source)!!.id
-                        scope.launch(Dispatchers.IO) { com.subhashh.lumen.data.ai.FaceStore.of(context).setCover(id, item.id) }
+                        scope.launch(Dispatchers.IO) { com.subhashh.lumen.ai.FaceStore.of(context).setCover(id, item.id) }
                         toast("Cover updated")
                     }
                     else -> null
@@ -2348,7 +2348,7 @@ private fun MainScaffold(
                 coverLabel = if (personOf(source) != null) "Make Person Cover" else "Make Album Cover",
                 notPerson = personOf(source)?.let { person ->
                     notPersonLabel(person) to { item ->
-                        scope.launch(Dispatchers.IO) { com.subhashh.lumen.data.ai.FaceStore.of(context).notThisPerson(person.id, listOf(item.id)) }
+                        scope.launch(Dispatchers.IO) { com.subhashh.lumen.ai.FaceStore.of(context).notThisPerson(person.id, listOf(item.id)) }
                         toast("Removed from ${person.name ?: "this person"}")
                     }
                 },
@@ -2475,7 +2475,7 @@ private fun MainScaffold(
                 personNameSuggestion = null
                 val proposal = person?.let { mergeProposalFor(it, name, allPeople) }
                 if (proposal != null) mergeProposal = proposal
-                else if (person != null) scope.launch(Dispatchers.IO) { com.subhashh.lumen.data.ai.FaceStore.of(context).rename(person.id, name) }
+                else if (person != null) scope.launch(Dispatchers.IO) { com.subhashh.lumen.ai.FaceStore.of(context).rename(person.id, name) }
             },
             onDismiss = {
                 personNameRequest = null
@@ -2488,11 +2488,11 @@ private fun MainScaffold(
                 mergeProposal = null
                 // Its page becomes the merged person's.
                 if (openCollection == CollectionKeys.person(p.person.id)) openCollection = CollectionKeys.person(p.match.id)
-                scope.launch(Dispatchers.IO) { com.subhashh.lumen.data.ai.FaceStore.of(context).merge(keep = p.match.id, gone = p.person.id) }
+                scope.launch(Dispatchers.IO) { com.subhashh.lumen.ai.FaceStore.of(context).merge(keep = p.match.id, gone = p.person.id) }
             },
             onKeepSeparate = { p ->
                 mergeProposal = null
-                scope.launch(Dispatchers.IO) { com.subhashh.lumen.data.ai.FaceStore.of(context).rename(p.person.id, p.name) }
+                scope.launch(Dispatchers.IO) { com.subhashh.lumen.ai.FaceStore.of(context).rename(p.person.id, p.name) }
             },
             onDismiss = { mergeProposal = null },
         )
@@ -2621,9 +2621,9 @@ private fun MainScaffold(
 
 /** Another person already called [name] (any case), with both faces' photos; null when the name's free. */
 private fun mergeProposalFor(
-    person: com.subhashh.lumen.data.ai.Person,
+    person: com.subhashh.lumen.ai.Person,
     name: String,
-    people: List<Pair<com.subhashh.lumen.data.ai.Person, MediaItem>>,
+    people: List<Pair<com.subhashh.lumen.ai.Person, MediaItem>>,
 ): MergeProposal? {
     val wanted = name.trim()
     if (wanted.isEmpty()) return null
@@ -2648,7 +2648,7 @@ private const val HeroShare = 0.46f
 private data class AlbumNameRequest(val album: MediaCollection?)
 
 /** "Not Chiara", or "Not This Person" before they're named. */
-private fun notPersonLabel(person: com.subhashh.lumen.data.ai.Person) = person.name?.let { "Not $it" } ?: "Not This Person"
+private fun notPersonLabel(person: com.subhashh.lumen.ai.Person) = person.name?.let { "Not $it" } ?: "Not This Person"
 
 @Composable
 private fun PermissionScreen(onGrant: () -> Unit) {
