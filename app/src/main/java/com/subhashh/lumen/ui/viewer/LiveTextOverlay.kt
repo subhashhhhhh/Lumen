@@ -1,5 +1,6 @@
 package com.subhashh.lumen.ui.viewer
 
+import com.subhashh.lumen.R
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -342,26 +343,26 @@ fun LiveTextMenu(state: LiveTextState, backdrop: Backdrop, onSearch: (String) ->
     val actions = buildList<Pair<String, () -> Unit>> {
         if (state.selection == null) {
             if (!state.showAll) return@buildList
-            add("Copy All" to { copy(context, state.text) })
-            add("Select All" to { state.selection = 0..(state.text.length - 1).coerceAtLeast(0) })
+            add(context.getString(R.string.viewer_copy_all) to { copy(context, state.text) })
+            add(context.getString(R.string.common_select_all) to { state.selection = 0..(state.text.length - 1).coerceAtLeast(0) })
             return@buildList
         }
         smartSpans(selected).singleOrNull()?.takeIf { it.first.first == 0 && it.first.last == selected.lastIndex }?.let { (_, kind) ->
             add(
                 when (kind) {
-                    Smart.Link -> "Open"
-                    Smart.Phone -> "Call"
-                    Smart.Email -> "Email"
+                    Smart.Link -> context.getString(R.string.common_open)
+                    Smart.Phone -> context.getString(R.string.viewer_call)
+                    Smart.Email -> context.getString(R.string.viewer_email)
                 } to { open(context, kind, selected) },
             )
         }
-        add("Copy" to {
+        add(context.getString(R.string.common_copy) to {
             copy(context, selected)
             state.clear()
         })
-        if (state.selection != 0..(state.text.length - 1)) add("Select All" to { state.selection = 0..(state.text.length - 1).coerceAtLeast(0) })
-        add("Search" to { onSearch(selected.take(80)) })
-        add("Share" to {
+        if (state.selection != 0..(state.text.length - 1)) add(context.getString(R.string.common_select_all) to { state.selection = 0..(state.text.length - 1).coerceAtLeast(0) })
+        add(context.getString(R.string.common_search) to { onSearch(selected.take(80)) })
+        add(context.getString(R.string.common_share) to {
             val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, selected)
             runCatching { context.startActivity(Intent.createChooser(send, null).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
         })
@@ -387,6 +388,6 @@ private fun copy(context: Context, text: String) {
     context.getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("Text", text))
     // Android 13+ shows its own confirmation.
     if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.TIRAMISU) {
-        Toast.makeText(context, "Copied", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, context.getString(R.string.common_copied), Toast.LENGTH_SHORT).show()
     }
 }

@@ -8,7 +8,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.subhashh.lumen.R
 import com.kyant.backdrop.Backdrop
 import com.subhashh.lumen.ui.components.GlassIconButton
 import com.subhashh.lumen.ui.components.GlassTextButton
@@ -29,8 +31,8 @@ fun SelectionTopControls(
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        GlassTextButton(backdrop, if (allSelected) "Deselect All" else "Select All", onToggleAll)
-        GlassIconButton(backdrop, LumenIcons.Close, "Cancel selection", onCancel)
+        GlassTextButton(backdrop, if (allSelected) stringResource(R.string.main_deselect_all) else stringResource(R.string.common_select_all), onToggleAll)
+        GlassIconButton(backdrop, LumenIcons.Close, stringResource(R.string.main_cancel_selection), onCancel)
     }
 }
 
@@ -69,39 +71,39 @@ fun SelectionActionBar(
     ) {
         if (inHidden) {
             GlassIconButton(
-                backdrop, LumenIcons.Share, "Share", guard(onShare),
+                backdrop, LumenIcons.Share, stringResource(R.string.common_share), guard(onShare),
                 tint = if (hasSelection) colors.content else idle,
             )
             GlassIconButton(
-                backdrop, LumenIcons.Unhide, "Unhide", guard(onUnhide),
+                backdrop, LumenIcons.Unhide, stringResource(R.string.common_unhide), guard(onUnhide),
                 tint = if (hasSelection) colors.content else idle,
             )
             GlassIconButton(
-                backdrop, LumenIcons.DeleteForever, "Delete permanently", guard(onDeleteForever),
+                backdrop, LumenIcons.DeleteForever, stringResource(R.string.main_delete_permanently), guard(onDeleteForever),
                 tint = if (hasSelection) Color(0xFFFF453A) else idle,
             )
             GlassIconButton(
-                backdrop, LumenIcons.More, "More", guard(onMore),
+                backdrop, LumenIcons.More, stringResource(R.string.main_more), guard(onMore),
                 tint = if (hasSelection) colors.content else idle,
             )
         } else if (inTrash) {
             GlassIconButton(
-                backdrop, LumenIcons.Restore, "Restore", guard(onRestore),
+                backdrop, LumenIcons.Restore, stringResource(R.string.common_restore), guard(onRestore),
                 tint = if (hasSelection) colors.content else idle,
             )
             GlassIconButton(
-                backdrop, LumenIcons.DeleteForever, "Delete forever", guard(onDeleteForever),
+                backdrop, LumenIcons.DeleteForever, stringResource(R.string.main_delete_forever), guard(onDeleteForever),
                 tint = if (hasSelection) Color(0xFFFF453A) else idle,
             )
         } else {
             GlassIconButton(
-                backdrop, LumenIcons.Share, "Share", guard(onShare),
+                backdrop, LumenIcons.Share, stringResource(R.string.common_share), guard(onShare),
                 tint = if (hasSelection) colors.content else idle,
             )
             if (showFavorite) GlassIconButton(
                 backdrop,
                 if (allFavorite) LumenIcons.HeartFilled else LumenIcons.Heart,
-                if (allFavorite) "Unfavorite" else "Favorite",
+                if (allFavorite) stringResource(R.string.common_unfavorite) else stringResource(R.string.common_favorite),
                 guard(onFavorite),
                 tint = when {
                     !hasSelection -> idle
@@ -110,11 +112,11 @@ fun SelectionActionBar(
                 },
             )
             GlassIconButton(
-                backdrop, LumenIcons.Delete, "Delete", guard(onDelete),
+                backdrop, LumenIcons.Delete, stringResource(R.string.common_delete), guard(onDelete),
                 tint = if (hasSelection) colors.content else idle,
             )
             GlassIconButton(
-                backdrop, LumenIcons.More, "More", guard(onMore),
+                backdrop, LumenIcons.More, stringResource(R.string.main_more), guard(onMore),
                 tint = if (hasSelection) colors.content else idle,
             )
         }

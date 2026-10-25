@@ -17,6 +17,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
 import kotlinx.coroutines.delay
 import androidx.compose.animation.core.snap
 import androidx.compose.material3.Icon
@@ -26,6 +27,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.layout.onSizeChanged
+import com.subhashh.lumen.R
 import com.subhashh.lumen.ui.icons.LumenIcons
 import me.saket.telephoto.zoomable.DoubleClickToZoomListener
 import me.saket.telephoto.zoomable.ZoomSpec
@@ -208,7 +210,7 @@ fun VideoPage(
             ) {
                 when (shown) {
                     FlashKind.Back, FlashKind.Ahead -> Text(
-                        if (shown == FlashKind.Back) "−10 s" else "+10 s",
+                        stringResource(if (shown == FlashKind.Back) R.string.viewer_seek_back else R.string.viewer_seek_ahead),
                         color = Color.White,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold,

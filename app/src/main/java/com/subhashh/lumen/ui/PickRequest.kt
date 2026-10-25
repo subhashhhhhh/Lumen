@@ -2,7 +2,9 @@ package com.subhashh.lumen.ui
 
 import android.content.Intent
 import android.provider.MediaStore
+import androidx.annotation.StringRes
 import androidx.compose.runtime.Immutable
+import com.subhashh.lumen.R
 import com.subhashh.lumen.data.MediaItem
 
 /**
@@ -15,11 +17,12 @@ data class PickRequest(val images: Boolean, val videos: Boolean, val multiple: B
     fun accepts(item: MediaItem) = if (item.isVideo) videos else images
 
     /** "Choose a Photo", "Choose Videos"… */
-    val title: String
+    @get:StringRes
+    val title: Int
         get() = when {
-            images && !videos -> if (multiple) "Choose Photos" else "Choose a Photo"
-            videos && !images -> if (multiple) "Choose Videos" else "Choose a Video"
-            else -> if (multiple) "Choose Items" else "Choose an Item"
+            images && !videos -> if (multiple) R.string.main_pick_choose_photos else R.string.main_pick_choose_a_photo
+            videos && !images -> if (multiple) R.string.main_pick_choose_videos else R.string.main_pick_choose_a_video
+            else -> if (multiple) R.string.main_pick_choose_items else R.string.main_pick_choose_an_item
         }
 
     companion object {

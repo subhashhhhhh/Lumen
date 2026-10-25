@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Viewer: buttons and accessibility -->
+    <string name="viewer_delete_permanently">Delete permanently</string>
+    <string name="viewer_delete_forever">Delete forever</string>
+    <string name="viewer_more">More</string>
+    <string name="viewer_live_text">Live Text</string>
+    <string name="viewer_play">Play</string>
+    <string name="viewer_pause">Pause</string>
+    <string name="viewer_mute">Mute</string>
+    <string name="viewer_unmute">Unmute</string>
+    <string name="viewer_captions_cc">CC</string>
+    <string name="viewer_seek_back">−10 s</string>
+    <string name="viewer_seek_ahead">+10 s</string>
+    <string name="viewer_today">Today</string>
+    <string name="viewer_yesterday">Yesterday</string>
+    <string name="viewer_caption">Caption</string>
+
+    <!-- Viewer: subtitles on the video -->
+    <string name="viewer_subtitles_unavailable">Subtitles unavailable</string>
+    <string name="viewer_no_speech">No speech</string>
+    <string name="viewer_making_subtitles">Making subtitles…</string>
+
+    <!-- Viewer: ⋯ menu -->
+    <string name="viewer_make_album_cover">Make Album Cover</string>
+    <string name="viewer_move_to_album">Move to Album…</string>
+    <string name="viewer_copy_to_album">Copy to Album…</string>
+    <string name="viewer_rename_ellipsis">Rename…</string>
+    <string name="viewer_adjust_date">Adjust Date &amp; Time…</string>
+    <string name="viewer_resize_convert">Resize or Convert…</string>
+    <string name="viewer_slideshow">Slideshow</string>
+    <string name="viewer_open_with">Open with…</string>
+    <string name="viewer_set_wallpaper">Set as Wallpaper…</string>
+    <string name="viewer_set_as">Set as…</string>
+    <string name="viewer_copy_to_clipboard">Copy to clipboard</string>
+    <string name="viewer_print">Print</string>
+    <string name="viewer_rotate">Rotate</string>
+    <string name="viewer_rotate_left">Rotate Left</string>
+    <string name="viewer_rotate_right">Rotate Right</string>
+    <string name="viewer_rotate_180">Rotate 180°</string>
+
+    <!-- Live Text menu -->
+    <string name="viewer_copy_all">Copy All</string>
+    <string name="viewer_call">Call</string>
+    <string name="viewer_email">Email</string>
+
+    <!-- Details sheet -->
+    <string name="viewer_unnamed">Unnamed</string>
+    <string name="viewer_allow_location">Allow location access to see where photos were taken</string>
+    <string name="viewer_add_caption">Add a Caption</string>
+    <string name="viewer_edit_caption">Edit caption</string>
+    <string name="viewer_looks_like">Looks like</string>
+    <string name="viewer_subtitles">Subtitles</string>
+    <string name="viewer_copy_with_times">Copy with Times</string>
+    <string name="viewer_export_srt">Export SRT</string>
+    <string name="viewer_export_vtt">Export VTT</string>
+    <string name="viewer_all_metadata">All Metadata</string>
+    <string name="viewer_show">Show</string>
+    <string name="viewer_nothing_readable">Nothing readable in this file</string>
+    <!-- After the local time when the photo was taken in another time zone, e.g. "3:40 PM your time". -->
+    <string name="viewer_your_time">%1$s your time</string>
+    <string name="viewer_adjust">Adjust</string>
+    <string name="viewer_camera">Camera</string>
+    <string name="viewer_camera_front">Front camera</string>
+    <string name="viewer_camera_ultra_wide">Ultra-wide</string>
+    <string name="viewer_camera_wide">Wide</string>
+    <string name="viewer_camera_telephoto">Telephoto</string>
+    <string name="viewer_megapixels">%1$d MP</string>
+    <string name="viewer_bit_depth">%1$d-bit</string>
+    <string name="viewer_motion_photo">Motion Photo</string>
+    <string name="viewer_slow_motion">Slow motion · %1$d fps</string>
+    <string name="viewer_audio">Audio: %1$s</string>
+    <string name="viewer_audio_mono">Mono</string>
+    <string name="viewer_audio_stereo">Stereo</string>
+    <plurals name="viewer_audio_channels">
+        <item quantity="one">%d channel</item>
+        <item quantity="other">%d channels</item>
+    </plurals>
+    <string name="viewer_location">Location</string>
+    <string name="viewer_open_in_maps">Open in Maps</string>
+    <!-- Which way the camera faced, e.g. "Facing NE". -->
+    <string name="viewer_facing">Facing %1$s</string>
+    <!-- Compass points, also used for coordinates (N/S latitude, E/W longitude). -->
+    <string name="viewer_compass_n">N</string>
+    <string name="viewer_compass_ne">NE</string>
+    <string name="viewer_compass_e">E</string>
+    <string name="viewer_compass_se">SE</string>
+    <string name="viewer_compass_s">S</string>
+    <string name="viewer_compass_sw">SW</string>
+    <string name="viewer_compass_w">W</string>
+    <string name="viewer_compass_nw">NW</string>
+    <string name="viewer_internal_storage">Internal storage</string>
+    <!-- Where the file came from, e.g. "From WhatsApp". -->
+    <string name="viewer_from">From %1$s</string>
+    <string name="viewer_added">Added %1$s</string>
+    <string name="viewer_modified">Modified %1$s</string>
+    <string name="viewer_flash">Flash</string>
+    <string name="viewer_manual_wb">Manual WB</string>
+    <string name="viewer_video">Video</string>
+    <string name="viewer_photo">Photo</string>
+    <!-- A video's container, e.g. "MP4 video". -->
+    <string name="viewer_format_video">%1$s video</string>
+
+    <!-- Set as Wallpaper -->
+    <string name="viewer_wallpaper_hint">Drag and pinch to frame it</string>
+    <string name="viewer_wallpaper_home">Home Screen</string>
+    <string name="viewer_wallpaper_lock">Lock Screen</string>
+    <string name="viewer_wallpaper_both">Both</string>
+    <string name="viewer_wallpaper_set_home">Wallpaper set on the home screen</string>
+    <string name="viewer_wallpaper_set_lock">Wallpaper set on the lock screen</string>
+    <string name="viewer_wallpaper_set_both">Wallpaper set on both screens</string>
+    <string name="viewer_wallpaper_failed">Couldn\'t set the wallpaper</string>
+
+    <!-- Map -->
+    <string name="viewer_map">Map</string>
+
+    <!-- Components: dialogs and menus -->
+    <string name="components_adjust_date_title">Adjust Date &amp; Time</string>
+    <!-- The photo's current date and time. -->
+    <string name="components_adjust_date_original">Original: %1$s</string>
+    <!-- Shown only when adjusting more than one item. -->
+    <plurals name="components_adjust_date_many">
+        <item quantity="one">This sets the earliest of the %d item; the others move by the same amount, keeping their order.</item>
+        <item quantity="other">This sets the earliest of the %d items; the others move by the same amount, keeping their order.</item>
+    </plurals>
+    <string name="components_adjust">Adjust</string>
+    <string name="components_selected">Selected</string>
+</resources>

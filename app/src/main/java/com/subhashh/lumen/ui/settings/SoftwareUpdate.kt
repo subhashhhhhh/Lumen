@@ -11,6 +11,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import com.subhashh.lumen.R
 import com.subhashh.lumen.data.LumenPrefs
 import com.subhashh.lumen.data.Updater
 import com.subhashh.lumen.ui.components.Confirmation
@@ -61,7 +63,7 @@ object UpdateSession {
                 Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${context.packageName}"))
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
             )
-            toast(context, "Allow Lumen to install apps, then tap Install again")
+            toast(context, context.getString(R.string.settings_update_allow_install))
             return
         }
         state = State.Downloading(0f)
@@ -70,14 +72,14 @@ object UpdateSession {
                 val apk = Updater.download(context, release) { f -> scope.launch { state = State.Downloading(f) } }
                 if (!Updater.signedLikeUs(context, apk)) {
                     apk.delete()
-                    toast(context, "This update isn't signed like your Lumen, so it wasn't installed")
+                    toast(context, context.getString(R.string.settings_update_not_signed))
                     state = State.Result(Updater.Check.Available(release))
                     return@launch
                 }
                 state = State.Installing
                 Updater.install(context, apk)
             } catch (e: Exception) {
-                toast(context, "The update couldn't be downloaded")
+                toast(context, context.getString(R.string.settings_update_download_failed))
             }
             state = State.Result(Updater.Check.Available(release))
         }
@@ -98,34 +100,42 @@ internal fun ColumnScope.SoftwareUpdateGroup(highlight: String?, onConfirm: (Con
     val state = UpdateSession.state
     val available = ((state as? UpdateSession.State.Result)?.check as? Updater.Check.Available)?.release
     Group(
-        "Software Update",
-        footer = "Updates come from Lumen's releases on GitHub. Checking only asks GitHub for the latest " +
-            "version; nothing about you or your photos is sent.",
+        stringResource(R.string.settings_software_update),
+        footer = stringResource(R.string.settings_software_update_footer),
     ) {
         Anchor("software-update", highlight) {
             SettingsRow(
-                title = if (available != null) "Lumen ${available.version}" else "Software Update",
+                title = if (available != null) {
+                    stringResource(R.string.settings_update_lumen_version, available.version)
+                } else {
+                    stringResource(R.string.settings_software_update)
+                },
                 value = when (state) {
-                    UpdateSession.State.Idle -> prefs.availableUpdate?.let { "Version $it" } ?: "Check Now"
-                    UpdateSession.State.Checking -> "Checking…"
-                    is UpdateSession.State.Downloading -> "Downloading ${(state.fraction * 100).toInt()}%"
-                    UpdateSession.State.Installing -> "Installing…"
+                    UpdateSession.State.Idle -> prefs.availableUpdate?.let { stringResource(R.string.settings_version_value, it) }
+                        ?: stringResource(R.string.settings_update_check_now)
+                    UpdateSession.State.Checking -> stringResource(R.string.settings_update_checking)
+                    is UpdateSession.State.Downloading -> stringResource(R.string.settings_update_downloading, (state.fraction * 100).toInt())
+                    UpdateSession.State.Installing -> stringResource(R.string.settings_update_installing)
                     is UpdateSession.State.Result -> when (val check = state.check) {
-                        Updater.Check.UpToDate -> "Up to Date"
-                        Updater.Check.NoReleases -> "No Releases Yet"
-                        is Updater.Check.Failed -> "Couldn't Check"
-                        is Updater.Check.Available -> "Install"
+                        Updater.Check.UpToDate -> stringResource(R.string.settings_update_up_to_date)
+                        Updater.Check.NoReleases -> stringResource(R.string.settings_update_no_releases)
+                        is Updater.Check.Failed -> stringResource(R.string.settings_update_check_failed)
+                        is Updater.Check.Available -> stringResource(R.string.common_install)
                     }
                 },
                 onClick = {
                     if (available != null) {
-                        val size = if (available.apkBytes > 0) " (%.0f MB)".format(available.apkBytes / 1_000_000f) else ""
+                        val message = if (available.apkBytes > 0) {
+                            context.getString(R.string.settings_update_confirm_message_size, available.apkBytes / 1_000_000f)
+                        } else {
+                            context.getString(R.string.settings_update_confirm_message)
+                        }
                         onConfirm(
                             Confirmation(
-                                title = "Install Lumen ${available.version}?",
-                                message = "Downloads the update$size from GitHub, then Android asks to install it.",
+                                title = context.getString(R.string.settings_update_confirm_title, available.version),
+                                message = message,
                                 details = releaseChanges(available.notes).ifBlank { null },
-                                confirm = "Install",
+                                confirm = context.getString(R.string.common_install),
                                 onConfirm = { UpdateSession.install(context, available) },
                             ),
                         )
@@ -140,13 +150,13 @@ internal fun ColumnScope.SoftwareUpdateGroup(highlight: String?, onConfirm: (Con
         Divider()
         Anchor("auto-update", highlight) {
             ToggleRow(
-                title = "Check Automatically",
+                title = stringResource(R.string.settings_update_check_automatically),
                 checked = auto,
                 onCheckedChange = {
                     auto = it
                     prefs.autoUpdateCheck = it
                 },
-                subtitle = "Once a day, when Lumen opens",
+                subtitle = stringResource(R.string.settings_update_check_automatically_subtitle),
                 icon = LumenIcons.Repeat,
                 iconColor = Gray,
             )

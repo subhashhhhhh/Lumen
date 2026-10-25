@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Text produced by the data layer (data/). -->
+<resources>
+    <!-- Storage -->
+    <string name="data_internal_storage">Internal storage</string>
+
+    <!-- Share, clipboard and print -->
+    <string name="data_photo">Photo</string>
+
+    <!-- Details → All Metadata: one row per video stream -->
+    <string name="data_metadata_track">Track %1$d</string>
+
+    <!-- Software update -->
+    <string name="data_update_install_failed">The update couldn\'t be installed</string>
+</resources>

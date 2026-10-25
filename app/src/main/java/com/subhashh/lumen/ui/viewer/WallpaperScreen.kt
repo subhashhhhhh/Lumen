@@ -34,6 +34,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
@@ -44,6 +45,7 @@ import coil3.SingletonImageLoader
 import coil3.request.ImageRequest
 import coil3.request.allowHardware
 import coil3.size.Scale
+import com.subhashh.lumen.R
 import com.subhashh.lumen.data.MediaItem
 import com.subhashh.lumen.ui.components.pressable
 import kotlinx.coroutines.Dispatchers
@@ -118,7 +120,7 @@ fun WallpaperScreen(
                 dstSize = IntSize(shownW.roundToInt(), shownH.roundToInt()),
             )
         }
-        val apply = { which: Int, label: String ->
+        val apply = { which: Int, done: String ->
             if (!applying) {
                 applying = true
                 scope.launch {
@@ -136,13 +138,13 @@ fun WallpaperScreen(
                         }.isSuccess
                     }
                     applying = false
-                    onDone(if (ok) "Wallpaper set on $label" else "Couldn't set the wallpaper")
+                    onDone(if (ok) done else context.getString(R.string.viewer_wallpaper_failed))
                 }
             }
         }
 
         Text(
-            "Drag and pinch to frame it",
+            stringResource(R.string.viewer_wallpaper_hint),
             color = Color.White,
             fontSize = 14.sp,
             modifier = Modifier
@@ -160,10 +162,10 @@ fun WallpaperScreen(
                 .fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            WallpaperButton("Home Screen") { apply(WallpaperManager.FLAG_SYSTEM, "the home screen") }
-            WallpaperButton("Lock Screen") { apply(WallpaperManager.FLAG_LOCK, "the lock screen") }
-            WallpaperButton("Both") { apply(WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK, "both screens") }
-            WallpaperButton("Cancel", dim = true, onClick = onCancel)
+            WallpaperButton(stringResource(R.string.viewer_wallpaper_home)) { apply(WallpaperManager.FLAG_SYSTEM, context.getString(R.string.viewer_wallpaper_set_home)) }
+            WallpaperButton(stringResource(R.string.viewer_wallpaper_lock)) { apply(WallpaperManager.FLAG_LOCK, context.getString(R.string.viewer_wallpaper_set_lock)) }
+            WallpaperButton(stringResource(R.string.viewer_wallpaper_both)) { apply(WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK, context.getString(R.string.viewer_wallpaper_set_both)) }
+            WallpaperButton(stringResource(R.string.common_cancel), dim = true, onClick = onCancel)
         }
         if (applying) {
             Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)), contentAlignment = Alignment.Center) {

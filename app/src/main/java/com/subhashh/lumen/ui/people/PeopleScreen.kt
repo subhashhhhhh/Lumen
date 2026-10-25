@@ -18,6 +18,8 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.pluralStringResource
+import com.subhashh.lumen.R
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
@@ -102,7 +104,7 @@ fun PeopleScreen(
                 }
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    person.name ?: "%,d photos".format(person.mediaIds.size),
+                    person.name ?: pluralStringResource(R.plurals.main_person_photo_count, person.mediaIds.size, person.mediaIds.size),
                     fontSize = 14.sp,
                     fontWeight = if (person.name != null) FontWeight.Medium else FontWeight.Normal,
                     color = if (person.name != null) onBackground else onBackground.copy(alpha = 0.55f),

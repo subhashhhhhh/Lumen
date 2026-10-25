@@ -31,10 +31,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.subhashh.lumen.R
 import com.subhashh.lumen.data.ImageExport
 import com.subhashh.lumen.ui.icons.LumenIcons
 import com.subhashh.lumen.ui.theme.LocalDarkTheme
@@ -85,10 +88,14 @@ fun ResizeDialog(
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Spacer(Modifier.height(20.dp))
-                    Text("Resize or Convert", color = colors.text, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.settings_resize_title), color = colors.text, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        if (n == 1) "Saves a new copy next to the original." else "Saves new copies of $n photos next to the originals.",
+                        if (n == 1) {
+                            stringResource(R.string.settings_resize_message_one)
+                        } else {
+                            pluralStringResource(R.plurals.settings_resize_message, n, n)
+                        },
                         color = colors.secondary,
                         fontSize = 13.sp,
                         textAlign = TextAlign.Center,
@@ -96,7 +103,7 @@ fun ResizeDialog(
                     )
                     Spacer(Modifier.height(10.dp))
                     PickerRow(
-                        title = "Size",
+                        title = stringResource(R.string.settings_resize_size),
                         options = ImageExport.Target.entries.map { it.label },
                         selected = target.ordinal,
                         onSelect = { target = ImageExport.Target.entries[it] },
@@ -105,7 +112,7 @@ fun ResizeDialog(
                     )
                     Divider()
                     PickerRow(
-                        title = "Format",
+                        title = stringResource(R.string.settings_resize_format),
                         options = ImageExport.Format.entries.map { it.label },
                         selected = format.ordinal,
                         onSelect = { format = ImageExport.Format.entries[it] },
@@ -116,7 +123,7 @@ fun ResizeDialog(
                     if (format != ImageExport.Format.Png) {
                         Divider()
                         PickerRow(
-                            title = "Quality",
+                            title = stringResource(R.string.settings_resize_quality),
                             options = ImageExport.Quality.entries.map { it.label },
                             selected = quality.ordinal,
                             onSelect = { quality = ImageExport.Quality.entries[it] },
@@ -128,7 +135,7 @@ fun ResizeDialog(
                     Box(Modifier.fillMaxWidth().height(0.5.dp).background(colors.divider))
                     Row(Modifier.fillMaxWidth().height(50.dp)) {
                         Text(
-                            "Cancel",
+                            stringResource(R.string.common_cancel),
                             color = accent,
                             fontSize = 17.sp,
                             textAlign = TextAlign.Center,
@@ -139,7 +146,7 @@ fun ResizeDialog(
                         )
                         Box(Modifier.width(0.5.dp).height(50.dp).background(colors.divider))
                         Text(
-                            if (n == 1) "Save Copy" else "Save Copies",
+                            stringResource(if (n == 1) R.string.settings_resize_save_copy else R.string.settings_resize_save_copies),
                             color = accent,
                             fontSize = 17.sp,
                             fontWeight = FontWeight.SemiBold,

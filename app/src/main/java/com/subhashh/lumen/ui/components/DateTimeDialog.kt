@@ -40,10 +40,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.subhashh.lumen.R
 import com.subhashh.lumen.ui.theme.LocalDarkTheme
 import java.text.DateFormat
 import java.time.Instant
@@ -128,10 +131,10 @@ fun DateTimeDialog(
                     .padding(top = 20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Text("Adjust Date & Time", color = text, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.components_adjust_date_title), color = text, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    "Original: " + DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(start)),
+                    stringResource(R.string.components_adjust_date_original, DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(start))),
                     color = secondary,
                     fontSize = 13.sp,
                 )
@@ -169,7 +172,7 @@ fun DateTimeDialog(
                 )
                 if (count > 1) {
                     Text(
-                        "This sets the earliest of the $count items; the others move by the same amount, keeping their order.",
+                        pluralStringResource(R.plurals.components_adjust_date_many, count, count),
                         color = secondary,
                         fontSize = 13.sp,
                         textAlign = TextAlign.Center,
@@ -180,7 +183,7 @@ fun DateTimeDialog(
                 Box(Modifier.fillMaxWidth().height(0.5.dp).background(secondary.copy(alpha = 0.3f)))
                 Row(Modifier.fillMaxWidth().height(50.dp)) {
                     Text(
-                        "Cancel",
+                        stringResource(R.string.common_cancel),
                         color = accent,
                         fontSize = 17.sp,
                         textAlign = TextAlign.Center,
@@ -191,7 +194,7 @@ fun DateTimeDialog(
                     )
                     Box(Modifier.width(0.5.dp).height(50.dp).background(secondary.copy(alpha = 0.3f)))
                     Text(
-                        "Adjust",
+                        stringResource(R.string.components_adjust),
                         color = accent,
                         fontSize = 17.sp,
                         fontWeight = FontWeight.SemiBold,

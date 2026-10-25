@@ -1,6 +1,7 @@
 package com.subhashh.lumen.ui.settings
 
 import android.content.Intent
+import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -13,98 +14,100 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
+import com.subhashh.lumen.R
 
-private data class Credit(val name: String, val by: String, val license: String, val usedFor: String, val url: String)
+private data class Credit(val name: String, val by: String, val license: String, @StringRes val usedFor: Int, val url: String)
 
 private val Credits = listOf(
-    Credit("Backdrop", "Kyant0", "Apache 2.0", "The liquid glass you see everywhere in Lumen", "https://github.com/Kyant0/backdrop"),
+    Credit("Backdrop", "Kyant0", "Apache 2.0", R.string.licenses_used_backdrop, "https://github.com/Kyant0/backdrop"),
     Credit(
         "liquid_glass_easy",
         "Ahmed Gamil",
         "MIT",
-        "The motion of the glass selection pill in the tab bar",
+        R.string.licenses_used_liquid_glass_easy,
         "https://pub.dev/packages/liquid_glass_easy",
     ),
-    Credit("Telephoto", "Saket Narayan", "Apache 2.0", "Zooming and tiled loading of large photos", "https://github.com/saket/telephoto"),
-    Credit("Coil", "Coil Contributors", "Apache 2.0", "Image loading", "https://github.com/coil-kt/coil"),
+    Credit("Telephoto", "Saket Narayan", "Apache 2.0", R.string.licenses_used_telephoto, "https://github.com/saket/telephoto"),
+    Credit("Coil", "Coil Contributors", "Apache 2.0", R.string.licenses_used_coil, "https://github.com/coil-kt/coil"),
     Credit(
         "avif-coder (with libavif and dav1d)",
         "Radzivon Bartoshyk",
         "MIT · BSD",
-        "AVIF photos, on phones whose own decoder can't show them",
+        R.string.licenses_used_avif,
         "https://github.com/awxkee/avif-coder",
     ),
     Credit(
         "Jetpack Compose, Media3, AndroidX",
         "The Android Open Source Project",
         "Apache 2.0",
-        "UI, video playback, EXIF and the rest of the platform pieces",
+        R.string.licenses_used_androidx,
         "https://developer.android.com/jetpack",
     ),
-    Credit("Kotlin and kotlinx.coroutines", "JetBrains", "Apache 2.0", "The language and its async library", "https://kotlinlang.org"),
+    Credit("Kotlin and kotlinx.coroutines", "JetBrains", "Apache 2.0", R.string.licenses_used_kotlin, "https://kotlinlang.org"),
     Credit(
         "Fluent UI System Icons",
         "Microsoft",
         "MIT",
-        "Icons",
+        R.string.licenses_used_icons,
         "https://github.com/microsoft/fluentui-system-icons",
     ),
-    Credit("GeoNames", "GeoNames", "CC BY 4.0", "Offline place names for photo locations", "https://www.geonames.org"),
+    Credit("GeoNames", "GeoNames", "CC BY 4.0", R.string.licenses_used_geonames, "https://www.geonames.org"),
     Credit(
         "SigLIP 2",
         "Google",
         "Apache 2.0",
-        "Smart Search, Accurate: the model that understands what's in photos",
+        R.string.licenses_used_siglip,
         "https://huggingface.co/google/siglip2-base-patch16-224",
     ),
     Credit(
         "OpenCLIP ViT-B/32 (LAION-2B) and CLIP's tokenizer",
         "LAION, OpenCLIP authors, OpenAI",
         "MIT",
-        "Smart Search, Fast",
+        R.string.licenses_used_openclip,
         "https://github.com/mlfoundations/open_clip",
     ),
     Credit(
         "Immich",
         "Immich contributors",
         "AGPL-3.0 (models: their original licenses)",
-        "The ONNX exports Lumen's search models are converted from; no Immich code is used",
+        R.string.licenses_used_immich,
         "https://huggingface.co/immich-app",
     ),
     Credit(
         "PP-OCRv6 small",
         "PaddlePaddle authors (Baidu)",
         "Apache 2.0",
-        "Reading text in photos and videos",
+        R.string.licenses_used_ocr,
         "https://huggingface.co/PaddlePaddle/PP-OCRv6_small_det_onnx",
     ),
-    Credit("YuNet", "Shiqi Yu (OpenCV Zoo)", "MIT", "Finding faces", "https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet"),
+    Credit("YuNet", "Shiqi Yu (OpenCV Zoo)", "MIT", R.string.licenses_used_yunet, "https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet"),
     Credit(
         "SFace",
         "Zhong et al. (OpenCV Zoo)",
         "Apache 2.0",
-        "Telling faces apart, to group them into people",
+        R.string.licenses_used_sface,
         "https://github.com/opencv/opencv_zoo/tree/main/models/face_recognition_sface",
     ),
     Credit(
         "Whistle and the needle engine",
         "Cactus Compute",
         "Apache 2.0",
-        "Subtitles: speech to text on the phone",
+        R.string.licenses_used_whistle,
         "https://huggingface.co/Cactus-Compute/whistle",
     ),
-    Credit("Silero VAD", "Silero Team", "MIT", "Subtitles: finding where people speak", "https://github.com/snakers4/silero-vad"),
-    Credit("ONNX Runtime", "Microsoft", "MIT", "Runs most of Lumen's models on the phone", "https://github.com/microsoft/onnxruntime"),
-    Credit("LiteRT", "Google", "Apache 2.0", "Runs models on the phone's GPU", "https://github.com/google-ai-edge/LiteRT"),
-    Credit("Recognize Anything", "The Recognize Anything authors", "Apache 2.0", "The words for \"Looks like\" and search suggestions", "https://github.com/xinyu1205/recognize-anything"),
-    Credit("MapLibre Native", "MapLibre contributors", "BSD 2-Clause", "Draws the maps in photo details", "https://github.com/maplibre/maplibre-native"),
-    Credit("OpenFreeMap", "Zsolt Ero", "MIT (styles), free tile hosting", "The map tiles and styles", "https://openfreemap.org"),
-    Credit("OpenMapTiles", "MapTiler and contributors", "BSD 3-Clause / CC-BY 4.0", "The map tiles' schema and style design", "https://openmaptiles.org"),
-    Credit("OpenStreetMap", "OpenStreetMap contributors", "ODbL", "The map data", "https://www.openstreetmap.org/copyright"),
+    Credit("Silero VAD", "Silero Team", "MIT", R.string.licenses_used_silero, "https://github.com/snakers4/silero-vad"),
+    Credit("ONNX Runtime", "Microsoft", "MIT", R.string.licenses_used_onnx_runtime, "https://github.com/microsoft/onnxruntime"),
+    Credit("LiteRT", "Google", "Apache 2.0", R.string.licenses_used_litert, "https://github.com/google-ai-edge/LiteRT"),
+    Credit("Recognize Anything", "The Recognize Anything authors", "Apache 2.0", R.string.licenses_used_ram, "https://github.com/xinyu1205/recognize-anything"),
+    Credit("MapLibre Native", "MapLibre contributors", "BSD 2-Clause", R.string.licenses_used_maplibre, "https://github.com/maplibre/maplibre-native"),
+    Credit("OpenFreeMap", "Zsolt Ero", "MIT (styles), free tile hosting", R.string.licenses_used_openfreemap, "https://openfreemap.org"),
+    Credit("OpenMapTiles", "MapTiler and contributors", "BSD 3-Clause / CC-BY 4.0", R.string.licenses_used_openmaptiles, "https://openmaptiles.org"),
+    Credit("OpenStreetMap", "OpenStreetMap contributors", "ODbL", R.string.licenses_used_osm, "https://www.openstreetmap.org/copyright"),
 )
 
 @Composable
@@ -112,14 +115,14 @@ fun LicensesScreen(contentPadding: PaddingValues, modifier: Modifier = Modifier)
     val context = LocalContext.current
     val colors = groupColors()
     SettingsPage(contentPadding, modifier) {
-        LargeTitle("Licenses")
+        LargeTitle(stringResource(R.string.licenses_title))
         Text(
-            "Lumen is free and open source under the Apache License 2.0. It's built on the work of these open-source projects. Tap one to visit it.",
+            stringResource(R.string.licenses_intro),
             fontSize = 15.sp,
             color = colors.secondary,
             modifier = Modifier.padding(start = 4.dp, end = 4.dp, bottom = 4.dp),
         )
-        Group("Credits") {
+        Group(stringResource(R.string.licenses_credits)) {
             Credits.forEachIndexed { index, credit ->
                 if (index > 0) Divider()
                 Column(
@@ -136,7 +139,7 @@ fun LicensesScreen(contentPadding: PaddingValues, modifier: Modifier = Modifier)
                 ) {
                     Text(credit.name, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = colors.text)
                     Text("${credit.by} · ${credit.license}", fontSize = 13.sp, color = colors.secondary)
-                    Text(credit.usedFor, fontSize = 13.sp, color = colors.secondary)
+                    Text(stringResource(credit.usedFor), fontSize = 13.sp, color = colors.secondary)
                 }
             }
         }

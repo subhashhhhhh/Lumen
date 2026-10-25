@@ -183,6 +183,9 @@ import com.subhashh.lumen.ui.search.SearchField
 import com.subhashh.lumen.data.SearchIndex
 import com.subhashh.lumen.ai.SmartHit
 import com.subhashh.lumen.ai.SmartSearch
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import com.subhashh.lumen.R
 
 private val MediaPermissions = when {
     Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE -> arrayOf(
@@ -286,7 +289,6 @@ private fun MainScaffold(
         val gridIds = gridItems.mapTo(HashSet()) { it.id }
         picked = picked.filterKeys { it in chosen || it !in gridIds } + gridItems.filter { it.id in chosen }.associateBy { it.id }
     }
-    val pickTitle = pick?.let { if (it.multiple && picked.isNotEmpty()) "${picked.size} Selected" else it.title }
     val allItems by viewModel.allItems.collectAsState()
     val excluded by viewModel.excluded.collectAsState()
     val hidden by viewModel.hidden.collectAsState()
@@ -583,21 +585,21 @@ private fun MainScaffold(
                 .filter { seen.add(it.id) }.sortedByDescending { it.takenAt }
             val ofText = textMatches.orEmpty().mapNotNull { byId[it] }.filter { seen.add(it.id) }.sortedByDescending { it.takenAt }
             val ofSmart = smartHits.orEmpty().mapNotNull { hit -> byId[hit.mediaId]?.takeIf { seen.add(it.id) } }
-            return@remember listOf(SearchSection(SearchSection.All, "", keyword + ofCaptions + ofPeople + ofText + ofSmart))
+            return@remember listOf(SearchSection(SearchSection.All, 0, keyword + ofCaptions + ofPeople + ofText + ofSmart))
         }
         listOf(
-            SearchSection(SearchSection.Names, "Names, Folders and Dates", keyword),
-            SearchSection("captions", "Captions", captionMatches.orEmpty().mapNotNull { byId[it] }.sortedByDescending { it.takenAt }),
+            SearchSection(SearchSection.Names, R.string.main_search_section_names, keyword),
+            SearchSection("captions", R.string.main_search_section_captions, captionMatches.orEmpty().mapNotNull { byId[it] }.sortedByDescending { it.takenAt }),
             SearchSection(
-                SearchSection.People, "People",
+                SearchSection.People, R.string.main_people,
                 personIds.distinct().mapNotNull { byId[it] }.sortedByDescending { it.takenAt },
             ),
             SearchSection(
-                SearchSection.Text, "Text in Photos",
+                SearchSection.Text, R.string.main_search_section_text,
                 textMatches.orEmpty().mapNotNull { byId[it] }.sortedByDescending { it.takenAt },
             ),
             SearchSection(
-                SearchSection.Smart, "Smart Search", smartHits.orEmpty().mapNotNull { byId[it.mediaId] },
+                SearchSection.Smart, R.string.main_search_section_smart, smartHits.orEmpty().mapNotNull { byId[it.mediaId] },
                 scores = smartHits.orEmpty().associate { it.mediaId to it.score },
             ),
         )
@@ -626,6 +628,7 @@ private fun MainScaffold(
         val years = library.orEmpty().asReversed().asSequence()
             .map { java.util.Calendar.getInstance().apply { timeInMillis = it.takenAt }.get(java.util.Calendar.YEAR).toString() }
             .distinct().take(2).toList()
+        // Words the search index knows (in English for now), so they stay untranslated.
         listOf("Videos", "Screenshots", "Favorites") + years + folders.take(3).map { it.title }
     }
     var recentSearches by remember { mutableStateOf(prefs.recentSearches) }
@@ -679,19 +682,19 @@ private fun MainScaffold(
         curvedEdge = prefs.curvedEdge
     }
     val gridSectionMode = if (sort == LibrarySort.Date) sectionMode else SectionMode.None
-    val librarySections = remember(libraryItems, gridSectionMode) { GridSections.of(libraryItems, gridSectionMode) }
+    val librarySections = remember(libraryItems, gridSectionMode) { GridSections.of(context, libraryItems, gridSectionMode) }
     /** The open album's photos and their headers, shared by its grid and the viewer's close flight. */
     val openItems = remember(openCollection, library, trash, hidden, hiddenUnlocked, sort, sortDescending, allPeople) {
         openCollection?.takeIf { it != CollectionKeys.Hidden }?.let(itemsOf)
     }
     val collectionSections = remember(openItems, gridSectionMode, openCollection) {
-        openItems?.let { GridSections.of(it, if (openCollection == CollectionKeys.RecentlyDeleted) SectionMode.None else gridSectionMode) }
+        openItems?.let { GridSections.of(context, it, if (openCollection == CollectionKeys.RecentlyDeleted) SectionMode.None else gridSectionMode) }
     }
     /** [heroOf] with the name and count it shows. */
     val heroWithLabel = { key: String? ->
         heroOf(key)?.let { cover ->
-            val name = personOf(key)?.let { it.name ?: "Add Name" } ?: folders.firstOrNull { it.key == key }?.title.orEmpty()
-            cover.copy(title = name, subtitle = heroSubtitle(if (key == openCollection) openItems.orEmpty() else itemsOf(key!!)))
+            val name = personOf(key)?.let { it.name ?: context.getString(R.string.main_add_name) } ?: folders.firstOrNull { it.key == key }?.title.orEmpty()
+            cover.copy(title = name, subtitle = heroSubtitle(context, if (key == openCollection) openItems.orEmpty() else itemsOf(key!!)))
         }
     }
     // An album's or person's cover: the top 46% of the screen.
@@ -758,8 +761,8 @@ private fun MainScaffold(
             }
         }
     }
-    val months = remember(libraryItems) { periods(libraryItems, byYear = false) }
-    val years = remember(libraryItems) { periods(libraryItems, byYear = true) }
+    val months = remember(libraryItems) { periods(context, libraryItems, byYear = false) }
+    val years = remember(libraryItems) { periods(context, libraryItems, byYear = true) }
     // A new filter starts at its newest item, like opening the Library.
     // Also out of onboarding: the newest photos are the ones it showed, so they're on screen.
     LaunchedEffect(filter, sort, sortDescending, entrance) {
@@ -891,15 +894,15 @@ private fun MainScaffold(
         if (uri != null) scope.launch {
             val found = FavoritesImport.read(context, uri, library.orEmpty())
             if (found == null) {
-                toast("That isn't a Fossify or Aves favorites file")
+                toast(context.getString(R.string.main_favorites_import_bad_file))
                 return@launch
             }
             val toMark = found.matched.filterNot { it.isFavorite }
             when {
-                found.matched.isEmpty() -> toast("None of its ${found.listed} favorites are on this phone")
-                toMark.isEmpty() -> toast("All ${found.matched.size} are already favorites")
+                found.matched.isEmpty() -> toast(context.resources.getQuantityString(R.plurals.main_favorites_import_none, found.listed, found.listed))
+                toMark.isEmpty() -> toast(context.resources.getQuantityString(R.plurals.main_favorites_import_already, found.matched.size, found.matched.size))
                 else -> {
-                    toast("Found ${found.matched.size} of ${found.listed}; marking ${toMark.size} as favorites")
+                    toast(context.getString(R.string.main_favorites_import_found, found.matched.size, found.listed, toMark.size))
                     selectionLauncher.launch(
                         IntentSenderRequest.Builder(MediaActions.favoriteRequest(context, toMark, favorite = true)).build(),
                     )
@@ -912,7 +915,7 @@ private fun MainScaffold(
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         if (uri != null) scope.launch {
             val ok = SettingsBackup.export(context, library.orEmpty().filter { it.isFavorite }, uri)
-            toast(if (ok) "Settings exported" else "Couldn't save the backup")
+            toast(context.getString(if (ok) R.string.main_settings_exported else R.string.main_backup_save_failed))
         }
     }
     val restoreFavoritesLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) {
@@ -922,10 +925,10 @@ private fun MainScaffold(
         if (uri != null) scope.launch {
             val imported = SettingsBackup.import(context, uri)
             if (imported == null) {
-                toast("That isn't a Lumen backup")
+                toast(context.getString(R.string.main_backup_bad_file))
                 return@launch
             }
-            toast("Settings restored")
+            toast(context.getString(R.string.main_settings_restored))
             val toFavorite = library.orEmpty().filter { !it.isFavorite && (it.relativePath + it.name) in imported.favoritePaths }
             if (toFavorite.isEmpty()) {
                 activity?.recreate()
@@ -941,10 +944,9 @@ private fun MainScaffold(
         val missing = !HiddenMedia.available()
         if (missing) {
             confirmation = Confirmation(
-                title = "Hiding needs All files access",
-                message = "Android's media index skips hidden photos on purpose, so Lumen has to work with storage " +
-                    "directly to hide and show them. Nothing ever leaves your phone.",
-                confirm = "Open Settings",
+                title = context.getString(R.string.main_all_files_title),
+                message = context.getString(R.string.main_all_files_message),
+                confirm = context.getString(R.string.main_open_settings),
             ) {
                 runCatching {
                     context.startActivity(
@@ -990,10 +992,9 @@ private fun MainScaffold(
             HiddenLock.deviceCredential(host, onSuccess = reset)
         } else {
             confirmation = Confirmation(
-                title = "Reset Hidden lock?",
-                message = "Your phone has no screen lock, so anyone holding it could do this. Hidden photos stay hidden; " +
-                    "you'll set a new lock next.",
-                confirm = "Reset",
+                title = context.getString(R.string.main_reset_lock_title),
+                message = context.getString(R.string.main_reset_lock_message),
+                confirm = context.getString(R.string.main_reset),
                 destructive = true,
             ) { reset() }
         }
@@ -1011,7 +1012,7 @@ private fun MainScaffold(
             scope.launch {
                 val restored = vaulted.count { Vault.restore(context, it, hidden = false) != null }
                 viewModel.loadVault()
-                if (items.isEmpty()) afterHiddenChange(if (restored == vaulted.size) "Unhidden" else "Couldn't unhide ${vaulted.size - restored}")
+                if (items.isEmpty()) afterHiddenChange(if (restored == vaulted.size) context.getString(R.string.main_unhidden) else context.getString(R.string.main_unhide_failed_count, vaulted.size - restored))
             }
             if (items.isEmpty()) return@unhide
         }
@@ -1019,10 +1020,10 @@ private fun MainScaffold(
         val doable = plans.filterNot { it is HiddenMedia.Unhide.DotFolder }
         if (doable.isEmpty()) {
             val folder = plans.filterIsInstance<HiddenMedia.Unhide.DotFolder>().firstOrNull()?.folder?.name
-            toast("“$folder” is hidden by its dot-name; rename that folder in a file manager to unhide it")
+            toast(context.getString(R.string.main_unhide_dot_folder, folder))
             return@unhide
         }
-        val run = { scope.launch { afterHiddenChange(if (HiddenMedia.unhide(context, doable) > 0) "Unhidden" else "Couldn't unhide") } }
+        val run = { scope.launch { afterHiddenChange(context.getString(if (HiddenMedia.unhide(context, doable) > 0) R.string.main_unhidden else R.string.main_unhide_failed)) } }
         val folders = doable.filterIsInstance<HiddenMedia.Unhide.Folder>()
         if (folders.isEmpty()) {
             run()
@@ -1031,10 +1032,10 @@ private fun MainScaffold(
             val affected = hidden.orEmpty().count { HiddenMedia.file(it)?.parentFile?.absolutePath in folderSet }
             val name = folders.singleOrNull()?.folder?.name
             confirmation = Confirmation(
-                title = if (name != null) "Unhide “$name”?" else "Unhide ${folders.size} folders?",
-                message = "These are hidden as whole folders, so all $affected items in them show up again " +
-                    "in Lumen's library and in other gallery apps.",
-                confirm = "Unhide",
+                title = if (name != null) context.getString(R.string.main_unhide_folder_title, name)
+                else context.resources.getQuantityString(R.plurals.main_unhide_folders_title, folders.size, folders.size),
+                message = context.resources.getQuantityString(R.plurals.main_unhide_folders_message, affected, affected),
+                confirm = context.getString(R.string.common_unhide),
             ) { run() }
         }
     }
@@ -1045,14 +1046,14 @@ private fun MainScaffold(
             scope.launch {
                 val n = VaultMigration.hideIntoVault(context, items) { MediaFiles.filePath(context, it) }
                 if (!hiddenUnlocked) Vault.close()
-                afterHiddenChange(if (n == items.size) "Hidden and encrypted. Find it in Collections → Hidden" else "Hid $n of ${items.size}")
+                afterHiddenChange(if (n == items.size) context.getString(R.string.main_hidden_encrypted_find) else context.getString(R.string.main_hid_n_of, n, items.size))
             }
             return@hide
         }
         scope.launch {
             val paths = withContext(Dispatchers.IO) { items.mapNotNull { MediaFiles.filePath(context, it) } }
             val n = HiddenMedia.hide(context, paths)
-            afterHiddenChange(if (n == items.size) "Hidden. Find it in Collections → Hidden" else "Hid $n of ${items.size}")
+            afterHiddenChange(if (n == items.size) context.getString(R.string.main_hidden_find) else context.getString(R.string.main_hid_n_of, n, items.size))
         }
     }
     val hideFolders: (List<MediaItem>) -> Unit = hide@{ items ->
@@ -1068,29 +1069,32 @@ private fun MainScaffold(
             val name = folders.singleOrNull()?.name
             val encrypt = encryptHidden
             confirmation = Confirmation(
-                title = if (name != null) "Hide “$name”?" else "Hide ${folders.size} folders?",
-                message = if (encrypt) {
-                    "All $affected items in ${if (name != null) "it" else "them"} will be encrypted into Lumen's vault: " +
-                        "no other app can see them. They'll be in Collections → Hidden."
-                } else {
-                    "All $affected items in ${if (name != null) "it" else "them"} will be hidden from Lumen's library and " +
-                        "from apps that use Android's media index, like Google Photos. File managers, and galleries that " +
-                        "look at storage directly, can still see them. They'll be in Collections → Hidden."
-                },
-                confirm = "Hide",
+                title = if (name != null) context.getString(R.string.main_hide_folder_title, name)
+                else context.resources.getQuantityString(R.plurals.main_hide_folders_title, folders.size, folders.size),
+                message = context.resources.getQuantityString(
+                    when {
+                        encrypt && name != null -> R.plurals.main_hide_folder_encrypt_message
+                        encrypt -> R.plurals.main_hide_folders_encrypt_message
+                        name != null -> R.plurals.main_hide_folder_message
+                        else -> R.plurals.main_hide_folders_message
+                    },
+                    affected,
+                    affected,
+                ),
+                confirm = context.getString(R.string.common_hide),
             ) {
                 if (encrypt && Vault.open(appContext)) {
                     scope.launch {
                         val inFolders = library.orEmpty().filter { File(root, it.relativePath).absolutePath in paths }
                         val n = VaultMigration.hideIntoVault(context, inFolders) { MediaFiles.filePath(context, it) }
                         if (!hiddenUnlocked) Vault.close()
-                        afterHiddenChange(if (n == inFolders.size) "Hidden and encrypted" else "Hid $n of ${inFolders.size}")
+                        afterHiddenChange(if (n == inFolders.size) context.getString(R.string.main_hidden_and_encrypted) else context.getString(R.string.main_hid_n_of, n, inFolders.size))
                     }
                     return@Confirmation
                 }
                 scope.launch {
                     val n = HiddenMedia.hideFolders(context, folders)
-                    afterHiddenChange(if (n == paths.size) "Hidden. Find it in Collections → Hidden" else "Couldn't hide some folders")
+                    afterHiddenChange(context.getString(if (n == paths.size) R.string.main_hidden_find else R.string.main_hide_some_folders_failed))
                 }
             }
         }
@@ -1111,7 +1115,7 @@ private fun MainScaffold(
                 else -> false
             }
             if (!opened) {
-                toast("This vault was made with a different Lumen lock; enter that one to open it")
+                toast(context.getString(R.string.main_vault_wrong_lock))
                 return@launch
             }
             vaultProgress = VaultProgress(encrypting = on, progress = null)
@@ -1129,9 +1133,14 @@ private fun MainScaffold(
             viewModel.refresh()
             toast(
                 when {
-                    result.failed > 0 -> "${result.moved} done, ${result.failed} couldn't be ${if (on) "encrypted" else "decrypted"} and stayed as they were"
-                    on -> if (result.moved == 0) "Encrypt Hidden is on" else "Encrypted ${result.moved} hidden items"
-                    else -> "Decrypted ${result.moved} items; they're hidden the usual way again"
+                    result.failed > 0 -> context.getString(
+                        if (on) R.string.main_vault_partial_encrypt else R.string.main_vault_partial_decrypt,
+                        result.moved,
+                        result.failed,
+                    )
+                    on -> if (result.moved == 0) context.getString(R.string.main_encrypt_hidden_on)
+                    else context.resources.getQuantityString(R.plurals.main_encrypted_items, result.moved, result.moved)
+                    else -> context.resources.getQuantityString(R.plurals.main_decrypted_items, result.moved, result.moved)
                 },
             )
         }
@@ -1149,16 +1158,16 @@ private fun MainScaffold(
     val deleteHidden: (List<MediaItem>) -> Unit = { items ->
         val n = items.size
         confirmation = Confirmation(
-            title = if (n == 1) "Delete this item?" else "Delete $n items?",
-            message = "Hidden items can't go to Recently Deleted, so this is permanent.",
-            confirm = "Delete",
+            title = if (n == 1) context.getString(R.string.main_delete_this_item) else context.resources.getQuantityString(R.plurals.main_delete_items_title, n, n),
+            message = context.getString(R.string.main_delete_hidden_message),
+            confirm = context.getString(R.string.common_delete),
             destructive = true,
         ) {
             scope.launch {
                 val (vaulted, plain) = items.partition(Vault::isVault)
                 val deleted = HiddenMedia.delete(plain) + vaulted.count(Vault::delete)
                 if (vaulted.isNotEmpty()) viewModel.loadVault()
-                afterHiddenChange(if (deleted == n) "Deleted" else "Couldn't delete ${n - deleted} of $n")
+                afterHiddenChange(if (deleted == n) context.getString(R.string.main_deleted) else context.getString(R.string.main_delete_failed, n - deleted, n))
             }
         }
     }
@@ -1193,8 +1202,8 @@ private fun MainScaffold(
         endSelection()
         val name = folders.singleOrNull()?.trimEnd('/')?.substringAfterLast('/')
         toast(
-            (if (name != null) "Excluded “$name”." else "Excluded ${folders.size} folders.") +
-                " Undo in Settings → Excluded folders",
+            if (name != null) context.getString(R.string.main_excluded_name, name)
+            else context.resources.getQuantityString(R.plurals.main_excluded_folders, folders.size, folders.size),
         )
     }
 
@@ -1206,8 +1215,8 @@ private fun MainScaffold(
         if (CollectionKeys.hiddenFolderId(openCollection.orEmpty()) != null) openCollection = CollectionKeys.Hidden
         val name = folders.singleOrNull()?.trimEnd('/')?.substringAfterLast('/')
         toast(
-            (if (name != null) "Excluded “$name”." else "Excluded ${folders.size} folders.") +
-                " Undo in Settings → Excluded folders",
+            if (name != null) context.getString(R.string.main_excluded_name, name)
+            else context.resources.getQuantityString(R.plurals.main_excluded_folders, folders.size, folders.size),
         )
     }
 
@@ -1244,13 +1253,13 @@ private fun MainScaffold(
             withWriteAccess(request.items) {
                 scope.launch {
                     val result = MediaFiles.move(context, request.items, target.relativePath)
-                    finish(fileMessage("Moved", "move", result, target.title))
+                    finish(fileMessage(context, move = true, result, target.title))
                 }
             }
         } else {
             scope.launch {
                 val result = MediaFiles.copy(context, request.items, target.relativePath)
-                finish(fileMessage("Copied", "copy", result, target.title))
+                finish(fileMessage(context, move = false, result, target.title))
             }
         }
     }
@@ -1260,10 +1269,10 @@ private fun MainScaffold(
             withWriteAccess(rotatable) {
                 scope.launch {
                     // Videos are remuxed, which takes a moment for long ones.
-                    if (rotatable.any { it.isVideo }) toast("Rotating…")
+                    if (rotatable.any { it.isVideo }) toast(context.getString(R.string.main_rotating))
                     val result = MediaFiles.rotate(context, rotatable, degrees)
                     // Success shows itself (the photo turns); only a failure needs a message.
-                    finish(if (result.failed == 0) null else "Couldn't rotate ${result.failed} of ${rotatable.size}")
+                    finish(if (result.failed == 0) null else context.getString(R.string.main_rotate_failed, result.failed, rotatable.size))
                 }
             }
         }
@@ -1323,9 +1332,9 @@ private fun MainScaffold(
                     else -> people
                 },
                 title = when {
-                    from != null -> "Merge with…"
-                    peopleSelection.isNullOrEmpty() -> if (peopleSelection != null) "Select People" else "People"
-                    else -> "${peopleSelection!!.size} Selected"
+                    from != null -> stringResource(R.string.main_merge_with_ellipsis)
+                    peopleSelection.isNullOrEmpty() -> stringResource(if (peopleSelection != null) R.string.main_select_people else R.string.main_people)
+                    else -> pluralStringResource(R.plurals.main_n_selected, peopleSelection!!.size, peopleSelection!!.size)
                 },
                 selection = if (from == null) peopleSelection else null,
                 onSelectionChange = { if (from == null && pick == null) peopleSelection = it },
@@ -1337,12 +1346,13 @@ private fun MainScaffold(
                 onOpen = { key ->
                     val target = personOf(key)
                     if (from != null && target != null) {
-                        val fromName = from.name ?: "this person"
+                        val fromName = from.name ?: context.getString(R.string.main_this_person)
+                        val targetName = target.name ?: context.getString(R.string.main_the_person_you_chose)
                         confirmation = Confirmation(
-                            title = "Merge People?",
-                            message = "Photos of $fromName and ${target.name ?: "the person you chose"} will show as one person" +
-                                ((target.name ?: from.name)?.let { ", named $it." } ?: "."),
-                            confirm = "Merge",
+                            title = context.getString(R.string.main_merge_people_title),
+                            message = (target.name ?: from.name)?.let { context.getString(R.string.main_merge_people_message_named, fromName, targetName, it) }
+                                ?: context.getString(R.string.main_merge_people_message, fromName, targetName),
+                            confirm = context.getString(R.string.main_merge),
                             onConfirm = {
                                 mergeFrom = null
                                 personFromPeople = false
@@ -1361,7 +1371,7 @@ private fun MainScaffold(
     }
     val collectionsPage: @Composable (Modifier) -> Unit = { pageModifier ->
         CollectionsScreen(
-            title = albumSelection?.let { albumSelectionTitle(it.size, "Album") } ?: "Collections",
+            title = albumSelection?.let { albumSelectionTitle(it.size, folders = false) } ?: stringResource(R.string.main_collections),
             columns = albumColumns,
             onColumnsChange = onAlbumColumns,
             selection = albumSelection,
@@ -1475,41 +1485,37 @@ private fun MainScaffold(
                                 biometrics = false
                             } else if (HiddenLock.biometricsAvailable(host)) {
                                 // Turning it on proves the fingerprint or face works first.
-                                HiddenLock.biometric(host, "Cancel", onSuccess = {
+                                HiddenLock.biometric(host, context.getString(R.string.common_cancel), onSuccess = {
                                     lockStore.biometrics = true
                                     biometrics = true
                                 }, onFallback = {})
                             } else {
-                                toast("Add a fingerprint or face in your phone's settings first")
+                                toast(context.getString(R.string.main_biometrics_missing))
                             }
                         },
                         excludedCount = excluded.size,
                         encryptHidden = encryptHidden,
                         onToggleEncryptHidden = toggle@{ on ->
                             if (!lockStore.isSet) {
-                                toast("Set up a Lumen lock first (Privacy → Set Up Lumen Lock)")
+                                toast(context.getString(R.string.main_lock_needed_for_encrypt))
                                 return@toggle
                             }
                             if (needsAllFiles()) return@toggle
                             confirmation = if (on) {
                                 Confirmation(
-                                    title = "Encrypt Hidden?",
-                                    message = (hidden?.filterNot(Vault::isVault)?.size?.let { "$it hidden items move" } ?: "Everything in Hidden moves") +
-                                        " into an encrypted vault that no other app or file manager can read (excluded folders stay as they are). " +
-                                        "It stays on your storage, so it survives uninstalling Lumen; your Lumen lock opens it again.\n\n" +
-                                        "If you uninstall Lumen and forget your lock, these files can't be recovered by anyone. " +
-                                        "A password is safer than a short PIN.",
-                                    confirm = "Encrypt",
+                                    title = context.getString(R.string.main_encrypt_hidden_title),
+                                    message = hidden?.filterNot(Vault::isVault)?.size?.let { context.resources.getQuantityString(R.plurals.main_encrypt_hidden_message_count, it, it) }
+                                        ?: context.getString(R.string.main_encrypt_hidden_message_all),
+                                    confirm = context.getString(R.string.main_encrypt),
                                 ) {
                                     pendingEncryption = true
                                     lockFlow = LockFlow.Confirm
                                 }
                             } else {
                                 Confirmation(
-                                    title = "Stop encrypting Hidden?",
-                                    message = "Everything in the vault is decrypted back to where it was, hidden the usual way: " +
-                                        "out of your library, but visible to file managers and some galleries.",
-                                    confirm = "Decrypt",
+                                    title = context.getString(R.string.main_decrypt_hidden_title),
+                                    message = context.getString(R.string.main_decrypt_hidden_message),
+                                    confirm = context.getString(R.string.main_decrypt),
                                 ) {
                                     pendingEncryption = false
                                     lockFlow = LockFlow.Confirm
@@ -1536,10 +1542,9 @@ private fun MainScaffold(
                         },
                         onImport = {
                             confirmation = Confirmation(
-                                title = "Import settings?",
-                                message = "Your current settings, album arrangement and exclusions are replaced by the backup's. " +
-                                    "Favorites in it are added to yours.",
-                                confirm = "Import",
+                                title = context.getString(R.string.main_import_settings_title),
+                                message = context.getString(R.string.main_import_settings_message),
+                                confirm = context.getString(R.string.main_import),
                             ) { importLauncher.launch(arrayOf("application/json", "application/octet-stream", "text/plain")) }
                         },
                     )
@@ -1563,7 +1568,7 @@ private fun MainScaffold(
                     }
                     tab == LumenTab.Library -> Box(Modifier.nestedScroll(zoomBarScroll)) {
                         LibraryScreen(
-                            title = pickTitle ?: selection?.let { selectionTitle(selectedItems) } ?: "Library",
+                            title = pickTitle(pick, picked.size) ?: selection?.let { selectionTitle(selectedItems) } ?: stringResource(R.string.main_library),
                             selection = if (pick?.multiple == true) picked.keys else selection,
                             onSelectionChange = {
                                 when {
@@ -1624,7 +1629,7 @@ private fun MainScaffold(
                         encrypted = encryptHidden,
                         folders = hiddenFolderList,
                         gridState = hiddenGrid,
-                        title = albumSelection?.let { albumSelectionTitle(it.size, "Folder") } ?: "Hidden",
+                        title = albumSelection?.let { albumSelectionTitle(it.size, folders = true) } ?: stringResource(R.string.main_hidden),
                         columns = albumColumns,
                         onColumnsChange = onAlbumColumns,
                         selection = albumSelection,
@@ -1648,8 +1653,8 @@ private fun MainScaffold(
                             val cover = heroWithLabel(key)
                             val items = openItems ?: itemsOf(key)
                             LibraryScreen(
-                                title = pickTitle ?: selection?.let { selectionTitle(selectedItems) }
-                                    ?: personOf(key)?.let { it.name ?: "Add Name" }
+                                title = pickTitle(pick, picked.size) ?: selection?.let { selectionTitle(selectedItems) }
+                                    ?: personOf(key)?.let { it.name ?: stringResource(R.string.main_add_name) }
                                     ?: (utilities + folders).firstOrNull { it.key == key }?.title
                                     ?: hiddenFolderList?.firstOrNull { it.collection.key == key }?.collection?.title.orEmpty(),
                                 selection = if (pick?.multiple == true) picked.keys else selection,
@@ -1674,8 +1679,9 @@ private fun MainScaffold(
                                 hero = cover?.let { c -> { heroModifier -> CoverHeader(c, coverTransition, heroModifier) } },
                                 heroHeight = heroHeight,
                                 modifier = Modifier.coverPage(coverTransition),
-                                emptyText = if (key.startsWith("empty:")) "This album is empty.\nAdd photos with ⋯ → Move to Album or Copy to Album."
-                                else "No photos or videos",
+                                emptyText = stringResource(
+                                    if (key.startsWith("empty:")) R.string.main_album_empty_hint else R.string.main_no_photos_or_videos,
+                                ),
                                 transition = transition,
                                 onOpen = { index -> openViewer(key, index) },
                             )
@@ -1737,14 +1743,15 @@ private fun MainScaffold(
         ) {
             GlassTextButton(
                 backdrop = backdrop,
-                text = "Empty",
+                text = stringResource(R.string.main_empty_trash),
                 onClick = {
                     val n = trash.size
                     // With Media management on, Android deletes without asking; so Lumen always asks.
                     confirmation = Confirmation(
-                        title = "Empty Recently Deleted?",
-                        message = if (n == 1) "This item will be deleted forever." else "All $n items will be deleted forever.",
-                        confirm = "Delete Forever",
+                        title = context.getString(R.string.main_empty_trash_title),
+                        message = if (n == 1) context.getString(R.string.main_empty_trash_message_one)
+                        else context.resources.getQuantityString(R.plurals.main_empty_trash_message, n, n),
+                        confirm = context.getString(R.string.main_delete_forever_title_case),
                         destructive = true,
                     ) {
                         selectionLauncher.launch(
@@ -1762,7 +1769,7 @@ private fun MainScaffold(
         if (pick != null && !searching && !viewerOpen) {
             GlassTextButton(
                 backdrop = backdrop,
-                text = "Cancel",
+                text = stringResource(R.string.common_cancel),
                 onClick = onCancelPick,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
@@ -1773,7 +1780,7 @@ private fun MainScaffold(
         if (pick?.multiple == true && picked.isNotEmpty()) {
             GlassTextButton(
                 backdrop = backdrop,
-                text = "Add ${picked.size}",
+                text = stringResource(R.string.main_pick_add_count, picked.size),
                 onClick = { onPicked(picked.values.toList()) },
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
@@ -1792,7 +1799,7 @@ private fun MainScaffold(
                 GlassIconButton(
                     backdrop = backdrop,
                     icon = LumenIcons.Filter,
-                    contentDescription = "View options",
+                    contentDescription = stringResource(R.string.main_view_options),
                     onClick = { menuOpen = !menuOpen },
                     // Blue while a filter is on, like iOS, so a filtered library is never a surprise.
                     tint = if (filter != LibraryFilter.All) MaterialTheme.colorScheme.primary else LocalGlassColors.current.content,
@@ -1800,7 +1807,7 @@ private fun MainScaffold(
                 GlassIconButton(
                     backdrop = backdrop,
                     icon = LumenIcons.Settings,
-                    contentDescription = "Settings",
+                    contentDescription = stringResource(R.string.common_settings),
                     onClick = { settingsPage = SettingsMain },
                 )
             }
@@ -1826,14 +1833,14 @@ private fun MainScaffold(
                 GlassIconButton(
                     backdrop = backdrop,
                     icon = LumenIcons.Filter,
-                    contentDescription = "Album options",
+                    contentDescription = stringResource(R.string.main_album_options),
                     onClick = { collectionsMenuOpen = !collectionsMenuOpen },
                     modifier = leaving,
                 )
                 GlassIconButton(
                     backdrop = backdrop,
                     icon = LumenIcons.Settings,
-                    contentDescription = "Settings",
+                    contentDescription = stringResource(R.string.common_settings),
                     onClick = { settingsPage = SettingsMain },
                     // A person's ⋯ grows out of this one instead (below), in its place.
                     modifier = if (openCollection != null && CollectionKeys.personId(openCollection) != null) Modifier.graphicsLayer { alpha = 0f } else leaving,
@@ -1847,11 +1854,11 @@ private fun MainScaffold(
             onDismiss = { collectionsMenuOpen = false },
             sections = listOf(
                 AlbumSort.entries.map { sort ->
-                    MenuItem("Sort by ${sort.label}", checked = sort == albumSettings.sort) {
+                    MenuItem(context.getString(R.string.main_sort_by, sort.label), checked = sort == albumSettings.sort) {
                         updateAlbums { it.copy(sort = sort) }
                     }
                 },
-                listOf(MenuItem("New Album…") { albumNameRequest = AlbumNameRequest(album = null) }),
+                listOf(MenuItem(stringResource(R.string.main_new_album_ellipsis)) { albumNameRequest = AlbumNameRequest(album = null) }),
             ),
             origin = TransformOrigin(1f, 0f),
             modifier = Modifier
@@ -1865,7 +1872,7 @@ private fun MainScaffold(
             GlassIconButton(
                 backdrop = backdrop,
                 icon = LumenIcons.Filter,
-                contentDescription = "People options",
+                contentDescription = stringResource(R.string.main_people_options),
                 onClick = { peopleMenuOpen = !peopleMenuOpen },
                 modifier = Modifier
                     .align(Alignment.TopEnd)
@@ -1879,13 +1886,13 @@ private fun MainScaffold(
             open = peopleMenuOpen && openCollection == CollectionKeys.People && inCollection,
             onDismiss = { peopleMenuOpen = false },
             sections = listOf(
-                listOf(false to "Circles", true to "Squares").map { (square, label) ->
-                    MenuItem(label, checked = peopleSquare == square) {
+                listOf(false to R.string.main_people_circles, true to R.string.main_people_squares).map { (square, label) ->
+                    MenuItem(context.getString(label), checked = peopleSquare == square) {
                         peopleSquare = square
                         prefs.peopleSquare = square
                     }
                 },
-                listOf(MenuItem("Show Hidden People", checked = showHiddenPeople) { showHiddenPeople = !showHiddenPeople }),
+                listOf(MenuItem(stringResource(R.string.main_show_hidden_people), checked = showHiddenPeople) { showHiddenPeople = !showHiddenPeople }),
             ),
             origin = TransformOrigin(1f, 0f),
             modifier = Modifier
@@ -1903,7 +1910,7 @@ private fun MainScaffold(
                 from = if (coverFromPeople) LumenIcons.Filter else LumenIcons.Settings,
                 to = LumenIcons.More,
                 fraction = { coverTransition.chrome() },
-                contentDescription = "Person options",
+                contentDescription = stringResource(R.string.main_person_options),
                 onClick = {},
                 modifier = Modifier
                     .align(Alignment.TopEnd)
@@ -1914,7 +1921,7 @@ private fun MainScaffold(
             GlassIconButton(
                 backdrop = backdrop,
                 icon = LumenIcons.More,
-                contentDescription = "Person options",
+                contentDescription = stringResource(R.string.main_person_options),
                 onClick = { personMenuOpen = !personMenuOpen },
                 modifier = Modifier
                     .align(Alignment.TopEnd)
@@ -1929,17 +1936,17 @@ private fun MainScaffold(
             onDismiss = { personMenuOpen = false },
             sections = listOf(
                 listOf(
-                    MenuItem(if (openPerson?.name == null) "Add Name…" else "Rename…") { personNameRequest = openPerson },
-                    MenuItem("Merge with…") {
+                    MenuItem(stringResource(if (openPerson?.name == null) R.string.main_add_name_ellipsis else R.string.main_rename_ellipsis)) { personNameRequest = openPerson },
+                    MenuItem(stringResource(R.string.main_merge_with_ellipsis)) {
                         mergeFrom = openPerson?.id
                         openCollection = CollectionKeys.People
                     },
                 ),
                 listOf(
-                    if (openPerson?.hidden == true) MenuItem("Unhide Person") {
+                    if (openPerson?.hidden == true) MenuItem(stringResource(R.string.main_unhide_person)) {
                         val id = openPerson.id
                         scope.launch(Dispatchers.IO) { com.subhashh.lumen.ai.FaceStore.of(context).setHidden(id, false) }
-                    } else MenuItem("Hide Person") {
+                    } else MenuItem(stringResource(R.string.main_hide_person)) {
                         val id = openPerson?.id ?: return@MenuItem
                         openCollection = if (personFromPeople) CollectionKeys.People else null
                         scope.launch(Dispatchers.IO) { com.subhashh.lumen.ai.FaceStore.of(context).setHidden(id, true) }
@@ -1957,7 +1964,7 @@ private fun MainScaffold(
             GlassIconButton(
                 backdrop = backdrop,
                 icon = LumenIcons.Back,
-                contentDescription = "Back",
+                contentDescription = stringResource(R.string.common_back),
                 onClick = {
                     when {
                         inSettings -> popSettings()
@@ -2068,19 +2075,26 @@ private fun MainScaffold(
                 horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
             ) {
-                GlassTextButton(backdrop, "Merge", onClick = merge@{
+                GlassTextButton(backdrop, stringResource(R.string.main_merge), onClick = merge@{
                     if (chosen.size < 2) {
-                        toast("Select two or more people to merge")
+                        toast(context.getString(R.string.main_merge_select_two))
                         return@merge
                     }
                     // The named one stays (else whoever has the most photos); the rest join them.
                     val keep = chosen.sortedWith(compareBy<com.subhashh.lumen.ai.Person> { it.name == null }.thenByDescending { it.mediaIds.size }).first()
                     val names = chosen.mapNotNull { it.name }.distinct()
                     confirmation = Confirmation(
-                        title = "Merge ${chosen.size} People?",
-                        message = "Their photos will show as one person" + (keep.name?.let { ", named $it." } ?: ".") +
-                            if (names.size > 1) " The other names (${names.filter { it != keep.name }.joinToString()}) go." else "",
-                        confirm = "Merge",
+                        title = context.resources.getQuantityString(R.plurals.main_merge_people_count_title, chosen.size, chosen.size),
+                        message = when {
+                            keep.name == null -> context.getString(R.string.main_merge_many_message)
+                            names.size > 1 -> context.getString(
+                                R.string.main_merge_many_message_named_others,
+                                keep.name,
+                                names.filter { it != keep.name }.joinToString(),
+                            )
+                            else -> context.getString(R.string.main_merge_many_message_named, keep.name)
+                        },
+                        confirm = context.getString(R.string.main_merge),
                         onConfirm = {
                             endSelection()
                             scope.launch(Dispatchers.IO) {
@@ -2090,7 +2104,7 @@ private fun MainScaffold(
                         },
                     )
                 })
-                GlassTextButton(backdrop, if (chosen.isNotEmpty() && chosen.all { it.hidden }) "Unhide" else "Hide", onClick = hide@{
+                GlassTextButton(backdrop, stringResource(if (chosen.isNotEmpty() && chosen.all { it.hidden }) R.string.common_unhide else R.string.common_hide), onClick = hide@{
                     if (chosen.isEmpty()) return@hide
                     val hide = !chosen.all { it.hidden }
                     endSelection()
@@ -2158,29 +2172,29 @@ private fun MainScaffold(
                 val many = if (albumSelection != null) albumSelection.orEmpty().size > 1
                 else selectedItems.map { it.relativePath }.distinct().size > 1
                 listOf(
-                    listOf(MenuItem(if (many) "Exclude Folders" else "Exclude Folder") { excludeFromHidden(selectedItems) }),
+                    listOf(MenuItem(stringResource(if (many) R.string.main_exclude_folders else R.string.main_exclude_folder)) { excludeFromHidden(selectedItems) }),
                 )
             } else if (albumSelection != null) {
                 // Whole albums: arrange them, move or copy their contents, or hide / exclude the folders.
                 val chosen = folders.filter { it.key in albumSelection.orEmpty() }
                 listOf(
                     listOfNotNull(
-                        chosen.singleOrNull()?.let { album -> MenuItem("Rename Album…") { albumNameRequest = AlbumNameRequest(album) } },
+                        chosen.singleOrNull()?.let { album -> MenuItem(stringResource(R.string.main_rename_album_ellipsis)) { albumNameRequest = AlbumNameRequest(album) } },
                         if (chosen.isNotEmpty() && chosen.all { it.pinned }) {
-                            MenuItem("Unpin") {
+                            MenuItem(stringResource(R.string.main_unpin)) {
                                 val paths = chosen.map { it.relativePath }.toSet()
                                 updateAlbums { it.copy(pinned = it.pinned.filterNot(paths::contains)) }
                                 endSelection()
                             }
                         } else {
-                            MenuItem("Pin to Top") {
+                            MenuItem(stringResource(R.string.main_pin_to_top)) {
                                 val add = chosen.filterNot { it.pinned }.map { it.relativePath }
                                 updateAlbums { it.copy(pinned = it.pinned + add) }
                                 endSelection()
                             }
                         },
                         if (chosen.any { it.customCover }) {
-                            MenuItem("Reset Cover") {
+                            MenuItem(stringResource(R.string.main_reset_cover)) {
                                 val paths = chosen.map { it.relativePath }.toSet()
                                 updateAlbums { it.copy(covers = it.covers.filterKeys { p -> p !in paths }) }
                                 endSelection()
@@ -2188,12 +2202,12 @@ private fun MainScaffold(
                         } else null,
                     ),
                     listOf(
-                        MenuItem("Move to Album…") { albumRequest = AlbumRequest(move = true, items = selectedItems) },
-                        MenuItem("Copy to Album…") { albumRequest = AlbumRequest(move = false, items = selectedItems) },
+                        MenuItem(stringResource(R.string.main_move_to_album_ellipsis)) { albumRequest = AlbumRequest(move = true, items = selectedItems) },
+                        MenuItem(stringResource(R.string.main_copy_to_album_ellipsis)) { albumRequest = AlbumRequest(move = false, items = selectedItems) },
                     ),
                     listOf(
-                        MenuItem(if (albumSelection.orEmpty().size > 1) "Hide Folders" else "Hide Folder") { hideFolders(selectedItems) },
-                        MenuItem(if (albumSelection.orEmpty().size > 1) "Exclude Folders" else "Exclude Folder") {
+                        MenuItem(stringResource(if (albumSelection.orEmpty().size > 1) R.string.main_hide_folders else R.string.main_hide_folder)) { hideFolders(selectedItems) },
+                        MenuItem(stringResource(if (albumSelection.orEmpty().size > 1) R.string.main_exclude_folders else R.string.main_exclude_folder)) {
                             excludeFolders(selectedItems)
                         },
                     ),
@@ -2210,19 +2224,19 @@ private fun MainScaffold(
                     )
                 },
                 listOf(
-                    MenuItem("Move to Album…") { albumRequest = AlbumRequest(move = true, items = selectedItems) },
-                    MenuItem("Copy to Album…") { albumRequest = AlbumRequest(move = false, items = selectedItems) },
+                    MenuItem(stringResource(R.string.main_move_to_album_ellipsis)) { albumRequest = AlbumRequest(move = true, items = selectedItems) },
+                    MenuItem(stringResource(R.string.main_copy_to_album_ellipsis)) { albumRequest = AlbumRequest(move = false, items = selectedItems) },
                 ),
                 listOfNotNull(
                     if (selectedItems.any(MediaFiles::canRotate)) rotateMenu { rotate(selectedItems, it) } else null,
-                    MenuItem("Adjust Date & Time…") { dateRequest = selectedItems },
-                    if (selectedItems.any { !it.isVideo }) MenuItem("Resize or Convert…") {
+                    MenuItem(stringResource(R.string.main_adjust_date_time_ellipsis)) { dateRequest = selectedItems },
+                    if (selectedItems.any { !it.isVideo }) MenuItem(stringResource(R.string.main_resize_or_convert_ellipsis)) {
                         resizeRequest = selectedItems.filterNot { it.isVideo }
                     } else null,
                 ),
-                listOf(MenuItem("Hide") { hide(selectedItems) }),
+                listOf(MenuItem(stringResource(R.string.common_hide)) { hide(selectedItems) }),
                 listOf(
-                    MenuItem("Slideshow") {
+                    MenuItem(stringResource(R.string.main_slideshow)) {
                         val key = selectableKey ?: return@MenuItem
                         val ids = selectedItems.mapTo(HashSet()) { it.id }
                         val first = selectableItems.indexOfFirst { it.id in ids }
@@ -2336,20 +2350,20 @@ private fun MainScaffold(
                 onMakeCover = when {
                     CollectionKeys.isFolder(source) -> { item ->
                         updateAlbums { it.copy(covers = it.covers + (item.relativePath to item.id)) }
-                        toast("Album cover updated")
+                        toast(context.getString(R.string.main_album_cover_updated))
                     }
                     personOf(source) != null -> { item ->
                         val id = personOf(source)!!.id
                         scope.launch(Dispatchers.IO) { com.subhashh.lumen.ai.FaceStore.of(context).setCover(id, item.id) }
-                        toast("Cover updated")
+                        toast(context.getString(R.string.main_cover_updated))
                     }
                     else -> null
                 },
-                coverLabel = if (personOf(source) != null) "Make Person Cover" else "Make Album Cover",
+                coverLabel = stringResource(if (personOf(source) != null) R.string.main_make_person_cover else R.string.main_make_album_cover),
                 notPerson = personOf(source)?.let { person ->
                     notPersonLabel(person) to { item ->
                         scope.launch(Dispatchers.IO) { com.subhashh.lumen.ai.FaceStore.of(context).notThisPerson(person.id, listOf(item.id)) }
-                        toast("Removed from ${person.name ?: "this person"}")
+                        toast(context.getString(R.string.main_removed_from, person.name ?: context.getString(R.string.main_this_person)))
                     }
                 },
                 onHide = { hide(listOf(it)) },
@@ -2363,7 +2377,7 @@ private fun MainScaffold(
 
         AlbumPicker(
             open = albumRequest != null,
-            title = if (albumRequest?.move == true) "Move to Album" else "Copy to Album",
+            title = stringResource(if (albumRequest?.move == true) R.string.main_move_to_album else R.string.main_copy_to_album),
             albums = folders,
             onPick = { target ->
                 albumRequest?.let { toAlbum(it, target) }
@@ -2375,7 +2389,7 @@ private fun MainScaffold(
 
         AlbumPicker(
             open = excludePicker,
-            title = "Exclude Folder",
+            title = stringResource(R.string.main_exclude_folder),
             albums = folders,
             onPick = { target ->
                 excludePicker = false
@@ -2413,11 +2427,11 @@ private fun MainScaffold(
                                 prefs.appLock = true
                                 appLockOn = true
                                 activity?.let(AppLock::settingsChanged)
-                                toast("App Lock is on")
+                                toast(context.getString(R.string.main_app_lock_on))
                             }
                         }
                         flow != LockFlow.Change -> showHidden()
-                        else -> toast("Lumen lock changed")
+                        else -> toast(context.getString(R.string.main_lock_changed))
                     }
                 },
                 onCancel = {
@@ -2436,8 +2450,8 @@ private fun MainScaffold(
 
         RenameDialog(
             currentName = if (enteringHfToken) "" else null,
-            title = "Hugging Face Token",
-            confirm = "Save",
+            title = stringResource(R.string.main_hf_token_title),
+            confirm = stringResource(R.string.common_save),
             keepExtension = false,
             onRename = { token ->
                 enteringHfToken = false
@@ -2456,7 +2470,7 @@ private fun MainScaffold(
                     withWriteAccess(listOf(item)) {
                         scope.launch {
                             val ok = MediaFiles.rename(context, item, newName)
-                            finish(if (ok) "Renamed to $newName" else "Couldn't rename: that name may already be taken")
+                            finish(if (ok) context.getString(R.string.main_renamed_to, newName) else context.getString(R.string.main_rename_failed))
                         }
                     }
                 }
@@ -2466,8 +2480,8 @@ private fun MainScaffold(
 
         RenameDialog(
             currentName = personNameRequest?.let { it.name ?: personNameSuggestion ?: "" },
-            title = if (personNameRequest?.name == null) "Add Name" else "Rename",
-            confirm = "Done",
+            title = stringResource(if (personNameRequest?.name == null) R.string.main_add_name else R.string.common_rename),
+            confirm = stringResource(R.string.common_done),
             keepExtension = false,
             onRename = { name ->
                 val person = personNameRequest
@@ -2498,8 +2512,8 @@ private fun MainScaffold(
         )
         RenameDialog(
             currentName = albumNameRequest?.let { it.album?.title ?: "" },
-            title = if (albumNameRequest?.album == null) "New Album" else "Rename Album",
-            confirm = if (albumNameRequest?.album == null) "Create" else "Rename",
+            title = stringResource(if (albumNameRequest?.album == null) R.string.main_new_album else R.string.main_rename_album),
+            confirm = stringResource(if (albumNameRequest?.album == null) R.string.main_create else R.string.common_rename),
             keepExtension = false,
             onRename = { name ->
                 val album = albumNameRequest?.album
@@ -2509,7 +2523,7 @@ private fun MainScaffold(
                     // New albums go in Pictures/, where any app may add photos without All files access.
                     val path = MediaFiles.newAlbumPath(clean)
                     if (folders.any { it.relativePath.equals(path, ignoreCase = true) }) {
-                        toast("There's already an album called “$clean”")
+                        toast(context.getString(R.string.main_album_exists, clean))
                     } else {
                         updateAlbums { it.copy(created = it.created + path) }
                         collectionsMenuOpen = false
@@ -2520,7 +2534,7 @@ private fun MainScaffold(
                     val newPath = (if (parent.isEmpty()) "" else "$parent/") + clean + "/"
                     when {
                         folders.any { it.relativePath.equals(newPath, ignoreCase = true) } ->
-                            toast("There's already an album called “$clean” there")
+                            toast(context.getString(R.string.main_album_exists_there, clean))
                         album.count == 0 -> {
                             updateAlbums { it.renamed(album.relativePath, newPath) }
                             endSelection()
@@ -2535,8 +2549,8 @@ private fun MainScaffold(
                                         when {
                                             result.failed == 0 -> null
                                             result.needsAllFilesAccess ->
-                                                "Couldn't rename “${album.title}”: that folder needs All files access (Settings → Permissions)"
-                                            else -> "Renamed ${result.done} of ${items.size}; ${result.failed} couldn't move"
+                                                context.getString(R.string.main_rename_album_needs_access, album.title)
+                                            else -> context.getString(R.string.main_rename_album_partial, result.done, items.size, result.failed)
                                         },
                                     )
                                 }
@@ -2566,15 +2580,16 @@ private fun MainScaffold(
                 val items = resizeRequest.orEmpty()
                 resizeRequest = null
                 scope.launch {
-                    if (items.size > 1) toast("Saving ${items.size} copies…")
+                    if (items.size > 1) toast(context.resources.getQuantityString(R.plurals.main_saving_copies, items.size, items.size))
                     val result = ImageExport.export(context, items, target, format, quality)
                     val where = result.folders.singleOrNull()?.trimEnd('/')?.substringAfterLast('/')
                     finish(
                         when {
-                            result.saved == 0 -> "Couldn't save the copy"
-                            result.failed > 0 -> "Saved ${result.saved} of ${items.size}"
-                            where != null -> if (result.saved == 1) "Saved a copy in $where" else "Saved ${result.saved} copies in $where"
-                            else -> "Saved ${result.saved} copies"
+                            result.saved == 0 -> context.getString(R.string.main_save_copy_failed)
+                            result.failed > 0 -> context.getString(R.string.main_saved_n_of, result.saved, items.size)
+                            where != null -> if (result.saved == 1) context.getString(R.string.main_saved_copy_in, where)
+                            else context.resources.getQuantityString(R.plurals.main_saved_copies_in, result.saved, result.saved, where)
+                            else -> context.resources.getQuantityString(R.plurals.main_saved_copies, result.saved, result.saved)
                         },
                     )
                 }
@@ -2598,10 +2613,10 @@ private fun MainScaffold(
                             val result = MediaDates.shift(context, items, delta)
                             finish(
                                 when {
-                                    result.failed == 0 -> if (items.size == 1) "Date changed" else "Dates changed"
+                                    result.failed == 0 -> context.getString(if (items.size == 1) R.string.main_date_changed else R.string.main_dates_changed)
                                     result.needsAllFilesAccess ->
-                                        "Changed ${result.done} of ${items.size}: videos and GIFs need All files access (Settings → Permissions)"
-                                    else -> "Changed ${result.done} of ${items.size}: HEIC and AVIF photos can't store a new date"
+                                        context.getString(R.string.main_dates_changed_needs_access, result.done, items.size)
+                                    else -> context.getString(R.string.main_dates_changed_heic, result.done, items.size)
                                 },
                             )
                         }
@@ -2648,7 +2663,16 @@ private const val HeroShare = 0.46f
 private data class AlbumNameRequest(val album: MediaCollection?)
 
 /** "Not Chiara", or "Not This Person" before they're named. */
-private fun notPersonLabel(person: com.subhashh.lumen.ai.Person) = person.name?.let { "Not $it" } ?: "Not This Person"
+@Composable
+private fun notPersonLabel(person: com.subhashh.lumen.ai.Person) =
+    person.name?.let { stringResource(R.string.main_not_person, it) } ?: stringResource(R.string.main_not_this_person)
+
+/** The picker's title: what's asked for, or how many are chosen; null when not picking. */
+@Composable
+private fun pickTitle(pick: PickRequest?, pickedCount: Int): String? = pick?.let {
+    if (it.multiple && pickedCount > 0) pluralStringResource(R.plurals.main_n_selected, pickedCount, pickedCount)
+    else stringResource(it.title)
+}
 
 @Composable
 private fun PermissionScreen(onGrant: () -> Unit) {
@@ -2659,35 +2683,36 @@ private fun PermissionScreen(onGrant: () -> Unit) {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text("Lumen", style = MaterialTheme.typography.displaySmall)
+        Text(stringResource(R.string.app_name), style = MaterialTheme.typography.displaySmall)
         Spacer(Modifier.height(12.dp))
         Text(
-            "Lumen needs access to your photos and videos. Everything stays on this device.",
+            stringResource(R.string.main_permission_message),
             textAlign = TextAlign.Center,
             style = MaterialTheme.typography.bodyLarge,
         )
         Spacer(Modifier.height(24.dp))
-        Button(onClick = onGrant) { Text("Allow access") }
+        Button(onClick = onGrant) { Text(stringResource(R.string.main_allow_access)) }
     }
 }
 
 /** "2 Albums Selected", "1 Folder Selected", or "Select Albums" when empty. */
-private fun albumSelectionTitle(n: Int, noun: String): String = when (n) {
-    0 -> "Select ${noun}s"
-    1 -> "1 $noun Selected"
-    else -> "$n ${noun}s Selected"
+@Composable
+private fun albumSelectionTitle(n: Int, folders: Boolean): String = when {
+    n == 0 -> stringResource(if (folders) R.string.main_select_folders else R.string.main_select_albums)
+    else -> pluralStringResource(if (folders) R.plurals.main_folders_selected else R.plurals.main_albums_selected, n, n)
 }
 
 /** "3 Photos Selected", "1 Video Selected", "5 Items Selected", or "Select Items" when empty. */
+@Composable
 private fun selectionTitle(selected: List<MediaItem>): String {
     val n = selected.size
-    if (n == 0) return "Select Items"
-    val noun = when {
-        selected.all { !it.isVideo } -> if (n == 1) "Photo" else "Photos"
-        selected.all { it.isVideo } -> if (n == 1) "Video" else "Videos"
-        else -> if (n == 1) "Item" else "Items"
+    if (n == 0) return stringResource(R.string.main_select_items)
+    val plurals = when {
+        selected.all { !it.isVideo } -> R.plurals.main_photos_selected
+        selected.all { it.isVideo } -> R.plurals.main_videos_selected
+        else -> R.plurals.main_items_selected
     }
-    return "$n $noun Selected"
+    return pluralStringResource(plurals, n, n)
 }
 
 /** [albumScope] for Collections' album list. */
@@ -2702,19 +2727,29 @@ private const val SettingsExcluded = "excluded"
 private data class AlbumRequest(val move: Boolean, val items: List<MediaItem>)
 
 /** One line after a copy or move: what happened, and why anything didn't. */
-private fun fileMessage(past: String, verb: String, result: FileResult, album: String): String {
-    val count = if (result.done == 1) "1 item" else "${result.done} items"
+private fun fileMessage(context: Context, move: Boolean, result: FileResult, album: String): String {
+    val res = context.resources
     return when {
-        result.failed == 0 && result.done == 0 -> "Already in $album"
-        result.failed == 0 -> "$past $count to $album"
+        result.failed == 0 && result.done == 0 -> context.getString(R.string.main_file_already_in, album)
+        result.failed == 0 ->
+            res.getQuantityString(if (move) R.plurals.main_file_moved else R.plurals.main_file_copied, result.done, result.done, album)
         result.needsAllFilesAccess ->
-            "Couldn't $verb into $album: that folder needs All files access (Settings → Permissions)"
-        result.done == 0 -> "Couldn't $verb to $album"
-        else -> "$past $count to $album; ${result.failed} failed"
+            context.getString(if (move) R.string.main_file_move_needs_access else R.string.main_file_copy_needs_access, album)
+        result.done == 0 -> context.getString(if (move) R.string.main_file_move_failed else R.string.main_file_copy_failed, album)
+        else -> res.getQuantityString(
+            if (move) R.plurals.main_file_moved_some_failed else R.plurals.main_file_copied_some_failed,
+            result.done,
+            result.done,
+            album,
+            result.failed,
+        )
     }
 }
 
-private val ScrollMonth = java.text.SimpleDateFormat("MMMM yyyy", java.util.Locale.getDefault())
+private val ScrollMonth = java.text.SimpleDateFormat(
+    android.text.format.DateFormat.getBestDateTimePattern(java.util.Locale.getDefault(), "MMMMyyyy"),
+    java.util.Locale.getDefault(),
+)
 
 /** How far to scroll one way before the bottom bar switches between tabs and Years / Months / All. */
 private val ZoomBarSwitchDistance = 40.dp

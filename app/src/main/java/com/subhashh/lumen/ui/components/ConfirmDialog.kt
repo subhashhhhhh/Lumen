@@ -10,6 +10,7 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import com.subhashh.lumen.R
 import com.subhashh.lumen.ui.theme.LocalDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,6 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -101,7 +103,7 @@ fun ConfirmDialog(confirmation: Confirmation?, onDismiss: () -> Unit) {
                 Box(Modifier.fillMaxWidth().height(0.5.dp).background(secondary.copy(alpha = 0.3f)))
                 Row(Modifier.fillMaxWidth().height(48.dp)) {
                     Text(
-                        "Cancel",
+                        stringResource(R.string.common_cancel),
                         color = Color(0xFF0A84FF),
                         fontSize = 17.sp,
                         textAlign = TextAlign.Center,

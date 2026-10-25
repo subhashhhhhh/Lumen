@@ -85,6 +85,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -96,7 +97,6 @@ import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.subhashh.lumen.R
 import com.subhashh.lumen.data.LumenPrefs
-import com.subhashh.lumen.ai.DownloadNotification.megabytes
 import com.subhashh.lumen.ai.FaceModel
 import com.subhashh.lumen.ai.ModelCatalog
 import com.subhashh.lumen.ai.ModelDownloads
@@ -244,7 +244,7 @@ private fun ColumnScope.Welcome(backdrop: Backdrop, onNext: () -> Unit) {
     com.subhashh.lumen.ui.components.AppIcon(132.dp, Modifier.align(Alignment.CenterHorizontally))
     Spacer(Modifier.height(18.dp))
     Text(
-        "Lumen",
+        stringResource(R.string.app_name),
         color = ink,
         fontSize = 44.sp,
         fontWeight = FontWeight.Bold,
@@ -252,7 +252,7 @@ private fun ColumnScope.Welcome(backdrop: Backdrop, onNext: () -> Unit) {
     )
     Spacer(Modifier.height(8.dp))
     Text(
-        "Your photos, smarter.\nAnd they never leave your phone.",
+        stringResource(R.string.onboarding_tagline),
         color = ink.copy(alpha = 0.8f),
         fontSize = 18.sp,
         textAlign = TextAlign.Center,
@@ -260,12 +260,12 @@ private fun ColumnScope.Welcome(backdrop: Backdrop, onNext: () -> Unit) {
     )
     Spacer(Modifier.height(32.dp))
     Card(backdrop) {
-        Item(LumenIcons.Lock, "No account", "Nothing to sign up for, nothing to sign in to")
-        Item(LumenIcons.Shield, "No cloud", "Search, faces and text are worked out on this phone")
-        Item(LumenIcons.Hide, "No Google", "No ads, no tracking, no Play Services")
+        Item(LumenIcons.Lock, stringResource(R.string.onboarding_no_account), stringResource(R.string.onboarding_no_account_detail))
+        Item(LumenIcons.Shield, stringResource(R.string.onboarding_no_cloud), stringResource(R.string.onboarding_no_cloud_detail))
+        Item(LumenIcons.Hide, stringResource(R.string.onboarding_no_google), stringResource(R.string.onboarding_no_google_detail))
     }
     Spacer(Modifier.weight(1f))
-    PrimaryButton(backdrop, "Get Started", onClick = onNext)
+    PrimaryButton(backdrop, stringResource(R.string.onboarding_get_started), onClick = onNext)
 }
 
 @Composable
@@ -284,31 +284,31 @@ private fun ColumnScope.Photos(backdrop: Backdrop, hasAccess: Boolean, onRequest
     val manage = remember(refresh) { Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && MediaStore.canManageMedia(context) }
     val askLocation = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { refresh++ }
 
-    Title("Your Photos", "Lumen shows the photos and videos already on your phone. Nothing is uploaded.")
+    Title(stringResource(R.string.onboarding_photos_title), stringResource(R.string.onboarding_photos_subtitle))
     Card(backdrop) {
-        Item(LumenIcons.Library, "Photos and Videos", "Needed to show your library") {
+        Item(LumenIcons.Library, stringResource(R.string.onboarding_photos_videos), stringResource(R.string.onboarding_photos_videos_detail)) {
             Toggle(hasAccess) { if (!hasAccess) onRequestAccess() }
         }
     }
     if (hasAccess) {
         Spacer(Modifier.height(16.dp))
-        Text("Optional", color = ink.copy(alpha = 0.6f), fontSize = 13.sp, modifier = Modifier.padding(start = 8.dp, bottom = 8.dp))
+        Text(stringResource(R.string.onboarding_optional), color = ink.copy(alpha = 0.6f), fontSize = 13.sp, modifier = Modifier.padding(start = 8.dp, bottom = 8.dp))
         Card(backdrop) {
-            Item(LumenIcons.Location, "Where Photos Were Taken", "For maps and place names") {
+            Item(LumenIcons.Location, stringResource(R.string.onboarding_location), stringResource(R.string.onboarding_location_detail)) {
                 Toggle(location) { if (!location) askLocation.launch(Manifest.permission.ACCESS_MEDIA_LOCATION) }
             }
-            Item(LumenIcons.Folder, "All Files", "Manage folders and hidden files, like Fossify") {
+            Item(LumenIcons.Folder, stringResource(R.string.onboarding_all_files), stringResource(R.string.onboarding_all_files_detail)) {
                 Toggle(allFiles) { context.openSpecial(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION) }
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                Item(LumenIcons.Delete, "Media Management", "Delete and favourite without asking each time") {
+                Item(LumenIcons.Delete, stringResource(R.string.onboarding_media_management), stringResource(R.string.onboarding_media_management_detail)) {
                     Toggle(manage) { context.openSpecial(Settings.ACTION_REQUEST_MANAGE_MEDIA) }
                 }
             }
         }
     }
     Spacer(Modifier.weight(1f))
-    PrimaryButton(backdrop, if (hasAccess) "Continue" else "Allow Access") { if (hasAccess) onNext() else onRequestAccess() }
+    PrimaryButton(backdrop, if (hasAccess) stringResource(R.string.common_continue) else stringResource(R.string.onboarding_allow_access)) { if (hasAccess) onNext() else onRequestAccess() }
 }
 
 /** Appearance: theme and glass, taking effect as they're tapped (it's the same look Settings sets). */
@@ -317,14 +317,14 @@ private fun ColumnScope.Look(backdrop: Backdrop, onNext: () -> Unit) {
     val appearance = com.subhashh.lumen.ui.theme.LocalAppearance.current
     val glass = com.subhashh.lumen.ui.theme.LocalGlass.current
     Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
-        Title("Appearance", "Pick how Lumen looks. You can change it any time in Settings.")
+        Title(stringResource(R.string.onboarding_look_title), stringResource(R.string.onboarding_look_subtitle))
         Card(backdrop) {
-            Item(LumenIcons.DarkTheme, "Theme", "Follow your phone, or always light or dark")
+            Item(LumenIcons.DarkTheme, stringResource(R.string.onboarding_theme), stringResource(R.string.onboarding_theme_detail))
             Row(Modifier.fillMaxWidth().padding(start = 38.dp, bottom = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 for (a in com.subhashh.lumen.ui.theme.Appearance.entries) {
                     val selected = a == appearance.current
                     Text(
-                        a.label,
+                        stringResource(a.labelRes),
                         color = ink,
                         fontSize = 13.sp,
                         fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
@@ -340,16 +340,16 @@ private fun ColumnScope.Look(backdrop: Backdrop, onNext: () -> Unit) {
         }
         Spacer(Modifier.height(12.dp))
         Card(backdrop) {
-            Item(LumenIcons.Image, "Liquid Glass", "Buttons, bars and menus made of glass. Off, they're solid") {
+            Item(LumenIcons.Image, stringResource(R.string.onboarding_liquid_glass), stringResource(R.string.onboarding_liquid_glass_detail)) {
                 Switch(glass.liquid, glass.onLiquid)
             }
-            Item(LumenIcons.Hide, "Reduce Blur", "Clearer glass with less blur, lighter on the GPU") {
+            Item(LumenIcons.Hide, stringResource(R.string.onboarding_reduce_blur), stringResource(R.string.onboarding_reduce_blur_detail)) {
                 Switch(glass.reduceBlur && glass.liquid, glass.onReduceBlur, enabled = glass.liquid)
             }
         }
     }
     Spacer(Modifier.height(12.dp))
-    PrimaryButton(backdrop, "Continue", onClick = onNext)
+    PrimaryButton(backdrop, stringResource(R.string.common_continue), onClick = onNext)
 }
 
 @Composable
@@ -374,6 +374,18 @@ private fun recommendedTier(context: Context) =
     } else {
         ModelCatalog.Fast
     }
+
+/** A download size, like the library's "%,d MB" but from resources. */
+@Composable
+private fun megabytes(bytes: Long): String = stringResource(R.string.onboarding_megabytes, bytes / 1_000_000)
+
+/** A search model's tier name; the library's [com.subhashh.lumen.ai.AiModel.label] is English only. */
+@Composable
+private fun tierLabel(model: com.subhashh.lumen.ai.AiModel): String = when (model) {
+    ModelCatalog.Accurate -> stringResource(R.string.onboarding_tier_accurate)
+    ModelCatalog.Fast -> stringResource(R.string.onboarding_tier_fast)
+    else -> model.label
+}
 
 @Composable
 private fun ColumnScope.Smart(backdrop: Backdrop, onNext: (downloading: Boolean) -> Unit) {
@@ -405,15 +417,15 @@ private fun ColumnScope.Smart(backdrop: Backdrop, onNext: (downloading: Boolean)
     val askNotifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { start() }
 
     Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
-        Title("Smart Features", "Find photos by what's in them, the words in them, and who's in them. The models download once, in the background.")
+        Title(stringResource(R.string.onboarding_smart_title), stringResource(R.string.onboarding_smart_subtitle))
         Card(backdrop) {
-            Item(LumenIcons.Search, "Smart Search", "“cat on a sofa”, “sunset at the beach” · ${megabytes(model.bytes)}") { Switch(search, { search = it }) }
+            Item(LumenIcons.Search, stringResource(R.string.onboarding_smart_search), stringResource(R.string.onboarding_smart_search_detail, megabytes(model.bytes))) { Switch(search, { search = it }) }
             if (search) {
                 Row(Modifier.fillMaxWidth().padding(start = 38.dp, bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     for (m in ModelCatalog.all) {
                         val selected = m.id == tier
                         Text(
-                            m.label + if (m == recommended) " · Recommended" else "",
+                            if (m == recommended) stringResource(R.string.onboarding_tier_recommended, tierLabel(m)) else tierLabel(m),
                             color = ink,
                             fontSize = 13.sp,
                             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
@@ -427,29 +439,29 @@ private fun ColumnScope.Smart(backdrop: Backdrop, onNext: (downloading: Boolean)
                     }
                 }
             }
-            Item(LumenIcons.Document, "Text in Photos", "Search the words in screenshots and videos · ${megabytes(OcrModel.bytes)}") { Switch(text, { text = it }) }
-            Item(LumenIcons.Image, "Faces", "Group photos by person · ${megabytes(FaceModel.bytes)}") { Switch(faces, { faces = it }) }
-            Item(LumenIcons.Video, "Subtitles", "Make subtitles for videos with CC · ${megabytes(SpeechModel.bytes)}") { Switch(subtitles, { subtitles = it }) }
+            Item(LumenIcons.Document, stringResource(R.string.onboarding_text), stringResource(R.string.onboarding_text_detail, megabytes(OcrModel.bytes))) { Switch(text, { text = it }) }
+            Item(LumenIcons.Image, stringResource(R.string.onboarding_faces), stringResource(R.string.onboarding_faces_detail, megabytes(FaceModel.bytes))) { Switch(faces, { faces = it }) }
+            Item(LumenIcons.Video, stringResource(R.string.onboarding_subtitles), stringResource(R.string.onboarding_subtitles_detail, megabytes(SpeechModel.bytes))) { Switch(subtitles, { subtitles = it }) }
         }
         Spacer(Modifier.height(12.dp))
         Card(backdrop) {
-            Item(LumenIcons.Settings, "Download on Wi-Fi Only", "Waits for Wi-Fi before downloading") { Switch(wifiOnly, { wifiOnly = it }) }
+            Item(LumenIcons.Settings, stringResource(R.string.onboarding_wifi_only), stringResource(R.string.onboarding_wifi_only_detail)) { Switch(wifiOnly, { wifiOnly = it }) }
         }
         Spacer(Modifier.height(10.dp))
         Text(
-            "Downloaded from Hugging Face. Your photos are never uploaded; everything runs on this phone.",
+            stringResource(R.string.onboarding_download_source),
             color = ink.copy(alpha = 0.6f),
             fontSize = 13.sp,
             modifier = Modifier.padding(horizontal = 8.dp),
         )
     }
     Spacer(Modifier.height(12.dp))
-    PrimaryButton(backdrop, if (total > 0) "Download in Background · ${megabytes(total)}" else "Continue", enabled = true) {
+    PrimaryButton(backdrop, if (total > 0) stringResource(R.string.onboarding_download_button, megabytes(total)) else stringResource(R.string.common_continue), enabled = true) {
         if (total == 0L) onNext(false)
         else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) askNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
         else start()
     }
-    SecondaryButton("Not Now") { onNext(false) }
+    SecondaryButton(stringResource(R.string.common_not_now)) { onNext(false) }
 }
 
 @Composable
@@ -458,10 +470,10 @@ private fun ColumnScope.Schedule(backdrop: Backdrop, onNext: () -> Unit) {
     val prefs = remember { LumenPrefs(context) }
     var overnight by rememberSaveable { mutableStateOf(prefs.indexScheduleOn) }
 
-    Title("When to Index", "Lumen looks through your photos once, in the background. Pick when.")
+    Title(stringResource(R.string.onboarding_schedule_title), stringResource(R.string.onboarding_schedule_subtitle))
     for ((night, title, subtitle) in listOf(
-        Triple(false, "While Charging", "Whenever your phone is plugged in"),
-        Triple(true, "Overnight", "1:00 – 7:00 AM, plugged in or not. Change the hours in Settings"),
+        Triple(false, stringResource(R.string.onboarding_while_charging), stringResource(R.string.onboarding_while_charging_detail)),
+        Triple(true, stringResource(R.string.onboarding_overnight), stringResource(R.string.onboarding_overnight_detail)),
     )) {
         val selected = overnight == night
         Box(
@@ -481,7 +493,7 @@ private fun ColumnScope.Schedule(backdrop: Backdrop, onNext: () -> Unit) {
         }
     }
     Spacer(Modifier.weight(1f))
-    PrimaryButton(backdrop, "Continue") {
+    PrimaryButton(backdrop, stringResource(R.string.common_continue)) {
         prefs.indexScheduleOn = overnight
         SmartIndex.schedule(context, replace = true)
         onNext()
@@ -576,11 +588,11 @@ private fun ColumnScope.Finish(backdrop: Backdrop, photos: List<MediaItem>, down
     Mosaic(tiles, Modifier.fillMaxWidth().weight(1f))
     Column(Modifier.graphicsLayer { alpha = fade.value }) {
         Spacer(Modifier.height(16.dp))
-        Text("You're All Set", color = ink, fontSize = 40.sp, fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+        Text(stringResource(R.string.onboarding_done_title), color = ink, fontSize = 40.sp, fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
         Spacer(Modifier.height(10.dp))
         Text(
-            if (downloading) "Smart Features download in the background.\nYou'll see their progress in your notifications."
-            else "Turn on Smart Features any time in Settings.",
+            if (downloading) stringResource(R.string.onboarding_done_downloading)
+            else stringResource(R.string.onboarding_done_later),
             color = ink.copy(alpha = 0.85f),
             fontSize = 16.sp,
             textAlign = TextAlign.Center,
@@ -589,7 +601,7 @@ private fun ColumnScope.Finish(backdrop: Backdrop, photos: List<MediaItem>, down
         Spacer(Modifier.height(28.dp))
         val background = MaterialTheme.colorScheme.background
         Box(Modifier.onGloballyPositioned { button = it.boundsInRoot().center }) {
-            PrimaryButton(backdrop, "Let's Go") {
+            PrimaryButton(backdrop, stringResource(R.string.onboarding_lets_go)) {
                 if (leaving) return@PrimaryButton
                 leaving = true
                 scope.launch {

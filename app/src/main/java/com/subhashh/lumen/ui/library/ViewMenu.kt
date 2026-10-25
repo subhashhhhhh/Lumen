@@ -1,6 +1,8 @@
 package com.subhashh.lumen.ui.library
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.ui.res.stringResource
+import com.subhashh.lumen.R
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -84,7 +86,7 @@ fun ViewMenu(
                 )
                 .padding(vertical = 8.dp),
         ) {
-            SectionLabel("Filter")
+            SectionLabel(stringResource(R.string.main_view_filter))
             LibraryFilter.entries.forEach { option ->
                 MenuRow(option.label, checked = option == filter) {
                     onFilter(option)
@@ -95,7 +97,7 @@ fun ViewMenu(
                 color = colors.contentSecondary.copy(alpha = 0.2f),
                 modifier = Modifier.padding(vertical = 6.dp),
             )
-            SectionLabel("Sort")
+            SectionLabel(stringResource(R.string.main_view_sort))
             LibrarySort.entries.forEach { option ->
                 // Picking a new sort starts in its natural direction; picking the current one keeps it.
                 MenuRow(option.label, checked = option == sort) {
@@ -115,12 +117,12 @@ fun ViewMenu(
                 color = colors.contentSecondary.copy(alpha = 0.2f),
                 modifier = Modifier.padding(vertical = 6.dp),
             )
-            SectionLabel("Grid")
-            MenuRow("Square", checked = !aspectRatioGrid) {
+            SectionLabel(stringResource(R.string.main_view_grid))
+            MenuRow(stringResource(R.string.main_view_square), checked = !aspectRatioGrid) {
                 onAspectRatioGrid(false)
                 onDismiss()
             }
-            MenuRow("Aspect Ratio", checked = aspectRatioGrid) {
+            MenuRow(stringResource(R.string.main_view_aspect_ratio), checked = aspectRatioGrid) {
                 onAspectRatioGrid(true)
                 onDismiss()
             }

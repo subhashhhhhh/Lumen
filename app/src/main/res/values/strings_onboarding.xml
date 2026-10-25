@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Activities -->
+    <string name="app_cant_open_file">Lumen can\'t open this file.</string>
+
+    <!-- Appearance choices (Theme.kt) -->
+    <string name="app_appearance_system">Match Phone</string>
+    <string name="app_appearance_light">Light</string>
+    <string name="app_appearance_dark">Dark</string>
+
+    <!-- Onboarding: welcome -->
+    <string name="onboarding_tagline">Your photos, smarter.\nAnd they never leave your phone.</string>
+    <string name="onboarding_no_account">No account</string>
+    <string name="onboarding_no_account_detail">Nothing to sign up for, nothing to sign in to</string>
+    <string name="onboarding_no_cloud">No cloud</string>
+    <string name="onboarding_no_cloud_detail">Search, faces and text are worked out on this phone</string>
+    <string name="onboarding_no_google">No Google</string>
+    <string name="onboarding_no_google_detail">No ads, no tracking, no Play Services</string>
+    <string name="onboarding_get_started">Get Started</string>
+
+    <!-- Onboarding: photo access -->
+    <string name="onboarding_photos_title">Your Photos</string>
+    <string name="onboarding_photos_subtitle">Lumen shows the photos and videos already on your phone. Nothing is uploaded.</string>
+    <string name="onboarding_photos_videos">Photos and Videos</string>
+    <string name="onboarding_photos_videos_detail">Needed to show your library</string>
+    <string name="onboarding_optional">Optional</string>
+    <string name="onboarding_location">Where Photos Were Taken</string>
+    <string name="onboarding_location_detail">For maps and place names</string>
+    <string name="onboarding_all_files">All Files</string>
+    <string name="onboarding_all_files_detail">Manage folders and hidden files, like Fossify</string>
+    <string name="onboarding_media_management">Media Management</string>
+    <string name="onboarding_media_management_detail">Delete and favourite without asking each time</string>
+    <string name="onboarding_allow_access">Allow Access</string>
+
+    <!-- Onboarding: appearance -->
+    <string name="onboarding_look_title">Appearance</string>
+    <string name="onboarding_look_subtitle">Pick how Lumen looks. You can change it any time in Settings.</string>
+    <string name="onboarding_theme">Theme</string>
+    <string name="onboarding_theme_detail">Follow your phone, or always light or dark</string>
+    <string name="onboarding_liquid_glass">Liquid Glass</string>
+    <string name="onboarding_liquid_glass_detail">Buttons, bars and menus made of glass. Off, they\'re solid</string>
+    <string name="onboarding_reduce_blur">Reduce Blur</string>
+    <string name="onboarding_reduce_blur_detail">Clearer glass with less blur, lighter on the GPU</string>
+
+    <!-- Onboarding: Smart Features -->
+    <string name="onboarding_smart_title">Smart Features</string>
+    <string name="onboarding_smart_subtitle">Find photos by what\'s in them, the words in them, and who\'s in them. The models download once, in the background.</string>
+    <string name="onboarding_smart_search">Smart Search</string>
+    <string name="onboarding_smart_search_detail">“cat on a sofa”, “sunset at the beach” · %1$s</string>
+    <string name="onboarding_tier_accurate">Accurate</string>
+    <string name="onboarding_tier_fast">Fast</string>
+    <string name="onboarding_tier_recommended">%1$s · Recommended</string>
+    <string name="onboarding_text">Text in Photos</string>
+    <string name="onboarding_text_detail">Search the words in screenshots and videos · %1$s</string>
+    <string name="onboarding_faces">Faces</string>
+    <string name="onboarding_faces_detail">Group photos by person · %1$s</string>
+    <string name="onboarding_subtitles">Subtitles</string>
+    <string name="onboarding_subtitles_detail">Make subtitles for videos with CC · %1$s</string>
+    <string name="onboarding_wifi_only">Download on Wi-Fi Only</string>
+    <string name="onboarding_wifi_only_detail">Waits for Wi-Fi before downloading</string>
+    <string name="onboarding_download_source">Downloaded from Hugging Face. Your photos are never uploaded; everything runs on this phone.</string>
+    <string name="onboarding_download_button">Download in Background · %1$s</string>
+    <string name="onboarding_megabytes">%1$,d MB</string>
+
+    <!-- Onboarding: when to index -->
+    <string name="onboarding_schedule_title">When to Index</string>
+    <string name="onboarding_schedule_subtitle">Lumen looks through your photos once, in the background. Pick when.</string>
+    <string name="onboarding_while_charging">While Charging</string>
+    <string name="onboarding_while_charging_detail">Whenever your phone is plugged in</string>
+    <string name="onboarding_overnight">Overnight</string>
+    <string name="onboarding_overnight_detail">1:00 – 7:00 AM, plugged in or not. Change the hours in Settings</string>
+
+    <!-- Onboarding: done -->
+    <string name="onboarding_done_title">You\'re All Set</string>
+    <string name="onboarding_done_downloading">Smart Features download in the background.\nYou\'ll see their progress in your notifications.</string>
+    <string name="onboarding_done_later">Turn on Smart Features any time in Settings.</string>
+    <string name="onboarding_lets_go">Let\'s Go</string>
+
+    <!-- Hidden: screen -->
+    <string name="hidden_name">Hidden</string>
+    <string name="hidden_unlocking_vault">Unlocking your vault…</string>
+    <string name="hidden_unlocking_vault_detail">Your files are safe; they\'re just encrypted.</string>
+    <string name="hidden_scanning">Looking for hidden photos…</string>
+    <string name="hidden_empty">Nothing hidden yet.\nUse ⋯ → Hide or Hide Folder on any photo.</string>
+    <string name="hidden_folder_count">Hidden folder · %1$d</string>
+    <plurals name="hidden_file_count">
+        <item quantity="one">%1$d hidden file</item>
+        <item quantity="other">%1$d hidden files</item>
+    </plurals>
+
+    <!-- Hidden: lock types and their stand-ins -->
+    <string name="hidden_lock_pin">PIN</string>
+    <string name="hidden_lock_pattern">Pattern</string>
+    <string name="hidden_lock_password">Password</string>
+    <string name="hidden_lock_word_entry">entry</string>
+    <string name="hidden_lock_word_it">it</string>
+    <string name="hidden_lock_word_lock">lock</string>
+
+    <!-- Hidden: system prompts -->
+    <string name="hidden_unlock_named">Unlock %1$s</string>
+    <string name="hidden_reset_lock_title">Reset Hidden lock</string>
+    <string name="hidden_reset_lock_subtitle">Confirm it\'s you with your phone\'s screen lock</string>
+    <string name="hidden_use_lock">Use %1$s</string>
+
+    <!-- Hidden: lock screen -->
+    <string name="hidden_too_many_tries">Too many tries. Wait %1$d s.</string>
+    <string name="hidden_wrong">Wrong %1$s</string>
+    <string name="hidden_pin_rule">Use 4 to 8 digits</string>
+    <string name="hidden_pattern_rule">Connect at least 4 dots</string>
+    <string name="hidden_password_rule">Use at least 4 characters</string>
+    <string name="hidden_mismatch">That didn\'t match. Try again.</string>
+    <string name="hidden_unlock">Unlock</string>
+    <string name="hidden_forgot">Forgot %1$s?</string>
+    <string name="hidden_new_lock">New Lock</string>
+    <string name="hidden_lock_hidden">Lock Hidden</string>
+    <string name="hidden_choose_subtitle">Choose how to lock your hidden photos. This is separate from your phone\'s lock.</string>
+    <string name="hidden_enter">Enter %1$s</string>
+    <string name="hidden_enter_current">Enter your current lock first</string>
+    <string name="hidden_confirm_you">Confirm it\'s you</string>
+    <string name="hidden_is_locked">%1$s is locked</string>
+    <string name="hidden_create_pin">Create a PIN</string>
+    <string name="hidden_pin_length">4 to 8 digits</string>
+    <string name="hidden_draw_pattern">Draw a Pattern</string>
+    <string name="hidden_create_password">Create a Password</string>
+    <string name="hidden_password_length">At least 4 characters</string>
+    <string name="hidden_confirm_type">Confirm %1$s</string>
+    <string name="hidden_enter_again">Enter it once more</string>
+    <string name="hidden_biometrics_title">Use Fingerprint or Face?</string>
+    <string name="hidden_biometrics_subtitle">Unlock Hidden faster. Your %1$s still works too.</string>
+    <string name="hidden_pin_hint">Numbers only, 4 to 8 digits</string>
+    <string name="hidden_pattern_hint">Connect dots on a 3 × 3 grid</string>
+    <string name="hidden_password_hint">Letters, numbers and symbols</string>
+    <string name="hidden_use_biometrics">Use Fingerprint or Face</string>
+
+    <!-- Hidden: moving into or out of the vault -->
+    <string name="hidden_vault_percent">%1$d%%</string>
+    <string name="hidden_vault_getting_ready">Getting ready…</string>
+    <string name="hidden_vault_opening">Opening the vault…</string>
+    <string name="hidden_vault_encrypting">Encrypting %1$d of %2$d</string>
+    <string name="hidden_vault_decrypting">Decrypting %1$d of %2$d</string>
+    <string name="hidden_vault_bytes">%1$s of %2$s</string>
+    <string name="hidden_vault_bytes_time">%1$s · %2$s</string>
+    <string name="hidden_vault_almost_done">almost done</string>
+    <string name="hidden_vault_seconds_left">about %1$d s left</string>
+    <string name="hidden_vault_minutes_left">about %1$d min left</string>
+    <string name="hidden_vault_hours_left">about %1$d h %2$d min left</string>
+    <string name="hidden_vault_encrypt_note">Each file is checked after encrypting, before its original is removed. Keep Lumen open.</string>
+    <string name="hidden_vault_decrypt_note">Files go back exactly where they were, still hidden. Keep Lumen open.</string>
+</resources>

@@ -40,13 +40,18 @@ import com.subhashh.lumen.data.MediaItem
 import com.subhashh.lumen.ui.images.version
 import com.subhashh.lumen.ui.components.pressable
 import com.subhashh.lumen.ui.images.ImageKeys
+import androidx.annotation.StringRes
+import android.content.Context
+import androidx.compose.ui.res.stringResource
+import com.subhashh.lumen.R
 import java.time.Instant
 import java.time.ZoneId
-import java.time.format.TextStyle
+import java.time.format.DateTimeFormatter
+import android.text.format.DateFormat
 import java.util.Locale
 
 /** The Library's zoom levels, from the bottom bar's segmented control. */
-enum class ZoomLevel(val label: String) { Years("Years"), Months("Months"), All("All") }
+enum class ZoomLevel(@StringRes val label: Int) { Years(R.string.main_zoom_years), Months(R.string.main_zoom_months), All(R.string.main_zoom_all) }
 
 /** One Years/Months card: a stretch of the library with a key photo. */
 @Immutable
@@ -60,10 +65,11 @@ data class Period(
 )
 
 /** Groups [items] (oldest first) into months or years, oldest first, like the grid. */
-fun periods(items: List<MediaItem>, byYear: Boolean): List<Period> {
+fun periods(context: Context, items: List<MediaItem>, byYear: Boolean): List<Period> {
     if (items.isEmpty()) return emptyList()
     val zone = ZoneId.systemDefault()
     val locale = Locale.getDefault()
+    val monthFormat = DateTimeFormatter.ofPattern(DateFormat.getBestDateTimePattern(locale, "MMMMyyyy"), locale)
     val result = ArrayList<Period>()
     var start = 0
     var currentKey = -1
@@ -73,11 +79,10 @@ fun periods(items: List<MediaItem>, byYear: Boolean): List<Period> {
         // Prefer a photo for the cover: video frames are often black or blurry.
         val cover = slice.lastOrNull { !it.isVideo } ?: slice.last()
         val count = slice.size
-        val noun = if (count == 1) "item" else "items"
         result += Period(
             title = if (byYear) date.year.toString()
-            else "${date.month.getDisplayName(TextStyle.FULL, locale)} ${date.year}",
-            subtitle = "$count $noun",
+            else monthFormat.format(date),
+            subtitle = context.resources.getQuantityString(R.plurals.main_item_count, count, count),
             cover = cover,
             firstIndex = start,
             year = date.year,
@@ -139,7 +144,7 @@ fun TimelineScreen(
                 modifier = Modifier.align(Alignment.Center),
             )
         }
-        LibraryHeader(title = "Library", subtitle = "", topPadding = 16.dp, modifier = Modifier.align(Alignment.TopStart))
+        LibraryHeader(title = stringResource(R.string.main_library), subtitle = "", topPadding = 16.dp, modifier = Modifier.align(Alignment.TopStart))
     }
 }
 

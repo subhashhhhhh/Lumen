@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.media.ExifInterface
 import android.media.MediaFormat
 import android.provider.MediaStore
+import com.subhashh.lumen.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -102,7 +103,7 @@ class MediaRepository(private val context: Context) {
                     isFavorite = cursor.getInt(favoriteCol) == 1,
                     relativePath = cursor.getString(pathCol).orEmpty(),
                     bucketId = cursor.getLong(bucketIdCol),
-                    bucketName = cursor.getString(bucketNameCol) ?: "Internal storage",
+                    bucketName = cursor.getString(bucketNameCol) ?: context.getString(R.string.data_internal_storage),
                     width = if (rotated) cursor.getInt(heightCol) else cursor.getInt(widthCol),
                     height = if (rotated) cursor.getInt(widthCol) else cursor.getInt(heightCol),
                     modified = cursor.getLong(modifiedCol),

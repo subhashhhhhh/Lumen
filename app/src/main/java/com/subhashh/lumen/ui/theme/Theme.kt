@@ -1,5 +1,6 @@
 package com.subhashh.lumen.ui.theme
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
@@ -8,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import com.subhashh.lumen.R
 
 /** Tints for glass surfaces. Below Android 12 there is no blur, so the fallback tint is much more opaque. */
 @Immutable
@@ -41,7 +43,11 @@ val LocalGlassColors = staticCompositionLocalOf { DarkGlass }
 val LocalDarkTheme = staticCompositionLocalOf { true }
 
 /** Settings → Appearance: follow the phone, or always light or dark. */
-enum class Appearance(val label: String) { System("Match Phone"), Light("Light"), Dark("Dark") }
+enum class Appearance(val label: String, @StringRes val labelRes: Int) {
+    System("Match Phone", R.string.app_appearance_system),
+    Light("Light", R.string.app_appearance_light),
+    Dark("Dark", R.string.app_appearance_dark),
+}
 
 /** The chosen [Appearance] and how to change it, for the Settings screen. */
 @Immutable

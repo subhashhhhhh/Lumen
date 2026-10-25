@@ -65,22 +65,26 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.sp
+import androidx.annotation.StringRes
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import com.subhashh.lumen.R
 import com.subhashh.lumen.ui.icons.LumenIcons
 
 /** Settings' pages. The main page lists these; each opens its own page. */
-enum class SettingsCategory(val key: String, val title: String) {
-    Appearance("appearance", "Appearance"),
-    Library("library", "Library"),
-    PhotosVideos("photos", "Photos & Videos"),
-    Privacy("privacy", "Privacy & Security"),
-    SmartSearch("smart-search", "Smart Features"),
-    Permissions("permissions", "Permissions"),
-    Backup("backup", "Backup & Import"),
-    About("about", "About"),
-    Developer("developer", "Developer Options");
+enum class SettingsCategory(val key: String, @StringRes val titleRes: Int) {
+    Appearance("appearance", R.string.settings_category_appearance),
+    Library("library", R.string.settings_category_library),
+    PhotosVideos("photos", R.string.settings_category_photos_videos),
+    Privacy("privacy", R.string.settings_category_privacy),
+    SmartSearch("smart-search", R.string.settings_category_smart_features),
+    Permissions("permissions", R.string.settings_category_permissions),
+    Backup("backup", R.string.settings_category_backup),
+    About("about", R.string.settings_category_about),
+    Developer("developer", R.string.settings_category_developer);
 
     companion object {
         fun of(key: String?) = entries.firstOrNull { it.key == key }
@@ -90,70 +94,70 @@ enum class SettingsCategory(val key: String, val title: String) {
 /** One searchable setting: where it lives and the words people might look for it by. */
 private data class SettingEntry(
     val id: String,
-    val title: String,
+    @StringRes val title: Int,
     val category: SettingsCategory,
-    val keywords: String = "",
+    @StringRes val keywords: Int,
 )
 
 private val Entries = listOf(
-    SettingEntry("theme", "Theme", SettingsCategory.Appearance, "dark mode light mode night appearance"),
-    SettingEntry("reduce-motion", "Reduce Motion", SettingsCategory.Appearance, "animations accessibility springs"),
-    SettingEntry("liquid-glass", "Liquid Glass", SettingsCategory.Appearance, "glass refraction lens effect gpu"),
-    SettingEntry("reduce-blur", "Reduce Blur", SettingsCategory.Appearance, "blur transparency solid frosted readability battery"),
-    SettingEntry("date-headers", "Date Headers", SettingsCategory.Library, "sections days months years grouping"),
-    SettingEntry("excluded", "Excluded Folders", SettingsCategory.Library, "ignore folders hide whatsapp junk"),
-    SettingEntry("curved-edge", "Curved Edge Display", SettingsCategory.Library, "fast scroll scrollbar handle edge"),
-    SettingEntry("ultra-hdr", "Ultra HDR", SettingsCategory.PhotosVideos, "hdr brightness glow"),
-    SettingEntry("film-strip", "Film Strip", SettingsCategory.PhotosVideos, "thumbnails strip scrubber skim viewer height size"),
-    SettingEntry("maps", "Maps", SettingsCategory.PhotosVideos, "map location openstreetmap openfreemap network privacy"),
-    SettingEntry("autoplay", "Autoplay Videos", SettingsCategory.PhotosVideos, "video play automatically"),
-    SettingEntry("loop", "Loop Videos", SettingsCategory.PhotosVideos, "repeat video"),
-    SettingEntry("slide-time", "Slideshow: Each Photo For", SettingsCategory.PhotosVideos, "slideshow seconds duration timing"),
-    SettingEntry("slide-transition", "Slideshow: Transition", SettingsCategory.PhotosVideos, "slideshow fade slide"),
-    SettingEntry("slide-shuffle", "Slideshow: Shuffle", SettingsCategory.PhotosVideos, "slideshow random order"),
-    SettingEntry("slide-repeat", "Slideshow: Repeat", SettingsCategory.PhotosVideos, "slideshow loop"),
-    SettingEntry("lumen-lock", "Lumen Lock", SettingsCategory.Privacy, "pin pattern password change set up passcode"),
-    SettingEntry("biometrics", "Fingerprint or Face", SettingsCategory.Privacy, "biometric unlock fingerprint face"),
-    SettingEntry("app-lock", "App Lock", SettingsCategory.Privacy, "lock app open protect"),
-    SettingEntry("lock-after", "Lock After", SettingsCategory.Privacy, "timeout minutes app lock"),
-    SettingEntry("hidden", "Hidden", SettingsCategory.Privacy, "hide private secret vault"),
-    SettingEntry("encrypt", "Encrypt Hidden", SettingsCategory.Privacy, "encryption vault secure"),
-    SettingEntry("search-quality", "Search Quality", SettingsCategory.SmartSearch, "accurate fast ai model smart search"),
-    SettingEntry("search-model", "Search Model", SettingsCategory.SmartSearch, "download remove update ai smart search"),
-    SettingEntry("indexed", "Indexed", SettingsCategory.SmartSearch, "indexing progress smart search"),
-    SettingEntry("subtitle-quality", "Subtitle Quality", SettingsCategory.SmartSearch, "subtitles captions cc transcription speech model"),
-    SettingEntry("subtitles-model", "Subtitles Model", SettingsCategory.SmartSearch, "subtitles captions cc transcription speech download"),
-    SettingEntry("scheduled-indexing", "Scheduled Indexing", SettingsCategory.SmartSearch, "overnight night time schedule hours indexing background sleep"),
-    SettingEntry("index-on-battery", "Index on Battery", SettingsCategory.SmartSearch, "charging battery background scan indexing"),
-    SettingEntry("video-detail", "Video Detail", SettingsCategory.SmartSearch, "video frames resolution faces quality speed"),
-    SettingEntry("face-model", "Face Models", SettingsCategory.SmartSearch, "people faces persons download remove update"),
-    SettingEntry("faces", "Faces", SettingsCategory.SmartSearch, "people faces persons grouping progress"),
-    SettingEntry("text-model", "Text Reader", SettingsCategory.SmartSearch, "ocr words text in photos screenshots download remove update"),
-    SettingEntry("text-read", "Text Read", SettingsCategory.SmartSearch, "ocr words text in photos screenshots reading progress"),
-    SettingEntry("wifi-only", "Download on Wi-Fi Only", SettingsCategory.SmartSearch, "mobile data cellular download"),
-    SettingEntry("search-details", "Search Details", SettingsCategory.Developer, "debug search sections scores developer"),
-    SettingEntry("hf-token", "Hugging Face Token", SettingsCategory.SmartSearch, "huggingface token download speed"),
-    SettingEntry("media-management", "Media Management", SettingsCategory.Permissions, "delete favorite trash permission confirm"),
-    SettingEntry("all-files", "All Files Access", SettingsCategory.Permissions, "storage hidden folders permission rename"),
-    SettingEntry("location", "Location in Photos", SettingsCategory.Permissions, "gps map places permission"),
-    SettingEntry("export", "Export Settings", SettingsCategory.Backup, "backup save"),
-    SettingEntry("import", "Import Settings", SettingsCategory.Backup, "restore backup"),
-    SettingEntry("import-favorites", "Import Favorites", SettingsCategory.Backup, "fossify aves favourites hearts"),
-    SettingEntry("licenses", "Open-Source Licenses", SettingsCategory.About, "credits open source"),
-    SettingEntry("software-update", "Software Update", SettingsCategory.About, "update upgrade new version download install"),
-    SettingEntry("auto-update", "Check for Updates Automatically", SettingsCategory.About, "update automatic daily"),
-    SettingEntry("github", "GitHub", SettingsCategory.About, "source code repository open source project"),
-    SettingEntry("report-bug", "Report a Bug", SettingsCategory.About, "issue problem feedback crash github"),
-    SettingEntry("version", "Version", SettingsCategory.About, "about app version"),
+    SettingEntry("theme", R.string.settings_theme, SettingsCategory.Appearance, R.string.settings_kw_theme),
+    SettingEntry("reduce-motion", R.string.settings_reduce_motion, SettingsCategory.Appearance, R.string.settings_kw_reduce_motion),
+    SettingEntry("liquid-glass", R.string.settings_liquid_glass, SettingsCategory.Appearance, R.string.settings_kw_liquid_glass),
+    SettingEntry("reduce-blur", R.string.settings_reduce_blur, SettingsCategory.Appearance, R.string.settings_kw_reduce_blur),
+    SettingEntry("date-headers", R.string.settings_date_headers, SettingsCategory.Library, R.string.settings_kw_date_headers),
+    SettingEntry("excluded", R.string.settings_excluded_folders, SettingsCategory.Library, R.string.settings_kw_excluded),
+    SettingEntry("curved-edge", R.string.settings_curved_edge, SettingsCategory.Library, R.string.settings_kw_curved_edge),
+    SettingEntry("ultra-hdr", R.string.settings_ultra_hdr, SettingsCategory.PhotosVideos, R.string.settings_kw_ultra_hdr),
+    SettingEntry("film-strip", R.string.settings_film_strip, SettingsCategory.PhotosVideos, R.string.settings_kw_film_strip),
+    SettingEntry("maps", R.string.settings_maps, SettingsCategory.PhotosVideos, R.string.settings_kw_maps),
+    SettingEntry("autoplay", R.string.settings_autoplay_videos, SettingsCategory.PhotosVideos, R.string.settings_kw_autoplay),
+    SettingEntry("loop", R.string.settings_loop_videos, SettingsCategory.PhotosVideos, R.string.settings_kw_loop),
+    SettingEntry("slide-time", R.string.settings_entry_slide_time, SettingsCategory.PhotosVideos, R.string.settings_kw_slide_time),
+    SettingEntry("slide-transition", R.string.settings_entry_slide_transition, SettingsCategory.PhotosVideos, R.string.settings_kw_slide_transition),
+    SettingEntry("slide-shuffle", R.string.settings_entry_slide_shuffle, SettingsCategory.PhotosVideos, R.string.settings_kw_slide_shuffle),
+    SettingEntry("slide-repeat", R.string.settings_entry_slide_repeat, SettingsCategory.PhotosVideos, R.string.settings_kw_slide_repeat),
+    SettingEntry("lumen-lock", R.string.settings_lumen_lock, SettingsCategory.Privacy, R.string.settings_kw_lumen_lock),
+    SettingEntry("biometrics", R.string.settings_biometrics, SettingsCategory.Privacy, R.string.settings_kw_biometrics),
+    SettingEntry("app-lock", R.string.settings_app_lock, SettingsCategory.Privacy, R.string.settings_kw_app_lock),
+    SettingEntry("lock-after", R.string.settings_lock_after, SettingsCategory.Privacy, R.string.settings_kw_lock_after),
+    SettingEntry("hidden", R.string.settings_hidden, SettingsCategory.Privacy, R.string.settings_kw_hidden),
+    SettingEntry("encrypt", R.string.settings_encrypt_hidden, SettingsCategory.Privacy, R.string.settings_kw_encrypt),
+    SettingEntry("search-quality", R.string.settings_entry_search_quality, SettingsCategory.SmartSearch, R.string.settings_kw_search_quality),
+    SettingEntry("search-model", R.string.settings_entry_search_model, SettingsCategory.SmartSearch, R.string.settings_kw_search_model),
+    SettingEntry("indexed", R.string.settings_entry_indexed, SettingsCategory.SmartSearch, R.string.settings_kw_indexed),
+    SettingEntry("subtitle-quality", R.string.settings_entry_subtitle_quality, SettingsCategory.SmartSearch, R.string.settings_kw_subtitle_quality),
+    SettingEntry("subtitles-model", R.string.settings_entry_subtitles_model, SettingsCategory.SmartSearch, R.string.settings_kw_subtitles_model),
+    SettingEntry("scheduled-indexing", R.string.settings_entry_scheduled_indexing, SettingsCategory.SmartSearch, R.string.settings_kw_scheduled_indexing),
+    SettingEntry("index-on-battery", R.string.settings_entry_index_on_battery, SettingsCategory.SmartSearch, R.string.settings_kw_index_on_battery),
+    SettingEntry("video-detail", R.string.settings_entry_video_detail, SettingsCategory.SmartSearch, R.string.settings_kw_video_detail),
+    SettingEntry("face-model", R.string.settings_entry_face_models, SettingsCategory.SmartSearch, R.string.settings_kw_face_model),
+    SettingEntry("faces", R.string.settings_entry_faces, SettingsCategory.SmartSearch, R.string.settings_kw_faces),
+    SettingEntry("text-model", R.string.settings_entry_text_reader, SettingsCategory.SmartSearch, R.string.settings_kw_text_model),
+    SettingEntry("text-read", R.string.settings_entry_text_read, SettingsCategory.SmartSearch, R.string.settings_kw_text_read),
+    SettingEntry("wifi-only", R.string.settings_entry_wifi_only, SettingsCategory.SmartSearch, R.string.settings_kw_wifi_only),
+    SettingEntry("search-details", R.string.settings_search_details, SettingsCategory.Developer, R.string.settings_kw_search_details),
+    SettingEntry("hf-token", R.string.settings_entry_hf_token, SettingsCategory.SmartSearch, R.string.settings_kw_hf_token),
+    SettingEntry("media-management", R.string.settings_media_management, SettingsCategory.Permissions, R.string.settings_kw_media_management),
+    SettingEntry("all-files", R.string.settings_all_files, SettingsCategory.Permissions, R.string.settings_kw_all_files),
+    SettingEntry("location", R.string.settings_location_in_photos, SettingsCategory.Permissions, R.string.settings_kw_location),
+    SettingEntry("export", R.string.settings_entry_export, SettingsCategory.Backup, R.string.settings_kw_export),
+    SettingEntry("import", R.string.settings_entry_import, SettingsCategory.Backup, R.string.settings_kw_import),
+    SettingEntry("import-favorites", R.string.settings_entry_import_favorites, SettingsCategory.Backup, R.string.settings_kw_import_favorites),
+    SettingEntry("licenses", R.string.settings_licenses, SettingsCategory.About, R.string.settings_kw_licenses),
+    SettingEntry("software-update", R.string.settings_software_update, SettingsCategory.About, R.string.settings_kw_software_update),
+    SettingEntry("auto-update", R.string.settings_entry_auto_update, SettingsCategory.About, R.string.settings_kw_auto_update),
+    SettingEntry("github", R.string.settings_github, SettingsCategory.About, R.string.settings_kw_github),
+    SettingEntry("report-bug", R.string.settings_report_bug, SettingsCategory.About, R.string.settings_kw_report_bug),
+    SettingEntry("version", R.string.settings_version, SettingsCategory.About, R.string.settings_kw_version),
 )
 
 /** Every query word must appear in the setting's name, page or keywords. */
-private fun search(query: String, developer: Boolean): List<SettingEntry> {
+private fun search(context: Context, query: String, developer: Boolean): List<SettingEntry> {
     val words = query.lowercase().split(' ').filter { it.isNotBlank() }
     if (words.isEmpty()) return emptyList()
     return Entries.filter { e ->
         if (e.category == SettingsCategory.Developer && !developer) return@filter false
-        val text = "${e.title} ${e.category.title} ${e.keywords}".lowercase()
+        val text = "${context.getString(e.title)} ${context.getString(e.category.titleRes)} ${context.getString(e.keywords)}".lowercase()
         words.all { it in text }
     }
 }
@@ -203,25 +207,25 @@ fun SettingsScreen(
     SettingsPage(contentPadding, modifier) {
         when (category) {
             null -> {
-                LargeTitle("Settings")
+                LargeTitle(stringResource(R.string.common_settings))
                 var query by rememberSaveable { mutableStateOf("") }
                 SearchBox(query, onQueryChange = { query = it })
                 if (query.isNotBlank()) {
-                    val results = search(query, prefs.developerOptions)
+                    val results = search(context, query, prefs.developerOptions)
                     if (results.isEmpty()) {
                         Text(
-                            "No settings match “${query.trim()}”.",
+                            stringResource(R.string.settings_no_match, query.trim()),
                             color = groupColors().secondary,
                             fontSize = 15.sp,
                             modifier = Modifier.padding(start = 4.dp, top = 8.dp),
                         )
                     } else {
-                        Group("Results") {
+                        Group(stringResource(R.string.settings_results)) {
                             results.forEachIndexed { i, entry ->
                                 if (i > 0) Divider()
                                 SettingsRow(
-                                    title = entry.title,
-                                    subtitle = entry.category.title,
+                                    title = stringResource(entry.title),
+                                    subtitle = stringResource(entry.category.titleRes),
                                     onClick = { onOpenCategory(entry.category, entry.id) },
                                     icon = entry.category.icon(),
                                     iconColor = entry.category.color(),
@@ -243,7 +247,7 @@ fun SettingsScreen(
                     if (update != null && com.subhashh.lumen.data.Updater.isNewer(update, context.versionName())) {
                         Group("") {
                             SettingsRow(
-                                title = "Lumen $update Is Available",
+                                title = stringResource(R.string.settings_update_available, update),
                                 onClick = { onOpenCategory(SettingsCategory.About, "software-update") },
                                 icon = LumenIcons.Import,
                                 iconColor = Blue,
@@ -258,12 +262,12 @@ fun SettingsScreen(
                         CategoryRow(SettingsCategory.PhotosVideos, null, open)
                     }
                     Group("") {
-                        CategoryRow(SettingsCategory.Privacy, if (appLockOn) "App Lock On" else null, open)
+                        CategoryRow(SettingsCategory.Privacy, if (appLockOn) stringResource(R.string.settings_app_lock_on) else null, open)
                         Divider()
-                        CategoryRow(SettingsCategory.SmartSearch, if (smartSearchOn) "On" else "Off", open)
+                        CategoryRow(SettingsCategory.SmartSearch, stringResource(if (smartSearchOn) R.string.common_on else R.string.common_off), open)
                     }
                     Group("") {
-                        CategoryRow(SettingsCategory.Permissions, "${granted.count { it }} of ${granted.size}", open)
+                        CategoryRow(SettingsCategory.Permissions, stringResource(R.string.settings_permissions_count, granted.count { it }, granted.size), open)
                         Divider()
                         CategoryRow(SettingsCategory.Backup, null, open)
                         Divider()
@@ -277,7 +281,7 @@ fun SettingsScreen(
                 }
             }
             else -> {
-                LargeTitle(category.title)
+                LargeTitle(stringResource(category.titleRes))
                 when (category) {
                     SettingsCategory.Appearance -> AppearancePage(highlight)
                     SettingsCategory.Library -> LibraryPage(prefs, highlight, excludedCount, onOpenExcluded)
@@ -301,7 +305,7 @@ fun SettingsScreen(
 
 @Composable
 private fun CategoryRow(category: SettingsCategory, value: String?, onOpen: (SettingsCategory) -> Unit) {
-    SettingsRow(title = category.title, value = value, onClick = { onOpen(category) }, icon = category.icon(), iconColor = category.color())
+    SettingsRow(title = stringResource(category.titleRes), value = value, onClick = { onOpen(category) }, icon = category.icon(), iconColor = category.color())
 }
 
 private fun SettingsCategory.icon() = when (this) {
@@ -344,7 +348,7 @@ private fun SearchBox(query: String, onQueryChange: (String) -> Unit) {
         Icon(LumenIcons.Search, contentDescription = null, tint = colors.secondary, modifier = Modifier.size(18.dp))
         Spacer(Modifier.width(8.dp))
         Box(Modifier.weight(1f)) {
-            if (query.isEmpty()) Text("Search settings", color = colors.secondary, fontSize = 17.sp)
+            if (query.isEmpty()) Text(stringResource(R.string.settings_search_hint), color = colors.secondary, fontSize = 17.sp)
             BasicTextField(
                 value = query,
                 onValueChange = onQueryChange,
@@ -357,7 +361,7 @@ private fun SearchBox(query: String, onQueryChange: (String) -> Unit) {
         if (query.isNotEmpty()) {
             Icon(
                 LumenIcons.Close,
-                contentDescription = "Clear",
+                contentDescription = stringResource(R.string.settings_clear),
                 tint = colors.secondary,
                 modifier = Modifier.size(18.dp).clickable { onQueryChange("") },
             )
@@ -392,10 +396,10 @@ internal fun Anchor(id: String, highlight: String?, content: @Composable () -> U
 private fun ColumnScope.AppearancePage(highlight: String?) {
     val appearance = LocalAppearance.current
     val motion = LocalMotion.current
-    Group("Display") {
+    Group(stringResource(R.string.settings_group_display)) {
         Anchor("theme", highlight) {
             PickerRow(
-                title = "Theme",
+                title = stringResource(R.string.settings_theme),
                 options = Appearance.entries.map { it.label },
                 selected = appearance.current.ordinal,
                 onSelect = { appearance.onChange(Appearance.entries[it]) },
@@ -406,8 +410,8 @@ private fun ColumnScope.AppearancePage(highlight: String?) {
         Divider()
         Anchor("reduce-motion", highlight) {
             ToggleRow(
-                title = "Reduce Motion",
-                subtitle = "No flying photos, springs or bounces",
+                title = stringResource(R.string.settings_reduce_motion),
+                subtitle = stringResource(R.string.settings_reduce_motion_subtitle),
                 checked = motion.reduce,
                 onCheckedChange = motion.onChange,
                 icon = LumenIcons.Accessibility,
@@ -417,13 +421,12 @@ private fun ColumnScope.AppearancePage(highlight: String?) {
     }
     val glass = com.subhashh.lumen.ui.theme.LocalGlass.current
     Group(
-        "Glass",
-        footer = "Liquid Glass: buttons, bars, menus and switches made of glass that bends what's behind it. " +
-            "Off, they're solid. Reduce Blur keeps the glass with much less blur: clearer, and lighter on the GPU.",
+        stringResource(R.string.settings_group_glass),
+        footer = stringResource(R.string.settings_glass_footer),
     ) {
         Anchor("liquid-glass", highlight) {
             ToggleRow(
-                title = "Liquid Glass",
+                title = stringResource(R.string.settings_liquid_glass),
                 checked = glass.liquid,
                 onCheckedChange = glass.onLiquid,
                 icon = LumenIcons.Image,
@@ -433,8 +436,8 @@ private fun ColumnScope.AppearancePage(highlight: String?) {
         Divider()
         Anchor("reduce-blur", highlight) {
             ToggleRow(
-                title = "Reduce Blur",
-                subtitle = if (!glass.liquid) "Only with Liquid Glass" else null,
+                title = stringResource(R.string.settings_reduce_blur),
+                subtitle = if (!glass.liquid) stringResource(R.string.settings_reduce_blur_needs_glass) else null,
                 checked = glass.reduceBlur && glass.liquid,
                 onCheckedChange = { if (glass.liquid) glass.onReduceBlur(it) },
                 icon = LumenIcons.Hide,
@@ -448,10 +451,10 @@ private fun ColumnScope.AppearancePage(highlight: String?) {
 private fun ColumnScope.LibraryPage(prefs: LumenPrefs, highlight: String?, excludedCount: Int, onOpenExcluded: () -> Unit) {
     var sections by remember { mutableStateOf(prefs.sectionMode) }
     var curvedEdge by remember { mutableStateOf(prefs.curvedEdge) }
-    Group("Grid", footer = "Headers show when photos are sorted by date.") {
+    Group(stringResource(R.string.settings_group_grid), footer = stringResource(R.string.settings_grid_footer)) {
         Anchor("date-headers", highlight) {
             PickerRow(
-                title = "Date Headers",
+                title = stringResource(R.string.settings_date_headers),
                 options = SectionMode.entries.map { it.label },
                 selected = sections.ordinal,
                 onSelect = {
@@ -465,8 +468,8 @@ private fun ColumnScope.LibraryPage(prefs: LumenPrefs, highlight: String?, exclu
         Divider()
         Anchor("curved-edge", highlight) {
             ToggleRow(
-                title = "Curved Edge Display",
-                subtitle = "Keep the fast-scroll handle off the curve, where touches are ignored",
+                title = stringResource(R.string.settings_curved_edge),
+                subtitle = stringResource(R.string.settings_curved_edge_subtitle),
                 checked = curvedEdge,
                 onCheckedChange = {
                     curvedEdge = it
@@ -477,12 +480,12 @@ private fun ColumnScope.LibraryPage(prefs: LumenPrefs, highlight: String?, exclu
             )
         }
     }
-    Group("Folders") {
+    Group(stringResource(R.string.settings_group_folders)) {
         Anchor("excluded", highlight) {
             SettingsRow(
-                title = "Excluded Folders",
-                subtitle = "Folders Lumen ignores",
-                value = if (excludedCount == 0) "None" else excludedCount.toString(),
+                title = stringResource(R.string.settings_excluded_folders),
+                subtitle = stringResource(R.string.settings_excluded_folders_subtitle),
+                value = if (excludedCount == 0) stringResource(R.string.settings_none) else excludedCount.toString(),
                 onClick = onOpenExcluded,
                 icon = LumenIcons.FolderProhibited,
                 iconColor = Gray,
@@ -500,13 +503,12 @@ private fun ColumnScope.PhotosPage(prefs: LumenPrefs, highlight: String?) {
     val hdrSupported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
     if (hdrSupported) {
         Group(
-            "Photos",
-            footer = "Ultra HDR photos can glow brighter than white. Match Brightness keeps to your brightness; " +
-                "Full HDR turns the screen all the way up while an HDR photo or video is shown, like Chrome.",
+            stringResource(R.string.settings_group_photos),
+            footer = stringResource(R.string.settings_hdr_footer),
         ) {
             Anchor("ultra-hdr", highlight) {
                 PickerRow(
-                    title = "Ultra HDR",
+                    title = stringResource(R.string.settings_ultra_hdr),
                     options = HdrMode.entries.map { it.label },
                     selected = hdrMode.ordinal,
                     onSelect = {
@@ -521,12 +523,12 @@ private fun ColumnScope.PhotosPage(prefs: LumenPrefs, highlight: String?) {
     }
     var filmStrip by remember { mutableStateOf(prefs.filmStrip) }
     Group(
-        "Viewer",
-        footer = "The thumbnails above the viewer's buttons: drag them to skim through photos.",
+        stringResource(R.string.settings_group_viewer),
+        footer = stringResource(R.string.settings_film_strip_footer),
     ) {
         Anchor("film-strip", highlight) {
             PickerRow(
-                title = "Film Strip",
+                title = stringResource(R.string.settings_film_strip),
                 options = FilmStripSize.entries.map { it.label },
                 selected = filmStrip.ordinal,
                 onSelect = {
@@ -539,14 +541,12 @@ private fun ColumnScope.PhotosPage(prefs: LumenPrefs, highlight: String?) {
         }
     }
     Group(
-        "Location",
-        footer = "Shows where photos were taken on a map in their details. Map tiles download from " +
-            "OpenFreeMap (OpenStreetMap data): it sees which area is shown, nothing else. Off: the place " +
-            "name and coordinates only, and Lumen doesn't contact it.",
+        stringResource(R.string.settings_group_location),
+        footer = stringResource(R.string.settings_maps_footer),
     ) {
         Anchor("maps", highlight) {
             ToggleRow(
-                title = "Maps",
+                title = stringResource(R.string.settings_maps),
                 checked = maps,
                 onCheckedChange = {
                     maps = it
@@ -557,10 +557,10 @@ private fun ColumnScope.PhotosPage(prefs: LumenPrefs, highlight: String?) {
             )
         }
     }
-    Group("Videos") {
+    Group(stringResource(R.string.settings_group_videos)) {
         Anchor("autoplay", highlight) {
             ToggleRow(
-                title = "Autoplay Videos",
+                title = stringResource(R.string.settings_autoplay_videos),
                 checked = autoplay,
                 onCheckedChange = {
                     autoplay = it
@@ -573,8 +573,8 @@ private fun ColumnScope.PhotosPage(prefs: LumenPrefs, highlight: String?) {
         Divider()
         Anchor("loop", highlight) {
             ToggleRow(
-                title = "Loop Videos",
-                subtitle = "Start over at the end",
+                title = stringResource(R.string.settings_loop_videos),
+                subtitle = stringResource(R.string.settings_start_over),
                 checked = loop,
                 onCheckedChange = {
                     loop = it
@@ -589,11 +589,11 @@ private fun ColumnScope.PhotosPage(prefs: LumenPrefs, highlight: String?) {
     var slideFade by remember { mutableStateOf(prefs.slideshowFade) }
     var slideShuffle by remember { mutableStateOf(prefs.slideshowShuffle) }
     var slideRepeat by remember { mutableStateOf(prefs.slideshowRepeat) }
-    Group("Slideshow") {
+    Group(stringResource(R.string.settings_group_slideshow)) {
         Anchor("slide-time", highlight) {
             PickerRow(
-                title = "Each Photo For",
-                options = SlideSeconds.map { "$it seconds" },
+                title = stringResource(R.string.settings_each_photo_for),
+                options = SlideSeconds.map { pluralStringResource(R.plurals.settings_slide_seconds, it, it) },
                 selected = SlideSeconds.indexOf(slideSeconds).coerceAtLeast(0),
                 onSelect = {
                     slideSeconds = SlideSeconds[it]
@@ -606,8 +606,8 @@ private fun ColumnScope.PhotosPage(prefs: LumenPrefs, highlight: String?) {
         Divider()
         Anchor("slide-transition", highlight) {
             PickerRow(
-                title = "Transition",
-                options = listOf("Slide", "Fade"),
+                title = stringResource(R.string.settings_transition),
+                options = listOf(stringResource(R.string.settings_transition_slide), stringResource(R.string.settings_transition_fade)),
                 selected = if (slideFade) 1 else 0,
                 onSelect = {
                     slideFade = it == 1
@@ -620,7 +620,7 @@ private fun ColumnScope.PhotosPage(prefs: LumenPrefs, highlight: String?) {
         Divider()
         Anchor("slide-shuffle", highlight) {
             ToggleRow(
-                title = "Shuffle",
+                title = stringResource(R.string.settings_shuffle),
                 checked = slideShuffle,
                 onCheckedChange = {
                     slideShuffle = it
@@ -633,8 +633,8 @@ private fun ColumnScope.PhotosPage(prefs: LumenPrefs, highlight: String?) {
         Divider()
         Anchor("slide-repeat", highlight) {
             ToggleRow(
-                title = "Repeat",
-                subtitle = "Start over at the end",
+                title = stringResource(R.string.settings_repeat),
+                subtitle = stringResource(R.string.settings_start_over),
                 checked = slideRepeat,
                 onCheckedChange = {
                     slideRepeat = it
@@ -662,13 +662,12 @@ private fun ColumnScope.PrivacyPage(
     onToggleBiometrics: () -> Unit,
 ) {
     Group(
-        "Lumen Lock",
-        footer = "Lumen's lock (PIN, pattern or password) guards Hidden, and with App Lock all of Lumen. " +
-            "It's separate from your phone's screen lock.",
+        stringResource(R.string.settings_lumen_lock),
+        footer = stringResource(R.string.settings_lumen_lock_footer),
     ) {
         Anchor("lumen-lock", highlight) {
             SettingsRow(
-                title = if (hiddenLockSet) "Change Lumen Lock" else "Set Up Lumen Lock",
+                title = stringResource(if (hiddenLockSet) R.string.settings_change_lumen_lock else R.string.settings_set_up_lumen_lock),
                 onClick = onChangeLock,
                 icon = LumenIcons.Lock,
                 iconColor = Blue,
@@ -678,8 +677,8 @@ private fun ColumnScope.PrivacyPage(
             Divider()
             Anchor("biometrics", highlight) {
                 ToggleRow(
-                    title = "Fingerprint or Face",
-                    subtitle = "Unlock faster",
+                    title = stringResource(R.string.settings_biometrics),
+                    subtitle = stringResource(R.string.settings_biometrics_subtitle),
                     checked = biometricsOn,
                     onCheckedChange = { onToggleBiometrics() },
                     icon = LumenIcons.Fingerprint,
@@ -690,8 +689,8 @@ private fun ColumnScope.PrivacyPage(
         Divider()
         Anchor("app-lock", highlight) {
             ToggleRow(
-                title = "App Lock",
-                subtitle = "Ask for Lumen's lock when opening Lumen",
+                title = stringResource(R.string.settings_app_lock),
+                subtitle = stringResource(R.string.settings_app_lock_subtitle),
                 checked = appLockOn,
                 onCheckedChange = onToggleAppLock,
                 icon = LumenIcons.Lock,
@@ -703,8 +702,8 @@ private fun ColumnScope.PrivacyPage(
             var minutes by remember { mutableStateOf(prefs.appLockMinutes) }
             Anchor("lock-after", highlight) {
                 PickerRow(
-                    title = "Lock After",
-                    options = LockMinutes.map { if (it == 0) "Immediately" else if (it == 1) "1 minute" else "$it minutes" },
+                    title = stringResource(R.string.settings_lock_after),
+                    options = LockMinutes.map { if (it == 0) stringResource(R.string.settings_lock_immediately) else pluralStringResource(R.plurals.settings_lock_minutes, it, it) },
                     selected = LockMinutes.indexOf(minutes).coerceAtLeast(0),
                     onSelect = {
                         minutes = LockMinutes[it]
@@ -716,11 +715,11 @@ private fun ColumnScope.PrivacyPage(
             }
         }
     }
-    Group("Hidden") {
+    Group(stringResource(R.string.settings_hidden)) {
         Anchor("hidden", highlight) {
             SettingsRow(
-                title = "Hidden",
-                subtitle = "Out of your library and most apps, locked in Lumen",
+                title = stringResource(R.string.settings_hidden),
+                subtitle = stringResource(R.string.settings_hidden_subtitle),
                 onClick = onOpenHidden,
                 icon = LumenIcons.Hide,
                 iconColor = Indigo,
@@ -729,8 +728,8 @@ private fun ColumnScope.PrivacyPage(
         Divider()
         Anchor("encrypt", highlight) {
             ToggleRow(
-                title = "Encrypt Hidden",
-                subtitle = "So no other app or file manager can see them",
+                title = stringResource(R.string.settings_encrypt_hidden),
+                subtitle = stringResource(R.string.settings_encrypt_hidden_subtitle),
                 checked = encryptHidden,
                 onCheckedChange = onToggleEncryptHidden,
                 icon = LumenIcons.Shield,
@@ -743,13 +742,13 @@ private fun ColumnScope.PrivacyPage(
 @Composable
 private fun ColumnScope.PermissionsPage(status: PermissionStatus, highlight: String?) {
     val context = LocalContext.current
-    Group("Android Permissions", footer = "Lumen works without these; they unlock the features named. Each opens Android's settings.") {
+    Group(stringResource(R.string.settings_group_android_permissions), footer = stringResource(R.string.settings_permissions_footer)) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             Anchor("media-management", highlight) {
                 SettingsRow(
-                    title = "Media Management",
-                    subtitle = "Delete and favorite without asking each time",
-                    value = if (status.manageMedia) "On" else "Off",
+                    title = stringResource(R.string.settings_media_management),
+                    subtitle = stringResource(R.string.settings_media_management_subtitle),
+                    value = stringResource(if (status.manageMedia) R.string.common_on else R.string.common_off),
                     onClick = { context.openSettings(Settings.ACTION_REQUEST_MANAGE_MEDIA) },
                     icon = LumenIcons.Shield,
                     iconColor = Green,
@@ -759,9 +758,9 @@ private fun ColumnScope.PermissionsPage(status: PermissionStatus, highlight: Str
         }
         Anchor("all-files", highlight) {
             SettingsRow(
-                title = "All Files Access",
-                subtitle = "Hidden folders, renaming albums, dates on videos",
-                value = if (status.allFiles) "On" else "Off",
+                title = stringResource(R.string.settings_all_files),
+                subtitle = stringResource(R.string.settings_all_files_subtitle),
+                value = stringResource(if (status.allFiles) R.string.common_on else R.string.common_off),
                 onClick = { context.openSettings(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION) },
                 icon = LumenIcons.FolderOpen,
                 iconColor = Blue,
@@ -770,9 +769,9 @@ private fun ColumnScope.PermissionsPage(status: PermissionStatus, highlight: Str
         Divider()
         Anchor("location", highlight) {
             SettingsRow(
-                title = "Location in Photos",
-                subtitle = "Show where photos were taken",
-                value = if (status.mediaLocation) "On" else "Off",
+                title = stringResource(R.string.settings_location_in_photos),
+                subtitle = stringResource(R.string.settings_location_in_photos_subtitle),
+                value = stringResource(if (status.mediaLocation) R.string.common_on else R.string.common_off),
                 onClick = { context.openSettings(Settings.ACTION_APPLICATION_DETAILS_SETTINGS) },
                 icon = LumenIcons.Location,
                 iconColor = Green,
@@ -783,11 +782,11 @@ private fun ColumnScope.PermissionsPage(status: PermissionStatus, highlight: Str
 
 @Composable
 private fun ColumnScope.BackupPage(highlight: String?, onExport: () -> Unit, onImport: () -> Unit, onImportFavorites: () -> Unit) {
-    Group("Lumen Backup", footer = "The Hidden lock is never included, so a backup can't unlock Hidden.") {
+    Group(stringResource(R.string.settings_group_lumen_backup), footer = stringResource(R.string.settings_backup_footer)) {
         Anchor("export", highlight) {
             SettingsRow(
-                title = "Export Settings…",
-                subtitle = "Settings, album arrangement and favorites",
+                title = stringResource(R.string.settings_export_row),
+                subtitle = stringResource(R.string.settings_export_subtitle),
                 onClick = onExport,
                 icon = LumenIcons.Export,
                 iconColor = Green,
@@ -796,19 +795,19 @@ private fun ColumnScope.BackupPage(highlight: String?, onExport: () -> Unit, onI
         Divider()
         Anchor("import", highlight) {
             SettingsRow(
-                title = "Import Settings…",
-                subtitle = "From a Lumen backup file",
+                title = stringResource(R.string.settings_import_row),
+                subtitle = stringResource(R.string.settings_import_subtitle),
                 onClick = onImport,
                 icon = LumenIcons.Import,
                 iconColor = Blue,
             )
         }
     }
-    Group("From Other Apps") {
+    Group(stringResource(R.string.settings_group_other_apps)) {
         Anchor("import-favorites", highlight) {
             SettingsRow(
-                title = "Import Favorites…",
-                subtitle = "From Fossify Gallery (.txt) or Aves (.json)",
+                title = stringResource(R.string.settings_import_favorites_row),
+                subtitle = stringResource(R.string.settings_import_favorites_subtitle),
                 onClick = onImportFavorites,
                 icon = LumenIcons.HeartFilled,
                 iconColor = Pink,
@@ -834,10 +833,10 @@ private fun ColumnScope.AboutPage(
     }
     AboutHeader(version = context.versionName(), onDeveloper = { open(DeveloperUrl) })
     SoftwareUpdateGroup(highlight, onConfirm)
-    Group("Open Source", footer = "Lumen is free and open source. Bugs and ideas are welcome on GitHub.") {
+    Group(stringResource(R.string.settings_group_open_source), footer = stringResource(R.string.settings_open_source_footer)) {
         Anchor("github", highlight) {
             SettingsRow(
-                title = "GitHub",
+                title = stringResource(R.string.settings_github),
                 value = "subhashhhhhh/Lumen",
                 onClick = { open(RepoUrl) },
                 icon = LumenIcons.Code,
@@ -847,7 +846,7 @@ private fun ColumnScope.AboutPage(
         Divider()
         Anchor("report-bug", highlight) {
             SettingsRow(
-                title = "Report a Bug",
+                title = stringResource(R.string.settings_report_bug),
                 onClick = { open("$RepoUrl/issues") },
                 icon = LumenIcons.Bug,
                 iconColor = Red,
@@ -857,7 +856,7 @@ private fun ColumnScope.AboutPage(
     Group("Lumen") {
         Anchor("licenses", highlight) {
             SettingsRow(
-                title = "Open-Source Licenses",
+                title = stringResource(R.string.settings_licenses),
                 onClick = onOpenLicenses,
                 icon = LumenIcons.Document,
                 iconColor = Gray,
@@ -866,7 +865,7 @@ private fun ColumnScope.AboutPage(
         Divider()
         Anchor("version", highlight) {
             SettingsRow(
-                title = "Version",
+                title = stringResource(R.string.settings_version),
                 value = context.versionName(),
                 // Seven taps show Developer Options, as on Android.
                 onClick = {
@@ -876,7 +875,7 @@ private fun ColumnScope.AboutPage(
                         prefs.developerOptions = true
                         android.widget.Toast.makeText(
                             context,
-                            if (already) "Developer Options are already on" else "Developer Options are on, in Settings",
+                            context.getString(if (already) R.string.settings_developer_already_on else R.string.settings_developer_now_on),
                             android.widget.Toast.LENGTH_SHORT,
                         ).show()
                     }
@@ -899,12 +898,16 @@ private fun AboutHeader(version: String, onDeveloper: () -> Unit) {
         com.subhashh.lumen.ui.components.AppIcon(96.dp)
         Spacer(Modifier.height(14.dp))
         Text("Lumen", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = colors.text)
-        Text("Version $version", fontSize = 15.sp, color = colors.secondary)
+        Text(stringResource(R.string.settings_version_value, version), fontSize = 15.sp, color = colors.secondary)
         Spacer(Modifier.height(10.dp))
+        val developerName = "Subhash Gottumukkala"
+        val madeBy = stringResource(R.string.settings_made_by, developerName)
+        val nameStart = madeBy.indexOf(developerName).coerceAtLeast(0)
         Text(
             androidx.compose.ui.text.buildAnnotatedString {
-                append("Made by ")
-                withStyle(androidx.compose.ui.text.SpanStyle(color = Blue, fontWeight = FontWeight.Medium)) { append("Subhash Gottumukkala") }
+                append(madeBy.substring(0, nameStart))
+                withStyle(androidx.compose.ui.text.SpanStyle(color = Blue, fontWeight = FontWeight.Medium)) { append(developerName) }
+                append(madeBy.substring((nameStart + developerName.length).coerceAtMost(madeBy.length)))
             },
             fontSize = 15.sp,
             color = colors.secondary,
@@ -921,13 +924,12 @@ private fun ColumnScope.DeveloperPage(prefs: LumenPrefs, highlight: String?) {
     var details by remember { mutableStateOf(prefs.searchDetails) }
     var shown by remember { mutableStateOf(prefs.developerOptions) }
     Group(
-        "Search",
-        footer = "Splits results by how they matched (names, folders and dates; people; text in photos; " +
-            "Smart Search), each one row until See All, with Smart Search's rank and score on each photo.",
+        stringResource(R.string.common_search),
+        footer = stringResource(R.string.settings_developer_search_footer),
     ) {
         Anchor("search-details", highlight) {
             ToggleRow(
-                title = "Search Details",
+                title = stringResource(R.string.settings_search_details),
                 checked = details,
                 onCheckedChange = {
                     details = it
@@ -938,11 +940,11 @@ private fun ColumnScope.DeveloperPage(prefs: LumenPrefs, highlight: String?) {
             )
         }
     }
-    Group("Onboarding", footer = "Shows first launch again, from the start. Nothing is reset.") {
+    Group(stringResource(R.string.settings_group_onboarding), footer = stringResource(R.string.settings_onboarding_footer)) {
         Anchor("show-onboarding", highlight) {
             val context = LocalContext.current
             SettingsRow(
-                title = "Show Onboarding",
+                title = stringResource(R.string.settings_show_onboarding),
                 onClick = {
                     prefs.onboardingDone = false
                     (context as? android.app.Activity)?.recreate()
@@ -952,10 +954,10 @@ private fun ColumnScope.DeveloperPage(prefs: LumenPrefs, highlight: String?) {
             )
         }
     }
-    Group("", footer = "Hides this page from Settings until Version in About is tapped seven times again.") {
+    Group("", footer = stringResource(R.string.settings_developer_footer)) {
         Anchor("developer-options", highlight) {
             ToggleRow(
-                title = "Show Developer Options",
+                title = stringResource(R.string.settings_show_developer_options),
                 checked = shown,
                 onCheckedChange = {
                     shown = it

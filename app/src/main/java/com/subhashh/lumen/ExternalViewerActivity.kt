@@ -12,6 +12,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.subhashh.lumen.data.ExternalMedia
@@ -45,7 +46,7 @@ class ExternalViewerActivity : ComponentActivity() {
                 when (val state = load) {
                     Load.Loading -> Unit
                     Load.Failed -> Text(
-                        "Lumen can't open this file.",
+                        stringResource(R.string.app_cant_open_file),
                         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                         textAlign = TextAlign.Center,
                         modifier = Modifier.align(Alignment.Center).padding(32.dp),

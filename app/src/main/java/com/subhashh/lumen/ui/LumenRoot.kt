@@ -13,6 +13,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import com.subhashh.lumen.R
 import com.subhashh.lumen.data.LumenPrefs
 import com.subhashh.lumen.ui.theme.Appearance
 import com.subhashh.lumen.ui.theme.AppearanceSetting
@@ -90,12 +91,12 @@ fun ComponentActivity.setLumenContent(content: @Composable () -> Unit) {
                         HiddenLockScreen(
                             flow = LockFlow.Unlock,
                             store = store,
-                            lockedName = "Lumen",
+                            lockedName = activity.getString(R.string.app_name),
                             onDone = { AppLock.unlock() },
                             onCancel = { activity.finish() },
                             onForgot = {
                                 // The phone's own screen lock can vouch for whoever forgot Lumen's.
-                                if (HiddenLock.deviceLockSet(activity)) HiddenLock.deviceCredential(activity, "Unlock Lumen") { AppLock.unlock() }
+                                if (HiddenLock.deviceLockSet(activity)) HiddenLock.deviceCredential(activity, activity.getString(R.string.main_unlock_lumen)) { AppLock.unlock() }
                             },
                         )
                     }

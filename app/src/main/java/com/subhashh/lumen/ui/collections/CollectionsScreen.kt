@@ -66,6 +66,8 @@ import com.subhashh.lumen.ai.Person
 import com.subhashh.lumen.ui.people.FaceAvatar
 import com.subhashh.lumen.ui.transition.CoverTransition
 import com.subhashh.lumen.ui.transition.coverCell
+import androidx.compose.ui.res.stringResource
+import com.subhashh.lumen.R
 
 @Composable
 fun CollectionsScreen(
@@ -116,7 +118,7 @@ fun CollectionsScreen(
         fullWidth { ScreenTitle(title) }
 
         if (people.isNotEmpty()) {
-            fullWidth { SectionHeader("People", trailing = "Open", onTrailingClick = { if (selection == null) onOpen(CollectionKeys.People) }) }
+            fullWidth { SectionHeader(stringResource(R.string.main_people), trailing = stringResource(R.string.common_open), onTrailingClick = { if (selection == null) onOpen(CollectionKeys.People) }) }
             fullWidth {
                 PeopleRow(
                     people.take(PeopleShown),
@@ -127,7 +129,7 @@ fun CollectionsScreen(
             }
         }
 
-        fullWidth { SectionHeader("Utilities") }
+        fullWidth { SectionHeader(stringResource(R.string.main_utilities)) }
         fullWidth {
             // Not selectable: dimmed while selecting albums.
             UtilityGroup(
@@ -138,7 +140,7 @@ fun CollectionsScreen(
             )
         }
 
-        fullWidth { SectionHeader("Albums", trailing = folders.size.toString()) }
+        fullWidth { SectionHeader(stringResource(R.string.main_albums), trailing = folders.size.toString()) }
         items(folders, key = { it.key }) { collection ->
             AlbumCard(
                 collection,
@@ -296,8 +298,8 @@ private fun UtilityGroup(
                 Text(
                     when {
                         collection.count != MediaCollections.LockedCount -> collection.count.toString()
-                        hiddenLockSet -> "Locked"
-                        else -> "Set Up"
+                        hiddenLockSet -> stringResource(R.string.main_hidden_locked)
+                        else -> stringResource(R.string.main_hidden_set_up)
                     },
                     fontSize = 16.sp,
                     color = colors.secondary,
@@ -378,7 +380,7 @@ private fun utilityIcon(key: String): ImageVector = when (key) {
 internal fun AlbumCard(
     collection: MediaCollection,
     onClick: () -> Unit,
-    subtitle: String = if (collection.count == 0) "Empty" else collection.count.toString(),
+    subtitle: String = if (collection.count == 0) stringResource(R.string.main_album_empty) else collection.count.toString(),
     /** null when not selecting. */
     selected: Boolean? = null,
     /** On the square cover, e.g. for the open transition to find it. */
@@ -418,7 +420,7 @@ internal fun AlbumCard(
             if (collection.pinned) {
                 Icon(
                     LumenIcons.Pin,
-                    contentDescription = "Pinned",
+                    contentDescription = stringResource(R.string.main_pinned),
                     tint = onBackground.copy(alpha = 0.6f),
                     modifier = Modifier.size(13.dp),
                 )

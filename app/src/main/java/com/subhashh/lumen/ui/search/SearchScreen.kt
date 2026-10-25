@@ -52,6 +52,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.annotation.StringRes
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import com.subhashh.lumen.R
 import com.subhashh.lumen.data.MediaCollection
 import com.subhashh.lumen.data.MediaItem
 import com.subhashh.lumen.data.CollectionKeys
@@ -70,7 +74,8 @@ import com.subhashh.lumen.ui.transition.transitionCell
 /** One way of matching a search, shown as its own section: one row until See All. */
 data class SearchSection(
     val id: String,
-    val title: String,
+    /** The section's heading; 0 for none (the one list). */
+    @StringRes val title: Int,
     val items: List<MediaItem>,
     /** Smart Search's score per item, shown on the cells in development builds only. */
     val scores: Map<Long, Float> = emptyMap(),
@@ -194,7 +199,7 @@ fun SearchScreen(
             .pinchColumns(ColumnSteps, columns, onColumnsChange),
     ) {
         if (people.isNotEmpty() || unnamed != null) {
-            item(span = { GridItemSpan(maxLineSpan) }) { SectionTitle("People") }
+            item(span = { GridItemSpan(maxLineSpan) }) { SectionTitle(stringResource(R.string.main_people)) }
             item(span = { GridItemSpan(maxLineSpan) }) {
                 LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(14.dp),
@@ -208,7 +213,7 @@ fun SearchScreen(
                     }
                     if (unnamed != null) {
                         item(key = "unnamed") {
-                            PersonCell(unnamed.first, unnamed.second, "Add Name", MaterialTheme.colorScheme.primary) {
+                            PersonCell(unnamed.first, unnamed.second, stringResource(R.string.main_add_name), MaterialTheme.colorScheme.primary) {
                                 onNamePerson(unnamed.first)
                             }
                         }
@@ -217,7 +222,7 @@ fun SearchScreen(
             }
         }
         if (albums.isNotEmpty()) {
-            item(span = { GridItemSpan(maxLineSpan) }) { SectionTitle("Albums") }
+            item(span = { GridItemSpan(maxLineSpan) }) { SectionTitle(stringResource(R.string.main_albums)) }
             item(span = { GridItemSpan(maxLineSpan) }) {
                 LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -235,25 +240,25 @@ fun SearchScreen(
             item(key = "header:${section.id}", span = { GridItemSpan(maxLineSpan) }) {
                 if (section.id == SearchSection.All) {
                     val n = section.items.size
+                    val lookingText = stringResource(R.string.main_search_looking_inside)
                     SectionTitle(
                         when {
-                            n == 0 -> "Looking inside photos…"
-                            n == 1 -> "1 Result"
-                            else -> "%,d Results".format(n)
+                            n == 0 -> lookingText
+                            else -> pluralStringResource(R.plurals.main_search_results, n, n)
                         },
-                        detail = if (lookingInside && n > 0) "Looking inside photos…" else null,
+                        detail = if (lookingInside && n > 0) lookingText else null,
                     )
                 } else {
                     SectionTitle(
-                        section.title,
+                        if (section.title != 0) stringResource(section.title) else "",
                         detail = when {
-                            section.items.isEmpty() -> "Looking inside photos…"
+                            section.items.isEmpty() -> stringResource(R.string.main_search_looking_inside)
                             else -> "%,d".format(section.items.size)
                         },
                         action = when {
                             section.items.size <= columns -> null
-                            section.id in expanded -> "Show Less"
-                            else -> "See All"
+                            section.id in expanded -> stringResource(R.string.main_search_show_less)
+                            else -> stringResource(R.string.main_search_see_all)
                         },
                         onAction = { onToggleSection(section.id) },
                     )
@@ -296,8 +301,7 @@ fun SearchScreen(
         if (sections != null && shown.isEmpty() && albums.isEmpty() && people.isEmpty() && unnamed == null) {
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Text(
-                    "Try describing what's in the photo, like “cat on a sofa” (with Smart Features in " +
-                        "Settings), or a file name, a folder, a month or a year.",
+                    stringResource(R.string.main_search_no_results_hint),
                     color = colors.onBackground.copy(alpha = 0.6f),
                     fontSize = 15.sp,
                     textAlign = TextAlign.Center,
@@ -374,7 +378,7 @@ private fun Suggestions(
             .padding(horizontal = 16.dp),
     ) {
         Text(
-            "Search",
+            stringResource(R.string.common_search),
             fontSize = 34.sp,
             fontWeight = FontWeight.Bold,
             color = onBackground,
@@ -382,9 +386,9 @@ private fun Suggestions(
         )
         if (recent.isNotEmpty()) {
             Row(Modifier.fillMaxWidth().padding(start = 4.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("Recent", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = onBackground, modifier = Modifier.weight(1f))
+                Text(stringResource(R.string.main_search_recent), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = onBackground, modifier = Modifier.weight(1f))
                 Text(
-                    "Clear",
+                    stringResource(R.string.main_search_clear),
                     fontSize = 15.sp,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.pressable(onClearRecent, pressedScale = 0.94f).padding(6.dp),
@@ -395,7 +399,7 @@ private fun Suggestions(
         }
         if (suggested.isNotEmpty()) {
             Text(
-                "From your photos",
+                stringResource(R.string.main_search_from_your_photos),
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 color = onBackground,
@@ -430,7 +434,7 @@ private fun Suggestions(
             }
         } else if (keywords.isNotEmpty()) {
             Text(
-                "Try",
+                stringResource(R.string.main_search_try),
                 fontSize = 15.sp,
                 color = onBackground.copy(alpha = 0.6f),
                 modifier = Modifier.padding(start = 4.dp, bottom = 10.dp),

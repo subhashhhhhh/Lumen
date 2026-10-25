@@ -67,6 +67,9 @@ import com.subhashh.lumen.ui.images.ImageKeys
 import com.subhashh.lumen.data.GridThumbnail
 import com.subhashh.lumen.ui.transition.PhotoTransition
 import com.subhashh.lumen.ui.transition.transitionCell
+import android.text.format.DateFormat
+import androidx.compose.ui.res.stringResource
+import com.subhashh.lumen.R
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -91,7 +94,7 @@ fun LibraryScreen(
     titleTopPadding: Dp = 16.dp,
     /** Whole photos letterboxed in their cells instead of square crops. */
     aspectRatioGrid: Boolean = false,
-    emptyText: String = "No photos or videos",
+    emptyText: String = stringResource(R.string.main_no_photos_or_videos),
     /** Columns, saved by the caller so the choice survives restarts. */
     columns: Int = ColumnSteps[DefaultColumnStep],
     onColumnsChange: (Int) -> Unit = {},
@@ -112,7 +115,8 @@ fun LibraryScreen(
     hero: (@Composable (Modifier) -> Unit)? = null,
     heroHeight: Dp = 0.dp,
 ) {
-    val grid = sections ?: remember(items) { GridSections.of(items, SectionMode.None) }
+    val context = LocalContext.current
+    val grid = sections ?: remember(items) { GridSections.of(context, items, SectionMode.None) }
     val entries = grid.entries
     val haptics = LocalHapticFeedback.current
     // Decode thumbnails for the cell size actually shown, so fewer, bigger cells stay sharp.
@@ -344,8 +348,8 @@ internal fun Thumbnail(
                     // GIFs move and RAW files are special; say so, as iOS does.
                     text = when {
                         item.isVideo -> formatDuration(item.durationMs)
-                        item.isRaw -> "RAW"
-                        else -> "GIF"
+                        item.isRaw -> stringResource(R.string.main_badge_raw)
+                        else -> stringResource(R.string.main_badge_gif)
                     },
                     style = OverlayText,
                     modifier = Modifier
@@ -357,7 +361,7 @@ internal fun Thumbnail(
                 // A small white heart, bottom-left, like iOS Photos.
                 Icon(
                     LumenIcons.HeartFilled,
-                    contentDescription = "Favorite",
+                    contentDescription = stringResource(R.string.common_favorite),
                     tint = Color.White,
                     modifier = Modifier
                         .align(Alignment.BottomStart)
@@ -383,7 +387,7 @@ internal fun SelectionMark(selected: Boolean, modifier: Modifier = Modifier) {
         ) {
             Icon(
                 LumenIcons.Selected,
-                contentDescription = "Selected",
+                contentDescription = stringResource(R.string.main_selected),
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.fillMaxSize(),
             )
@@ -428,7 +432,7 @@ private val HeaderScrim = arrayOf(
     1.00f to Color.Transparent,
 )
 
-private val MonthFormat = SimpleDateFormat("MMMM yyyy", Locale.getDefault())
+private val MonthFormat = SimpleDateFormat(DateFormat.getBestDateTimePattern(Locale.getDefault(), "MMMMyyyy"), Locale.getDefault())
 
 private val OverlayText = TextStyle(
     color = Color.White,

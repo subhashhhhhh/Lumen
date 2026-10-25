@@ -41,7 +41,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
 import com.kyant.backdrop.Backdrop
+import com.subhashh.lumen.R
 import com.subhashh.lumen.ui.theme.LocalGlassColors
 
 @Immutable
@@ -156,7 +158,7 @@ private fun MenuRow(item: MenuItem, colors: GlassColors, onClick: () -> Unit) {
             modifier = Modifier.weight(1f),
         )
         if (item.checked) {
-            Icon(LumenIcons.Check, contentDescription = "Selected", tint = colors.content, modifier = Modifier.size(18.dp))
+            Icon(LumenIcons.Check, contentDescription = stringResource(R.string.components_selected), tint = colors.content, modifier = Modifier.size(18.dp))
         }
         if (item.submenu != null) {
             Icon(

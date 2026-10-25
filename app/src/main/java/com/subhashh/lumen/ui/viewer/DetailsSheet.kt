@@ -1,6 +1,8 @@
 package com.subhashh.lumen.ui.viewer
 
+import com.subhashh.lumen.R
 import com.subhashh.lumen.data.toRef
+import androidx.compose.ui.res.stringResource
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.animateFloatAsState
 import kotlinx.coroutines.delay
@@ -217,7 +219,7 @@ fun DetailsSheet(
                                 ),
                         )
                         Text(
-                            person.name ?: "Unnamed",
+                            person.name ?: stringResource(R.string.viewer_unnamed),
                             color = if (person.name == null) colors.secondary else colors.text,
                             fontSize = 13.sp,
                             maxLines = 1,
@@ -249,13 +251,13 @@ fun DetailsSheet(
                         Icon(LumenIcons.Location, null, tint = colors.secondary, modifier = Modifier.size(20.dp))
                         Spacer(Modifier.width(10.dp))
                         Text(
-                            "Allow location access to see where photos were taken",
+                            stringResource(R.string.viewer_allow_location),
                             color = colors.secondary,
                             fontSize = 14.sp,
                             modifier = Modifier.weight(1f),
                         )
                         Spacer(Modifier.width(8.dp))
-                        Action("Allow", colors, onAllowLocation)
+                        Action(stringResource(R.string.common_allow), colors, onAllowLocation)
                     }
                 }
             }
@@ -279,12 +281,12 @@ private fun CaptionRow(caption: String?, colors: SheetColors, onEdit: () -> Unit
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp).pressable(onEdit, pressedScale = 0.98f).padding(horizontal = 4.dp, vertical = 4.dp),
     ) {
         Text(
-            caption ?: "Add a Caption",
+            caption ?: stringResource(R.string.viewer_add_caption),
             color = if (caption == null) colors.secondary else colors.text,
             fontSize = 15.sp,
             modifier = Modifier.weight(1f),
         )
-        Icon(LumenIcons.Edit, contentDescription = "Edit caption", tint = colors.accent, modifier = Modifier.size(18.dp))
+        Icon(LumenIcons.Edit, contentDescription = stringResource(R.string.viewer_edit_caption), tint = colors.accent, modifier = Modifier.size(18.dp))
     }
 }
 
@@ -309,7 +311,7 @@ private fun WhatLumenSees(item: MediaItem, colors: SheetColors, onSearch: (Strin
     if (looks.isNotEmpty()) {
         Spacer(Modifier.height(10.dp))
         Group(colors) {
-            Line("Looks like", colors, secondary = true)
+            Line(stringResource(R.string.viewer_looks_like), colors, secondary = true)
             Spacer(Modifier.height(8.dp))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 for (word in looks) {
@@ -357,7 +359,7 @@ private fun SubtitlesPart(item: MediaItem, cues: List<Cue>, colors: SheetColors,
     LaunchedEffect(active) {
         if (active != null && !list.isScrollInProgress) list.animateScrollToItem((active - 1).coerceAtLeast(0))
     }
-    Title(LumenIcons.Video, "Subtitles", colors)
+    Title(LumenIcons.Video, stringResource(R.string.viewer_subtitles), colors)
     Spacer(Modifier.height(8.dp))
     LazyColumn(state = list, modifier = Modifier.fillMaxWidth().heightIn(max = 220.dp)) {
         itemsIndexed(cues) { i, cue ->
@@ -393,10 +395,10 @@ private fun SubtitlesPart(item: MediaItem, cues: List<Cue>, colors: SheetColors,
     Spacer(Modifier.height(10.dp))
     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         for ((label, action) in listOf<Pair<String, () -> Unit>>(
-            "Copy" to { copyText(context, cues.joinToString("\n") { it.text }) },
-            "Copy with Times" to { copyText(context, Subtitles.timestamped(cues)) },
-            "Export SRT" to { exportSubtitles(context, item, Subtitles.srt(cues), "srt", "application/x-subrip") },
-            "Export VTT" to { exportSubtitles(context, item, Subtitles.vtt(cues), "vtt", "text/vtt") },
+            stringResource(R.string.common_copy) to { copyText(context, cues.joinToString("\n") { it.text }) },
+            stringResource(R.string.viewer_copy_with_times) to { copyText(context, Subtitles.timestamped(cues)) },
+            stringResource(R.string.viewer_export_srt) to { exportSubtitles(context, item, Subtitles.srt(cues), "srt", "application/x-subrip") },
+            stringResource(R.string.viewer_export_vtt) to { exportSubtitles(context, item, Subtitles.vtt(cues), "vtt", "text/vtt") },
         )) {
             Text(
                 label,
@@ -417,7 +419,7 @@ private fun copyText(context: Context, text: String) {
     context.getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("Text", text))
     // Android 13+ confirms copies itself.
     if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.TIRAMISU) {
-        Toast.makeText(context, "Copied", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, context.getString(R.string.common_copied), Toast.LENGTH_SHORT).show()
     }
 }
 
@@ -443,16 +445,16 @@ private fun AllMetadataGroup(item: MediaItem, canReadLocation: Boolean, colors: 
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxWidth().pressable({ open = !open }, pressedScale = 0.98f),
     ) {
-        Text("All Metadata", color = colors.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+        Text(stringResource(R.string.viewer_all_metadata), color = colors.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
         if (open && tags.isNotEmpty()) {
-            Action("Copy", colors) { copyText(context, tags.joinToString("\n") { (k, v) -> "$k: $v" }) }
+            Action(stringResource(R.string.common_copy), colors) { copyText(context, tags.joinToString("\n") { (k, v) -> "$k: $v" }) }
         } else {
-            Text(if (open) "" else "Show", color = colors.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            Text(if (open) "" else stringResource(R.string.viewer_show), color = colors.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
         }
     }
     if (open) {
         Spacer(Modifier.height(8.dp))
-        if (tags.isEmpty()) Line("Nothing readable in this file", colors, secondary = true)
+        if (tags.isEmpty()) Line(stringResource(R.string.viewer_nothing_readable), colors, secondary = true)
         for ((key, value) in tags) {
             Row(Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
                 Text(key, color = colors.secondary, fontSize = 12.sp, modifier = Modifier.weight(0.42f))
@@ -470,6 +472,8 @@ private fun WhenHeader(item: MediaItem, d: MediaDetails?, colors: SheetColors, o
     val there = d?.offset?.let { runCatching { ZoneOffset.of(it) }.getOrNull() }
         ?.let { Instant.ofEpochMilli(item.takenAt).atOffset(it) }
     val time = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
+    val zone = DateTimeFormatter.ofPattern("OOOO", Locale.getDefault())
+    val yourTime = stringResource(R.string.viewer_your_time)
     Row(verticalAlignment = Alignment.Top, modifier = Modifier.padding(horizontal = 4.dp)) {
         Column(Modifier.weight(1f)) {
             Text(
@@ -481,13 +485,13 @@ private fun WhenHeader(item: MediaItem, d: MediaDetails?, colors: SheetColors, o
             val line = buildString {
                 append(time.format(there ?: here))
                 if (there != null) {
-                    append("  ·  GMT").append(if (there.offset == ZoneOffset.UTC) "" else there.offset.id)
-                    if (there.offset != here.offset) append("  ·  ").append(here.format(time)).append(" your time")
+                    append("  ·  ").append(zone.format(there))
+                    if (there.offset != here.offset) append("  ·  ").append(yourTime.format(here.format(time)))
                 }
             }
             Text(line, color = colors.secondary, fontSize = 15.sp)
         }
-        Action("Adjust", colors) { onAdjustDate(item) }
+        Action(stringResource(R.string.viewer_adjust), colors) { onAdjustDate(item) }
     }
 }
 
@@ -554,15 +558,15 @@ private fun Line(text: String, colors: SheetColors, secondary: Boolean = false) 
 
 @Composable
 private fun CameraGroup(item: MediaItem, camera: CameraInfo, colors: SheetColors) {
-    val title = camera.device?.let { if (item.isRaw) "$it · RAW" else it } ?: "Camera"
+    val title = camera.device?.let { if (item.isRaw) "$it · RAW" else it } ?: stringResource(R.string.viewer_camera)
     Title(LumenIcons.Camera, title, colors)
-    val kind = cameraKind(camera)
+    val kind = cameraKind(camera)?.let { stringResource(it) }
     val lens = listOfNotNull(kind, camera.lens).joinToString("  ·  ")
     if (lens.isNotEmpty()) {
         Spacer(Modifier.height(2.dp))
         Text(lens, color = colors.secondary, fontSize = 13.sp, modifier = Modifier.padding(start = 30.dp))
     }
-    val chips = exposureFacts(camera)
+    val chips = exposureFacts(LocalContext.current, camera)
     if (chips.isNotEmpty()) {
         Spacer(Modifier.height(12.dp))
         Chips(chips, colors)
@@ -570,23 +574,23 @@ private fun CameraGroup(item: MediaItem, camera: CameraInfo, colors: SheetColors
 }
 
 /** Which of the phone's cameras, from its lens name or 35 mm-equivalent focal length. */
-private fun cameraKind(c: CameraInfo): String? = when {
-    c.lens?.contains("front", ignoreCase = true) == true -> "Front camera"
+private fun cameraKind(c: CameraInfo): Int? = when {
+    c.lens?.contains("front", ignoreCase = true) == true -> R.string.viewer_camera_front
     c.focal35mm == null -> null
-    c.focal35mm < 20 -> "Ultra-wide"
-    c.focal35mm <= 35 -> "Wide"
-    else -> "Telephoto"
+    c.focal35mm < 20 -> R.string.viewer_camera_ultra_wide
+    c.focal35mm <= 35 -> R.string.viewer_camera_wide
+    else -> R.string.viewer_camera_telephoto
 }
 
 @Composable
 private fun ImageGroup(item: MediaItem, d: MediaDetails, colors: SheetColors) {
     val context = LocalContext.current
-    Title(LumenIcons.Image, formatName(d.mimeType, false), colors)
+    Title(LumenIcons.Image, formatName(context, d.mimeType, false), colors)
     Spacer(Modifier.height(8.dp))
     val size = buildList {
         if (d.width > 0) {
             val mp = d.width.toLong() * d.height / 1_000_000.0
-            if (mp >= 1) add("${mp.roundToInt()} MP")
+            if (mp >= 1) add(context.getString(R.string.viewer_megapixels, mp.roundToInt()))
             add("${d.width} × ${d.height}")
         }
         if (d.sizeBytes > 0) add(Formatter.formatShortFileSize(context, d.sizeBytes))
@@ -595,8 +599,8 @@ private fun ImageGroup(item: MediaItem, d: MediaDetails, colors: SheetColors) {
     val chips = listOfNotNull(
         d.hdr,
         d.colorSpace,
-        d.bitDepth?.let { "$it-bit" },
-        "Motion Photo".takeIf { d.motionPhoto },
+        d.bitDepth?.let { stringResource(R.string.viewer_bit_depth, it) },
+        stringResource(R.string.viewer_motion_photo).takeIf { d.motionPhoto },
         "RAW".takeIf { item.isRaw },
     )
     if (chips.isNotEmpty()) {
@@ -609,7 +613,7 @@ private fun ImageGroup(item: MediaItem, d: MediaDetails, colors: SheetColors) {
 private fun VideoGroup(item: MediaItem, d: MediaDetails, colors: SheetColors) {
     val context = LocalContext.current
     val v = d.video
-    Title(LumenIcons.Video, listOfNotNull(v?.codec, formatName(d.mimeType, true)).joinToString(" · "), colors)
+    Title(LumenIcons.Video, listOfNotNull(v?.codec, formatName(context, d.mimeType, true)).joinToString(" · "), colors)
     Spacer(Modifier.height(8.dp))
     val main = buildList {
         if (item.durationMs > 0) add(formatDuration(item.durationMs))
@@ -619,14 +623,14 @@ private fun VideoGroup(item: MediaItem, d: MediaDetails, colors: SheetColors) {
     }
     if (main.isNotEmpty()) Line(main.joinToString("  ·  "), colors)
     if (v != null) {
-        audioLine(v)?.let {
+        audioLine(context, v)?.let {
             Spacer(Modifier.height(2.dp))
             Line(it, colors, secondary = true)
         }
         val chips = listOfNotNull(
             v.hdr,
             v.bitrate?.let { "%.1f Mbps".format(Locale.US, it / 1_000_000.0) },
-            v.captureFps?.let { "Slow motion · ${it.roundToInt()} fps" },
+            v.captureFps?.let { context.getString(R.string.viewer_slow_motion, it.roundToInt()) },
         )
         if (chips.isNotEmpty()) {
             Spacer(Modifier.height(10.dp))
@@ -635,18 +639,18 @@ private fun VideoGroup(item: MediaItem, d: MediaDetails, colors: SheetColors) {
     }
 }
 
-private fun audioLine(v: VideoInfo): String? {
+private fun audioLine(context: Context, v: VideoInfo): String? {
     val codec = v.audioCodec ?: return null
-    val channels = when (v.audioChannels) {
+    val channels = when (val count = v.audioChannels) {
         null -> null
-        1 -> "Mono"
-        2 -> "Stereo"
+        1 -> context.getString(R.string.viewer_audio_mono)
+        2 -> context.getString(R.string.viewer_audio_stereo)
         6 -> "5.1"
         8 -> "7.1"
-        else -> "${v.audioChannels} channels"
+        else -> context.resources.getQuantityString(R.plurals.viewer_audio_channels, count, count)
     }
     val rate = v.sampleRate?.let { if (it % 1000 == 0) "${it / 1000} kHz" else "%.1f kHz".format(Locale.US, it / 1000.0) }
-    return listOfNotNull("Audio: $codec", channels, rate).joinToString("  ·  ")
+    return listOfNotNull(context.getString(R.string.viewer_audio, codec), channels, rate).joinToString("  ·  ")
 }
 
 @Composable
@@ -660,22 +664,25 @@ private fun LocationGroup(d: MediaDetails, location: GeoPoint, showMaps: Boolean
             modifier = Modifier.fillMaxWidth().height(160.dp).clip(RoundedCornerShape(14.dp)),
         )
         Spacer(Modifier.height(12.dp))
-        Title(LumenIcons.Location, place ?: "Location", colors)
+        Title(LumenIcons.Location, place ?: stringResource(R.string.viewer_location), colors)
     } else {
-        Title(LumenIcons.Location, place ?: "Location", colors) { Action("Open in Maps", colors) { onOpenMap(location) } }
+        Title(LumenIcons.Location, place ?: stringResource(R.string.viewer_location), colors) { Action(stringResource(R.string.viewer_open_in_maps), colors) { onOpenMap(location) } }
     }
     Spacer(Modifier.height(2.dp))
     val extra = listOfNotNull(
-        formatCoordinates(location),
+        formatCoordinates(context, location),
         d.altitude?.let { "${it.roundToInt()} m" },
-        d.direction?.let { "Facing ${compass(it)}" },
+        d.direction?.let { context.getString(R.string.viewer_facing, compass(context, it)) },
     )
     Text(extra.joinToString("  ·  "), color = colors.secondary, fontSize = 13.sp, modifier = Modifier.padding(start = 30.dp))
 }
 
-private fun compass(degrees: Double): String {
-    val points = listOf("N", "NE", "E", "SE", "S", "SW", "W", "NW")
-    return points[((degrees % 360 + 360) % 360 / 45).roundToInt() % 8]
+private fun compass(context: Context, degrees: Double): String {
+    val points = listOf(
+        R.string.viewer_compass_n, R.string.viewer_compass_ne, R.string.viewer_compass_e, R.string.viewer_compass_se,
+        R.string.viewer_compass_s, R.string.viewer_compass_sw, R.string.viewer_compass_w, R.string.viewer_compass_nw,
+    )
+    return context.getString(points[((degrees % 360 + 360) % 360 / 45).roundToInt() % 8])
 }
 
 @Composable
@@ -683,19 +690,22 @@ private fun FileGroup(item: MediaItem, d: MediaDetails, colors: SheetColors, onR
     Title(null, d.fileName, colors) {
         Icon(
             LumenIcons.Edit,
-            contentDescription = "Rename",
+            contentDescription = stringResource(R.string.common_rename),
             tint = colors.accent,
             modifier = Modifier.pressable({ onRename(item) }, pressedScale = 0.9f).padding(4.dp).size(20.dp),
         )
     }
     Spacer(Modifier.height(2.dp))
-    val where = listOfNotNull(d.volume, d.folder.trimEnd('/').ifEmpty { null }).joinToString("  ·  ").ifEmpty { "Internal storage" }
+    val where = listOfNotNull(d.volume, d.folder.trimEnd('/').ifEmpty { null }).joinToString("  ·  ").ifEmpty { stringResource(R.string.viewer_internal_storage) }
     Text(where, color = colors.secondary, fontSize = 13.sp)
-    val chips = listOfNotNull(MediaSource.describe(item.relativePath, d.fileName)?.let { "From $it" })
+    val from = stringResource(R.string.viewer_from)
+    val added = stringResource(R.string.viewer_added)
+    val modified = stringResource(R.string.viewer_modified)
+    val chips = listOfNotNull(MediaSource.describe(item.relativePath, d.fileName)?.let { from.format(it) })
     val dates = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
     val lines = listOfNotNull(
-        d.dateAdded?.let { "Added " + Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).format(dates) },
-        d.dateModified?.let { "Modified " + Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).format(dates) },
+        d.dateAdded?.let { added.format(Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).format(dates)) },
+        d.dateModified?.let { modified.format(Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).format(dates)) },
     )
     if (chips.isNotEmpty()) {
         Spacer(Modifier.height(10.dp))
@@ -707,36 +717,36 @@ private fun FileGroup(item: MediaItem, d: MediaDetails, colors: SheetColors, onR
     }
 }
 
-private fun exposureFacts(c: CameraInfo) = buildList {
+private fun exposureFacts(context: Context, c: CameraInfo) = buildList {
     c.iso?.let { add("ISO $it") }
     // The 35 mm equivalent says how wide the shot is; the real focal length means little on phones.
     (c.focal35mm?.let { "$it mm" } ?: c.focalLengthMm?.let { "${formatNumber(it)} mm" })?.let(::add)
     c.aperture?.let { add("ƒ${formatNumber(it)}") }
     c.exposure?.let { add(if (it < 1) "1/${(1 / it).roundToInt()} s" else "${formatNumber(it)} s") }
     c.exposureBias?.takeIf { abs(it) >= 0.05 }?.let { add("%+.1f EV".format(Locale.US, it)) }
-    if (c.flashFired == true) add("Flash")
-    if (c.whiteBalanceManual == true) add("Manual WB")
+    if (c.flashFired == true) add(context.getString(R.string.viewer_flash))
+    if (c.whiteBalanceManual == true) add(context.getString(R.string.viewer_manual_wb))
 }
 
 private fun formatNumber(v: Double): String =
     if (abs(v - v.roundToInt()) < 0.05) v.roundToInt().toString() else "%.1f".format(Locale.US, v)
 
-private fun formatName(mime: String, isVideo: Boolean): String {
+private fun formatName(context: Context, mime: String, isVideo: Boolean): String {
     // RAW types look like image/x-adobe-dng or image/x-canon-cr2: show "DNG RAW", "CR2 RAW".
     if (!isVideo && mime.startsWith("image/x-") && mime.substringAfterLast('-') in RawExtensions) {
         return mime.substringAfterLast('-').uppercase() + " RAW"
     }
     val subtype = mime.substringAfter('/').uppercase()
     return when {
-        subtype == "*" || subtype.isEmpty() -> if (isVideo) "Video" else "Photo"
-        isVideo -> "$subtype video"
+        subtype == "*" || subtype.isEmpty() -> context.getString(if (isVideo) R.string.viewer_video else R.string.viewer_photo)
+        isVideo -> context.getString(R.string.viewer_format_video, subtype)
         else -> subtype
     }
 }
 
-private fun formatCoordinates(p: GeoPoint): String {
-    val lat = "%.4f° %s".format(Locale.US, abs(p.latitude), if (p.latitude >= 0) "N" else "S")
-    val lon = "%.4f° %s".format(Locale.US, abs(p.longitude), if (p.longitude >= 0) "E" else "W")
+private fun formatCoordinates(context: Context, p: GeoPoint): String {
+    val lat = "%.4f° %s".format(Locale.US, abs(p.latitude), context.getString(if (p.latitude >= 0) R.string.viewer_compass_n else R.string.viewer_compass_s))
+    val lon = "%.4f° %s".format(Locale.US, abs(p.longitude), context.getString(if (p.longitude >= 0) R.string.viewer_compass_e else R.string.viewer_compass_w))
     return "$lat, $lon"
 }
 

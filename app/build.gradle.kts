@@ -104,6 +104,13 @@ android {
     buildFeatures {
         compose = true
     }
+
+    // Per-app language (Android 13+, Settings → Apps → Lumen → Language): the list of languages is
+    // generated from the translated res/values-xx folders; res/resources.properties says the
+    // default strings are English.
+    androidResources {
+        generateLocaleConfig = true
+    }
 }
 
 // Lumen drives Lumen AI's engine directly (its own search screen, settings, Lab), not just the

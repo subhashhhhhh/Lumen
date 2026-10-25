@@ -17,10 +17,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.subhashh.lumen.R
 import com.subhashh.lumen.data.ExclusionSuggestion
 
 /**
@@ -39,37 +42,44 @@ fun ExcludedFoldersScreen(
 ) {
     val colors = groupColors()
     SettingsPage(contentPadding, modifier) {
-        LargeTitle("Excluded Folders")
+        LargeTitle(stringResource(R.string.settings_excluded_folders))
         Text(
-            "Lumen ignores these folders and everything inside them. The files stay where they are, " +
-                "and other apps still see them.",
+            stringResource(R.string.settings_excluded_intro),
             fontSize = 15.sp,
             color = colors.secondary,
             modifier = Modifier.padding(start = 4.dp, end = 4.dp),
         )
 
         if (excluded.isNotEmpty()) {
-            Group("Excluded") {
+            Group(stringResource(R.string.settings_group_excluded)) {
                 excluded.forEachIndexed { i, (folder, count) ->
                     if (i > 0) Divider()
-                    FolderRow(folder, "$count ${if (count == 1) "item" else "items"}", "Include") { onInclude(folder) }
+                    FolderRow(
+                        folder,
+                        pluralStringResource(R.plurals.settings_excluded_items, count, count),
+                        stringResource(R.string.settings_include),
+                    ) { onInclude(folder) }
                 }
             }
         }
 
         if (suggestions.isNotEmpty()) {
-            Group("Suggested", footer = "Folders that look like software projects: their images are usually icons and build files.") {
+            Group(stringResource(R.string.settings_group_suggested), footer = stringResource(R.string.settings_suggested_footer)) {
                 suggestions.forEachIndexed { i, suggestion ->
                     if (i > 0) Divider()
-                    FolderRow(suggestion.folder, "${suggestion.itemCount} code images", "Exclude") {
+                    FolderRow(
+                        suggestion.folder,
+                        pluralStringResource(R.plurals.settings_code_images, suggestion.itemCount, suggestion.itemCount),
+                        stringResource(R.string.settings_exclude),
+                    ) {
                         onExclude(suggestion.folder)
                     }
                 }
             }
         }
 
-        Group("Add") {
-            SettingsRow(title = "Choose a Folder…", onClick = onChooseFolder)
+        Group(stringResource(R.string.common_add)) {
+            SettingsRow(title = stringResource(R.string.settings_choose_folder), onClick = onChooseFolder)
         }
     }
 }
@@ -88,7 +98,7 @@ private fun FolderRow(folder: String, subtitle: String, action: String, onAction
         Column(Modifier.weight(1f)) {
             Text(name, fontSize = 16.sp, color = colors.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(
-                "${folder.trimEnd('/')} · $subtitle",
+                stringResource(R.string.settings_folder_subtitle, folder.trimEnd('/'), subtitle),
                 fontSize = 13.sp,
                 color = colors.secondary,
                 maxLines = 1,

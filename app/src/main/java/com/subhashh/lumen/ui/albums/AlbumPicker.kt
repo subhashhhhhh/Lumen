@@ -60,6 +60,8 @@ import com.subhashh.lumen.data.MediaThumbnail
 import com.subhashh.lumen.ui.components.pressable
 import com.subhashh.lumen.ui.icons.LumenIcons
 import com.subhashh.lumen.ui.images.ImageKeys
+import androidx.compose.ui.res.stringResource
+import com.subhashh.lumen.R
 
 /** Where to put photos: an existing album (by folder) or a new one. */
 data class AlbumTarget(val relativePath: String, val title: String)
@@ -142,7 +144,7 @@ private fun Sheet(
                 .padding(horizontal = 20.dp, vertical = 16.dp),
         ) {
             Text(
-                "Cancel",
+                stringResource(R.string.common_cancel),
                 color = Color(0xFF0A84FF),
                 fontSize = 16.sp,
                 modifier = Modifier
@@ -181,7 +183,7 @@ private fun Sheet(
                     }
                     Spacer(Modifier.width(14.dp))
                     if (!naming) {
-                        Text("New Album…", color = colors.text, fontSize = 16.sp)
+                        Text(stringResource(R.string.main_new_album_ellipsis), color = colors.text, fontSize = 16.sp)
                     } else {
                         BasicTextField(
                             value = name,
@@ -192,7 +194,7 @@ private fun Sheet(
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                             keyboardActions = KeyboardActions(onDone = { create() }),
                             decorationBox = { field ->
-                                if (name.isEmpty()) Text("Album name", color = colors.secondary, fontSize = 16.sp)
+                                if (name.isEmpty()) Text(stringResource(R.string.main_album_name_hint), color = colors.secondary, fontSize = 16.sp)
                                 field()
                             },
                             modifier = Modifier
@@ -200,7 +202,7 @@ private fun Sheet(
                                 .focusRequester(focus),
                         )
                         Text(
-                            "Create",
+                            stringResource(R.string.main_create),
                             color = if (name.isBlank()) colors.secondary else Color(0xFF0A84FF),
                             fontSize = 16.sp,
                             fontWeight = FontWeight.SemiBold,

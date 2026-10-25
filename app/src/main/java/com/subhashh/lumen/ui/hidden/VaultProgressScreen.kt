@@ -45,12 +45,14 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.subhashh.lumen.R
 import com.subhashh.lumen.data.vault.VaultMigration
 import com.subhashh.lumen.ui.icons.LumenIcons
 import com.subhashh.lumen.ui.theme.LocalMotion
@@ -139,7 +141,7 @@ fun VaultProgressScreen(encrypting: Boolean, progress: VaultMigration.Progress?)
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "${(shown * 100).toInt()}%",
+                        stringResource(R.string.hidden_vault_percent, (shown * 100).toInt()),
                         color = Color.White,
                         fontSize = 28.sp,
                         fontWeight = FontWeight.Bold,
@@ -151,8 +153,13 @@ fun VaultProgressScreen(encrypting: Boolean, progress: VaultMigration.Progress?)
             Spacer(Modifier.height(18.dp))
             Text(
                 when {
-                    progress == null || progress.total == 0 -> if (encrypting) "Getting ready…" else "Opening the vault…"
-                    else -> "${if (encrypting) "Encrypting" else "Decrypting"} ${minOf(progress.done + 1, progress.total)} of ${progress.total}"
+                    progress == null || progress.total == 0 ->
+                        stringResource(if (encrypting) R.string.hidden_vault_getting_ready else R.string.hidden_vault_opening)
+                    else -> stringResource(
+                        if (encrypting) R.string.hidden_vault_encrypting else R.string.hidden_vault_decrypting,
+                        minOf(progress.done + 1, progress.total),
+                        progress.total,
+                    )
                 },
                 color = Color.White,
                 fontSize = 18.sp,
@@ -160,13 +167,13 @@ fun VaultProgressScreen(encrypting: Boolean, progress: VaultMigration.Progress?)
             )
             Spacer(Modifier.height(6.dp))
             if (progress != null && progress.bytesTotal > 0) {
+                val sizes = stringResource(
+                    R.string.hidden_vault_bytes,
+                    Formatter.formatShortFileSize(context, progress.bytesDone),
+                    Formatter.formatShortFileSize(context, progress.bytesTotal),
+                )
                 Text(
-                    buildString {
-                        append(Formatter.formatShortFileSize(context, progress.bytesDone))
-                        append(" of ")
-                        append(Formatter.formatShortFileSize(context, progress.bytesTotal))
-                        remaining?.let { append(" · ").append(timeLeft(it)) }
-                    },
+                    remaining?.let { stringResource(R.string.hidden_vault_bytes_time, sizes, timeLeft(context, it)) } ?: sizes,
                     color = Color.White.copy(alpha = 0.65f),
                     fontSize = 14.sp,
                 )
@@ -174,9 +181,9 @@ fun VaultProgressScreen(encrypting: Boolean, progress: VaultMigration.Progress?)
             Spacer(Modifier.height(36.dp))
             Text(
                 if (encrypting) {
-                    "Each file is checked after encrypting, before its original is removed. Keep Lumen open."
+                    stringResource(R.string.hidden_vault_encrypt_note)
                 } else {
-                    "Files go back exactly where they were, still hidden. Keep Lumen open."
+                    stringResource(R.string.hidden_vault_decrypt_note)
                 },
                 color = Color.White.copy(alpha = 0.5f),
                 fontSize = 13.sp,
@@ -227,13 +234,13 @@ private fun CipherText(name: String, encrypting: Boolean, animate: Boolean, acce
     )
 }
 
-private fun timeLeft(ms: Long): String {
+private fun timeLeft(context: android.content.Context, ms: Long): String {
     val seconds = ms / 1000
     return when {
-        seconds < 10 -> "almost done"
-        seconds < 60 -> "about ${seconds} s left"
-        seconds < 3600 -> "about ${(seconds + 30) / 60} min left"
-        else -> "about ${seconds / 3600} h ${(seconds % 3600) / 60} min left"
+        seconds < 10 -> context.getString(R.string.hidden_vault_almost_done)
+        seconds < 60 -> context.getString(R.string.hidden_vault_seconds_left, seconds)
+        seconds < 3600 -> context.getString(R.string.hidden_vault_minutes_left, (seconds + 30) / 60)
+        else -> context.getString(R.string.hidden_vault_hours_left, seconds / 3600, (seconds % 3600) / 60)
     }
 }
 

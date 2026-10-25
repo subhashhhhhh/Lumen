@@ -24,6 +24,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import com.subhashh.lumen.R
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -97,7 +100,7 @@ fun MergePeopleDialog(
                 Faces(p, ring = card)
                 Spacer(Modifier.height(16.dp))
                 Text(
-                    "Merge with ${p.name}?",
+                    stringResource(R.string.main_merge_with_name, p.name),
                     color = text,
                     fontSize = 17.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -106,17 +109,16 @@ fun MergePeopleDialog(
                 )
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    "You already have someone named ${p.name}. If this is them, merge to see " +
-                        "all ${photos((p.person.mediaIds + p.match.mediaIds).size)} as one person.",
+                    stringResource(R.string.main_merge_proposal_message, p.name, photos((p.person.mediaIds + p.match.mediaIds).size)),
                     color = secondary,
                     fontSize = 14.sp,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(horizontal = 18.dp),
                 )
                 Spacer(Modifier.height(20.dp))
-                Action("Merge", blue, divider, bold = true) { onMerge(p) }
-                Action("Keep Separate", blue, divider) { onKeepSeparate(p) }
-                Action("Cancel", blue, divider, onClick = onDismiss)
+                Action(stringResource(R.string.main_merge), blue, divider, bold = true) { onMerge(p) }
+                Action(stringResource(R.string.main_keep_separate), blue, divider) { onKeepSeparate(p) }
+                Action(stringResource(R.string.common_cancel), blue, divider, onClick = onDismiss)
             }
         }
     }
@@ -166,7 +168,8 @@ private fun Action(label: String, color: Color, divider: Color, bold: Boolean = 
     )
 }
 
-private fun photos(n: Int): String = "%,d %s".format(n, if (n == 1) "photo" else "photos")
+@Composable
+private fun photos(n: Int): String = pluralStringResource(R.plurals.main_merge_photo_count, n, n)
 
 private val FaceSize = 84.dp
 private val RingWidth = 3.dp

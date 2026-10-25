@@ -7,6 +7,7 @@ import android.content.Intent
 import android.content.IntentSender
 import android.net.Uri
 import android.provider.MediaStore
+import com.subhashh.lumen.R
 import androidx.core.content.FileProvider
 import androidx.print.PrintHelper
 
@@ -57,14 +58,14 @@ object MediaActions {
     /** Copies the photo itself (not a path) so it can be pasted into a chat or a document. */
     fun copyToClipboard(context: Context, item: MediaItem) {
         val clipboard = context.getSystemService(ClipboardManager::class.java) ?: return
-        clipboard.setPrimaryClip(ClipData.newUri(context.contentResolver, "Photo", item.uri))
+        clipboard.setPrimaryClip(ClipData.newUri(context.contentResolver, context.getString(R.string.data_photo), item.uri))
     }
 
     /** Android's own print flow (printer, PDF, copies); scaled to fit the page. */
     fun print(context: Context, item: MediaItem) {
         runCatching {
             PrintHelper(context).apply { scaleMode = PrintHelper.SCALE_MODE_FIT }
-                .printBitmap(item.uri.lastPathSegment ?: "Photo", item.uri)
+                .printBitmap(item.uri.lastPathSegment ?: context.getString(R.string.data_photo), item.uri)
         }
     }
 

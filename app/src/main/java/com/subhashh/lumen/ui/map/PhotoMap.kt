@@ -32,6 +32,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -40,6 +41,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import com.subhashh.lumen.R
 import com.subhashh.lumen.data.GeoPoint
 import com.subhashh.lumen.ui.components.GlassIconButton
 import com.subhashh.lumen.ui.components.glass
@@ -180,7 +182,7 @@ fun MapPreview(point: GeoPoint, onOpen: () -> Unit, modifier: Modifier = Modifie
         val image = bitmap
         if (image != null) {
             Box(Modifier.fillMaxSize().pressable(onOpen, pressedScale = 0.97f)) {
-                Image(image.asImageBitmap(), contentDescription = "Map", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                Image(image.asImageBitmap(), contentDescription = stringResource(R.string.viewer_map), contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                 Pin(Modifier.align(Alignment.Center))
             }
         } else {
@@ -217,7 +219,7 @@ fun PhotoMapScreen(point: GeoPoint, title: String?, onBack: () -> Unit, onOpenIn
             Modifier.statusBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            GlassIconButton(backdrop, LumenIcons.Back, "Back", onClick = onBack)
+            GlassIconButton(backdrop, LumenIcons.Back, stringResource(R.string.common_back), onClick = onBack)
             if (title != null) {
                 Text(
                     title,
@@ -232,7 +234,7 @@ fun PhotoMapScreen(point: GeoPoint, title: String?, onBack: () -> Unit, onOpenIn
             }
         }
         Text(
-            "Open in Maps",
+            stringResource(R.string.viewer_open_in_maps),
             color = glass.content,
             fontSize = 15.sp,
             modifier = Modifier

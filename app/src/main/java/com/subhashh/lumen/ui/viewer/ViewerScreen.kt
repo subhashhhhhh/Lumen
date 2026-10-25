@@ -1,6 +1,8 @@
 package com.subhashh.lumen.ui.viewer
 
+import com.subhashh.lumen.R
 import com.subhashh.lumen.data.toRef
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 
 import androidx.compose.foundation.layout.offset
@@ -165,7 +167,7 @@ fun ViewerScreen(
     external: Boolean = false,
     /** Viewing a folder album: ⋯ offers Make Album Cover (a person's photos: [coverLabel]). */
     onMakeCover: ((MediaItem) -> Unit)? = null,
-    coverLabel: String = "Make Album Cover",
+    coverLabel: String = stringResource(R.string.viewer_make_album_cover),
     /** Viewing a person's photos: ⋯ offers this ("Not Chiara") to take them out of this one. */
     notPerson: Pair<String, (MediaItem) -> Unit>? = null,
     onAdjustDate: (MediaItem) -> Unit = {},
@@ -607,38 +609,38 @@ fun ViewerScreen(
                             GlassIconButton(
                                 backdrop = backdrop,
                                 icon = LumenIcons.Share,
-                                contentDescription = "Share",
+                                contentDescription = stringResource(R.string.common_share),
                                 onClick = { MediaActions.share(context, current) },
                             )
                             GlassIconButton(
                                 backdrop = backdrop,
                                 icon = LumenIcons.Info,
-                                contentDescription = "Details",
+                                contentDescription = stringResource(R.string.common_details),
                                 onClick = motion::openInfo,
                             )
                         } else if (inHidden) {
                             GlassIconButton(
                                 backdrop = backdrop,
                                 icon = LumenIcons.Share,
-                                contentDescription = "Share",
+                                contentDescription = stringResource(R.string.common_share),
                                 onClick = { onShareHidden(current) },
                             )
                             GlassIconButton(
                                 backdrop = backdrop,
                                 icon = LumenIcons.Info,
-                                contentDescription = "Details",
+                                contentDescription = stringResource(R.string.common_details),
                                 onClick = motion::openInfo,
                             )
                             GlassIconButton(
                                 backdrop = backdrop,
                                 icon = LumenIcons.Unhide,
-                                contentDescription = "Unhide",
+                                contentDescription = stringResource(R.string.common_unhide),
                                 onClick = { onUnhide(current) },
                             )
                             GlassIconButton(
                                 backdrop = backdrop,
                                 icon = LumenIcons.DeleteForever,
-                                contentDescription = "Delete permanently",
+                                contentDescription = stringResource(R.string.viewer_delete_permanently),
                                 tint = Color(0xFFFF453A),
                                 onClick = { onDeleteHidden(current) },
                             )
@@ -646,13 +648,13 @@ fun ViewerScreen(
                             GlassIconButton(
                                 backdrop = backdrop,
                                 icon = LumenIcons.Restore,
-                                contentDescription = "Restore",
+                                contentDescription = stringResource(R.string.common_restore),
                                 onClick = { launch(MediaActions.restoreRequest(context, current)) },
                             )
                             GlassIconButton(
                                 backdrop = backdrop,
                                 icon = LumenIcons.DeleteForever,
-                                contentDescription = "Delete forever",
+                                contentDescription = stringResource(R.string.viewer_delete_forever),
                                 tint = Color(0xFFFF453A),
                                 onClick = { launch(MediaActions.deleteForeverRequest(context, current)) },
                             )
@@ -660,13 +662,13 @@ fun ViewerScreen(
                             GlassIconButton(
                                 backdrop = backdrop,
                                 icon = LumenIcons.Share,
-                                contentDescription = "Share",
+                                contentDescription = stringResource(R.string.common_share),
                                 onClick = { MediaActions.share(context, current) },
                             )
                             GlassIconButton(
                                 backdrop = backdrop,
                                 icon = if (current.isFavorite) LumenIcons.HeartFilled else LumenIcons.Heart,
-                                contentDescription = "Favorite",
+                                contentDescription = stringResource(R.string.common_favorite),
                                 tint = if (current.isFavorite) Color(0xFFFF375F) else LocalGlassColors.current.content,
                                 onClick = {
                                     haptics.performHapticFeedback(
@@ -679,13 +681,13 @@ fun ViewerScreen(
                             GlassIconButton(
                                 backdrop = backdrop,
                                 icon = LumenIcons.Info,
-                                contentDescription = "Details",
+                                contentDescription = stringResource(R.string.common_details),
                                 onClick = motion::openInfo,
                             )
                             GlassIconButton(
                                 backdrop = backdrop,
                                 icon = LumenIcons.Delete,
-                                contentDescription = "Delete",
+                                contentDescription = stringResource(R.string.common_delete),
                                 onClick = { launch(MediaActions.trashRequest(context, current)) },
                             )
                         }
@@ -789,8 +791,8 @@ fun ViewerScreen(
         }
         com.subhashh.lumen.ui.components.RenameDialog(
             currentName = captionEdit?.second,
-            title = "Caption",
-            confirm = "Save",
+            title = stringResource(R.string.viewer_caption),
+            confirm = stringResource(R.string.common_save),
             keepExtension = false,
             freeText = true,
             onRename = { text ->
@@ -845,29 +847,29 @@ private fun viewerMenu(
             )
         },
         listOf(
-            MenuItem("Move to Album…") { onMoveToAlbum(item) },
-            MenuItem("Copy to Album…") { onCopyToAlbum(item) },
+            MenuItem(context.getString(R.string.viewer_move_to_album)) { onMoveToAlbum(item) },
+            MenuItem(context.getString(R.string.viewer_copy_to_album)) { onCopyToAlbum(item) },
         ),
         listOfNotNull(
-            MenuItem("Rename…") { onRename(item) },
-            MenuItem("Adjust Date & Time…") { onAdjustDate(item) },
-            if (photo) MenuItem("Resize or Convert…") { onResize(item) } else null,
-            if (MediaFiles.canRotate(item)) rotateMenu { degrees -> onRotate(item, degrees) } else null,
+            MenuItem(context.getString(R.string.viewer_rename_ellipsis)) { onRename(item) },
+            MenuItem(context.getString(R.string.viewer_adjust_date)) { onAdjustDate(item) },
+            if (photo) MenuItem(context.getString(R.string.viewer_resize_convert)) { onResize(item) } else null,
+            if (MediaFiles.canRotate(item)) rotateMenu(context) { degrees -> onRotate(item, degrees) } else null,
         ),
         listOfNotNull(
-            MenuItem("Slideshow") { onSlideshow() },
+            MenuItem(context.getString(R.string.viewer_slideshow)) { onSlideshow() },
             if (notPerson == null) onMakeCover?.let { MenuItem(coverLabel) { it(item) } } else null,
         ),
         // Folder actions live on albums (Collections → long-press), not on a single photo.
-        listOf(MenuItem("Hide") { onHide(item) }),
+        listOf(MenuItem(context.getString(R.string.common_hide)) { onHide(item) }),
         listOfNotNull(
-            MenuItem("Open with…") { MediaActions.openWith(context, item) },
-            if (photo) MenuItem("Set as Wallpaper…") { onSetWallpaper(item) } else null,
-            if (photo) MenuItem("Set as…") { MediaActions.setAs(context, item) } else null,
-            MenuItem("Copy to clipboard") { MediaActions.copyToClipboard(context, item) },
+            MenuItem(context.getString(R.string.viewer_open_with)) { MediaActions.openWith(context, item) },
+            if (photo) MenuItem(context.getString(R.string.viewer_set_wallpaper)) { onSetWallpaper(item) } else null,
+            if (photo) MenuItem(context.getString(R.string.viewer_set_as)) { MediaActions.setAs(context, item) } else null,
+            MenuItem(context.getString(R.string.viewer_copy_to_clipboard)) { MediaActions.copyToClipboard(context, item) },
         ),
         listOfNotNull(
-            if (photo) MenuItem("Print") { MediaActions.print(context, item) } else null,
+            if (photo) MenuItem(context.getString(R.string.viewer_print)) { MediaActions.print(context, item) } else null,
         ),
     )
 }
@@ -875,20 +877,23 @@ private fun viewerMenu(
 /** ⋯ for a file another app opened in Lumen: hand-offs only, nothing that changes it. */
 private fun externalMenu(context: Context, item: MediaItem): List<List<MenuItem>> = listOf(
     listOfNotNull(
-        MenuItem("Open with…") { MediaActions.openWith(context, item) },
-        if (!item.isVideo) MenuItem("Set as…") { MediaActions.setAs(context, item) } else null,
-        MenuItem("Copy to clipboard") { MediaActions.copyToClipboard(context, item) },
+        MenuItem(context.getString(R.string.viewer_open_with)) { MediaActions.openWith(context, item) },
+        if (!item.isVideo) MenuItem(context.getString(R.string.viewer_set_as)) { MediaActions.setAs(context, item) } else null,
+        MenuItem(context.getString(R.string.viewer_copy_to_clipboard)) { MediaActions.copyToClipboard(context, item) },
     ),
-    listOfNotNull(if (!item.isVideo) MenuItem("Print") { MediaActions.print(context, item) } else null),
+    listOfNotNull(if (!item.isVideo) MenuItem(context.getString(R.string.viewer_print)) { MediaActions.print(context, item) } else null),
 )
 
 /** "Rotate ›" with Left / Right / 180° inside, shared by the viewer and selection menus. */
-fun rotateMenu(onRotate: (degrees: Int) -> Unit) = MenuItem(
-    label = "Rotate",
+@Composable
+fun rotateMenu(onRotate: (degrees: Int) -> Unit) = rotateMenu(LocalContext.current, onRotate)
+
+fun rotateMenu(context: Context, onRotate: (degrees: Int) -> Unit) = MenuItem(
+    label = context.getString(R.string.viewer_rotate),
     submenu = listOf(
-        MenuItem("Rotate Left") { onRotate(270) },
-        MenuItem("Rotate Right") { onRotate(90) },
-        MenuItem("Rotate 180°") { onRotate(180) },
+        MenuItem(context.getString(R.string.viewer_rotate_left)) { onRotate(270) },
+        MenuItem(context.getString(R.string.viewer_rotate_right)) { onRotate(90) },
+        MenuItem(context.getString(R.string.viewer_rotate_180)) { onRotate(180) },
     ),
 )
 
@@ -938,7 +943,7 @@ private fun TopBar(
         GlassIconButton(
             backdrop = backdrop,
             icon = LumenIcons.Back,
-            contentDescription = "Back",
+            contentDescription = stringResource(R.string.common_back),
             onClick = onBack,
             modifier = Modifier.align(Alignment.CenterStart),
         )
@@ -946,7 +951,7 @@ private fun TopBar(
             GlassIconButton(
                 backdrop = backdrop,
                 icon = LumenIcons.More,
-                contentDescription = "More",
+                contentDescription = stringResource(R.string.viewer_more),
                 onClick = onMore,
                 modifier = Modifier.align(Alignment.CenterEnd),
             )
@@ -955,7 +960,7 @@ private fun TopBar(
             GlassIconButton(
                 backdrop = backdrop,
                 icon = if (liveTextOn) LumenIcons.LiveTextFilled else LumenIcons.LiveText,
-                contentDescription = "Live Text",
+                contentDescription = stringResource(R.string.viewer_live_text),
                 onClick = onLiveText,
                 tint = if (liveTextOn) MaterialTheme.colorScheme.primary else colors.content,
                 modifier = Modifier.align(Alignment.CenterEnd).padding(end = if (onMore != null) 56.dp else 0.dp),
@@ -968,7 +973,8 @@ private fun TopBar(
             Modifier.align(Alignment.Center),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            val (day, time) = remember(item.takenAt) { formatTakenAt(item.takenAt) }
+            val context = LocalContext.current
+            val (day, time) = remember(item.takenAt) { formatTakenAt(context, item.takenAt) }
             Text(
                 day,
                 color = colors.content,
@@ -1007,7 +1013,7 @@ private fun VideoControls(backdrop: Backdrop, player: Player) {
     ) {
         Icon(
             imageVector = if (playPause.showPlay) LumenIcons.Play else LumenIcons.Pause,
-            contentDescription = if (playPause.showPlay) "Play" else "Pause",
+            contentDescription = stringResource(if (playPause.showPlay) R.string.viewer_play else R.string.viewer_pause),
             tint = colors.content,
             modifier = Modifier
                 .size(44.dp)
@@ -1057,7 +1063,7 @@ private fun VideoControls(backdrop: Backdrop, player: Player) {
         )
         Icon(
             imageVector = if (muted) LumenIcons.Muted else LumenIcons.Sound,
-            contentDescription = if (muted) "Unmute" else "Mute",
+            contentDescription = stringResource(if (muted) R.string.viewer_unmute else R.string.viewer_mute),
             tint = colors.content,
             modifier = Modifier
                 .size(36.dp)
@@ -1083,7 +1089,7 @@ private fun CaptionsButton(backdrop: Backdrop, on: Boolean, onClick: () -> Unit)
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            "CC",
+            stringResource(R.string.viewer_captions_cc),
             color = if (on) MaterialTheme.colorScheme.primary else colors.content,
             fontSize = 14.sp,
             fontWeight = FontWeight.Bold,
@@ -1123,9 +1129,9 @@ private fun SubtitleOverlay(item: MediaItem, player: Player, modifier: Modifier 
     val line = cues.lastOrNull { position >= it.startMs && position <= it.endMs }?.text
     val status = when {
         line != null -> null
-        failed -> "Subtitles unavailable"
-        finished && cues.isEmpty() -> "No speech"
-        !finished && cues.none { it.startMs >= position - 30_000 && it.startMs <= position + 30_000 } -> "Making subtitles…"
+        failed -> stringResource(R.string.viewer_subtitles_unavailable)
+        finished && cues.isEmpty() -> stringResource(R.string.viewer_no_speech)
+        !finished && cues.none { it.startMs >= position - 30_000 && it.startMs <= position + 30_000 } -> stringResource(R.string.viewer_making_subtitles)
         else -> null
     }
     val text = line ?: status ?: return
@@ -1210,12 +1216,12 @@ private fun SystemBarsVisibility(visible: Boolean) {
     }
 }
 
-private fun formatTakenAt(millis: Long): Pair<String, String> {
+private fun formatTakenAt(context: Context, millis: Long): Pair<String, String> {
     val dateTime = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault())
     val today = LocalDate.now()
     val day = when (dateTime.toLocalDate()) {
-        today -> "Today"
-        today.minusDays(1) -> "Yesterday"
+        today -> context.getString(R.string.viewer_today)
+        today.minusDays(1) -> context.getString(R.string.viewer_yesterday)
         else -> dateTime.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG))
     }
     val time = dateTime.format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT))

@@ -25,9 +25,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.subhashh.lumen.R
 import com.subhashh.lumen.data.CollectionKeys
 import com.subhashh.lumen.data.HiddenMedia
 import com.subhashh.lumen.data.MediaCollection
@@ -99,18 +102,18 @@ fun HiddenScreen(
             if (encrypted) {
                 UnlockingVault()
                 Spacer(Modifier.height(18.dp))
-                Text("Unlocking your vault…", color = colors.onBackground, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.hidden_unlocking_vault), color = colors.onBackground, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.height(4.dp))
-                Text("Your files are safe; they're just encrypted.", color = colors.onBackground.copy(alpha = 0.55f), fontSize = 13.sp)
+                Text(stringResource(R.string.hidden_unlocking_vault_detail), color = colors.onBackground.copy(alpha = 0.55f), fontSize = 13.sp)
             } else {
                 CircularProgressIndicator(Modifier.size(28.dp), strokeWidth = 2.5.dp)
                 Spacer(Modifier.height(14.dp))
-                Text("Looking for hidden photos…", color = colors.onBackground.copy(alpha = 0.6f), fontSize = 15.sp)
+                Text(stringResource(R.string.hidden_scanning), color = colors.onBackground.copy(alpha = 0.6f), fontSize = 15.sp)
             }
         }
         folders.isEmpty() -> Box(modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
             Text(
-                "Nothing hidden yet.\nUse ⋯ → Hide or Hide Folder on any photo.",
+                stringResource(R.string.hidden_empty),
                 color = colors.onBackground.copy(alpha = 0.6f),
                 fontSize = 15.sp,
                 textAlign = TextAlign.Center,
@@ -134,7 +137,7 @@ fun HiddenScreen(
                     collection = folder.collection,
                     selected = selection?.let { folder.collection.key in it },
                     onClick = { gestures.click(folder.collection.key) { onOpen(folder.collection.key) } },
-                    subtitle = if (folder.wholeFolder) "Hidden folder · $n" else "$n hidden ${if (n == 1) "file" else "files"}",
+                    subtitle = if (folder.wholeFolder) stringResource(R.string.hidden_folder_count, n) else pluralStringResource(R.plurals.hidden_file_count, n, n),
                 )
             }
         }

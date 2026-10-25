@@ -1,6 +1,8 @@
 package com.subhashh.lumen.ui.collections
 
+import android.content.Context
 import androidx.compose.ui.Modifier
+import com.subhashh.lumen.R
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
@@ -25,11 +27,12 @@ fun Modifier.coverUnderlay(transition: CoverTransition): Modifier = this
     }
 
 /** "1,204 Photos, 37 Videos", leaving out a kind there's none of. */
-fun heroSubtitle(items: List<MediaItem>): String {
+fun heroSubtitle(context: Context, items: List<MediaItem>): String {
     val videos = items.count { it.isVideo }
     val photos = items.size - videos
+    val res = context.resources
     return listOfNotNull(
-        photos.takeIf { it > 0 }?.let { "%,d %s".format(it, if (it == 1) "Photo" else "Photos") },
-        videos.takeIf { it > 0 }?.let { "%,d %s".format(it, if (it == 1) "Video" else "Videos") },
-    ).joinToString(", ")
+        photos.takeIf { it > 0 }?.let { res.getQuantityString(R.plurals.main_hero_photos, it, it) },
+        videos.takeIf { it > 0 }?.let { res.getQuantityString(R.plurals.main_hero_videos, it, it) },
+    ).joinToString(context.getString(R.string.main_list_separator))
 }

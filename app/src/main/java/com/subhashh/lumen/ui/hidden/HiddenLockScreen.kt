@@ -52,7 +52,9 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -62,6 +64,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.subhashh.lumen.R
 import com.subhashh.lumen.data.HiddenLockStore
 import com.subhashh.lumen.data.LockType
 import com.subhashh.lumen.ui.components.pressable
@@ -104,11 +107,12 @@ fun HiddenLockScreen(
     onCancel: () -> Unit,
     onForgot: () -> Unit,
     /** What the lock guards, for its wording: "Hidden", or "Lumen" for App Lock. */
-    lockedName: String = "Hidden",
+    lockedName: String = stringResource(R.string.hidden_name),
     /** The lock itself, whenever it's entered correctly or newly set (never for fingerprint or face). */
     onSecret: (String) -> Unit = {},
 ) {
     val activity = LocalActivity.current
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val haptics = LocalHapticFeedback.current
     var step by remember(flow) {
@@ -139,7 +143,7 @@ fun HiddenLockScreen(
         when (val s = step) {
             is Step.Verify -> {
                 val wait = store.lockedOutUntil() - System.currentTimeMillis()
-                if (wait > 0) return fail("Too many tries. Wait ${(wait / 1000) + 1} s.")
+                if (wait > 0) return fail(context.getString(R.string.hidden_too_many_tries, (wait / 1000) + 1))
                 busy = true
                 scope.launch {
                     // PBKDF2 is deliberately slow; keep it off the main thread.
@@ -154,17 +158,17 @@ fun HiddenLockScreen(
                         store.recordFailure()
                         val left = HiddenLockStore.MaxAttempts - store.failedAttempts() % HiddenLockStore.MaxAttempts
                         fail(
-                            if (left == HiddenLockStore.MaxAttempts) "Too many tries. Wait 30 s."
-                            else "Wrong ${store.type?.label ?: "entry"}",
+                            if (left == HiddenLockStore.MaxAttempts) context.getString(R.string.hidden_too_many_tries, 30)
+                            else context.getString(R.string.hidden_wrong, store.type?.localName(context) ?: context.getString(R.string.hidden_lock_word_entry)),
                         )
                     }
                 }
             }
             is Step.New -> {
                 val problem = when (s.type) {
-                    LockType.Pin -> if (secret.length !in 4..8) "Use 4 to 8 digits" else null
-                    LockType.Pattern -> if (secret.length < 4) "Connect at least 4 dots" else null
-                    LockType.Password -> if (secret.length < 4) "Use at least 4 characters" else null
+                    LockType.Pin -> if (secret.length !in 4..8) context.getString(R.string.hidden_pin_rule) else null
+                    LockType.Pattern -> if (secret.length < 4) context.getString(R.string.hidden_pattern_rule) else null
+                    LockType.Password -> if (secret.length < 4) context.getString(R.string.hidden_password_rule) else null
                 }
                 if (problem != null) return fail(problem)
                 error = null
@@ -173,7 +177,7 @@ fun HiddenLockScreen(
             is Step.Confirm -> {
                 if (secret != s.first) {
                     step = Step.New(s.type)
-                    return fail("That didn't match. Try again.")
+                    return fail(context.getString(R.string.hidden_mismatch))
                 }
                 busy = true
                 scope.launch {
@@ -196,10 +200,10 @@ fun HiddenLockScreen(
             activity != null && HiddenLock.biometricsAvailable(activity)
         ) {
             delay(250) // let the screen settle in first
-            HiddenLock.biometric(activity, "Use ${type.label}", onSuccess = {
+            HiddenLock.biometric(activity, activity.getString(R.string.hidden_use_lock, type.localName(activity)), onSuccess = {
                 store.recordSuccess()
                 onDone()
-            }, onFallback = {}, title = "Unlock $lockedName")
+            }, onFallback = {}, title = activity.getString(R.string.hidden_unlock_named, lockedName))
         }
     }
 
@@ -221,7 +225,7 @@ fun HiddenLockScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
-                "Cancel",
+                stringResource(R.string.common_cancel),
                 color = Accent,
                 fontSize = 17.sp,
                 modifier = Modifier
@@ -274,7 +278,7 @@ fun HiddenLockScreen(
                             when (type) {
                                 LockType.Pin -> PinEntry(autoLength, ::submit)
                                 LockType.Pattern -> PatternEntry(::submit)
-                                LockType.Password -> PasswordEntry(if (s is Step.Verify) "Unlock" else "Next", ::submit)
+                                LockType.Password -> PasswordEntry(stringResource(if (s is Step.Verify) R.string.hidden_unlock else R.string.common_next), ::submit)
                             }
                         }
                     }
@@ -283,7 +287,7 @@ fun HiddenLockScreen(
 
             if (step is Step.Verify) {
                 Text(
-                    "Forgot ${store.type?.label ?: "it"}?",
+                    stringResource(R.string.hidden_forgot, store.type?.localName(context) ?: stringResource(R.string.hidden_lock_word_it)),
                     color = Accent,
                     fontSize = 15.sp,
                     modifier = Modifier
@@ -295,32 +299,47 @@ fun HiddenLockScreen(
     }
 }
 
-private fun titles(step: Step, store: HiddenLockStore, flow: LockFlow, lockedName: String): Pair<String, String> = when (step) {
-    Step.Choose -> (if (flow == LockFlow.Change) "New Lock" else "Lock Hidden") to
-        "Choose how to lock your hidden photos. This is separate from your phone's lock."
-    is Step.Verify -> "Enter ${store.type?.label ?: "PIN"}" to
-        when (step.then) {
-            LockFlow.Change -> "Enter your current lock first"
-            LockFlow.Confirm -> "Confirm it's you"
-            else -> "$lockedName is locked"
+/** A lock type's name in the app's language; [LockType.label] is English only. */
+private fun LockType.localName(context: android.content.Context): String = context.getString(
+    when (this) {
+        LockType.Pin -> R.string.hidden_lock_pin
+        LockType.Pattern -> R.string.hidden_lock_pattern
+        LockType.Password -> R.string.hidden_lock_password
+    },
+)
+
+@Composable
+private fun titles(step: Step, store: HiddenLockStore, flow: LockFlow, lockedName: String): Pair<String, String> {
+    val context = LocalContext.current
+    return when (step) {
+        Step.Choose -> stringResource(if (flow == LockFlow.Change) R.string.hidden_new_lock else R.string.hidden_lock_hidden) to
+            stringResource(R.string.hidden_choose_subtitle)
+        is Step.Verify -> stringResource(R.string.hidden_enter, store.type?.localName(context) ?: stringResource(R.string.hidden_lock_pin)) to
+            when (step.then) {
+                LockFlow.Change -> stringResource(R.string.hidden_enter_current)
+                LockFlow.Confirm -> stringResource(R.string.hidden_confirm_you)
+                else -> stringResource(R.string.hidden_is_locked, lockedName)
+            }
+        is Step.New -> when (step.type) {
+            LockType.Pin -> stringResource(R.string.hidden_create_pin) to stringResource(R.string.hidden_pin_length)
+            LockType.Pattern -> stringResource(R.string.hidden_draw_pattern) to stringResource(R.string.hidden_pattern_rule)
+            LockType.Password -> stringResource(R.string.hidden_create_password) to stringResource(R.string.hidden_password_length)
         }
-    is Step.New -> when (step.type) {
-        LockType.Pin -> "Create a PIN" to "4 to 8 digits"
-        LockType.Pattern -> "Draw a Pattern" to "Connect at least 4 dots"
-        LockType.Password -> "Create a Password" to "At least 4 characters"
+        is Step.Confirm -> stringResource(R.string.hidden_confirm_type, step.type.localName(context)) to stringResource(R.string.hidden_enter_again)
+        Step.Biometrics -> stringResource(R.string.hidden_biometrics_title) to
+            stringResource(R.string.hidden_biometrics_subtitle, store.type?.localName(context) ?: stringResource(R.string.hidden_lock_word_lock))
     }
-    is Step.Confirm -> "Confirm ${step.type.label}" to "Enter it once more"
-    Step.Biometrics -> "Use Fingerprint or Face?" to "Unlock Hidden faster. Your ${store.type?.label ?: "lock"} still works too."
 }
 
 @Composable
 private fun ChooseType(onChoose: (LockType) -> Unit) {
     val colors = MaterialTheme.colorScheme
+    val context = LocalContext.current
     Column(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
         listOf(
-            LockType.Pin to "Numbers only, 4 to 8 digits",
-            LockType.Pattern to "Connect dots on a 3 × 3 grid",
-            LockType.Password to "Letters, numbers and symbols",
+            LockType.Pin to stringResource(R.string.hidden_pin_hint),
+            LockType.Pattern to stringResource(R.string.hidden_pattern_hint),
+            LockType.Password to stringResource(R.string.hidden_password_hint),
         ).forEach { (type, hint) ->
             Column(
                 Modifier
@@ -330,7 +349,7 @@ private fun ChooseType(onChoose: (LockType) -> Unit) {
                     .background(colors.onBackground.copy(alpha = 0.07f))
                     .padding(horizontal = 18.dp, vertical = 14.dp),
             ) {
-                Text(type.label, color = colors.onBackground, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                Text(type.localName(context), color = colors.onBackground, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
                 Text(hint, color = colors.onBackground.copy(alpha = 0.6f), fontSize = 14.sp)
             }
         }
@@ -349,10 +368,10 @@ private fun BiometricsOffer(onEnable: () -> Unit, onSkip: () -> Unit) {
                 .background(Accent),
             contentAlignment = Alignment.Center,
         ) {
-            Text("Use Fingerprint or Face", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+            Text(stringResource(R.string.hidden_use_biometrics), color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
         }
         Text(
-            "Not Now",
+            stringResource(R.string.common_not_now),
             color = Accent,
             fontSize = 17.sp,
             modifier = Modifier
@@ -409,7 +428,7 @@ private fun PinEntry(autoLength: Int, onSubmit: (String) -> Unit) {
                         contentAlignment = Alignment.Center,
                     ) {
                         if (key == "⌫") {
-                            Icon(LumenIcons.Back, "Delete", tint = colors.onBackground, modifier = Modifier.size(22.dp))
+                            Icon(LumenIcons.Back, stringResource(R.string.common_delete), tint = colors.onBackground, modifier = Modifier.size(22.dp))
                         } else {
                             Text(key, color = colors.onBackground, fontSize = 30.sp)
                         }
@@ -420,7 +439,7 @@ private fun PinEntry(autoLength: Int, onSubmit: (String) -> Unit) {
         if (autoLength == 0) {
             Spacer(Modifier.height(12.dp))
             Text(
-                "Next",
+                stringResource(R.string.common_next),
                 color = if (pin.length in 4..8) Accent else colors.onBackground.copy(alpha = 0.3f),
                 fontSize = 17.sp,
                 fontWeight = FontWeight.SemiBold,

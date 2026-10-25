@@ -15,6 +15,7 @@ import android.provider.OpenableColumns
 import androidx.compose.runtime.Immutable
 import androidx.core.content.ContextCompat
 import androidx.exifinterface.media.ExifInterface
+import com.subhashh.lumen.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -348,7 +349,7 @@ object MediaDetailsLoader {
     /** "Internal storage", or the SD card's own name, for a MediaStore volume. */
     private fun volumeLabel(context: Context, volume: String?): String? {
         if (volume == null) return null
-        if (volume == MediaStore.VOLUME_EXTERNAL_PRIMARY) return "Internal storage"
+        if (volume == MediaStore.VOLUME_EXTERNAL_PRIMARY) return context.getString(R.string.data_internal_storage)
         val storage = context.getSystemService(android.os.storage.StorageManager::class.java)
         return storage.storageVolumes.firstOrNull { it.mediaStoreVolumeName == volume }?.getDescription(context) ?: volume
     }

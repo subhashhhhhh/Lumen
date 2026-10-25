@@ -5,6 +5,7 @@ import android.media.MediaExtractor
 import android.media.MediaMetadataRetriever
 import android.provider.MediaStore
 import androidx.exifinterface.media.ExifInterface
+import com.subhashh.lumen.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -46,7 +47,7 @@ object AllMetadata {
                         extractor.setDataSource(context, uri, null)
                         for (i in 0 until extractor.trackCount) {
                             // "{mime=video/hevc, width=1920, …}": one row per stream.
-                            add("Track ${i + 1}" to extractor.getTrackFormat(i).toString().removePrefix("{").removeSuffix("}"))
+                            add(context.getString(R.string.data_metadata_track, i + 1) to extractor.getTrackFormat(i).toString().removePrefix("{").removeSuffix("}"))
                         }
                     } finally {
                         extractor.release()

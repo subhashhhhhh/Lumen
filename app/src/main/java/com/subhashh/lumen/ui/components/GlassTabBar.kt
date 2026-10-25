@@ -50,10 +50,13 @@ import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.subhashh.lumen.ui.icons.LumenIcons
 import com.subhashh.lumen.ui.library.ZoomLevel
 import com.subhashh.lumen.ui.theme.LocalGlassColors
+import androidx.annotation.StringRes
+import androidx.compose.ui.res.stringResource
+import com.subhashh.lumen.R
 
-enum class LumenTab(val label: String, val icon: ImageVector, val selectedIcon: ImageVector) {
-    Library("Library", LumenIcons.Library, LumenIcons.LibraryFilled),
-    Collections("Collections", LumenIcons.Collections, LumenIcons.CollectionsFilled),
+enum class LumenTab(@StringRes val label: Int, val icon: ImageVector, val selectedIcon: ImageVector) {
+    Library(R.string.main_library, LumenIcons.Library, LumenIcons.LibraryFilled),
+    Collections(R.string.main_collections, LumenIcons.Collections, LumenIcons.CollectionsFilled),
 }
 
 /**
@@ -135,7 +138,7 @@ fun GlassTabBar(
             ) {
                 Icon(
                     if (searchSelected) LumenIcons.SearchFilled else LumenIcons.Search,
-                    contentDescription = "Search",
+                    contentDescription = stringResource(R.string.common_search),
                     tint = searchTint,
                 )
             }
@@ -255,7 +258,7 @@ private fun MorphingTabs(
                     ) {
                         ZoomLevel.entries.forEach { level ->
                             ZoomItem(
-                                label = level.label,
+                                label = stringResource(level.label),
                                 width = zoomItemWidth,
                                 selected = level == zoomLevel,
                                 enabled = enabled && t > 0.5f,
@@ -305,7 +308,7 @@ private fun MorphingTabs(
                             enabled = enabled && t < 0.5f,
                             // Outline normally, filled when selected — like iOS.
                             icon = if (tab == selected) tab.selectedIcon else tab.icon,
-                            label = tab.label,
+                            label = stringResource(tab.label),
                             selected = tab == selected,
                             onClick = { onSelect(tab) },
                         )
@@ -314,7 +317,7 @@ private fun MorphingTabs(
             }
             Icon(
                 LumenIcons.LibraryFilled,
-                contentDescription = "Tabs",
+                contentDescription = stringResource(R.string.main_tabs),
                 tint = colors.content,
                 modifier = Modifier
                     .align(Alignment.Center)

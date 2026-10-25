@@ -1,0 +1,376 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Search -->
+    <string name="main_people">People</string>
+    <string name="main_albums">Albums</string>
+    <string name="main_add_name">Add Name</string>
+    <string name="main_search_looking_inside">Looking inside photos…</string>
+    <plurals name="main_search_results">
+        <item quantity="one">%1$,d Result</item>
+        <item quantity="other">%1$,d Results</item>
+    </plurals>
+    <string name="main_search_show_less">Show Less</string>
+    <string name="main_search_see_all">See All</string>
+    <string name="main_search_no_results_hint">Try describing what\'s in the photo, like “cat on a sofa” (with Smart Features in Settings), or a file name, a folder, a month or a year.</string>
+    <string name="main_search_recent">Recent</string>
+    <string name="main_search_clear">Clear</string>
+    <string name="main_search_from_your_photos">From your photos</string>
+    <string name="main_search_try">Try</string>
+    <string name="main_search_field_hint">Files, folders, months, years…</string>
+
+    <!-- People -->
+    <string name="main_merge_with_name">Merge with %1$s?</string>
+    <string name="main_merge_proposal_message">You already have someone named %1$s. If this is them, merge to see all %2$s as one person.</string>
+    <plurals name="main_merge_photo_count">
+        <item quantity="one">%1$,d photo</item>
+        <item quantity="other">%1$,d photos</item>
+    </plurals>
+    <string name="main_merge">Merge</string>
+    <string name="main_keep_separate">Keep Separate</string>
+    <plurals name="main_person_photo_count">
+        <item quantity="one">%1$,d photos</item>
+        <item quantity="other">%1$,d photos</item>
+    </plurals>
+
+    <!-- Selection -->
+    <string name="main_deselect_all">Deselect All</string>
+    <string name="main_cancel_selection">Cancel selection</string>
+    <string name="main_delete_permanently">Delete permanently</string>
+    <string name="main_more">More</string>
+    <string name="main_delete_forever">Delete forever</string>
+    <string name="main_selected">Selected</string>
+
+    <!-- Album picker -->
+    <string name="main_new_album_ellipsis">New Album…</string>
+    <string name="main_album_name_hint">Album name</string>
+    <string name="main_create">Create</string>
+
+    <!-- Collections -->
+    <string name="main_utilities">Utilities</string>
+    <string name="main_hidden_locked">Locked</string>
+    <string name="main_hidden_set_up">Set Up</string>
+    <string name="main_album_empty">Empty</string>
+    <string name="main_pinned">Pinned</string>
+    <plurals name="main_hero_photos">
+        <item quantity="one">%1$,d Photo</item>
+        <item quantity="other">%1$,d Photos</item>
+    </plurals>
+    <plurals name="main_hero_videos">
+        <item quantity="one">%1$,d Video</item>
+        <item quantity="other">%1$,d Videos</item>
+    </plurals>
+    <string name="main_list_separator">", "</string>
+
+    <!-- Tabs and Library -->
+    <string name="main_library">Library</string>
+    <string name="main_collections">Collections</string>
+    <string name="main_tabs">Tabs</string>
+    <string name="main_zoom_years">Years</string>
+    <string name="main_zoom_months">Months</string>
+    <string name="main_zoom_all">All</string>
+    <plurals name="main_item_count">
+        <item quantity="one">%1$d item</item>
+        <item quantity="other">%1$d items</item>
+    </plurals>
+    <string name="main_section_none">None</string>
+    <string name="main_section_months">Months</string>
+    <string name="main_section_days">Days</string>
+    <string name="main_today">Today</string>
+    <string name="main_yesterday">Yesterday</string>
+    <string name="main_no_photos_or_videos">No photos or videos</string>
+    <string name="main_badge_raw">RAW</string>
+    <string name="main_badge_gif">GIF</string>
+    <string name="main_view_filter">Filter</string>
+    <string name="main_view_sort">Sort</string>
+    <string name="main_view_grid">Grid</string>
+    <string name="main_view_square">Square</string>
+    <string name="main_view_aspect_ratio">Aspect Ratio</string>
+
+    <!-- App lock and picker -->
+    <string name="main_unlock_lumen">Unlock Lumen</string>
+    <string name="main_pick_choose_photos">Choose Photos</string>
+    <string name="main_pick_choose_a_photo">Choose a Photo</string>
+    <string name="main_pick_choose_videos">Choose Videos</string>
+    <string name="main_pick_choose_a_video">Choose a Video</string>
+    <string name="main_pick_choose_items">Choose Items</string>
+    <string name="main_pick_choose_an_item">Choose an Item</string>
+
+    <!-- Main scaffold: backup and favorites import -->
+    <string name="main_favorites_import_bad_file">That isn\'t a Fossify or Aves favorites file</string>
+    <plurals name="main_favorites_import_none">
+        <item quantity="one">None of its %1$d favorites are on this phone</item>
+        <item quantity="other">None of its %1$d favorites are on this phone</item>
+    </plurals>
+    <plurals name="main_favorites_import_already">
+        <item quantity="one">All %1$d are already favorites</item>
+        <item quantity="other">All %1$d are already favorites</item>
+    </plurals>
+    <string name="main_favorites_import_found">Found %1$d of %2$d; marking %3$d as favorites</string>
+    <string name="main_settings_exported">Settings exported</string>
+    <string name="main_backup_save_failed">Couldn\'t save the backup</string>
+    <string name="main_backup_bad_file">That isn\'t a Lumen backup</string>
+    <string name="main_settings_restored">Settings restored</string>
+
+    <!-- Main scaffold: hiding and unhiding -->
+    <string name="main_all_files_title">Hiding needs All files access</string>
+    <string name="main_all_files_message">Android\'s media index skips hidden photos on purpose, so Lumen has to work with storage directly to hide and show them. Nothing ever leaves your phone.</string>
+    <string name="main_open_settings">Open Settings</string>
+    <string name="main_reset_lock_title">Reset Hidden lock?</string>
+    <string name="main_reset_lock_message">Your phone has no screen lock, so anyone holding it could do this. Hidden photos stay hidden; you\'ll set a new lock next.</string>
+    <string name="main_reset">Reset</string>
+    <string name="main_unhidden">Unhidden</string>
+    <string name="main_unhide_failed_count">Couldn\'t unhide %1$d</string>
+    <string name="main_unhide_failed">Couldn\'t unhide</string>
+    <string name="main_unhide_dot_folder">“%1$s” is hidden by its dot-name; rename that folder in a file manager to unhide it</string>
+    <string name="main_unhide_folder_title">Unhide “%1$s”?</string>
+    <plurals name="main_unhide_folders_title">
+        <item quantity="one">Unhide %1$d folders?</item>
+        <item quantity="other">Unhide %1$d folders?</item>
+    </plurals>
+    <plurals name="main_unhide_folders_message">
+        <item quantity="one">These are hidden as whole folders, so all %1$d items in them show up again in Lumen\'s library and in other gallery apps.</item>
+        <item quantity="other">These are hidden as whole folders, so all %1$d items in them show up again in Lumen\'s library and in other gallery apps.</item>
+    </plurals>
+    <string name="main_hidden_encrypted_find">Hidden and encrypted. Find it in Collections → Hidden</string>
+    <string name="main_hidden_find">Hidden. Find it in Collections → Hidden</string>
+    <string name="main_hidden_and_encrypted">Hidden and encrypted</string>
+    <string name="main_hid_n_of">Hid %1$d of %2$d</string>
+    <string name="main_hide_some_folders_failed">Couldn\'t hide some folders</string>
+    <string name="main_hide_folder_title">Hide “%1$s”?</string>
+    <plurals name="main_hide_folders_title">
+        <item quantity="one">Hide %1$d folders?</item>
+        <item quantity="other">Hide %1$d folders?</item>
+    </plurals>
+    <plurals name="main_hide_folder_encrypt_message">
+        <item quantity="one">All %1$d items in it will be encrypted into Lumen\'s vault: no other app can see them. They\'ll be in Collections → Hidden.</item>
+        <item quantity="other">All %1$d items in it will be encrypted into Lumen\'s vault: no other app can see them. They\'ll be in Collections → Hidden.</item>
+    </plurals>
+    <plurals name="main_hide_folders_encrypt_message">
+        <item quantity="one">All %1$d items in them will be encrypted into Lumen\'s vault: no other app can see them. They\'ll be in Collections → Hidden.</item>
+        <item quantity="other">All %1$d items in them will be encrypted into Lumen\'s vault: no other app can see them. They\'ll be in Collections → Hidden.</item>
+    </plurals>
+    <plurals name="main_hide_folder_message">
+        <item quantity="one">All %1$d items in it will be hidden from Lumen\'s library and from apps that use Android\'s media index, like Google Photos. File managers, and galleries that look at storage directly, can still see them. They\'ll be in Collections → Hidden.</item>
+        <item quantity="other">All %1$d items in it will be hidden from Lumen\'s library and from apps that use Android\'s media index, like Google Photos. File managers, and galleries that look at storage directly, can still see them. They\'ll be in Collections → Hidden.</item>
+    </plurals>
+    <plurals name="main_hide_folders_message">
+        <item quantity="one">All %1$d items in them will be hidden from Lumen\'s library and from apps that use Android\'s media index, like Google Photos. File managers, and galleries that look at storage directly, can still see them. They\'ll be in Collections → Hidden.</item>
+        <item quantity="other">All %1$d items in them will be hidden from Lumen\'s library and from apps that use Android\'s media index, like Google Photos. File managers, and galleries that look at storage directly, can still see them. They\'ll be in Collections → Hidden.</item>
+    </plurals>
+
+    <!-- Main scaffold: Encrypt Hidden -->
+    <string name="main_vault_wrong_lock">This vault was made with a different Lumen lock; enter that one to open it</string>
+    <string name="main_vault_partial_encrypt">%1$d done, %2$d couldn\'t be encrypted and stayed as they were</string>
+    <string name="main_vault_partial_decrypt">%1$d done, %2$d couldn\'t be decrypted and stayed as they were</string>
+    <string name="main_encrypt_hidden_on">Encrypt Hidden is on</string>
+    <plurals name="main_encrypted_items">
+        <item quantity="one">Encrypted %1$d hidden items</item>
+        <item quantity="other">Encrypted %1$d hidden items</item>
+    </plurals>
+    <plurals name="main_decrypted_items">
+        <item quantity="one">Decrypted %1$d items; they\'re hidden the usual way again</item>
+        <item quantity="other">Decrypted %1$d items; they\'re hidden the usual way again</item>
+    </plurals>
+
+    <!-- Main scaffold: deleting from Hidden, excluding folders -->
+    <string name="main_delete_this_item">Delete this item?</string>
+    <plurals name="main_delete_items_title">
+        <item quantity="one">Delete %1$d items?</item>
+        <item quantity="other">Delete %1$d items?</item>
+    </plurals>
+    <string name="main_delete_hidden_message">Hidden items can\'t go to Recently Deleted, so this is permanent.</string>
+    <string name="main_deleted">Deleted</string>
+    <string name="main_delete_failed">Couldn\'t delete %1$d of %2$d</string>
+    <string name="main_excluded_name">Excluded “%1$s”. Undo in Settings → Excluded folders</string>
+    <plurals name="main_excluded_folders">
+        <item quantity="one">Excluded %1$d folders. Undo in Settings → Excluded folders</item>
+        <item quantity="other">Excluded %1$d folders. Undo in Settings → Excluded folders</item>
+    </plurals>
+
+    <!-- Main scaffold: files -->
+    <string name="main_rotating">Rotating…</string>
+    <string name="main_rotate_failed">Couldn\'t rotate %1$d of %2$d</string>
+
+    <!-- Main scaffold: people -->
+    <string name="main_merge_with_ellipsis">Merge with…</string>
+    <string name="main_select_people">Select People</string>
+    <plurals name="main_n_selected">
+        <item quantity="one">%1$d Selected</item>
+        <item quantity="other">%1$d Selected</item>
+    </plurals>
+    <string name="main_this_person">this person</string>
+    <string name="main_the_person_you_chose">the person you chose</string>
+    <string name="main_merge_people_title">Merge People?</string>
+    <string name="main_merge_people_message_named">Photos of %1$s and %2$s will show as one person, named %3$s.</string>
+    <string name="main_merge_people_message">Photos of %1$s and %2$s will show as one person.</string>
+
+    <!-- Main scaffold: settings actions -->
+    <string name="main_biometrics_missing">Add a fingerprint or face in your phone\'s settings first</string>
+    <string name="main_lock_needed_for_encrypt">Set up a Lumen lock first (Privacy → Set Up Lumen Lock)</string>
+    <string name="main_encrypt_hidden_title">Encrypt Hidden?</string>
+    <plurals name="main_encrypt_hidden_message_count">
+        <item quantity="one">%1$d hidden items move into an encrypted vault that no other app or file manager can read (excluded folders stay as they are). It stays on your storage, so it survives uninstalling Lumen; your Lumen lock opens it again.\n\nIf you uninstall Lumen and forget your lock, these files can\'t be recovered by anyone. A password is safer than a short PIN.</item>
+        <item quantity="other">%1$d hidden items move into an encrypted vault that no other app or file manager can read (excluded folders stay as they are). It stays on your storage, so it survives uninstalling Lumen; your Lumen lock opens it again.\n\nIf you uninstall Lumen and forget your lock, these files can\'t be recovered by anyone. A password is safer than a short PIN.</item>
+    </plurals>
+    <string name="main_encrypt_hidden_message_all">Everything in Hidden moves into an encrypted vault that no other app or file manager can read (excluded folders stay as they are). It stays on your storage, so it survives uninstalling Lumen; your Lumen lock opens it again.\n\nIf you uninstall Lumen and forget your lock, these files can\'t be recovered by anyone. A password is safer than a short PIN.</string>
+    <string name="main_encrypt">Encrypt</string>
+    <string name="main_decrypt_hidden_title">Stop encrypting Hidden?</string>
+    <string name="main_decrypt_hidden_message">Everything in the vault is decrypted back to where it was, hidden the usual way: out of your library, but visible to file managers and some galleries.</string>
+    <string name="main_decrypt">Decrypt</string>
+    <string name="main_import_settings_title">Import settings?</string>
+    <string name="main_import_settings_message">Your current settings, album arrangement and exclusions are replaced by the backup\'s. Favorites in it are added to yours.</string>
+    <string name="main_import">Import</string>
+
+    <!-- Main scaffold: pages and top buttons -->
+    <string name="main_hidden">Hidden</string>
+    <string name="main_album_empty_hint">This album is empty.\nAdd photos with ⋯ → Move to Album or Copy to Album.</string>
+    <string name="main_empty_trash">Empty</string>
+    <string name="main_empty_trash_title">Empty Recently Deleted?</string>
+    <string name="main_empty_trash_message_one">This item will be deleted forever.</string>
+    <plurals name="main_empty_trash_message">
+        <item quantity="one">All %1$d items will be deleted forever.</item>
+        <item quantity="other">All %1$d items will be deleted forever.</item>
+    </plurals>
+    <string name="main_delete_forever_title_case">Delete Forever</string>
+    <string name="main_pick_add_count">Add %1$d</string>
+    <string name="main_view_options">View options</string>
+    <string name="main_album_options">Album options</string>
+    <string name="main_sort_by">Sort by %1$s</string>
+    <string name="main_people_options">People options</string>
+    <string name="main_people_circles">Circles</string>
+    <string name="main_people_squares">Squares</string>
+    <string name="main_show_hidden_people">Show Hidden People</string>
+    <string name="main_person_options">Person options</string>
+    <string name="main_add_name_ellipsis">Add Name…</string>
+    <string name="main_rename_ellipsis">Rename…</string>
+    <string name="main_unhide_person">Unhide Person</string>
+    <string name="main_hide_person">Hide Person</string>
+
+    <!-- Main scaffold: people selection -->
+    <string name="main_merge_select_two">Select two or more people to merge</string>
+    <plurals name="main_merge_people_count_title">
+        <item quantity="one">Merge %1$d People?</item>
+        <item quantity="other">Merge %1$d People?</item>
+    </plurals>
+    <string name="main_merge_many_message">Their photos will show as one person.</string>
+    <string name="main_merge_many_message_named">Their photos will show as one person, named %1$s.</string>
+    <string name="main_merge_many_message_named_others">Their photos will show as one person, named %1$s. The other names (%2$s) go.</string>
+
+    <!-- Main scaffold: selection menu -->
+    <string name="main_exclude_folder">Exclude Folder</string>
+    <string name="main_exclude_folders">Exclude Folders</string>
+    <string name="main_hide_folder">Hide Folder</string>
+    <string name="main_hide_folders">Hide Folders</string>
+    <string name="main_rename_album_ellipsis">Rename Album…</string>
+    <string name="main_unpin">Unpin</string>
+    <string name="main_pin_to_top">Pin to Top</string>
+    <string name="main_reset_cover">Reset Cover</string>
+    <string name="main_move_to_album_ellipsis">Move to Album…</string>
+    <string name="main_copy_to_album_ellipsis">Copy to Album…</string>
+    <string name="main_adjust_date_time_ellipsis">Adjust Date &amp; Time…</string>
+    <string name="main_resize_or_convert_ellipsis">Resize or Convert…</string>
+    <string name="main_slideshow">Slideshow</string>
+
+    <!-- Main scaffold: viewer callbacks and album picker -->
+    <string name="main_album_cover_updated">Album cover updated</string>
+    <string name="main_cover_updated">Cover updated</string>
+    <string name="main_make_person_cover">Make Person Cover</string>
+    <string name="main_make_album_cover">Make Album Cover</string>
+    <string name="main_removed_from">Removed from %1$s</string>
+    <string name="main_move_to_album">Move to Album</string>
+    <string name="main_copy_to_album">Copy to Album</string>
+
+    <!-- Main scaffold: lock, dialogs -->
+    <string name="main_app_lock_on">App Lock is on</string>
+    <string name="main_lock_changed">Lumen lock changed</string>
+    <string name="main_hf_token_title">Hugging Face Token</string>
+    <string name="main_renamed_to">Renamed to %1$s</string>
+    <string name="main_rename_failed">Couldn\'t rename: that name may already be taken</string>
+    <string name="main_new_album">New Album</string>
+    <string name="main_rename_album">Rename Album</string>
+    <string name="main_album_exists">There\'s already an album called “%1$s”</string>
+    <string name="main_album_exists_there">There\'s already an album called “%1$s” there</string>
+    <string name="main_rename_album_needs_access">Couldn\'t rename “%1$s”: that folder needs All files access (Settings → Permissions)</string>
+    <string name="main_rename_album_partial">Renamed %1$d of %2$d; %3$d couldn\'t move</string>
+
+    <!-- Main scaffold: resize and dates -->
+    <plurals name="main_saving_copies">
+        <item quantity="one">Saving %1$d copies…</item>
+        <item quantity="other">Saving %1$d copies…</item>
+    </plurals>
+    <string name="main_save_copy_failed">Couldn\'t save the copy</string>
+    <string name="main_saved_n_of">Saved %1$d of %2$d</string>
+    <string name="main_saved_copy_in">Saved a copy in %1$s</string>
+    <plurals name="main_saved_copies_in">
+        <item quantity="one">Saved %1$d copies in %2$s</item>
+        <item quantity="other">Saved %1$d copies in %2$s</item>
+    </plurals>
+    <plurals name="main_saved_copies">
+        <item quantity="one">Saved %1$d copies</item>
+        <item quantity="other">Saved %1$d copies</item>
+    </plurals>
+    <string name="main_date_changed">Date changed</string>
+    <string name="main_dates_changed">Dates changed</string>
+    <string name="main_dates_changed_needs_access">Changed %1$d of %2$d: videos and GIFs need All files access (Settings → Permissions)</string>
+    <string name="main_dates_changed_heic">Changed %1$d of %2$d: HEIC and AVIF photos can\'t store a new date</string>
+
+    <!-- Main scaffold: copy and move -->
+    <string name="main_file_already_in">Already in %1$s</string>
+    <plurals name="main_file_moved">
+        <item quantity="one">Moved %1$d item to %2$s</item>
+        <item quantity="other">Moved %1$d items to %2$s</item>
+    </plurals>
+    <plurals name="main_file_copied">
+        <item quantity="one">Copied %1$d item to %2$s</item>
+        <item quantity="other">Copied %1$d items to %2$s</item>
+    </plurals>
+    <string name="main_file_move_needs_access">Couldn\'t move into %1$s: that folder needs All files access (Settings → Permissions)</string>
+    <string name="main_file_copy_needs_access">Couldn\'t copy into %1$s: that folder needs All files access (Settings → Permissions)</string>
+    <string name="main_file_move_failed">Couldn\'t move to %1$s</string>
+    <string name="main_file_copy_failed">Couldn\'t copy to %1$s</string>
+    <plurals name="main_file_moved_some_failed">
+        <item quantity="one">Moved %1$d item to %2$s; %3$d failed</item>
+        <item quantity="other">Moved %1$d items to %2$s; %3$d failed</item>
+    </plurals>
+    <plurals name="main_file_copied_some_failed">
+        <item quantity="one">Copied %1$d item to %2$s; %3$d failed</item>
+        <item quantity="other">Copied %1$d items to %2$s; %3$d failed</item>
+    </plurals>
+
+    <!-- Titles while selecting or picking -->
+    <string name="main_not_person">Not %1$s</string>
+    <string name="main_not_this_person">Not This Person</string>
+    <string name="main_select_albums">Select Albums</string>
+    <string name="main_select_folders">Select Folders</string>
+    <plurals name="main_albums_selected">
+        <item quantity="one">%1$d Album Selected</item>
+        <item quantity="other">%1$d Albums Selected</item>
+    </plurals>
+    <plurals name="main_folders_selected">
+        <item quantity="one">%1$d Folder Selected</item>
+        <item quantity="other">%1$d Folders Selected</item>
+    </plurals>
+    <string name="main_select_items">Select Items</string>
+    <plurals name="main_photos_selected">
+        <item quantity="one">%1$d Photo Selected</item>
+        <item quantity="other">%1$d Photos Selected</item>
+    </plurals>
+    <plurals name="main_videos_selected">
+        <item quantity="one">%1$d Video Selected</item>
+        <item quantity="other">%1$d Videos Selected</item>
+    </plurals>
+    <plurals name="main_items_selected">
+        <item quantity="one">%1$d Item Selected</item>
+        <item quantity="other">%1$d Items Selected</item>
+    </plurals>
+
+    <!-- Permission screen -->
+    <string name="main_permission_message">Lumen needs access to your photos and videos. Everything stays on this device.</string>
+    <string name="main_allow_access">Allow access</string>
+
+    <!-- Search Details sections -->
+    <string name="main_search_section_names">Names, Folders and Dates</string>
+    <string name="main_search_section_captions">Captions</string>
+    <string name="main_search_section_text">Text in Photos</string>
+    <string name="main_search_section_smart">Smart Search</string>
+</resources>

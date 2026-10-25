@@ -1,0 +1,263 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Settings: category pages -->
+    <string name="settings_category_appearance">Appearance</string>
+    <string name="settings_category_library">Library</string>
+    <string name="settings_category_photos_videos">Photos &amp; Videos</string>
+    <string name="settings_category_privacy">Privacy &amp; Security</string>
+    <string name="settings_category_smart_features">Smart Features</string>
+    <string name="settings_category_permissions">Permissions</string>
+    <string name="settings_category_backup">Backup &amp; Import</string>
+    <string name="settings_category_about">About</string>
+    <string name="settings_category_developer">Developer Options</string>
+
+    <!-- Settings: main page -->
+    <string name="settings_search_hint">Search settings</string>
+    <string name="settings_clear">Clear</string>
+    <string name="settings_no_match">No settings match “%1$s”.</string>
+    <string name="settings_results">Results</string>
+    <string name="settings_update_available">Lumen %1$s Is Available</string>
+    <string name="settings_app_lock_on">App Lock On</string>
+    <!-- Permissions granted, e.g. "2 of 3" -->
+    <string name="settings_permissions_count">%1$d of %2$d</string>
+
+    <!-- Settings search: entry titles that only appear in search results -->
+    <string name="settings_entry_slide_time">Slideshow: Each Photo For</string>
+    <string name="settings_entry_slide_transition">Slideshow: Transition</string>
+    <string name="settings_entry_slide_shuffle">Slideshow: Shuffle</string>
+    <string name="settings_entry_slide_repeat">Slideshow: Repeat</string>
+    <string name="settings_entry_search_quality">Search Quality</string>
+    <string name="settings_entry_search_model">Search Model</string>
+    <string name="settings_entry_indexed">Indexed</string>
+    <string name="settings_entry_subtitle_quality">Subtitle Quality</string>
+    <string name="settings_entry_subtitles_model">Subtitles Model</string>
+    <string name="settings_entry_scheduled_indexing">Scheduled Indexing</string>
+    <string name="settings_entry_index_on_battery">Index on Battery</string>
+    <string name="settings_entry_video_detail">Video Detail</string>
+    <string name="settings_entry_face_models">Face Models</string>
+    <string name="settings_entry_faces">Faces</string>
+    <string name="settings_entry_text_reader">Text Reader</string>
+    <string name="settings_entry_text_read">Text Read</string>
+    <string name="settings_entry_wifi_only">Download on Wi-Fi Only</string>
+    <string name="settings_entry_hf_token">Hugging Face Token</string>
+    <string name="settings_entry_export">Export Settings</string>
+    <string name="settings_entry_import">Import Settings</string>
+    <string name="settings_entry_import_favorites">Import Favorites</string>
+    <string name="settings_entry_auto_update">Check for Updates Automatically</string>
+
+    <!-- Settings search: extra words people might search for each setting by, separated by spaces.
+         Lowercase; any word typed must appear in the setting's name, page or these words. -->
+    <string name="settings_kw_theme">dark mode light mode night appearance</string>
+    <string name="settings_kw_reduce_motion">animations accessibility springs</string>
+    <string name="settings_kw_liquid_glass">glass refraction lens effect gpu</string>
+    <string name="settings_kw_reduce_blur">blur transparency solid frosted readability battery</string>
+    <string name="settings_kw_date_headers">sections days months years grouping</string>
+    <string name="settings_kw_excluded">ignore folders hide whatsapp junk</string>
+    <string name="settings_kw_curved_edge">fast scroll scrollbar handle edge</string>
+    <string name="settings_kw_ultra_hdr">hdr brightness glow</string>
+    <string name="settings_kw_film_strip">thumbnails strip scrubber skim viewer height size</string>
+    <string name="settings_kw_maps">map location openstreetmap openfreemap network privacy</string>
+    <string name="settings_kw_autoplay">video play automatically</string>
+    <string name="settings_kw_loop">repeat video</string>
+    <string name="settings_kw_slide_time">slideshow seconds duration timing</string>
+    <string name="settings_kw_slide_transition">slideshow fade slide</string>
+    <string name="settings_kw_slide_shuffle">slideshow random order</string>
+    <string name="settings_kw_slide_repeat">slideshow loop</string>
+    <string name="settings_kw_lumen_lock">pin pattern password change set up passcode</string>
+    <string name="settings_kw_biometrics">biometric unlock fingerprint face</string>
+    <string name="settings_kw_app_lock">lock app open protect</string>
+    <string name="settings_kw_lock_after">timeout minutes app lock</string>
+    <string name="settings_kw_hidden">hide private secret vault</string>
+    <string name="settings_kw_encrypt">encryption vault secure</string>
+    <string name="settings_kw_search_quality">accurate fast ai model smart search</string>
+    <string name="settings_kw_search_model">download remove update ai smart search</string>
+    <string name="settings_kw_indexed">indexing progress smart search</string>
+    <string name="settings_kw_subtitle_quality">subtitles captions cc transcription speech model</string>
+    <string name="settings_kw_subtitles_model">subtitles captions cc transcription speech download</string>
+    <string name="settings_kw_scheduled_indexing">overnight night time schedule hours indexing background sleep</string>
+    <string name="settings_kw_index_on_battery">charging battery background scan indexing</string>
+    <string name="settings_kw_video_detail">video frames resolution faces quality speed</string>
+    <string name="settings_kw_face_model">people faces persons download remove update</string>
+    <string name="settings_kw_faces">people faces persons grouping progress</string>
+    <string name="settings_kw_text_model">ocr words text in photos screenshots download remove update</string>
+    <string name="settings_kw_text_read">ocr words text in photos screenshots reading progress</string>
+    <string name="settings_kw_wifi_only">mobile data cellular download</string>
+    <string name="settings_kw_search_details">debug search sections scores developer</string>
+    <string name="settings_kw_hf_token">huggingface token download speed</string>
+    <string name="settings_kw_media_management">delete favorite trash permission confirm</string>
+    <string name="settings_kw_all_files">storage hidden folders permission rename</string>
+    <string name="settings_kw_location">gps map places permission</string>
+    <string name="settings_kw_export">backup save</string>
+    <string name="settings_kw_import">restore backup</string>
+    <string name="settings_kw_import_favorites">fossify aves favourites hearts</string>
+    <string name="settings_kw_licenses">credits open source</string>
+    <string name="settings_kw_software_update">update upgrade new version download install</string>
+    <string name="settings_kw_auto_update">update automatic daily</string>
+    <string name="settings_kw_github">source code repository open source project</string>
+    <string name="settings_kw_report_bug">issue problem feedback crash github</string>
+    <string name="settings_kw_version">about app version</string>
+
+    <!-- Settings: Appearance -->
+    <string name="settings_group_display">Display</string>
+    <string name="settings_theme">Theme</string>
+    <string name="settings_reduce_motion">Reduce Motion</string>
+    <string name="settings_reduce_motion_subtitle">No flying photos, springs or bounces</string>
+    <string name="settings_group_glass">Glass</string>
+    <string name="settings_glass_footer">Liquid Glass: buttons, bars, menus and switches made of glass that bends what\'s behind it. Off, they\'re solid. Reduce Blur keeps the glass with much less blur: clearer, and lighter on the GPU.</string>
+    <string name="settings_liquid_glass">Liquid Glass</string>
+    <string name="settings_reduce_blur">Reduce Blur</string>
+    <string name="settings_reduce_blur_needs_glass">Only with Liquid Glass</string>
+
+    <!-- Settings: Library -->
+    <string name="settings_group_grid">Grid</string>
+    <string name="settings_grid_footer">Headers show when photos are sorted by date.</string>
+    <string name="settings_date_headers">Date Headers</string>
+    <string name="settings_curved_edge">Curved Edge Display</string>
+    <string name="settings_curved_edge_subtitle">Keep the fast-scroll handle off the curve, where touches are ignored</string>
+    <string name="settings_group_folders">Folders</string>
+    <string name="settings_excluded_folders">Excluded Folders</string>
+    <string name="settings_excluded_folders_subtitle">Folders Lumen ignores</string>
+    <string name="settings_none">None</string>
+
+    <!-- Settings: Photos & Videos -->
+    <string name="settings_group_photos">Photos</string>
+    <string name="settings_hdr_footer">Ultra HDR photos can glow brighter than white. Match Brightness keeps to your brightness; Full HDR turns the screen all the way up while an HDR photo or video is shown, like Chrome.</string>
+    <string name="settings_ultra_hdr">Ultra HDR</string>
+    <string name="settings_group_viewer">Viewer</string>
+    <string name="settings_film_strip_footer">The thumbnails above the viewer\'s buttons: drag them to skim through photos.</string>
+    <string name="settings_film_strip">Film Strip</string>
+    <string name="settings_group_location">Location</string>
+    <string name="settings_maps_footer">Shows where photos were taken on a map in their details. Map tiles download from OpenFreeMap (OpenStreetMap data): it sees which area is shown, nothing else. Off: the place name and coordinates only, and Lumen doesn\'t contact it.</string>
+    <string name="settings_maps">Maps</string>
+    <string name="settings_group_videos">Videos</string>
+    <string name="settings_autoplay_videos">Autoplay Videos</string>
+    <string name="settings_loop_videos">Loop Videos</string>
+    <string name="settings_start_over">Start over at the end</string>
+    <string name="settings_group_slideshow">Slideshow</string>
+    <string name="settings_each_photo_for">Each Photo For</string>
+    <plurals name="settings_slide_seconds">
+        <item quantity="one">%d second</item>
+        <item quantity="other">%d seconds</item>
+    </plurals>
+    <string name="settings_transition">Transition</string>
+    <string name="settings_transition_slide">Slide</string>
+    <string name="settings_transition_fade">Fade</string>
+    <string name="settings_shuffle">Shuffle</string>
+    <string name="settings_repeat">Repeat</string>
+
+    <!-- Settings: Privacy & Security -->
+    <string name="settings_lumen_lock">Lumen Lock</string>
+    <string name="settings_lumen_lock_footer">Lumen\'s lock (PIN, pattern or password) guards Hidden, and with App Lock all of Lumen. It\'s separate from your phone\'s screen lock.</string>
+    <string name="settings_change_lumen_lock">Change Lumen Lock</string>
+    <string name="settings_set_up_lumen_lock">Set Up Lumen Lock</string>
+    <string name="settings_biometrics">Fingerprint or Face</string>
+    <string name="settings_biometrics_subtitle">Unlock faster</string>
+    <string name="settings_app_lock">App Lock</string>
+    <string name="settings_app_lock_subtitle">Ask for Lumen\'s lock when opening Lumen</string>
+    <string name="settings_lock_after">Lock After</string>
+    <string name="settings_lock_immediately">Immediately</string>
+    <plurals name="settings_lock_minutes">
+        <item quantity="one">%d minute</item>
+        <item quantity="other">%d minutes</item>
+    </plurals>
+    <string name="settings_hidden">Hidden</string>
+    <string name="settings_hidden_subtitle">Out of your library and most apps, locked in Lumen</string>
+    <string name="settings_encrypt_hidden">Encrypt Hidden</string>
+    <string name="settings_encrypt_hidden_subtitle">So no other app or file manager can see them</string>
+
+    <!-- Settings: Permissions -->
+    <string name="settings_group_android_permissions">Android Permissions</string>
+    <string name="settings_permissions_footer">Lumen works without these; they unlock the features named. Each opens Android\'s settings.</string>
+    <string name="settings_media_management">Media Management</string>
+    <string name="settings_media_management_subtitle">Delete and favorite without asking each time</string>
+    <string name="settings_all_files">All Files Access</string>
+    <string name="settings_all_files_subtitle">Hidden folders, renaming albums, dates on videos</string>
+    <string name="settings_location_in_photos">Location in Photos</string>
+    <string name="settings_location_in_photos_subtitle">Show where photos were taken</string>
+
+    <!-- Settings: Backup & Import -->
+    <string name="settings_group_lumen_backup">Lumen Backup</string>
+    <string name="settings_backup_footer">The Hidden lock is never included, so a backup can\'t unlock Hidden.</string>
+    <string name="settings_export_row">Export Settings…</string>
+    <string name="settings_export_subtitle">Settings, album arrangement and favorites</string>
+    <string name="settings_import_row">Import Settings…</string>
+    <string name="settings_import_subtitle">From a Lumen backup file</string>
+    <string name="settings_group_other_apps">From Other Apps</string>
+    <string name="settings_import_favorites_row">Import Favorites…</string>
+    <string name="settings_import_favorites_subtitle">From Fossify Gallery (.txt) or Aves (.json)</string>
+
+    <!-- Settings: About -->
+    <string name="settings_group_open_source">Open Source</string>
+    <string name="settings_open_source_footer">Lumen is free and open source. Bugs and ideas are welcome on GitHub.</string>
+    <string name="settings_github" translatable="false">GitHub</string>
+    <string name="settings_report_bug">Report a Bug</string>
+    <string name="settings_licenses">Open-Source Licenses</string>
+    <string name="settings_version">Version</string>
+    <string name="settings_version_value">Version %1$s</string>
+    <!-- %1$s is the developer's name, shown as a link -->
+    <string name="settings_made_by">Made by %1$s</string>
+    <string name="settings_developer_already_on">Developer Options are already on</string>
+    <string name="settings_developer_now_on">Developer Options are on, in Settings</string>
+
+    <!-- Settings: Software Update -->
+    <string name="settings_software_update">Software Update</string>
+    <string name="settings_software_update_footer">Updates come from Lumen\'s releases on GitHub. Checking only asks GitHub for the latest version; nothing about you or your photos is sent.</string>
+    <string name="settings_update_lumen_version">Lumen %1$s</string>
+    <string name="settings_update_check_now">Check Now</string>
+    <string name="settings_update_checking">Checking…</string>
+    <string name="settings_update_downloading">Downloading %1$d%%</string>
+    <string name="settings_update_installing">Installing…</string>
+    <string name="settings_update_up_to_date">Up to Date</string>
+    <string name="settings_update_no_releases">No Releases Yet</string>
+    <string name="settings_update_check_failed">Couldn\'t Check</string>
+    <string name="settings_update_confirm_title">Install Lumen %1$s?</string>
+    <!-- %1$.0f is the download size in megabytes -->
+    <string name="settings_update_confirm_message_size">Downloads the update (%1$.0f MB) from GitHub, then Android asks to install it.</string>
+    <string name="settings_update_confirm_message">Downloads the update from GitHub, then Android asks to install it.</string>
+    <string name="settings_update_check_automatically">Check Automatically</string>
+    <string name="settings_update_check_automatically_subtitle">Once a day, when Lumen opens</string>
+    <string name="settings_update_allow_install">Allow Lumen to install apps, then tap Install again</string>
+    <string name="settings_update_not_signed">This update isn\'t signed like your Lumen, so it wasn\'t installed</string>
+    <string name="settings_update_download_failed">The update couldn\'t be downloaded</string>
+
+    <!-- Settings: Developer Options -->
+    <string name="settings_developer_search_footer">Splits results by how they matched (names, folders and dates; people; text in photos; Smart Search), each one row until See All, with Smart Search\'s rank and score on each photo.</string>
+    <string name="settings_search_details">Search Details</string>
+    <string name="settings_group_onboarding">Onboarding</string>
+    <string name="settings_onboarding_footer">Shows first launch again, from the start. Nothing is reset.</string>
+    <string name="settings_show_onboarding">Show Onboarding</string>
+    <string name="settings_developer_footer">Hides this page from Settings until Version in About is tapped seven times again.</string>
+    <string name="settings_show_developer_options">Show Developer Options</string>
+
+    <!-- Settings: Excluded Folders -->
+    <string name="settings_excluded_intro">Lumen ignores these folders and everything inside them. The files stay where they are, and other apps still see them.</string>
+    <string name="settings_group_excluded">Excluded</string>
+    <plurals name="settings_excluded_items">
+        <item quantity="one">%d item</item>
+        <item quantity="other">%d items</item>
+    </plurals>
+    <string name="settings_include">Include</string>
+    <string name="settings_group_suggested">Suggested</string>
+    <string name="settings_suggested_footer">Folders that look like software projects: their images are usually icons and build files.</string>
+    <plurals name="settings_code_images">
+        <item quantity="one">%d code images</item>
+        <item quantity="other">%d code images</item>
+    </plurals>
+    <string name="settings_exclude">Exclude</string>
+    <string name="settings_choose_folder">Choose a Folder…</string>
+    <!-- A folder's path, then what's in it -->
+    <string name="settings_folder_subtitle">%1$s · %2$s</string>
+
+    <!-- Resize or Convert dialog -->
+    <string name="settings_resize_title">Resize or Convert</string>
+    <string name="settings_resize_message_one">Saves a new copy next to the original.</string>
+    <plurals name="settings_resize_message">
+        <item quantity="one">Saves new copies of %d photos next to the originals.</item>
+        <item quantity="other">Saves new copies of %d photos next to the originals.</item>
+    </plurals>
+    <string name="settings_resize_size">Size</string>
+    <string name="settings_resize_format">Format</string>
+    <string name="settings_resize_quality">Quality</string>
+    <string name="settings_resize_save_copy">Save Copy</string>
+    <string name="settings_resize_save_copies">Save Copies</string>
+</resources>

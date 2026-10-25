@@ -16,6 +16,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
+import com.subhashh.lumen.R
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -71,7 +73,7 @@ fun SearchField(
         Spacer(Modifier.width(10.dp))
         Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
             if (query.isEmpty()) {
-                Text("Files, folders, months, years…", color = colors.contentSecondary, fontSize = 17.sp, maxLines = 1)
+                Text(stringResource(R.string.main_search_field_hint), color = colors.contentSecondary, fontSize = 17.sp, maxLines = 1)
             }
             BasicTextField(
                 value = query,
@@ -96,7 +98,7 @@ fun SearchField(
                     .pressable({ onQueryChange("") }),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(LumenIcons.Close, contentDescription = "Clear", tint = colors.contentSecondary, modifier = Modifier.size(18.dp))
+                Icon(LumenIcons.Close, contentDescription = stringResource(R.string.main_search_clear), tint = colors.contentSecondary, modifier = Modifier.size(18.dp))
             }
         }
     }

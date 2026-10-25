@@ -6,6 +6,7 @@ import android.hardware.biometrics.BiometricManager.Authenticators.BIOMETRIC_STR
 import android.hardware.biometrics.BiometricManager.Authenticators.DEVICE_CREDENTIAL
 import android.hardware.biometrics.BiometricPrompt
 import android.os.CancellationSignal
+import com.subhashh.lumen.R
 
 /**
  * The system prompts around Hidden's own lock (platform BiometricPrompt; no androidx.biometric /
@@ -31,7 +32,7 @@ object HiddenLock {
         fallback: String,
         onSuccess: () -> Unit,
         onFallback: () -> Unit,
-        title: String = "Unlock Hidden",
+        title: String = activity.getString(R.string.hidden_unlock_named, activity.getString(R.string.hidden_name)),
     ) {
         val prompt = BiometricPrompt.Builder(activity)
             .setTitle(title)
@@ -42,10 +43,10 @@ object HiddenLock {
     }
 
     /** The phone's own screen lock (PIN/pattern/password or biometrics), to authorize a reset. */
-    fun deviceCredential(activity: Activity, title: String = "Reset Hidden lock", onSuccess: () -> Unit) {
+    fun deviceCredential(activity: Activity, title: String = activity.getString(R.string.hidden_reset_lock_title), onSuccess: () -> Unit) {
         val prompt = BiometricPrompt.Builder(activity)
             .setTitle(title)
-            .setSubtitle("Confirm it's you with your phone's screen lock")
+            .setSubtitle(activity.getString(R.string.hidden_reset_lock_subtitle))
             .setAllowedAuthenticators(BIOMETRIC_STRONG or DEVICE_CREDENTIAL)
             .build()
         prompt.authenticate(CancellationSignal(), activity.mainExecutor, callback(onSuccess))
