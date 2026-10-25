@@ -128,8 +128,12 @@ fun Onboarding(
     onFinish: (OnboardingExit) -> Unit,
 ) {
     var step by rememberSaveable { mutableStateOf(Step.Welcome) }
+    /** Smart Features are downloading: without them there's nothing to index, so no When to Index. */
+    var downloading by rememberSaveable { mutableStateOf(false) }
     val backdrop = rememberLayerBackdrop()
-    BackHandler(enabled = step != Step.Welcome) { step = Step.entries[step.ordinal - 1] }
+    BackHandler(enabled = step != Step.Welcome) {
+        step = if (step == Step.Done && !downloading) Step.Smart else Step.entries[step.ordinal - 1]
+    }
 
     // Opaque, and every touch stays here: the Library is already built underneath.
     Box(
@@ -161,9 +165,12 @@ fun Onboarding(
                     Step.Welcome -> Welcome(backdrop) { step = Step.Look }
                     Step.Look -> Look(backdrop) { step = Step.Photos }
                     Step.Photos -> Photos(backdrop, hasAccess, onRequestAccess) { step = Step.Smart }
-                    Step.Smart -> Smart(backdrop) { step = Step.Schedule }
+                    Step.Smart -> Smart(backdrop) { started ->
+                        downloading = started
+                        step = if (started) Step.Schedule else Step.Done
+                    }
                     Step.Schedule -> Schedule(backdrop) { step = Step.Done }
-                    Step.Done -> Finish(backdrop, photos, onFinish)
+                    Step.Done -> Finish(backdrop, photos, downloading, onFinish)
                 }
             }
         }
@@ -369,7 +376,7 @@ private fun recommendedTier(context: Context) =
     }
 
 @Composable
-private fun ColumnScope.Smart(backdrop: Backdrop, onNext: () -> Unit) {
+private fun ColumnScope.Smart(backdrop: Backdrop, onNext: (downloading: Boolean) -> Unit) {
     val context = LocalContext.current
     val prefs = remember { LumenPrefs(context) }
     val recommended = remember { recommendedTier(context) }
@@ -392,7 +399,7 @@ private fun ColumnScope.Smart(backdrop: Backdrop, onNext: () -> Unit) {
             ModelPack.Text.takeIf { text },
             ModelPack.Subtitles.takeIf { subtitles },
         ).forEach { ModelDownloads.start(context, it, wifiOnly) }
-        onNext()
+        onNext(true)
     }
     // The download's notification needs this on Android 13+; it downloads either way.
     val askNotifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { start() }
@@ -438,11 +445,11 @@ private fun ColumnScope.Smart(backdrop: Backdrop, onNext: () -> Unit) {
     }
     Spacer(Modifier.height(12.dp))
     PrimaryButton(backdrop, if (total > 0) "Download in Background · ${megabytes(total)}" else "Continue", enabled = true) {
-        if (total == 0L) onNext()
+        if (total == 0L) onNext(false)
         else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) askNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
         else start()
     }
-    SecondaryButton("Not Now", onNext)
+    SecondaryButton("Not Now") { onNext(false) }
 }
 
 @Composable
@@ -560,7 +567,7 @@ private fun Mosaic(tiles: List<MosaicTile>, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun ColumnScope.Finish(backdrop: Backdrop, photos: List<MediaItem>, onFinish: (OnboardingExit) -> Unit) {
+private fun ColumnScope.Finish(backdrop: Backdrop, photos: List<MediaItem>, downloading: Boolean, onFinish: (OnboardingExit) -> Unit) {
     val tiles = remember(photos) { photos.map { MosaicTile(it) } }
     val fade = remember { androidx.compose.animation.core.Animatable(1f) }
     val scope = rememberCoroutineScope()
@@ -572,7 +579,8 @@ private fun ColumnScope.Finish(backdrop: Backdrop, photos: List<MediaItem>, onFi
         Text("You're All Set", color = ink, fontSize = 40.sp, fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
         Spacer(Modifier.height(10.dp))
         Text(
-            "Smart Features download in the background.\nYou'll see their progress in your notifications.",
+            if (downloading) "Smart Features download in the background.\nYou'll see their progress in your notifications."
+            else "Turn on Smart Features any time in Settings.",
             color = ink.copy(alpha = 0.85f),
             fontSize = 16.sp,
             textAlign = TextAlign.Center,
