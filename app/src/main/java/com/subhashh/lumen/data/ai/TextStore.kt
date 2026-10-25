@@ -11,7 +11,7 @@ import java.io.File
  * accent-insensitive), so a search for a name or a phrase finds every screenshot containing it.
  * Same lifecycle as [EmbeddingStore]: app-private, not backed up, rebuilt if lost.
  */
-class TextStore private constructor(context: Context) : SQLiteOpenHelper(context, file(context).path, null, 1) {
+class TextStore private constructor(context: Context) : SQLiteOpenHelper(context, file(context).path, null, 2) {
 
     init {
         setWriteAheadLoggingEnabled(true)
@@ -21,9 +21,55 @@ class TextStore private constructor(context: Context) : SQLiteOpenHelper(context
         // An item with no text keeps its row in items (so it isn't read again) and none in texts.
         db.execSQL("CREATE TABLE items (media_id INTEGER PRIMARY KEY, modified INTEGER NOT NULL)")
         db.execSQL("CREATE VIRTUAL TABLE texts USING fts4(body, tokenize=unicode61 \"remove_diacritics=2\")")
+        createLines(db)
     }
 
-    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) = Unit
+    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+        if (oldVersion < 2) createLines(db)
+    }
+
+    /**
+     * Where each line of a photo's text is, for Live Text: [LiveText.encode]d lines in pixels of
+     * the [width]×[height] image they were read from. Photos only, at the `modified` they were
+     * read at; added in version 2, so photos read before it have words but no lines.
+     */
+    private fun createLines(db: SQLiteDatabase) {
+        db.execSQL("CREATE TABLE IF NOT EXISTS lines (media_id INTEGER PRIMARY KEY, modified INTEGER NOT NULL, width INTEGER NOT NULL, height INTEGER NOT NULL, data BLOB NOT NULL)")
+    }
+
+    class StoredLines(val width: Int, val height: Int, val data: ByteArray)
+
+    fun putLines(mediaId: Long, modified: Long, width: Int, height: Int, data: ByteArray) {
+        writableDatabase.insertWithOnConflict("lines", null, ContentValues().apply {
+            put("media_id", mediaId)
+            put("modified", modified)
+            put("width", width)
+            put("height", height)
+            put("data", data)
+        }, SQLiteDatabase.CONFLICT_REPLACE)
+    }
+
+    /** [mediaId]'s lines as read at [modified]; null when there are none for that version. */
+    fun lines(mediaId: Long, modified: Long): StoredLines? =
+        readableDatabase.rawQuery("SELECT width, height, data FROM lines WHERE media_id = ? AND modified = ?", arrayOf(mediaId.toString(), modified.toString())).use { c ->
+            if (c.moveToFirst()) StoredLines(c.getInt(0), c.getInt(1), c.getBlob(2)) else null
+        }
+
+    /** What the index knows about [mediaId] at [modified]: not read yet, read with no words, or read with words. */
+    enum class Known { NotRead, NoText, HasText }
+
+    fun known(mediaId: Long, modified: Long): Known {
+        val read = readableDatabase.rawQuery("SELECT 1 FROM items WHERE media_id = ? AND modified = ?", arrayOf(mediaId.toString(), modified.toString())).use { it.moveToFirst() }
+        if (!read) return Known.NotRead
+        return if (text(mediaId) != null) Known.HasText else Known.NoText
+    }
+
+    /** Photos read before lines were kept that have words: read again once, for Live Text. */
+    fun withTextButNoLines(): Set<Long> = HashSet<Long>().apply {
+        readableDatabase.rawQuery("SELECT docid FROM texts WHERE docid NOT IN (SELECT media_id FROM lines)", null).use { c ->
+            while (c.moveToNext()) add(c.getLong(0))
+        }
+    }
 
     /** Item id → the `modified` it was read at. */
     fun indexed(): Map<Long, Long> = HashMap<Long, Long>().apply {
@@ -64,6 +110,7 @@ class TextStore private constructor(context: Context) : SQLiteOpenHelper(context
             for (id in ids) {
                 db.delete("texts", "docid = ?", arrayOf(id.toString()))
                 db.delete("items", "media_id = ?", arrayOf(id.toString()))
+                db.delete("lines", "media_id = ?", arrayOf(id.toString()))
             }
             db.setTransactionSuccessful()
         } finally {

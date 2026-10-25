@@ -218,18 +218,27 @@ fun ViewerScreen(
     val showMaps = remember { com.subhashh.lumen.data.LumenPrefs(context).showMaps }
     // Settings → Photos & Videos → Film Strip.
     val filmStrip = remember { com.subhashh.lumen.data.LumenPrefs(context).filmStrip }
-    // Live Text: the photo on screen is read once it settles (a few hundred ms, then cached).
+    // Live Text: the lines Text Reading kept for the photo, at once. A photo it hasn't read is
+    // read here, once it settles (swiping past doesn't start reads); one it found no words in
+    // isn't read at all.
     val liveText = remember { LiveTextState() }
     LaunchedEffect(current?.id, current?.modified) {
         val item = current?.takeIf { !it.isVideo }
         liveText.show(item, item?.let { com.subhashh.lumen.data.ai.LiveText.cached(it) })
         if (item == null || liveText.result != null) return@LaunchedEffect
-        delay(300)
+        val (stored, known) = com.subhashh.lumen.data.ai.LiveText.stored(context, item)
+        if (stored != null || known == com.subhashh.lumen.data.ai.TextStore.Known.NoText) {
+            liveText.show(item, stored)
+            return@LaunchedEffect
+        }
+        if (known == com.subhashh.lumen.data.ai.TextStore.Known.NotRead) delay(300)
         liveText.show(item, com.subhashh.lumen.data.ai.LiveText.read(context, item))
     }
-    // The text models are only kept while the viewer is open.
+    // The text models load as the viewer opens, not on its first photo, and stay a little after
+    // it closes, so opening the next photo doesn't wait for them.
     DisposableEffect(Unit) {
-        onDispose { kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default).launch { com.subhashh.lumen.data.ai.LiveText.release() } }
+        com.subhashh.lumen.data.ai.LiveText.warm(context)
+        onDispose { com.subhashh.lumen.data.ai.LiveText.release() }
     }
     /** The caption being edited from the details sheet: the item and its caption so far. */
     var captionEdit by remember { mutableStateOf<Pair<MediaItem, String>?>(null) }

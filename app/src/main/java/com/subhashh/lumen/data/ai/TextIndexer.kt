@@ -35,7 +35,10 @@ class TextIndexer(private val context: Context) {
         }
         val known = store.indexed()
         store.remove(known.keys - library.mapTo(HashSet()) { it.id })
-        val todo = library.filter { known[it.id] != it.modified }
+        // Photos read before line positions were kept, that have words: read once more, so Live
+        // Text has them ready (photos with no words have nothing to show).
+        val needLines = store.withTextButNoLines()
+        val todo = library.filter { known[it.id] != it.modified || (!it.isVideo && it.id in needLines) }
             .sortedWith(compareBy<MediaItem> { it.isVideo }.thenByDescending { it.takenAt })
         val px = LumenPrefs(context).videoDetail.px
         var finished = library.size - todo.size
@@ -76,11 +79,14 @@ class TextIndexer(private val context: Context) {
                     Log.d(Tag, "${item.name.take(40)}: ${item.durationMs / 1000}s video, $frames frames, $read lines read, " +
                         "${lines.size} kept, ${SystemClock.elapsedRealtime() - started} ms")
                 } else {
-                    val lines = runCatching {
+                    // With where each line is, so Live Text in the viewer has them ready.
+                    val read = runCatching {
                         val bitmap = MediaFrames.forReading(context, item, ReadSide)
-                        try { reader.read(bitmap) } finally { bitmap.recycle() }
-                    }.onFailure { Log.w(Tag, "Couldn't read ${item.name}", it) }.getOrDefault(emptyList())
+                        try { LiveText.Result(reader.readLines(bitmap), bitmap.width, bitmap.height) } finally { bitmap.recycle() }
+                    }.onFailure { Log.w(Tag, "Couldn't read ${item.name}", it) }.getOrNull()
+                    val lines = read?.lines.orEmpty().map { it.text }
                     store.put(item.id, item.modified, lines.joinToString("\n"))
+                    if (read != null) store.putLines(item.id, item.modified, read.width, read.height, LiveText.encode(read.lines))
                     Log.d(Tag, "${item.name.take(40)}: ${lines.size} lines, ${SystemClock.elapsedRealtime() - started} ms")
                 }
                 SmartIndex.reportText(context, ++finished, library.size)
