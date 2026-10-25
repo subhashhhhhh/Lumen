@@ -7,6 +7,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onSizeChanged
@@ -49,6 +50,12 @@ fun PhotoPage(
     }
 
     val haptics = LocalHapticFeedback.current
+    // The zoomable image keeps the click handlers it was first given. A neighbour is built off
+    // screen, before it's the current page (no Live Text), and kept as you swipe to it, so its
+    // handlers read these instead of capturing them; otherwise long-press did nothing there
+    // until the viewer was opened on that photo.
+    val currentLiveText by rememberUpdatedState(liveText)
+    val currentOnTap by rememberUpdatedState(onTap)
     var viewport by remember { mutableStateOf(IntSize.Zero) }
     val doubleClick = remember { FillOnDoubleClick { viewport } }
     Box(modifier.fillMaxSize().onSizeChanged { viewport = it }) {
@@ -66,17 +73,18 @@ fun PhotoPage(
         state = state,
         onClick = { p ->
             val bounds = state.zoomableState.transformedContentBounds
+            val live = currentLiveText
             when {
                 // A tap away from a selection drops it, like iOS.
-                liveText?.selection != null -> liveText.clear()
-                liveText?.showAll == true && liveText.openAt(context, bounds, p) -> Unit
-                else -> onTap()
+                live?.selection != null -> live.clear()
+                live?.showAll == true && live.openAt(context, bounds, p) -> Unit
+                else -> currentOnTap()
             }
         },
         onDoubleClick = doubleClick,
         // Long-press on text selects the word there.
         onLongClick = { p ->
-            if (liveText?.selectAt(state.zoomableState.transformedContentBounds, p) == true) {
+            if (currentLiveText?.selectAt(state.zoomableState.transformedContentBounds, p) == true) {
                 haptics.performHapticFeedback(HapticFeedbackType.LongPress)
             }
         },
