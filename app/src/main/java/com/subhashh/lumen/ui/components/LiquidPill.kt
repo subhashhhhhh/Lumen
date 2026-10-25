@@ -106,7 +106,13 @@ class LiquidPillState internal constructor(initial: Int, private val scope: Coro
     internal var stepPx = 0f
 
     /** False where the lens can't render (before Android 13): it travels without lifting. */
-    internal val lifts = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+    internal val lifts: Boolean get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && glassOn
+
+    /**
+     * Settings → Appearance: Liquid Glass on and Reduce Blur off. Otherwise the pill travels flat,
+     * as it does where the lens can't render: no lift, rim, shadow or see-through glass.
+     */
+    internal var glassOn = true
 
     private var travelPos = initial.toDouble()
     private var travelVel = 0.0
@@ -481,6 +487,7 @@ fun LiquidPillFill(
     modifier: Modifier = Modifier,
 ) {
     state.stepPx = geometry.stepPx
+    state.glassOn = com.subhashh.lumen.ui.theme.LocalGlass.current.lens
     if (state.lifts && !state.isFlat) return
     Box(
         modifier
@@ -506,9 +513,8 @@ fun LiquidPillLens(
     offset: Offset,
     modifier: Modifier = Modifier,
 ) {
+    state.glassOn = com.subhashh.lumen.ui.theme.LocalGlass.current.lens
     if (!state.lifts || state.isFlat) return
-    // Settings → Appearance: the pill only bends what's under it with Liquid Glass on.
-    val lens = com.subhashh.lumen.ui.theme.LocalGlass.current.lens
     val backdrop = remember(page, bar, items, fillColor) {
         PillBackdrop(page, bar, items) { fillColor.copy(alpha = fillColor.alpha * (1f - state.material)) }
     }
@@ -519,7 +525,7 @@ fun LiquidPillLens(
                 backdrop = backdrop,
                 shape = { CircleShape },
                 effects = {
-                    if (lens) lens(
+                    lens(
                         LensHeight.toPx() * state.glassPresence,
                         LensAmount.toPx() * state.material,
                         chromaticAberration = true,
