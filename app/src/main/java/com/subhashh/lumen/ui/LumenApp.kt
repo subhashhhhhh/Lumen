@@ -413,7 +413,7 @@ private fun MainScaffold(
     SideEffect { transition.fitCells = aspectRatioGrid }
 
     val utilities = remember(library, trash, pick) {
-        MediaCollections.utilities(library.orEmpty(), trash).filter {
+        MediaCollections.utilities(context, library.orEmpty(), trash).filter {
             // Nothing to pick from the trash, and Hidden stays locked away.
             pick == null || (it.key != CollectionKeys.RecentlyDeleted && it.key != CollectionKeys.Hidden)
         }
@@ -1579,7 +1579,7 @@ private fun MainScaffold(
                             aspectRatioGrid = aspectRatioGrid,
                             columns = gridColumns,
                             onColumnsChange = onGridColumns,
-                            emptyText = filter.emptyText,
+                            emptyText = stringResource(filter.emptyText),
                             startAtEnd = chronological,
                             showMonth = sort == LibrarySort.Date,
                             scrollLabel = scrollLabel,
@@ -1608,7 +1608,7 @@ private fun MainScaffold(
                                     level = level,
                                     listState = if (level == ZoomLevel.Years) yearsList else monthsList,
                                     contentPadding = gridPadding,
-                                    emptyText = filter.emptyText,
+                                    emptyText = stringResource(filter.emptyText),
                                     onOpen = { period ->
                                         if (level == ZoomLevel.Years) {
                                             zoomLevel = ZoomLevel.Months
@@ -1854,7 +1854,7 @@ private fun MainScaffold(
             onDismiss = { collectionsMenuOpen = false },
             sections = listOf(
                 AlbumSort.entries.map { sort ->
-                    MenuItem(context.getString(R.string.main_sort_by, sort.label), checked = sort == albumSettings.sort) {
+                    MenuItem(context.getString(R.string.main_sort_by, context.getString(sort.label)), checked = sort == albumSettings.sort) {
                         updateAlbums { it.copy(sort = sort) }
                     }
                 },

@@ -1,5 +1,7 @@
 package com.subhashh.lumen.data
 
+import com.subhashh.lumen.R
+import androidx.annotation.StringRes
 import com.subhashh.lumen.ui.library.SectionMode
 import android.content.Context
 import androidx.core.content.edit
@@ -10,10 +12,10 @@ import com.subhashh.lumen.ui.theme.Appearance
  * allows at your brightness; Full HDR turns the screen all the way up while an HDR photo or
  * video is shown, like Chrome.
  */
-enum class HdrMode(val label: String) { Off("Off"), MatchBrightness("Match Brightness"), Full("Full HDR") }
+enum class HdrMode(@StringRes val label: Int) { Off(R.string.common_off), MatchBrightness(R.string.data_hdr_match), Full(R.string.data_hdr_full) }
 
 /** The viewer's film strip: its height, in dp; Off hides it. */
-enum class FilmStripSize(val label: String, val heightDp: Int) { Off("Off", 0), Small("Small", 32), Medium("Medium", 42), Large("Large", 56) }
+enum class FilmStripSize(@StringRes val label: Int, val heightDp: Int) { Off(R.string.common_off, 0), Small(R.string.data_size_small, 32), Medium(R.string.data_size_medium, 42), Large(R.string.data_size_large, 56) }
 
 /** Small persisted view preferences. */
 class LumenPrefs(context: Context) {
@@ -327,4 +329,4 @@ class LumenPrefs(context: Context) {
  * captions need pixels. Smart Search itself looks at 224 px either way. Applies to videos
  * scanned after a change.
  */
-enum class VideoDetail(val label: String, val px: Int) { High("High", 1280), Medium("Medium", 960), Low("Low", 640) }
+enum class VideoDetail(@StringRes val label: Int, val px: Int) { High(R.string.data_detail_high, 1280), Medium(R.string.data_size_medium, 960), Low(R.string.data_detail_low, 640) }

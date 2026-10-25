@@ -14,10 +14,10 @@ import java.time.format.TextStyle
 import java.util.Locale
 
 /** Settings → Library → Section Headers. [labelRes] is [label] as a string resource. */
-enum class SectionMode(val label: String, @StringRes val labelRes: Int) {
-    None("None", R.string.main_section_none),
-    Months("Months", R.string.main_section_months),
-    Days("Days", R.string.main_section_days),
+enum class SectionMode(@StringRes val labelRes: Int) {
+    None(R.string.main_section_none),
+    Months(R.string.main_section_months),
+    Days(R.string.main_section_days),
 }
 
 /** One cell of a sectioned grid: a date header spanning the row, or a photo. */

@@ -701,7 +701,7 @@ private fun FileGroup(item: MediaItem, d: MediaDetails, colors: SheetColors, onR
     val from = stringResource(R.string.viewer_from)
     val added = stringResource(R.string.viewer_added)
     val modified = stringResource(R.string.viewer_modified)
-    val chips = listOfNotNull(MediaSource.describe(item.relativePath, d.fileName)?.let { from.format(it) })
+    val chips = listOfNotNull(MediaSource.describe(LocalContext.current, item.relativePath, d.fileName)?.let { from.format(it) })
     val dates = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
     val lines = listOfNotNull(
         d.dateAdded?.let { added.format(Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).format(dates)) },

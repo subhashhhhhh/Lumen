@@ -92,9 +92,6 @@
     <string name="hidden_lock_pin">PIN</string>
     <string name="hidden_lock_pattern">Pattern</string>
     <string name="hidden_lock_password">Password</string>
-    <string name="hidden_lock_word_entry">entry</string>
-    <string name="hidden_lock_word_it">it</string>
-    <string name="hidden_lock_word_lock">lock</string>
 
     <!-- Hidden: system prompts -->
     <string name="hidden_unlock_named">Unlock %1$s</string>
@@ -104,17 +101,14 @@
 
     <!-- Hidden: lock screen -->
     <string name="hidden_too_many_tries">Too many tries. Wait %1$d s.</string>
-    <string name="hidden_wrong">Wrong %1$s</string>
     <string name="hidden_pin_rule">Use 4 to 8 digits</string>
     <string name="hidden_pattern_rule">Connect at least 4 dots</string>
     <string name="hidden_password_rule">Use at least 4 characters</string>
     <string name="hidden_mismatch">That didn\'t match. Try again.</string>
     <string name="hidden_unlock">Unlock</string>
-    <string name="hidden_forgot">Forgot %1$s?</string>
     <string name="hidden_new_lock">New Lock</string>
     <string name="hidden_lock_hidden">Lock Hidden</string>
     <string name="hidden_choose_subtitle">Choose how to lock your hidden photos. This is separate from your phone\'s lock.</string>
-    <string name="hidden_enter">Enter %1$s</string>
     <string name="hidden_enter_current">Enter your current lock first</string>
     <string name="hidden_confirm_you">Confirm it\'s you</string>
     <string name="hidden_is_locked">%1$s is locked</string>
@@ -126,7 +120,6 @@
     <string name="hidden_confirm_type">Confirm %1$s</string>
     <string name="hidden_enter_again">Enter it once more</string>
     <string name="hidden_biometrics_title">Use Fingerprint or Face?</string>
-    <string name="hidden_biometrics_subtitle">Unlock Hidden faster. Your %1$s still works too.</string>
     <string name="hidden_pin_hint">Numbers only, 4 to 8 digits</string>
     <string name="hidden_pattern_hint">Connect dots on a 3 × 3 grid</string>
     <string name="hidden_password_hint">Letters, numbers and symbols</string>
@@ -146,4 +139,21 @@
     <string name="hidden_vault_hours_left">about %1$d h %2$d min left</string>
     <string name="hidden_vault_encrypt_note">Each file is checked after encrypting, before its original is removed. Keep Lumen open.</string>
     <string name="hidden_vault_decrypt_note">Files go back exactly where they were, still hidden. Keep Lumen open.</string>
+
+    <!-- Hidden: whole sentences per lock type (see sentence() in HiddenLockScreen.kt) -->
+    <string name="hidden_wrong_pin">Wrong PIN</string>
+    <string name="hidden_wrong_pattern">Wrong Pattern</string>
+    <string name="hidden_wrong_password">Wrong Password</string>
+    <string name="hidden_wrong_entry">Wrong entry</string>
+    <string name="hidden_forgot_pin">Forgot PIN?</string>
+    <string name="hidden_forgot_pattern">Forgot Pattern?</string>
+    <string name="hidden_forgot_password">Forgot Password?</string>
+    <string name="hidden_forgot_it">Forgot it?</string>
+    <string name="hidden_enter_pin">Enter PIN</string>
+    <string name="hidden_enter_pattern">Enter Pattern</string>
+    <string name="hidden_enter_password">Enter Password</string>
+    <string name="hidden_biometrics_subtitle_pin">Unlock Hidden faster. Your PIN still works too.</string>
+    <string name="hidden_biometrics_subtitle_pattern">Unlock Hidden faster. Your Pattern still works too.</string>
+    <string name="hidden_biometrics_subtitle_password">Unlock Hidden faster. Your Password still works too.</string>
+    <string name="hidden_biometrics_subtitle_lock">Unlock Hidden faster. Your lock still works too.</string>
 </resources>

@@ -104,7 +104,7 @@ fun ResizeDialog(
                     Spacer(Modifier.height(10.dp))
                     PickerRow(
                         title = stringResource(R.string.settings_resize_size),
-                        options = ImageExport.Target.entries.map { it.label },
+                        options = ImageExport.Target.entries.map { stringResource(it.label) },
                         selected = target.ordinal,
                         onSelect = { target = ImageExport.Target.entries[it] },
                         icon = LumenIcons.Image,
@@ -113,7 +113,7 @@ fun ResizeDialog(
                     Divider()
                     PickerRow(
                         title = stringResource(R.string.settings_resize_format),
-                        options = ImageExport.Format.entries.map { it.label },
+                        options = ImageExport.Format.entries.map { stringResource(it.label) },
                         selected = format.ordinal,
                         onSelect = { format = ImageExport.Format.entries[it] },
                         icon = LumenIcons.Document,
@@ -124,7 +124,7 @@ fun ResizeDialog(
                         Divider()
                         PickerRow(
                             title = stringResource(R.string.settings_resize_quality),
-                            options = ImageExport.Quality.entries.map { it.label },
+                            options = ImageExport.Quality.entries.map { stringResource(it.label) },
                             selected = quality.ordinal,
                             onSelect = { quality = ImageExport.Quality.entries[it] },
                             icon = LumenIcons.Hdr,

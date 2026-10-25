@@ -43,10 +43,10 @@ val LocalGlassColors = staticCompositionLocalOf { DarkGlass }
 val LocalDarkTheme = staticCompositionLocalOf { true }
 
 /** Settings → Appearance: follow the phone, or always light or dark. */
-enum class Appearance(val label: String, @StringRes val labelRes: Int) {
-    System("Match Phone", R.string.app_appearance_system),
-    Light("Light", R.string.app_appearance_light),
-    Dark("Dark", R.string.app_appearance_dark),
+enum class Appearance(@StringRes val labelRes: Int) {
+    System(R.string.app_appearance_system),
+    Light(R.string.app_appearance_light),
+    Dark(R.string.app_appearance_dark),
 }
 
 /** The chosen [Appearance] and how to change it, for the Settings screen. */

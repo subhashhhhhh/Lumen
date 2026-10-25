@@ -1,5 +1,7 @@
 package com.subhashh.lumen.data
 
+import com.subhashh.lumen.R
+import androidx.annotation.StringRes
 import android.content.ContentValues
 import android.content.Context
 import android.graphics.Bitmap
@@ -25,23 +27,23 @@ import kotlin.math.roundToInt
 object ImageExport {
 
     /** How big the copy is. Named sizes cap the longer side and never enlarge. */
-    enum class Target(val label: String, val suffix: String, val longSide: Int?, val percent: Int?) {
-        Original("Original", "copy", null, null),
-        UHD("4K", "4k", 3840, null),
-        FullHD("1080p", "1080p", 1920, null),
-        HD("720p", "720p", 1280, null),
-        Half("50%", "50", null, 50),
-        Quarter("25%", "25", null, 25),
+    enum class Target(@StringRes val label: Int, val suffix: String, val longSide: Int?, val percent: Int?) {
+        Original(R.string.data_export_original, "copy", null, null),
+        UHD(R.string.data_export_4k, "4k", 3840, null),
+        FullHD(R.string.data_export_1080p, "1080p", 1920, null),
+        HD(R.string.data_export_720p, "720p", 1280, null),
+        Half(R.string.data_export_50, "50", null, 50),
+        Quarter(R.string.data_export_25, "25", null, 25),
     }
 
-    enum class Format(val label: String, val mime: String?, val extension: String?) {
-        Same("Same as Original", null, null),
-        Jpeg("JPEG", "image/jpeg", "jpg"),
-        Png("PNG", "image/png", "png"),
-        Webp("WebP", "image/webp", "webp"),
+    enum class Format(@StringRes val label: Int, val mime: String?, val extension: String?) {
+        Same(R.string.data_export_same, null, null),
+        Jpeg(R.string.data_export_jpeg, "image/jpeg", "jpg"),
+        Png(R.string.data_export_png, "image/png", "png"),
+        Webp(R.string.data_export_webp, "image/webp", "webp"),
     }
 
-    enum class Quality(val label: String, val value: Int) { High("High", 95), Medium("Medium", 85), Small("Small", 70) }
+    enum class Quality(@StringRes val label: Int, val value: Int) { High(R.string.data_detail_high, 95), Medium(R.string.data_size_medium, 85), Small(R.string.data_size_small, 70) }
 
     /** Formats Lumen can write; anything else (HEIC, AVIF, RAW…) becomes JPEG under "Same as Original". */
     private val Writable = mapOf("image/jpeg" to Format.Jpeg, "image/png" to Format.Png, "image/webp" to Format.Webp)

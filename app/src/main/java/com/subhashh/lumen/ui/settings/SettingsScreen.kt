@@ -255,7 +255,7 @@ fun SettingsScreen(
                         }
                     }
                     Group("") {
-                        CategoryRow(SettingsCategory.Appearance, appearance.current.label, open)
+                        CategoryRow(SettingsCategory.Appearance, stringResource(appearance.current.labelRes), open)
                         Divider()
                         CategoryRow(SettingsCategory.Library, null, open)
                         Divider()
@@ -400,7 +400,7 @@ private fun ColumnScope.AppearancePage(highlight: String?) {
         Anchor("theme", highlight) {
             PickerRow(
                 title = stringResource(R.string.settings_theme),
-                options = Appearance.entries.map { it.label },
+                options = Appearance.entries.map { stringResource(it.labelRes) },
                 selected = appearance.current.ordinal,
                 onSelect = { appearance.onChange(Appearance.entries[it]) },
                 icon = LumenIcons.DarkTheme,
@@ -455,7 +455,7 @@ private fun ColumnScope.LibraryPage(prefs: LumenPrefs, highlight: String?, exclu
         Anchor("date-headers", highlight) {
             PickerRow(
                 title = stringResource(R.string.settings_date_headers),
-                options = SectionMode.entries.map { it.label },
+                options = SectionMode.entries.map { stringResource(it.labelRes) },
                 selected = sections.ordinal,
                 onSelect = {
                     sections = SectionMode.entries[it]
@@ -509,7 +509,7 @@ private fun ColumnScope.PhotosPage(prefs: LumenPrefs, highlight: String?) {
             Anchor("ultra-hdr", highlight) {
                 PickerRow(
                     title = stringResource(R.string.settings_ultra_hdr),
-                    options = HdrMode.entries.map { it.label },
+                    options = HdrMode.entries.map { stringResource(it.label) },
                     selected = hdrMode.ordinal,
                     onSelect = {
                         hdrMode = HdrMode.entries[it]
@@ -529,7 +529,7 @@ private fun ColumnScope.PhotosPage(prefs: LumenPrefs, highlight: String?) {
         Anchor("film-strip", highlight) {
             PickerRow(
                 title = stringResource(R.string.settings_film_strip),
-                options = FilmStripSize.entries.map { it.label },
+                options = FilmStripSize.entries.map { stringResource(it.label) },
                 selected = filmStrip.ordinal,
                 onSelect = {
                     filmStrip = FilmStripSize.entries[it]

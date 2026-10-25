@@ -159,7 +159,7 @@ fun HiddenLockScreen(
                         val left = HiddenLockStore.MaxAttempts - store.failedAttempts() % HiddenLockStore.MaxAttempts
                         fail(
                             if (left == HiddenLockStore.MaxAttempts) context.getString(R.string.hidden_too_many_tries, 30)
-                            else context.getString(R.string.hidden_wrong, store.type?.localName(context) ?: context.getString(R.string.hidden_lock_word_entry)),
+                            else context.getString(sentence(store.type, R.string.hidden_wrong_pin, R.string.hidden_wrong_pattern, R.string.hidden_wrong_password, R.string.hidden_wrong_entry)),
                         )
                     }
                 }
@@ -287,7 +287,7 @@ fun HiddenLockScreen(
 
             if (step is Step.Verify) {
                 Text(
-                    stringResource(R.string.hidden_forgot, store.type?.localName(context) ?: stringResource(R.string.hidden_lock_word_it)),
+                    stringResource(sentence(store.type, R.string.hidden_forgot_pin, R.string.hidden_forgot_pattern, R.string.hidden_forgot_password, R.string.hidden_forgot_it)),
                     color = Accent,
                     fontSize = 15.sp,
                     modifier = Modifier
@@ -300,6 +300,17 @@ fun HiddenLockScreen(
 }
 
 /** A lock type's name in the app's language; [LockType.label] is English only. */
+/**
+ * One whole sentence per lock type (and one for no type yet), never a lock name dropped into a
+ * sentence: in many languages the words around it change with it.
+ */
+private fun sentence(type: LockType?, pin: Int, pattern: Int, password: Int, none: Int): Int = when (type) {
+    LockType.Pin -> pin
+    LockType.Pattern -> pattern
+    LockType.Password -> password
+    null -> none
+}
+
 private fun LockType.localName(context: android.content.Context): String = context.getString(
     when (this) {
         LockType.Pin -> R.string.hidden_lock_pin
@@ -314,7 +325,7 @@ private fun titles(step: Step, store: HiddenLockStore, flow: LockFlow, lockedNam
     return when (step) {
         Step.Choose -> stringResource(if (flow == LockFlow.Change) R.string.hidden_new_lock else R.string.hidden_lock_hidden) to
             stringResource(R.string.hidden_choose_subtitle)
-        is Step.Verify -> stringResource(R.string.hidden_enter, store.type?.localName(context) ?: stringResource(R.string.hidden_lock_pin)) to
+        is Step.Verify -> stringResource(sentence(store.type, R.string.hidden_enter_pin, R.string.hidden_enter_pattern, R.string.hidden_enter_password, R.string.hidden_enter_pin)) to
             when (step.then) {
                 LockFlow.Change -> stringResource(R.string.hidden_enter_current)
                 LockFlow.Confirm -> stringResource(R.string.hidden_confirm_you)
@@ -327,7 +338,7 @@ private fun titles(step: Step, store: HiddenLockStore, flow: LockFlow, lockedNam
         }
         is Step.Confirm -> stringResource(R.string.hidden_confirm_type, step.type.localName(context)) to stringResource(R.string.hidden_enter_again)
         Step.Biometrics -> stringResource(R.string.hidden_biometrics_title) to
-            stringResource(R.string.hidden_biometrics_subtitle, store.type?.localName(context) ?: stringResource(R.string.hidden_lock_word_lock))
+            stringResource(sentence(store.type, R.string.hidden_biometrics_subtitle_pin, R.string.hidden_biometrics_subtitle_pattern, R.string.hidden_biometrics_subtitle_password, R.string.hidden_biometrics_subtitle_lock))
     }
 }
 

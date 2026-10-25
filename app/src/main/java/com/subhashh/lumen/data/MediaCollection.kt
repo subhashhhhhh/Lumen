@@ -1,5 +1,8 @@
 package com.subhashh.lumen.data
 
+import android.content.Context
+import com.subhashh.lumen.R
+import androidx.annotation.StringRes
 import androidx.compose.runtime.Immutable
 
 /** Saveable string keys for every grid the app can show. */
@@ -88,7 +91,7 @@ data class MediaCollection(
 )
 
 /** How the Albums section is ordered; pinned albums always come first. */
-enum class AlbumSort(val label: String) { Recent("Recent"), Name("Name"), Count("Most Items") }
+enum class AlbumSort(@StringRes val label: Int) { Recent(R.string.data_album_sort_recent), Name(R.string.data_sort_name), Count(R.string.data_album_sort_count) }
 
 /**
  * The user's album arrangement, keyed by folder path so it survives MediaStore id changes:
@@ -112,16 +115,16 @@ data class AlbumSettings(
 
 object MediaCollections {
 
-    fun utilities(library: List<MediaItem>, trash: List<MediaItem>): List<MediaCollection> =
+    fun utilities(context: Context, library: List<MediaItem>, trash: List<MediaItem>): List<MediaCollection> =
         listOf(
-            CollectionKeys.Favorites to "Favorites",
-            CollectionKeys.Videos to "Videos",
-            CollectionKeys.Screenshots to "Screenshots",
-            CollectionKeys.RecentlyDeleted to "Recently Deleted",
+            CollectionKeys.Favorites to R.string.data_filter_favorites,
+            CollectionKeys.Videos to R.string.data_filter_videos,
+            CollectionKeys.Screenshots to R.string.data_filter_screenshots,
+            CollectionKeys.RecentlyDeleted to R.string.data_recently_deleted,
         ).map { (key, title) ->
             val items = CollectionKeys.items(key, library, trash)
-            MediaCollection(key, title, items.lastOrNull(), items.size)
-        } + MediaCollection(CollectionKeys.Hidden, "Hidden", cover = null, count = LockedCount)
+            MediaCollection(key, context.getString(title), items.lastOrNull(), items.size)
+        } + MediaCollection(CollectionKeys.Hidden, context.getString(R.string.data_hidden), cover = null, count = LockedCount)
 
     /** Count shown for Hidden, which stays unknown (and unshown) until unlocked. */
     const val LockedCount = -1

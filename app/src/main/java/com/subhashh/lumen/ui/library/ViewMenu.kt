@@ -88,7 +88,7 @@ fun ViewMenu(
         ) {
             SectionLabel(stringResource(R.string.main_view_filter))
             LibraryFilter.entries.forEach { option ->
-                MenuRow(option.label, checked = option == filter) {
+                MenuRow(stringResource(option.label), checked = option == filter) {
                     onFilter(option)
                     onDismiss()
                 }
@@ -100,16 +100,16 @@ fun ViewMenu(
             SectionLabel(stringResource(R.string.main_view_sort))
             LibrarySort.entries.forEach { option ->
                 // Picking a new sort starts in its natural direction; picking the current one keeps it.
-                MenuRow(option.label, checked = option == sort) {
+                MenuRow(stringResource(option.label), checked = option == sort) {
                     onSort(option, if (option == sort) descending else option.defaultDescending)
                     onDismiss()
                 }
             }
-            MenuRow(sort.ascendingLabel, checked = !descending) {
+            MenuRow(stringResource(sort.ascendingLabel), checked = !descending) {
                 onSort(sort, false)
                 onDismiss()
             }
-            MenuRow(sort.descendingLabel, checked = descending) {
+            MenuRow(stringResource(sort.descendingLabel), checked = descending) {
                 onSort(sort, true)
                 onDismiss()
             }
