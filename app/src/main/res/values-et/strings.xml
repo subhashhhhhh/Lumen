@@ -1,0 +1,999 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Lumen's English text. Translations live in values-<language>/strings.xml and are edited on
+  Weblate; keep placeholders (%1$s, %2$d) and plural forms as they are.
+--><resources>
+    <string name="app_name" translatable="false"></string>
+    <!-- ===== Words used across many screens ===== -->
+    <string name="common_cancel"></string>
+    <string name="common_done"></string>
+    <string name="common_delete"></string>
+    <string name="common_share"></string>
+    <string name="common_copy"></string>
+    <string name="common_copied"></string>
+    <string name="common_rename"></string>
+    <string name="common_remove"></string>
+    <string name="common_save"></string>
+    <string name="common_back"></string>
+    <string name="common_open"></string>
+    <string name="common_search"></string>
+    <string name="common_select_all"></string>
+    <string name="common_settings"></string>
+    <string name="common_details"></string>
+    <string name="common_hide"></string>
+    <string name="common_unhide"></string>
+    <string name="common_restore"></string>
+    <string name="common_favorite"></string>
+    <string name="common_unfavorite"></string>
+    <string name="common_continue"></string>
+    <string name="common_next"></string>
+    <string name="common_not_now"></string>
+    <string name="common_download"></string>
+    <string name="common_install"></string>
+    <string name="common_update"></string>
+    <string name="common_retry"></string>
+    <string name="common_allow"></string>
+    <string name="common_add"></string>
+    <string name="common_on"></string>
+    <string name="common_off"></string>
+    <!-- ===== Library, Collections, albums, search, selection, people ===== -->
+    <!-- Search -->
+    <string name="main_people"></string>
+    <string name="main_albums"></string>
+    <string name="main_add_name"></string>
+    <string name="main_search_looking_inside"></string>
+    <plurals name="main_search_results">
+    </plurals>
+    <string name="main_search_show_less"></string>
+    <string name="main_search_see_all"></string>
+    <string name="main_search_no_results_hint"></string>
+    <string name="main_search_recent"></string>
+    <string name="main_search_clear"></string>
+    <string name="main_search_from_your_photos"></string>
+    <string name="main_search_try"></string>
+    <string name="main_search_field_hint"></string>
+    <!-- People -->
+    <string name="main_merge_with_name"></string>
+    <string name="main_merge_proposal_message"></string>
+    <plurals name="main_merge_photo_count">
+    </plurals>
+    <string name="main_merge"></string>
+    <string name="main_keep_separate"></string>
+    <plurals name="main_person_photo_count">
+    </plurals>
+    <!-- Selection -->
+    <string name="main_deselect_all"></string>
+    <string name="main_cancel_selection"></string>
+    <string name="main_delete_permanently"></string>
+    <string name="main_more"></string>
+    <string name="main_delete_forever"></string>
+    <string name="main_selected"></string>
+    <!-- Album picker -->
+    <string name="main_new_album_ellipsis"></string>
+    <string name="main_album_name_hint"></string>
+    <string name="main_create"></string>
+    <!-- Collections -->
+    <string name="main_utilities"></string>
+    <string name="main_hidden_locked"></string>
+    <string name="main_hidden_set_up"></string>
+    <string name="main_album_empty"></string>
+    <string name="main_pinned"></string>
+    <plurals name="main_hero_photos">
+    </plurals>
+    <plurals name="main_hero_videos">
+    </plurals>
+    <string name="main_list_separator"></string>
+    <!-- Tabs and Library -->
+    <string name="main_library"></string>
+    <string name="main_collections"></string>
+    <string name="main_tabs"></string>
+    <string name="main_zoom_years"></string>
+    <string name="main_zoom_months"></string>
+    <string name="main_zoom_all"></string>
+    <plurals name="main_item_count">
+    </plurals>
+    <string name="main_section_none"></string>
+    <string name="main_section_months"></string>
+    <string name="main_section_days"></string>
+    <string name="main_today"></string>
+    <string name="main_yesterday"></string>
+    <string name="main_no_photos_or_videos"></string>
+    <string name="main_badge_raw"></string>
+    <string name="main_badge_gif"></string>
+    <string name="main_view_filter"></string>
+    <string name="main_view_sort"></string>
+    <string name="main_view_grid"></string>
+    <string name="main_view_square"></string>
+    <string name="main_view_aspect_ratio"></string>
+    <!-- App lock and picker -->
+    <string name="main_unlock_lumen"></string>
+    <string name="main_pick_choose_photos"></string>
+    <string name="main_pick_choose_a_photo"></string>
+    <string name="main_pick_choose_videos"></string>
+    <string name="main_pick_choose_a_video"></string>
+    <string name="main_pick_choose_items"></string>
+    <string name="main_pick_choose_an_item"></string>
+    <!-- Main scaffold: backup and favorites import -->
+    <string name="main_favorites_import_bad_file"></string>
+    <plurals name="main_favorites_import_none">
+    </plurals>
+    <plurals name="main_favorites_import_already">
+    </plurals>
+    <string name="main_favorites_import_found"></string>
+    <string name="main_settings_exported"></string>
+    <string name="main_backup_save_failed"></string>
+    <string name="main_backup_bad_file"></string>
+    <string name="main_settings_restored"></string>
+    <!-- Main scaffold: hiding and unhiding -->
+    <string name="main_all_files_title"></string>
+    <string name="main_all_files_message"></string>
+    <string name="main_open_settings"></string>
+    <string name="main_reset_lock_title"></string>
+    <string name="main_reset_lock_message"></string>
+    <string name="main_reset"></string>
+    <string name="main_unhidden"></string>
+    <string name="main_unhide_failed_count"></string>
+    <string name="main_unhide_failed"></string>
+    <string name="main_unhide_dot_folder"></string>
+    <string name="main_unhide_folder_title"></string>
+    <plurals name="main_unhide_folders_title">
+    </plurals>
+    <plurals name="main_unhide_folders_message">
+    </plurals>
+    <string name="main_hidden_encrypted_find"></string>
+    <string name="main_hidden_find"></string>
+    <string name="main_hidden_and_encrypted"></string>
+    <string name="main_hid_n_of"></string>
+    <string name="main_hide_some_folders_failed"></string>
+    <string name="main_hide_folder_title"></string>
+    <plurals name="main_hide_folders_title">
+    </plurals>
+    <plurals name="main_hide_folder_encrypt_message">
+    </plurals>
+    <plurals name="main_hide_folders_encrypt_message">
+    </plurals>
+    <plurals name="main_hide_folder_message">
+    </plurals>
+    <plurals name="main_hide_folders_message">
+    </plurals>
+    <!-- Main scaffold: Encrypt Hidden -->
+    <string name="main_vault_wrong_lock"></string>
+    <string name="main_vault_partial_encrypt"></string>
+    <string name="main_vault_partial_decrypt"></string>
+    <string name="main_encrypt_hidden_on"></string>
+    <plurals name="main_encrypted_items">
+    </plurals>
+    <plurals name="main_decrypted_items">
+    </plurals>
+    <!-- Main scaffold: deleting from Hidden, excluding folders -->
+    <string name="main_delete_this_item"></string>
+    <plurals name="main_delete_items_title">
+    </plurals>
+    <string name="main_delete_hidden_message"></string>
+    <string name="main_deleted"></string>
+    <string name="main_delete_failed"></string>
+    <string name="main_excluded_name"></string>
+    <plurals name="main_excluded_folders">
+    </plurals>
+    <!-- Main scaffold: files -->
+    <string name="main_rotating"></string>
+    <string name="main_rotate_failed"></string>
+    <!-- Main scaffold: people -->
+    <string name="main_merge_with_ellipsis"></string>
+    <string name="main_select_people"></string>
+    <plurals name="main_n_selected">
+    </plurals>
+    <string name="main_this_person"></string>
+    <string name="main_the_person_you_chose"></string>
+    <string name="main_merge_people_title"></string>
+    <string name="main_merge_people_message_named"></string>
+    <string name="main_merge_people_message"></string>
+    <!-- Main scaffold: settings actions -->
+    <string name="main_biometrics_missing"></string>
+    <string name="main_lock_needed_for_encrypt"></string>
+    <string name="main_encrypt_hidden_title"></string>
+    <plurals name="main_encrypt_hidden_message_count">
+    </plurals>
+    <string name="main_encrypt_hidden_message_all"></string>
+    <string name="main_encrypt"></string>
+    <string name="main_decrypt_hidden_title"></string>
+    <string name="main_decrypt_hidden_message"></string>
+    <string name="main_decrypt"></string>
+    <string name="main_import_settings_title"></string>
+    <string name="main_import_settings_message"></string>
+    <string name="main_import"></string>
+    <!-- Main scaffold: pages and top buttons -->
+    <string name="main_hidden"></string>
+    <string name="main_album_empty_hint"></string>
+    <string name="main_empty_trash"></string>
+    <string name="main_empty_trash_title"></string>
+    <string name="main_empty_trash_message_one"></string>
+    <plurals name="main_empty_trash_message">
+    </plurals>
+    <string name="main_delete_forever_title_case"></string>
+    <plurals name="main_trash_message">
+    </plurals>
+    <plurals name="main_delete_forever_message">
+    </plurals>
+    <string name="main_pick_add_count"></string>
+    <string name="main_view_options"></string>
+    <string name="main_album_options"></string>
+    <string name="main_sort_by"></string>
+    <string name="main_people_options"></string>
+    <string name="main_people_circles"></string>
+    <string name="main_people_squares"></string>
+    <string name="main_show_hidden_people"></string>
+    <string name="main_person_options"></string>
+    <string name="main_add_name_ellipsis"></string>
+    <string name="main_rename_ellipsis"></string>
+    <string name="main_unhide_person"></string>
+    <string name="main_hide_person"></string>
+    <!-- Main scaffold: people selection -->
+    <string name="main_merge_select_two"></string>
+    <plurals name="main_merge_people_count_title">
+    </plurals>
+    <string name="main_merge_many_message"></string>
+    <string name="main_merge_many_message_named"></string>
+    <string name="main_merge_many_message_named_others"></string>
+    <!-- Main scaffold: selection menu -->
+    <string name="main_exclude_folder"></string>
+    <string name="main_exclude_folders"></string>
+    <string name="main_hide_folder"></string>
+    <string name="main_hide_folders"></string>
+    <string name="main_rename_album_ellipsis"></string>
+    <string name="main_unpin"></string>
+    <string name="main_pin_to_top"></string>
+    <string name="main_reset_cover"></string>
+    <string name="main_move_to_album_ellipsis"></string>
+    <string name="main_copy_to_album_ellipsis"></string>
+    <string name="main_adjust_date_time_ellipsis"></string>
+    <string name="main_resize_or_convert_ellipsis"></string>
+    <string name="main_slideshow"></string>
+    <!-- Main scaffold: viewer callbacks and album picker -->
+    <string name="main_album_cover_updated"></string>
+    <string name="main_cover_updated"></string>
+    <string name="main_make_person_cover"></string>
+    <string name="main_make_album_cover"></string>
+    <string name="main_removed_from"></string>
+    <string name="main_move_to_album"></string>
+    <string name="main_copy_to_album"></string>
+    <!-- Main scaffold: lock, dialogs -->
+    <string name="main_app_lock_on"></string>
+    <string name="main_lock_changed"></string>
+    <string name="main_hf_token_title"></string>
+    <string name="main_renamed_to"></string>
+    <string name="main_rename_failed"></string>
+    <string name="main_new_album"></string>
+    <string name="main_rename_album"></string>
+    <string name="main_album_exists"></string>
+    <string name="main_album_exists_there"></string>
+    <string name="main_rename_album_needs_access"></string>
+    <string name="main_rename_album_partial"></string>
+    <!-- Main scaffold: resize and dates -->
+    <plurals name="main_saving_copies">
+    </plurals>
+    <string name="main_save_copy_failed"></string>
+    <string name="main_saved_n_of"></string>
+    <string name="main_saved_copy_in"></string>
+    <plurals name="main_saved_copies_in">
+    </plurals>
+    <plurals name="main_saved_copies">
+    </plurals>
+    <string name="main_date_changed"></string>
+    <string name="main_dates_changed"></string>
+    <string name="main_dates_changed_needs_access"></string>
+    <string name="main_dates_changed_heic"></string>
+    <!-- Main scaffold: copy and move -->
+    <string name="main_file_already_in"></string>
+    <plurals name="main_file_moved">
+    </plurals>
+    <plurals name="main_file_copied">
+    </plurals>
+    <string name="main_file_move_needs_access"></string>
+    <string name="main_file_copy_needs_access"></string>
+    <string name="main_file_move_failed"></string>
+    <string name="main_file_copy_failed"></string>
+    <plurals name="main_file_moved_some_failed">
+    </plurals>
+    <plurals name="main_file_copied_some_failed">
+    </plurals>
+    <!-- Titles while selecting or picking -->
+    <string name="main_not_person"></string>
+    <string name="main_not_this_person"></string>
+    <string name="main_select_albums"></string>
+    <string name="main_select_folders"></string>
+    <plurals name="main_albums_selected">
+    </plurals>
+    <plurals name="main_folders_selected">
+    </plurals>
+    <string name="main_select_items"></string>
+    <plurals name="main_photos_selected">
+    </plurals>
+    <plurals name="main_videos_selected">
+    </plurals>
+    <plurals name="main_items_selected">
+    </plurals>
+    <!-- Permission screen -->
+    <string name="main_permission_message"></string>
+    <string name="main_allow_access"></string>
+    <!-- Search Details sections -->
+    <string name="main_search_section_names"></string>
+    <string name="main_search_section_captions"></string>
+    <string name="main_search_section_text"></string>
+    <string name="main_search_section_smart"></string>
+    <!-- ===== Settings ===== -->
+    <!-- Settings: category pages -->
+    <string name="settings_category_appearance"></string>
+    <string name="settings_category_library"></string>
+    <string name="settings_category_photos_videos"></string>
+    <string name="settings_category_privacy"></string>
+    <string name="settings_category_smart_features"></string>
+    <string name="settings_category_permissions"></string>
+    <string name="settings_category_backup"></string>
+    <string name="settings_category_about"></string>
+    <string name="settings_category_developer"></string>
+    <!-- Settings: main page -->
+    <string name="settings_search_hint"></string>
+    <string name="settings_clear"></string>
+    <string name="settings_no_match"></string>
+    <string name="settings_results"></string>
+    <string name="settings_update_available"></string>
+    <string name="main_update_message"></string>
+    <string name="main_update_view"></string>
+    <string name="main_update_later"></string>
+    <string name="settings_app_lock_on"></string>
+    <!-- Permissions granted, e.g. "2 of 3" -->
+    <string name="settings_permissions_count"></string>
+    <!-- Settings search: entry titles that only appear in search results -->
+    <string name="settings_entry_slide_time"></string>
+    <string name="settings_entry_slide_transition"></string>
+    <string name="settings_entry_slide_shuffle"></string>
+    <string name="settings_entry_slide_repeat"></string>
+    <string name="settings_entry_search_quality"></string>
+    <string name="settings_entry_search_model"></string>
+    <string name="settings_entry_indexed"></string>
+    <string name="settings_entry_subtitle_quality"></string>
+    <string name="settings_entry_subtitles_model"></string>
+    <string name="settings_entry_scheduled_indexing"></string>
+    <string name="settings_entry_index_on_battery"></string>
+    <string name="settings_entry_unrestricted_battery"></string>
+    <string name="settings_entry_video_detail"></string>
+    <string name="settings_entry_face_models"></string>
+    <string name="settings_entry_faces"></string>
+    <string name="settings_entry_text_reader"></string>
+    <string name="settings_entry_text_read"></string>
+    <string name="settings_entry_wifi_only"></string>
+    <string name="settings_entry_hf_token"></string>
+    <string name="settings_entry_export"></string>
+    <string name="settings_entry_import"></string>
+    <string name="settings_entry_import_favorites"></string>
+    <string name="settings_entry_auto_update"></string>
+    <!-- Settings search: extra words people might search for each setting by, separated by spaces.
+         Lowercase; any word typed must appear in the setting's name, page or these words. -->
+    <string name="settings_kw_theme"></string>
+    <string name="settings_kw_reduce_motion"></string>
+    <string name="settings_kw_liquid_glass"></string>
+    <string name="settings_kw_reduce_blur"></string>
+    <string name="settings_kw_date_headers"></string>
+    <string name="settings_kw_excluded"></string>
+    <string name="settings_kw_curved_edge"></string>
+    <string name="settings_kw_ultra_hdr"></string>
+    <string name="settings_kw_film_strip"></string>
+    <string name="settings_kw_maps"></string>
+    <string name="settings_kw_autoplay"></string>
+    <string name="settings_kw_loop"></string>
+    <string name="settings_kw_slide_time"></string>
+    <string name="settings_kw_slide_transition"></string>
+    <string name="settings_kw_slide_shuffle"></string>
+    <string name="settings_kw_slide_repeat"></string>
+    <string name="settings_kw_lumen_lock"></string>
+    <string name="settings_kw_biometrics"></string>
+    <string name="settings_kw_app_lock"></string>
+    <string name="settings_kw_lock_after"></string>
+    <string name="settings_kw_hidden"></string>
+    <string name="settings_kw_encrypt"></string>
+    <string name="settings_kw_search_quality"></string>
+    <string name="settings_kw_search_model"></string>
+    <string name="settings_kw_indexed"></string>
+    <string name="settings_kw_subtitle_quality"></string>
+    <string name="settings_kw_subtitles_model"></string>
+    <string name="settings_kw_scheduled_indexing"></string>
+    <string name="settings_kw_index_on_battery"></string>
+    <string name="settings_kw_unrestricted_battery"></string>
+    <string name="settings_kw_video_detail"></string>
+    <string name="settings_kw_face_model"></string>
+    <string name="settings_kw_faces"></string>
+    <string name="settings_kw_text_model"></string>
+    <string name="settings_kw_text_read"></string>
+    <string name="settings_kw_wifi_only"></string>
+    <string name="settings_kw_search_details"></string>
+    <string name="settings_kw_hf_token"></string>
+    <string name="settings_kw_media_management"></string>
+    <string name="settings_kw_all_files"></string>
+    <string name="settings_kw_location"></string>
+    <string name="settings_kw_export"></string>
+    <string name="settings_kw_import"></string>
+    <string name="settings_kw_import_favorites"></string>
+    <string name="settings_kw_licenses"></string>
+    <string name="settings_kw_software_update"></string>
+    <string name="settings_kw_auto_update"></string>
+    <string name="settings_kw_github"></string>
+    <string name="settings_kw_report_bug"></string>
+    <string name="settings_kw_version"></string>
+    <!-- Settings: Appearance -->
+    <string name="settings_group_display"></string>
+    <string name="settings_theme"></string>
+    <string name="settings_reduce_motion"></string>
+    <string name="settings_reduce_motion_subtitle"></string>
+    <string name="settings_group_glass"></string>
+    <string name="settings_glass_footer"></string>
+    <string name="settings_liquid_glass"></string>
+    <string name="settings_reduce_blur"></string>
+    <string name="settings_reduce_blur_needs_glass"></string>
+    <!-- Settings: Library -->
+    <string name="settings_group_grid"></string>
+    <string name="settings_grid_footer"></string>
+    <string name="settings_date_headers"></string>
+    <string name="settings_curved_edge"></string>
+    <string name="settings_curved_edge_subtitle"></string>
+    <string name="settings_group_folders"></string>
+    <string name="settings_excluded_folders"></string>
+    <string name="settings_excluded_folders_subtitle"></string>
+    <string name="settings_none"></string>
+    <!-- Settings: Photos & Videos -->
+    <string name="settings_group_photos"></string>
+    <string name="settings_hdr_footer"></string>
+    <string name="settings_ultra_hdr"></string>
+    <string name="settings_group_viewer"></string>
+    <string name="settings_film_strip_footer"></string>
+    <string name="settings_film_strip"></string>
+    <string name="settings_group_location"></string>
+    <string name="settings_maps_footer"></string>
+    <string name="settings_maps"></string>
+    <string name="settings_group_videos"></string>
+    <string name="settings_autoplay_videos"></string>
+    <string name="settings_loop_videos"></string>
+    <string name="settings_start_over"></string>
+    <string name="settings_group_slideshow"></string>
+    <string name="settings_each_photo_for"></string>
+    <plurals name="settings_slide_seconds">
+    </plurals>
+    <string name="settings_transition"></string>
+    <string name="settings_transition_slide"></string>
+    <string name="settings_transition_fade"></string>
+    <string name="settings_shuffle"></string>
+    <string name="settings_repeat"></string>
+    <!-- Settings: Privacy & Security -->
+    <string name="settings_lumen_lock"></string>
+    <string name="settings_lumen_lock_footer"></string>
+    <string name="settings_change_lumen_lock"></string>
+    <string name="settings_set_up_lumen_lock"></string>
+    <string name="settings_biometrics"></string>
+    <string name="settings_biometrics_subtitle"></string>
+    <string name="settings_app_lock"></string>
+    <string name="settings_app_lock_subtitle"></string>
+    <string name="settings_lock_after"></string>
+    <string name="settings_lock_immediately"></string>
+    <plurals name="settings_lock_minutes">
+    </plurals>
+    <string name="settings_hidden"></string>
+    <string name="settings_hidden_subtitle"></string>
+    <string name="settings_encrypt_hidden"></string>
+    <string name="settings_encrypt_hidden_subtitle"></string>
+    <!-- Settings: Permissions -->
+    <string name="settings_group_android_permissions"></string>
+    <string name="settings_permissions_footer"></string>
+    <string name="settings_media_management"></string>
+    <string name="settings_media_management_subtitle"></string>
+    <string name="settings_all_files"></string>
+    <string name="settings_all_files_subtitle"></string>
+    <string name="settings_location_in_photos"></string>
+    <string name="settings_location_in_photos_subtitle"></string>
+    <!-- Settings: Backup & Import -->
+    <string name="settings_group_lumen_backup"></string>
+    <string name="settings_backup_footer"></string>
+    <string name="settings_export_row"></string>
+    <string name="settings_export_subtitle"></string>
+    <string name="settings_import_row"></string>
+    <string name="settings_import_subtitle"></string>
+    <string name="settings_group_other_apps"></string>
+    <string name="settings_import_favorites_row"></string>
+    <string name="settings_import_favorites_subtitle"></string>
+    <!-- Settings: About -->
+    <string name="settings_group_open_source"></string>
+    <string name="settings_open_source_footer"></string>
+    <string name="settings_github" translatable="false"></string>
+    <string name="settings_report_bug"></string>
+    <string name="settings_licenses"></string>
+    <string name="settings_version"></string>
+    <string name="settings_version_value"></string>
+    <!-- %1$s is the developer's name, shown as a link -->
+    <string name="settings_made_by"></string>
+    <string name="settings_developer_already_on"></string>
+    <string name="settings_developer_now_on"></string>
+    <!-- Settings: Software Update -->
+    <string name="settings_software_update"></string>
+    <string name="settings_software_update_footer"></string>
+    <string name="settings_update_lumen_version"></string>
+    <string name="settings_update_check_now"></string>
+    <string name="settings_update_checking"></string>
+    <string name="settings_update_downloading"></string>
+    <string name="settings_update_installing"></string>
+    <string name="settings_update_up_to_date"></string>
+    <string name="settings_update_no_releases"></string>
+    <string name="settings_update_check_failed"></string>
+    <string name="settings_update_confirm_title"></string>
+    <!-- %1$.0f is the download size in megabytes -->
+    <string name="settings_update_confirm_message_size"></string>
+    <string name="settings_update_confirm_message"></string>
+    <string name="settings_update_check_automatically"></string>
+    <string name="settings_update_check_automatically_subtitle"></string>
+    <string name="settings_update_allow_install"></string>
+    <string name="settings_update_not_signed"></string>
+    <string name="settings_update_download_failed"></string>
+    <!-- Settings: Developer Options -->
+    <string name="settings_developer_search_footer"></string>
+    <string name="settings_search_details"></string>
+    <string name="settings_group_onboarding"></string>
+    <string name="settings_onboarding_footer"></string>
+    <string name="settings_show_onboarding"></string>
+    <string name="settings_developer_footer"></string>
+    <string name="settings_show_developer_options"></string>
+    <!-- Settings: Excluded Folders -->
+    <string name="settings_excluded_intro"></string>
+    <string name="settings_group_excluded"></string>
+    <plurals name="settings_excluded_items">
+    </plurals>
+    <string name="settings_include"></string>
+    <string name="settings_group_suggested"></string>
+    <string name="settings_suggested_footer"></string>
+    <plurals name="settings_code_images">
+    </plurals>
+    <string name="settings_exclude"></string>
+    <string name="settings_choose_folder"></string>
+    <!-- A folder's path, then what's in it -->
+    <string name="settings_folder_subtitle"></string>
+    <!-- Resize or Convert dialog -->
+    <string name="settings_resize_title"></string>
+    <string name="settings_resize_message_one"></string>
+    <plurals name="settings_resize_message">
+    </plurals>
+    <string name="settings_resize_size"></string>
+    <string name="settings_resize_format"></string>
+    <string name="settings_resize_quality"></string>
+    <string name="settings_resize_save_copy"></string>
+    <string name="settings_resize_save_copies"></string>
+    <!-- ===== Smart Features settings and open-source licenses ===== -->
+    <!-- Model packs and tiers (labels from the AI library) -->
+    <string name="smart_pack_search"></string>
+    <string name="smart_pack_text"></string>
+    <string name="smart_pack_faces"></string>
+    <string name="smart_pack_subtitles"></string>
+    <string name="smart_tier_accurate"></string>
+    <string name="smart_tier_fast"></string>
+    <string name="smart_video_high"></string>
+    <string name="smart_video_medium"></string>
+    <string name="smart_video_low"></string>
+    <string name="smart_option_size"></string>
+    <string name="smart_option_px"></string>
+    <!-- Indexing progress -->
+    <string name="smart_continues_schedule"></string>
+    <string name="smart_continues_background"></string>
+    <string name="smart_continues_charging"></string>
+    <string name="smart_all_count"></string>
+    <string name="smart_count_of"></string>
+    <!-- Pack status -->
+    <string name="smart_remove_message_size"></string>
+    <string name="smart_status_downloading"></string>
+    <string name="smart_status_queued"></string>
+    <string name="smart_status_waiting_wifi"></string>
+    <string name="smart_status_waiting_connection"></string>
+    <string name="smart_status_failed"></string>
+    <string name="smart_status_ready"></string>
+    <string name="smart_status_switching"></string>
+    <string name="smart_status_update"></string>
+    <string name="smart_status_not_downloaded"></string>
+    <!-- Smart Search -->
+    <string name="smart_search_title"></string>
+    <string name="smart_search_footer"></string>
+    <string name="smart_search_quality"></string>
+    <string name="smart_search_model"></string>
+    <string name="smart_search_remove_title"></string>
+    <string name="smart_search_remove_message"></string>
+    <string name="smart_indexed"></string>
+    <string name="smart_indexed_complete"></string>
+    <!-- Text in Photos -->
+    <string name="smart_text_title"></string>
+    <string name="smart_text_footer"></string>
+    <string name="smart_text_model"></string>
+    <string name="smart_text_remove_title"></string>
+    <string name="smart_text_remove_message"></string>
+    <string name="smart_text_read"></string>
+    <string name="smart_text_read_complete"></string>
+    <!-- Faces -->
+    <string name="smart_faces_title"></string>
+    <string name="smart_faces_footer"></string>
+    <string name="smart_faces_model"></string>
+    <string name="smart_faces_remove_title"></string>
+    <string name="smart_faces_remove_message"></string>
+    <plurals name="smart_faces_people_found">
+    </plurals>
+    <plurals name="smart_faces_people_so_far">
+    </plurals>
+    <!-- Subtitles -->
+    <string name="smart_subtitles_title"></string>
+    <string name="smart_subtitles_footer"></string>
+    <string name="smart_subtitles_quality"></string>
+    <string name="smart_subtitles_model"></string>
+    <string name="smart_subtitles_remove_title"></string>
+    <string name="smart_subtitles_remove_message"></string>
+    <!-- Scheduled Indexing -->
+    <string name="smart_schedule_title"></string>
+    <string name="smart_schedule_footer_on"></string>
+    <string name="smart_schedule_footer_off"></string>
+    <string name="smart_schedule_starts"></string>
+    <string name="smart_schedule_ends"></string>
+    <!-- Indexing and Downloads -->
+    <string name="smart_downloads_title"></string>
+    <string name="smart_downloads_footer"></string>
+    <string name="smart_index_on_battery"></string>
+    <string name="smart_index_on_battery_subtitle"></string>
+    <string name="smart_unrestricted_battery"></string>
+    <string name="smart_unrestricted_battery_subtitle"></string>
+    <string name="smart_video_detail"></string>
+    <string name="smart_video_detail_subtitle"></string>
+    <string name="smart_wifi_only"></string>
+    <string name="smart_hf_token"></string>
+    <string name="smart_hf_token_subtitle"></string>
+    <string name="smart_hf_token_saved"></string>
+    <string name="smart_hf_token_none"></string>
+    <string name="smart_hf_token_remove_title"></string>
+    <string name="smart_hf_token_remove_message"></string>
+    <!-- Licenses screen -->
+    <string name="licenses_title"></string>
+    <string name="licenses_intro"></string>
+    <string name="licenses_credits"></string>
+    <!-- What each credited project is used for -->
+    <string name="licenses_used_backdrop"></string>
+    <string name="licenses_used_liquid_glass_easy"></string>
+    <string name="licenses_used_telephoto"></string>
+    <string name="licenses_used_coil"></string>
+    <string name="licenses_used_avif"></string>
+    <string name="licenses_used_androidx"></string>
+    <string name="licenses_used_kotlin"></string>
+    <string name="licenses_used_icons"></string>
+    <string name="licenses_used_geonames"></string>
+    <string name="licenses_used_siglip"></string>
+    <string name="licenses_used_openclip"></string>
+    <string name="licenses_used_immich"></string>
+    <string name="licenses_used_ocr"></string>
+    <string name="licenses_used_yunet"></string>
+    <string name="licenses_used_sface"></string>
+    <string name="licenses_used_whistle"></string>
+    <string name="licenses_used_silero"></string>
+    <string name="licenses_used_onnx_runtime"></string>
+    <string name="licenses_used_litert"></string>
+    <string name="licenses_used_ram"></string>
+    <string name="licenses_used_maplibre"></string>
+    <string name="licenses_used_openfreemap"></string>
+    <string name="licenses_used_openmaptiles"></string>
+    <string name="licenses_used_osm"></string>
+    <!-- ===== Viewer, details sheet, Live Text, map and dialogs ===== -->
+    <!-- Viewer: buttons and accessibility -->
+    <string name="viewer_delete_permanently"></string>
+    <string name="viewer_delete_forever"></string>
+    <string name="viewer_more"></string>
+    <string name="viewer_live_text"></string>
+    <string name="viewer_play"></string>
+    <string name="viewer_pause"></string>
+    <string name="viewer_mute"></string>
+    <string name="viewer_unmute"></string>
+    <string name="viewer_captions_cc"></string>
+    <string name="viewer_seek_back"></string>
+    <string name="viewer_seek_ahead"></string>
+    <string name="viewer_today"></string>
+    <string name="viewer_yesterday"></string>
+    <string name="viewer_caption"></string>
+    <!-- Viewer: subtitles on the video -->
+    <string name="viewer_subtitles_unavailable"></string>
+    <string name="viewer_no_speech"></string>
+    <string name="viewer_making_subtitles"></string>
+    <!-- Viewer: ⋯ menu -->
+    <string name="viewer_make_album_cover"></string>
+    <string name="viewer_move_to_album"></string>
+    <string name="viewer_copy_to_album"></string>
+    <string name="viewer_rename_ellipsis"></string>
+    <string name="viewer_adjust_date"></string>
+    <string name="viewer_resize_convert"></string>
+    <string name="viewer_slideshow"></string>
+    <string name="viewer_open_with"></string>
+    <string name="viewer_set_wallpaper"></string>
+    <string name="viewer_set_as"></string>
+    <string name="viewer_copy_to_clipboard"></string>
+    <string name="viewer_print"></string>
+    <string name="viewer_rotate"></string>
+    <string name="viewer_rotate_left"></string>
+    <string name="viewer_rotate_right"></string>
+    <string name="viewer_rotate_180"></string>
+    <!-- Live Text menu -->
+    <string name="viewer_copy_all"></string>
+    <string name="viewer_call"></string>
+    <string name="viewer_email"></string>
+    <!-- Details sheet -->
+    <string name="viewer_unnamed"></string>
+    <string name="viewer_allow_location"></string>
+    <string name="viewer_add_caption"></string>
+    <string name="viewer_edit_caption"></string>
+    <string name="viewer_looks_like"></string>
+    <string name="viewer_subtitles"></string>
+    <string name="viewer_copy_with_times"></string>
+    <string name="viewer_export_srt"></string>
+    <string name="viewer_export_vtt"></string>
+    <string name="viewer_all_metadata"></string>
+    <string name="viewer_show"></string>
+    <string name="viewer_nothing_readable"></string>
+    <!-- After the local time when the photo was taken in another time zone, e.g. "3:40 PM your time". -->
+    <string name="viewer_your_time"></string>
+    <string name="viewer_adjust"></string>
+    <string name="viewer_camera"></string>
+    <string name="viewer_camera_front"></string>
+    <string name="viewer_camera_ultra_wide"></string>
+    <string name="viewer_camera_wide"></string>
+    <string name="viewer_camera_telephoto"></string>
+    <string name="viewer_megapixels"></string>
+    <string name="viewer_bit_depth"></string>
+    <string name="viewer_motion_photo"></string>
+    <string name="viewer_slow_motion"></string>
+    <string name="viewer_audio"></string>
+    <string name="viewer_audio_mono"></string>
+    <string name="viewer_audio_stereo"></string>
+    <plurals name="viewer_audio_channels">
+    </plurals>
+    <string name="viewer_location"></string>
+    <string name="viewer_open_in_maps"></string>
+    <!-- Which way the camera faced, e.g. "Facing NE". -->
+    <string name="viewer_facing"></string>
+    <!-- Compass points, also used for coordinates (N/S latitude, E/W longitude). -->
+    <string name="viewer_compass_n"></string>
+    <string name="viewer_compass_ne"></string>
+    <string name="viewer_compass_e"></string>
+    <string name="viewer_compass_se"></string>
+    <string name="viewer_compass_s"></string>
+    <string name="viewer_compass_sw"></string>
+    <string name="viewer_compass_w"></string>
+    <string name="viewer_compass_nw"></string>
+    <string name="viewer_internal_storage"></string>
+    <!-- Where the file came from, e.g. "From WhatsApp". -->
+    <string name="viewer_from"></string>
+    <string name="viewer_added"></string>
+    <string name="viewer_modified"></string>
+    <string name="viewer_flash"></string>
+    <string name="viewer_manual_wb"></string>
+    <string name="viewer_video"></string>
+    <string name="viewer_photo"></string>
+    <!-- A video's container, e.g. "MP4 video". -->
+    <string name="viewer_format_video"></string>
+    <!-- Set as Wallpaper -->
+    <string name="viewer_wallpaper_hint"></string>
+    <string name="viewer_wallpaper_home"></string>
+    <string name="viewer_wallpaper_lock"></string>
+    <string name="viewer_wallpaper_both"></string>
+    <string name="viewer_wallpaper_set_home"></string>
+    <string name="viewer_wallpaper_set_lock"></string>
+    <string name="viewer_wallpaper_set_both"></string>
+    <string name="viewer_wallpaper_failed"></string>
+    <!-- Map -->
+    <string name="viewer_map"></string>
+    <!-- Components: dialogs and menus -->
+    <string name="components_adjust_date_title"></string>
+    <!-- The photo's current date and time. -->
+    <string name="components_adjust_date_original"></string>
+    <!-- Shown only when adjusting more than one item. -->
+    <plurals name="components_adjust_date_many">
+    </plurals>
+    <string name="components_adjust"></string>
+    <string name="components_selected"></string>
+    <!-- ===== First setup, Hidden and the lock screen ===== -->
+    <!-- Activities -->
+    <string name="app_cant_open_file"></string>
+    <!-- Appearance choices (Theme.kt) -->
+    <string name="app_appearance_system"></string>
+    <string name="app_appearance_light"></string>
+    <string name="app_appearance_dark"></string>
+    <!-- Onboarding: welcome -->
+    <string name="onboarding_tagline"></string>
+    <string name="onboarding_no_account"></string>
+    <string name="onboarding_no_account_detail"></string>
+    <string name="onboarding_no_cloud"></string>
+    <string name="onboarding_no_cloud_detail"></string>
+    <string name="onboarding_no_google"></string>
+    <string name="onboarding_no_google_detail"></string>
+    <string name="onboarding_get_started"></string>
+    <!-- Onboarding: photo access -->
+    <string name="onboarding_photos_title"></string>
+    <string name="onboarding_photos_subtitle"></string>
+    <string name="onboarding_photos_videos"></string>
+    <string name="onboarding_photos_videos_detail"></string>
+    <string name="onboarding_optional"></string>
+    <string name="onboarding_location"></string>
+    <string name="onboarding_location_detail"></string>
+    <string name="onboarding_all_files"></string>
+    <string name="onboarding_all_files_detail"></string>
+    <string name="onboarding_media_management"></string>
+    <string name="onboarding_media_management_detail"></string>
+    <string name="onboarding_unrestricted_battery"></string>
+    <string name="onboarding_unrestricted_battery_detail"></string>
+    <string name="onboarding_allow_access"></string>
+    <!-- Onboarding: appearance -->
+    <string name="onboarding_look_title"></string>
+    <string name="onboarding_look_subtitle"></string>
+    <string name="onboarding_theme"></string>
+    <string name="onboarding_theme_detail"></string>
+    <string name="onboarding_liquid_glass"></string>
+    <string name="onboarding_liquid_glass_detail"></string>
+    <string name="onboarding_reduce_blur"></string>
+    <string name="onboarding_reduce_blur_detail"></string>
+    <!-- Onboarding: Smart Features -->
+    <string name="onboarding_smart_title"></string>
+    <string name="onboarding_smart_subtitle"></string>
+    <string name="onboarding_smart_search"></string>
+    <string name="onboarding_smart_search_detail"></string>
+    <string name="onboarding_tier_accurate"></string>
+    <string name="onboarding_tier_fast"></string>
+    <string name="onboarding_tier_recommended"></string>
+    <string name="onboarding_text"></string>
+    <string name="onboarding_text_detail"></string>
+    <string name="onboarding_faces"></string>
+    <string name="onboarding_faces_detail"></string>
+    <string name="onboarding_subtitles"></string>
+    <string name="onboarding_subtitles_detail"></string>
+    <string name="onboarding_wifi_only"></string>
+    <string name="onboarding_wifi_only_detail"></string>
+    <string name="onboarding_download_source"></string>
+    <string name="onboarding_download_button"></string>
+    <string name="onboarding_megabytes"></string>
+    <!-- Onboarding: when to index -->
+    <string name="onboarding_schedule_title"></string>
+    <string name="onboarding_schedule_subtitle"></string>
+    <string name="onboarding_while_charging"></string>
+    <string name="onboarding_while_charging_detail"></string>
+    <string name="onboarding_overnight"></string>
+    <string name="onboarding_overnight_detail"></string>
+    <!-- Onboarding: done -->
+    <string name="onboarding_done_title"></string>
+    <string name="onboarding_done_downloading"></string>
+    <string name="onboarding_done_later"></string>
+    <string name="onboarding_lets_go"></string>
+    <!-- Hidden: screen -->
+    <string name="hidden_name"></string>
+    <string name="hidden_unlocking_vault"></string>
+    <string name="hidden_unlocking_vault_detail"></string>
+    <string name="hidden_scanning"></string>
+    <string name="hidden_empty"></string>
+    <string name="hidden_folder_count"></string>
+    <plurals name="hidden_file_count">
+    </plurals>
+    <!-- Hidden: lock types and their stand-ins -->
+    <string name="hidden_lock_pin"></string>
+    <string name="hidden_lock_pattern"></string>
+    <string name="hidden_lock_password"></string>
+    <!-- Hidden: system prompts -->
+    <string name="hidden_unlock_named"></string>
+    <string name="hidden_reset_lock_title"></string>
+    <string name="hidden_reset_lock_subtitle"></string>
+    <string name="hidden_use_lock"></string>
+    <!-- Hidden: lock screen -->
+    <string name="hidden_too_many_tries"></string>
+    <string name="hidden_pin_rule"></string>
+    <string name="hidden_pattern_rule"></string>
+    <string name="hidden_password_rule"></string>
+    <string name="hidden_mismatch"></string>
+    <string name="hidden_unlock"></string>
+    <string name="hidden_new_lock"></string>
+    <string name="hidden_lock_hidden"></string>
+    <string name="hidden_choose_subtitle"></string>
+    <string name="hidden_enter_current"></string>
+    <string name="hidden_confirm_you"></string>
+    <string name="hidden_is_locked"></string>
+    <string name="hidden_create_pin"></string>
+    <string name="hidden_pin_length"></string>
+    <string name="hidden_draw_pattern"></string>
+    <string name="hidden_create_password"></string>
+    <string name="hidden_password_length"></string>
+    <string name="hidden_confirm_type"></string>
+    <string name="hidden_enter_again"></string>
+    <string name="hidden_biometrics_title"></string>
+    <string name="hidden_pin_hint"></string>
+    <string name="hidden_pattern_hint"></string>
+    <string name="hidden_password_hint"></string>
+    <string name="hidden_use_biometrics"></string>
+    <!-- Hidden: moving into or out of the vault -->
+    <string name="hidden_vault_percent"></string>
+    <string name="hidden_vault_getting_ready"></string>
+    <string name="hidden_vault_opening"></string>
+    <string name="hidden_vault_encrypting"></string>
+    <string name="hidden_vault_decrypting"></string>
+    <string name="hidden_vault_bytes"></string>
+    <string name="hidden_vault_bytes_time"></string>
+    <string name="hidden_vault_almost_done"></string>
+    <string name="hidden_vault_seconds_left"></string>
+    <string name="hidden_vault_minutes_left"></string>
+    <string name="hidden_vault_hours_left"></string>
+    <string name="hidden_vault_encrypt_note"></string>
+    <string name="hidden_vault_decrypt_note"></string>
+    <!-- Hidden: whole sentences per lock type (see sentence() in HiddenLockScreen.kt) -->
+    <string name="hidden_wrong_pin"></string>
+    <string name="hidden_wrong_pattern"></string>
+    <string name="hidden_wrong_password"></string>
+    <string name="hidden_wrong_entry"></string>
+    <string name="hidden_forgot_pin"></string>
+    <string name="hidden_forgot_pattern"></string>
+    <string name="hidden_forgot_password"></string>
+    <string name="hidden_forgot_it"></string>
+    <string name="hidden_enter_pin"></string>
+    <string name="hidden_enter_pattern"></string>
+    <string name="hidden_enter_password"></string>
+    <string name="hidden_biometrics_subtitle_pin"></string>
+    <string name="hidden_biometrics_subtitle_pattern"></string>
+    <string name="hidden_biometrics_subtitle_password"></string>
+    <string name="hidden_biometrics_subtitle_lock"></string>
+    <!-- ===== Labels from the data layer: menus, options, album names, sources ===== -->
+    <!-- Storage -->
+    <string name="data_internal_storage"></string>
+    <!-- Share, clipboard and print -->
+    <string name="data_photo"></string>
+    <!-- Details → All Metadata: one row per video stream -->
+    <string name="data_metadata_track"></string>
+    <!-- Software update -->
+    <string name="data_update_install_failed"></string>
+    <!-- Settings options (LumenPrefs) -->
+    <string name="data_hdr_match"></string>
+    <string name="data_hdr_full"></string>
+    <string name="data_size_small"></string>
+    <string name="data_size_medium"></string>
+    <string name="data_size_large"></string>
+    <string name="data_detail_high"></string>
+    <string name="data_detail_low"></string>
+    <!-- Library order and filter (the ≡ menu) -->
+    <string name="data_sort_date"></string>
+    <string name="data_sort_name"></string>
+    <string name="data_sort_size"></string>
+    <string name="data_sort_oldest"></string>
+    <string name="data_sort_newest"></string>
+    <string name="data_sort_a_z"></string>
+    <string name="data_sort_z_a"></string>
+    <string name="data_sort_smallest"></string>
+    <string name="data_sort_largest"></string>
+    <string name="data_filter_all"></string>
+    <string name="data_filter_photos"></string>
+    <string name="data_filter_videos"></string>
+    <string name="data_filter_favorites"></string>
+    <string name="data_filter_screenshots"></string>
+    <string name="data_empty_all"></string>
+    <string name="data_empty_photos"></string>
+    <string name="data_empty_videos"></string>
+    <string name="data_empty_favorites"></string>
+    <string name="data_empty_screenshots"></string>
+    <!-- Albums -->
+    <string name="data_album_sort_recent"></string>
+    <string name="data_album_sort_count"></string>
+    <string name="data_recently_deleted"></string>
+    <string name="data_hidden"></string>
+    <!-- Resize / Convert -->
+    <string name="data_export_original"></string>
+    <string name="data_export_same"></string>
+    <string name="data_export_4k" translatable="false"></string>
+    <string name="data_export_1080p" translatable="false"></string>
+    <string name="data_export_720p" translatable="false"></string>
+    <string name="data_export_50" translatable="false"></string>
+    <string name="data_export_25" translatable="false"></string>
+    <string name="data_export_jpeg" translatable="false"></string>
+    <string name="data_export_png" translatable="false"></string>
+    <string name="data_export_webp" translatable="false"></string>
+    <!-- Where a photo came from (details sheet: "From …"); app names stay in code -->
+    <string name="data_source_screenshot"></string>
+    <string name="data_source_screenshot_of"></string>
+    <string name="data_source_screen_recording"></string>
+    <string name="data_source_camera"></string>
+    <string name="data_source_downloads"></string>
+</resources>
