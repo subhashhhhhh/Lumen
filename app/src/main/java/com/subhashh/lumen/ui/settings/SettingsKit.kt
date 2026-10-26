@@ -272,7 +272,8 @@ internal fun NumberRow(
             textStyle = androidx.compose.ui.text.TextStyle(color = colors.text, fontSize = 16.sp, textAlign = androidx.compose.ui.text.style.TextAlign.End),
             cursorBrush = androidx.compose.ui.graphics.SolidColor(Blue),
             modifier = Modifier
-                .width(56.dp)
+                // Room for the largest number allowed (up to 60,000).
+                .width((24 + 10 * max.toString().length).dp)
                 .clip(RoundedCornerShape(8.dp))
                 .background(colors.secondary.copy(alpha = 0.12f))
                 .padding(horizontal = 8.dp, vertical = 6.dp)

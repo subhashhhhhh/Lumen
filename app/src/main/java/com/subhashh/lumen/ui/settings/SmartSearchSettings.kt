@@ -468,8 +468,10 @@ internal fun SmartSearchGroup(
         val unit = stringResource(R.string.smart_video_text_unit)
         val max = com.subhashh.lumen.ai.VideoTextRates.Max
         fun save(new: com.subhashh.lumen.ai.VideoTextRates) {
-            rates = new
-            prefs.videoTextRates = new
+            // Max Frames goes up to 1,000 times the long videos' rate: lowering the rate lowers it too.
+            val capped = new.copy(longMaxFrames = new.longMaxFrames.coerceAtMost(new.long * com.subhashh.lumen.ai.VideoTextRates.MaxFramesPerRate))
+            rates = capped
+            prefs.videoTextRates = capped
         }
         Anchor("video-text-short", highlight) {
             NumberRow(stringResource(R.string.smart_video_text_short), rates.short, { save(rates.copy(short = it)) }, 1, max, unit, stringResource(R.string.smart_video_text_short_subtitle))
@@ -481,6 +483,18 @@ internal fun SmartSearchGroup(
         Divider()
         Anchor("video-text-long", highlight) {
             NumberRow(stringResource(R.string.smart_video_text_long), rates.long, { save(rates.copy(long = it)) }, 1, max, unit, stringResource(R.string.smart_video_text_long_subtitle))
+        }
+        Divider()
+        Anchor("video-text-max-frames", highlight) {
+            NumberRow(
+                stringResource(R.string.smart_video_text_max_frames),
+                rates.longMaxFrames,
+                { save(rates.copy(longMaxFrames = it)) },
+                0,
+                rates.long * com.subhashh.lumen.ai.VideoTextRates.MaxFramesPerRate,
+                stringResource(R.string.smart_video_text_frames_unit),
+                stringResource(R.string.smart_video_text_max_frames_subtitle),
+            )
         }
     }
 }

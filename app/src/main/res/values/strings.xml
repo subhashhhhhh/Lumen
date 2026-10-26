@@ -793,6 +793,10 @@
     <string name="smart_video_text_medium_subtitle">1 to 2 minutes</string>
     <string name="smart_video_text_long">Long Videos</string>
     <string name="smart_video_text_long_subtitle">Over 2 minutes</string>
+    <string name="smart_video_text_max_frames">Max Frames</string>
+    <string name="smart_video_text_max_frames_subtitle">In long videos. 0: no limit; above it, that many spread through the video</string>
+    <!-- After the Max Frames number, e.g. "120 frames" -->
+    <string name="smart_video_text_frames_unit">frames</string>
     <!-- After the frames-a-second number, e.g. "2 /s" -->
     <string name="smart_video_text_unit">/s</string>
     <string name="smart_video_text_footer">How many frames each second are read for text. More frames catch quicker captions. Never more than the video has. Applies to videos read from now on.</string>
