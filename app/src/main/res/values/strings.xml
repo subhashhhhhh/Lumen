@@ -440,6 +440,9 @@
     <string name="settings_no_match">No settings match “%1$s”.</string>
     <string name="settings_results">Results</string>
     <string name="settings_update_available">Lumen %1$s Is Available</string>
+    <string name="main_update_message">A new version of Lumen is ready to download.</string>
+    <string name="main_update_view">View Update</string>
+    <string name="main_update_later">Later</string>
     <string name="settings_app_lock_on">App Lock On</string>
     <!-- Permissions granted, e.g. "2 of 3" -->
     <string name="settings_permissions_count">%1$d of %2$d</string>

@@ -130,6 +130,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.AnimatedContent
 import com.subhashh.lumen.ui.settings.SettingsScreen
+import com.subhashh.lumen.ui.settings.UpdateSession
 import com.subhashh.lumen.ui.settings.SettingsCategory
 import com.subhashh.lumen.ui.settings.LicensesScreen
 import com.subhashh.lumen.ui.theme.LocalGlassColors
@@ -360,6 +361,10 @@ private fun MainScaffold(
 
     val context = LocalContext.current
     val prefs = remember { LumenPrefs(context) }
+    // An update is waiting (found by Software Update, now or on an earlier day): a dot on Settings.
+    val installedVersion = remember { com.subhashh.lumen.data.Updater.installedVersion(context) }
+    val updateWaiting = (((UpdateSession.state as? UpdateSession.State.Result)?.check as? com.subhashh.lumen.data.Updater.Check.Available)?.release?.version
+        ?: prefs.availableUpdate)?.let { com.subhashh.lumen.data.Updater.isNewer(it, installedVersion) } == true
     // A picker starts unfiltered: the asked-for types already narrow it, and a saved
     // "Videos" filter would leave a photo picker empty.
     var filter by remember { mutableStateOf(if (pick != null) LibraryFilter.All else prefs.libraryFilter) }
@@ -1829,6 +1834,7 @@ private fun MainScaffold(
                     icon = LumenIcons.Settings,
                     contentDescription = stringResource(R.string.common_settings),
                     onClick = { settingsPage = SettingsMain },
+                    badge = updateWaiting,
                 )
             }
         }
@@ -1862,6 +1868,7 @@ private fun MainScaffold(
                     icon = LumenIcons.Settings,
                     contentDescription = stringResource(R.string.common_settings),
                     onClick = { settingsPage = SettingsMain },
+                    badge = updateWaiting,
                     // A person's ⋯ grows out of this one instead (below), in its place.
                     modifier = if (openCollection != null && CollectionKeys.personId(openCollection) != null) Modifier.graphicsLayer { alpha = 0f } else leaving,
                 )
@@ -2473,6 +2480,24 @@ private fun MainScaffold(
         // A face in the viewer's sheet flying to or from its person's page: above the viewer.
         if (coverTransition.overViewer) CoverTransitionOverlay(coverTransition)
 
+        // A newer Lumen from the daily check: announced once per version, when nothing else is up.
+        val announce = UpdateSession.announce
+        if (announce != null && confirmation == null && !viewerOpen && !selecting && settingsPage == null && pick == null) {
+            LaunchedEffect(announce) {
+                UpdateSession.announce = null
+                prefs.announcedUpdate = announce.version
+                confirmation = Confirmation(
+                    title = context.getString(R.string.settings_update_available, announce.version),
+                    message = context.getString(R.string.main_update_message),
+                    details = com.subhashh.lumen.ui.components.releaseChanges(announce.notes).ifBlank { null },
+                    confirm = context.getString(R.string.main_update_view),
+                    cancel = context.getString(R.string.main_update_later),
+                ) {
+                    settingsHighlight = "software-update"
+                    settingsPage = settingsCategoryPage(SettingsCategory.About)
+                }
+            }
+        }
         ConfirmDialog(confirmation, onDismiss = { confirmation = null })
 
         RenameDialog(

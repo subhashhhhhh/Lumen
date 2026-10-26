@@ -36,14 +36,19 @@ object UpdateSession {
     var state by mutableStateOf<State>(State.Idle)
         private set
 
+    /** A newer Lumen the daily check found and hasn't announced yet; the app shows it once, then clears it. */
+    var announce by mutableStateOf<Updater.Release?>(null)
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
-    fun check(context: Context) {
+    fun check(context: Context, automatic: Boolean = false) {
         if (state is State.Checking || state is State.Downloading) return
         state = State.Checking
         scope.launch {
             val result = Updater.check(context)
-            LumenPrefs(context).availableUpdate = (result as? Updater.Check.Available)?.release?.version
+            val prefs = LumenPrefs(context)
+            prefs.availableUpdate = (result as? Updater.Check.Available)?.release?.version
+            if (automatic && result is Updater.Check.Available && prefs.announcedUpdate != result.release.version) announce = result.release
             state = State.Result(result)
         }
     }
@@ -52,7 +57,7 @@ object UpdateSession {
     fun checkIfDue(context: Context) {
         val prefs = LumenPrefs(context)
         if (!prefs.autoUpdateCheck || System.currentTimeMillis() - prefs.lastUpdateCheck < DayMs) return
-        check(context)
+        check(context, automatic = true)
     }
 
     fun install(context: Context, release: Updater.Release) {

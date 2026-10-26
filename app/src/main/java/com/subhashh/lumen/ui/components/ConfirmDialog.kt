@@ -47,6 +47,8 @@ data class Confirmation(
     val destructive: Boolean = false,
     /** Longer Markdown under the message (release notes): left-aligned and scrollable. */
     val details: String? = null,
+    /** The dismiss button's label; Cancel when null. */
+    val cancel: String? = null,
     val onConfirm: () -> Unit,
 )
 
@@ -103,7 +105,7 @@ fun ConfirmDialog(confirmation: Confirmation?, onDismiss: () -> Unit) {
                 Box(Modifier.fillMaxWidth().height(0.5.dp).background(secondary.copy(alpha = 0.3f)))
                 Row(Modifier.fillMaxWidth().height(48.dp)) {
                     Text(
-                        stringResource(R.string.common_cancel),
+                        c.cancel ?: stringResource(R.string.common_cancel),
                         color = Color(0xFF0A84FF),
                         fontSize = 17.sp,
                         textAlign = TextAlign.Center,

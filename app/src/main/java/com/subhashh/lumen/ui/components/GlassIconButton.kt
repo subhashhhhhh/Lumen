@@ -1,6 +1,9 @@
 package com.subhashh.lumen.ui.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
@@ -21,6 +24,8 @@ fun GlassIconButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     tint: Color = LocalGlassColors.current.content,
+    /** A red dot at the top right: something new behind this button (an update for Settings). */
+    badge: Boolean = false,
 ) {
     Box(
         modifier = modifier
@@ -30,6 +35,15 @@ fun GlassIconButton(
         contentAlignment = Alignment.Center,
     ) {
         Icon(icon, contentDescription = contentDescription, tint = tint)
+        if (badge) {
+            Box(
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 9.dp, end = 9.dp)
+                    .size(10.dp)
+                    .background(Color(0xFFFF3B30), CircleShape),
+            )
+        }
     }
 }
 

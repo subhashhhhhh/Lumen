@@ -216,6 +216,11 @@ class LumenPrefs(context: Context) {
         get() = prefs.getString(KeyAvailableUpdate, null)
         set(value) = prefs.edit { putString(KeyAvailableUpdate, value) }
 
+    /** The newest version the update popup has shown, so each version is announced once. */
+    var announcedUpdate: String?
+        get() = prefs.getString(KeyAnnouncedUpdate, null)
+        set(value) = prefs.edit { putString(KeyAnnouncedUpdate, value) }
+
     /** Settings → Developer Options is shown (tapping Version seven times in About). */
     var developerOptions: Boolean
         get() = prefs.getBoolean(KeyDeveloperOptions, false)
@@ -287,6 +292,7 @@ class LumenPrefs(context: Context) {
         const val KeyShowMaps = "show_maps"
         const val KeyTextVideoVersion = "text_video_version"
         const val KeyOnboardingDone = "onboarding_done"
+        const val KeyAnnouncedUpdate = "announced_update"
         const val KeyIndexScheduleOn = "index_schedule_on"
         const val KeyIndexScheduleStart = "index_schedule_start"
         const val KeyIndexScheduleEnd = "index_schedule_end"
