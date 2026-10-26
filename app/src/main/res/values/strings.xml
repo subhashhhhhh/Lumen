@@ -977,6 +977,7 @@
     <string name="onboarding_optional">Optional</string>
     <string name="onboarding_location">Where Photos Were Taken</string>
     <string name="onboarding_location_detail">For maps and place names</string>
+    <string name="onboarding_location_blocked">Off: Android won’t ask again</string>
     <string name="onboarding_all_files">All Files</string>
     <string name="onboarding_all_files_detail">Manage folders and hidden files, like Fossify</string>
     <string name="onboarding_media_management">Media Management</string>

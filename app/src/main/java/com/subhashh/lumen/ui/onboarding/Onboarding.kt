@@ -297,12 +297,12 @@ private fun ColumnScope.Photos(backdrop: Backdrop, hasAccess: Boolean, onRequest
         context.getSystemService(android.os.PowerManager::class.java).isIgnoringBatteryOptimizations(context.packageName)
     }
     val activity = LocalActivity.current
+    // Denied twice, Android answers at once without asking, and App Info has no switch for it
+    // (it's the locations saved in photos, not the phone's): say so instead of doing nothing.
+    var locationBlocked by rememberSaveable { mutableStateOf(false) }
     val askLocation = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         refresh++
-        // Denied twice, Android answers at once without asking: App Info is the only way left.
-        if (!granted && activity?.shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_MEDIA_LOCATION) == false) {
-            context.openSpecial(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
-        }
+        locationBlocked = !granted && activity?.shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_MEDIA_LOCATION) == false
     }
 
     // Scrolls, with Continue fixed below: on small screens or with large text the list is taller
@@ -318,15 +318,24 @@ private fun ColumnScope.Photos(backdrop: Backdrop, hasAccess: Boolean, onRequest
             Spacer(Modifier.height(16.dp))
             Text(stringResource(R.string.onboarding_optional), color = ink.copy(alpha = 0.6f), fontSize = 13.sp, modifier = Modifier.padding(start = 8.dp, bottom = 8.dp))
             Card(backdrop) {
-                Item(LumenIcons.Location, stringResource(R.string.onboarding_location), stringResource(R.string.onboarding_location_detail)) {
+                Item(
+                    LumenIcons.Location,
+                    stringResource(R.string.onboarding_location),
+                    stringResource(if (locationBlocked && !location) R.string.onboarding_location_blocked else R.string.onboarding_location_detail),
+                ) {
                     Toggle(location) { if (!location) askLocation.launch(Manifest.permission.ACCESS_MEDIA_LOCATION) }
                 }
                 Item(LumenIcons.Folder, stringResource(R.string.onboarding_all_files), stringResource(R.string.onboarding_all_files_detail)) {
-                    Toggle(allFiles) { context.openSpecial(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION) }
+                    // On or off, it's the same system page (an app can't turn these off itself).
+                    Toggle(allFiles, onTurnOff = { context.openSpecial(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION) }) {
+                        context.openSpecial(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
+                    }
                 }
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                     Item(LumenIcons.Delete, stringResource(R.string.onboarding_media_management), stringResource(R.string.onboarding_media_management_detail)) {
-                        Toggle(manage) { context.openSpecial(Settings.ACTION_REQUEST_MANAGE_MEDIA) }
+                        Toggle(manage, onTurnOff = { context.openSpecial(Settings.ACTION_REQUEST_MANAGE_MEDIA) }) {
+                            context.openSpecial(Settings.ACTION_REQUEST_MANAGE_MEDIA)
+                        }
                     }
                 }
                 Item(LumenIcons.Timer, stringResource(R.string.onboarding_unrestricted_battery), stringResource(R.string.onboarding_unrestricted_battery_detail)) {
