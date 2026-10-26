@@ -14,9 +14,9 @@ import com.subhashh.lumen.data.LumenPrefs
 import com.subhashh.lumen.data.Updater
 import kotlinx.coroutines.delay
 
-/** Lumen opened on this many different days, over at least [StarAfterDays], before asking. */
-private const val StarDaysUsed = 5
-private const val StarAfterDays = 7
+/** Lumen opened on this many different days (the second day), at least [StarAfterDays] apart, before asking. */
+private const val StarDaysUsed = 2
+private const val StarAfterDays = 1
 
 /**
  * Asks once for a star on GitHub, from someone who keeps coming back: never on the first days,
