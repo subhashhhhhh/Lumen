@@ -19,7 +19,7 @@
     <string name="common_unfavorite">Desmarcar Favorito</string>
     <string name="common_continue">Continuar</string>
     <string name="common_next">Siguiente</string>
-    <string name="common_not_now">Ahora No</string>
+    <string name="common_not_now"></string>
     <string name="common_download">Descargar</string>
     <string name="common_install">Instalar</string>
     <string name="common_update">Actualizar</string>
@@ -37,4 +37,11 @@
     <string name="common_settings">Ajustes</string>
     <string name="common_hide">Ocultar</string>
     <string name="common_unhide">Mostrar</string>
+    <plurals name="main_search_results">
+        <item quantity="one">%1$d Resultado</item>
+        <item quantity="many">%1$d Resultados</item>
+        <item quantity="other">%1$,d Resultados</item>
+    </plurals>
+    <string name="main_search_looking_inside">Analizando el contenido de las fotos…</string>
+    <string name="main_search_show_less">Mostrar Menos</string>
 </resources>
