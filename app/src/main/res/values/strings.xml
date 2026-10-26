@@ -459,6 +459,7 @@
     <string name="settings_entry_subtitles_model">Subtitles Model</string>
     <string name="settings_entry_scheduled_indexing">Scheduled Indexing</string>
     <string name="settings_entry_index_on_battery">Index on Battery</string>
+    <string name="settings_entry_unrestricted_battery">Unrestricted Battery</string>
     <string name="settings_entry_video_detail">Video Detail</string>
     <string name="settings_entry_face_models">Face Models</string>
     <string name="settings_entry_faces">Faces</string>
@@ -502,6 +503,7 @@
     <string name="settings_kw_subtitles_model">subtitles captions cc transcription speech download</string>
     <string name="settings_kw_scheduled_indexing">overnight night time schedule hours indexing background sleep</string>
     <string name="settings_kw_index_on_battery">charging battery background scan indexing</string>
+    <string name="settings_kw_unrestricted_battery">battery optimization optimisation background indexing doze unrestricted</string>
     <string name="settings_kw_video_detail">video frames resolution faces quality speed</string>
     <string name="settings_kw_face_model">people faces persons download remove update</string>
     <string name="settings_kw_faces">people faces persons grouping progress</string>
@@ -774,6 +776,8 @@
     <string name="smart_downloads_footer">Models download once from Hugging Face; your photos and searches never leave this phone.</string>
     <string name="smart_index_on_battery">Index on Battery</string>
     <string name="smart_index_on_battery_subtitle">Keep scanning off the charger; stops when the battery runs low</string>
+    <string name="smart_unrestricted_battery">Unrestricted Battery</string>
+    <string name="smart_unrestricted_battery_subtitle">Lets indexing keep going after you leave Lumen; otherwise Android holds it back</string>
     <string name="smart_video_detail">Video Detail</string>
     <string name="smart_video_detail_subtitle">Frame size for faces and text in videos; lower is faster on older phones</string>
     <string name="smart_wifi_only">Download on Wi-Fi Only</string>

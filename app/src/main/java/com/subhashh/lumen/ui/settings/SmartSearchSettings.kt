@@ -93,6 +93,11 @@ internal fun SmartSearchGroup(
     var wifiOnly by remember { mutableStateOf(prefs.modelWifiOnly) }
     var videoDetail by remember { mutableStateOf(prefs.videoDetail) }
     var onBattery by remember { mutableStateOf(prefs.indexOnBattery) }
+    // Android's battery optimization holds background jobs back (standby quotas, Doze, and some
+    // makers' own battery managers); only the system screen can change it, so re-read on resume.
+    val unrestricted = remember(refresh) {
+        context.getSystemService(android.os.PowerManager::class.java).isIgnoringBatteryOptimizations(context.packageName)
+    }
     var scheduleOn by remember { mutableStateOf(prefs.indexScheduleOn) }
     var scheduleStart by remember { mutableIntStateOf(prefs.indexScheduleStart) }
     var scheduleEnd by remember { mutableIntStateOf(prefs.indexScheduleEnd) }
@@ -371,6 +376,28 @@ internal fun SmartSearchGroup(
             }
             Divider()
         }
+        Anchor("unrestricted-battery", highlight) {
+            ToggleRow(
+                title = stringResource(R.string.smart_unrestricted_battery),
+                subtitle = stringResource(R.string.smart_unrestricted_battery_subtitle),
+                checked = unrestricted,
+                onCheckedChange = { on ->
+                    // Asking needs Android's own dialog; taking it back, its battery settings list.
+                    val intent = if (on) {
+                        android.content.Intent(
+                            android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                            android.net.Uri.parse("package:" + context.packageName),
+                        )
+                    } else {
+                        android.content.Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                    }
+                    runCatching { context.startActivity(intent) }
+                },
+                icon = LumenIcons.Timer,
+                iconColor = Green,
+            )
+        }
+        Divider()
         Anchor("video-detail", highlight) {
             PickerRow(
                 title = stringResource(R.string.smart_video_detail),
