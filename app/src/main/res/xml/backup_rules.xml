@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 11 backup (Google or Seedvault): Lumen's settings only. Not the Hidden lock, the vault
+     key or the Hugging Face token (secrets), and not the indexes or models (rebuilt or downloaded
+     again on the new phone, where the photos' IDs differ anyway). -->
+<full-backup-content>
+    <include domain="sharedpref" path="lumen.xml" />
+</full-backup-content>

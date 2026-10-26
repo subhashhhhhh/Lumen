@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12+ backup and phone-to-phone transfer: the same as backup_rules.xml, settings only. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <include domain="sharedpref" path="lumen.xml" />
+    </cloud-backup>
+    <device-transfer>
+        <include domain="sharedpref" path="lumen.xml" />
+    </device-transfer>
+</data-extraction-rules>

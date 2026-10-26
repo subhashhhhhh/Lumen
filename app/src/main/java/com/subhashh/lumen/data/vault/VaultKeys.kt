@@ -15,8 +15,9 @@ import javax.crypto.spec.SecretKeySpec
 
 /**
  * The vault's master key, kept two ways:
- *  - sealed by a key in Android's hardware Keystore, in Lumen's no-backup storage: opens the
- *    vault day to day without asking for the lock again (Hidden's own lock already did);
+ *  - sealed by a key in Android's hardware Keystore, in private storage that backups leave out
+ *    (res/xml/backup_rules.xml): opens the vault day to day without asking for the lock again
+ *    (Hidden's own lock already did);
  *  - in the recovery file next to the vault ([VaultKeyFile]), sealed by the user's Lumen lock:
  *    opens it after a reinstall, when the Keystore copy is gone with the old install.
  */
