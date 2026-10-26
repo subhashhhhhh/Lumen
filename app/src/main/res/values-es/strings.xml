@@ -231,4 +231,46 @@
     <string name="main_the_person_you_chose">la persona que elegiste</string>
     <string name="main_merge_people_title">¿Combinar Personas?</string>
     <string name="main_merge_people_message_named">Las fotos de %1$s y %2$s se mostrarán como una sola persona, con el nombre %3$s.</string>
+    <string name="main_merge_people_message">Las fotos de %1$s y %2$s se mostrarán como una sola persona.</string>
+    <string name="main_biometrics_missing">Primero, añade una huella dactilar o configura el reconocimiento facial en los ajustes de tu teléfono</string>
+    <string name="main_lock_needed_for_encrypt">Primero, configura un bloqueo de Lumen (Privacidad → Configurar bloqueo de Lumen)</string>
+    <string name="main_encrypt_hidden_title">¿Cifrar elementos ocultos?</string>
+    <plurals name="main_encrypt_hidden_message_count">
+        <item quantity="one">Los %1$d elementos ocultos se trasladarán a una bóveda cifrada a la que ninguna otra aplicación ni administrador de archivos podrá acceder (las carpetas excluidas permanecerán sin cambios). La bóveda permanecerá en tu almacenamiento, por lo que seguirá allí aunque desinstales Lumen; podrás volver a abrirla con tu bloqueo de Lumen.\n\nSi desinstalas Lumen y olvidas tu bloqueo, nadie podrá recuperar estos archivos. Una contraseña es más segura que un PIN corto.</item>
+        <item quantity="many">Los %1$d elementos ocultos se trasladarán a una bóveda cifrada a la que ninguna otra aplicación ni administrador de archivos podrá acceder (las carpetas excluidas permanecerán sin cambios). La bóveda permanecerá en tu almacenamiento, por lo que seguirá allí aunque desinstales Lumen; podrás volver a abrirla con tu bloqueo de Lumen.\n\nSi desinstalas Lumen y olvidas tu bloqueo, nadie podrá recuperar estos archivos. Una contraseña es más segura que un PIN corto.</item>
+        <item quantity="other">Los %1$d elementos ocultos se trasladarán a una bóveda cifrada a la que ninguna otra aplicación ni administrador de archivos podrá acceder (las carpetas excluidas permanecerán sin cambios). La bóveda permanecerá en tu almacenamiento, por lo que seguirá allí aunque desinstales Lumen; podrás volver a abrirla con tu bloqueo de Lumen.\n\nSi desinstalas Lumen y olvidas tu bloqueo, nadie podrá recuperar estos archivos. Una contraseña es más segura que un PIN corto.</item>
+    </plurals>
+    <string name="main_encrypt_hidden_message_all">Todo el contenido de Ocultos se trasladará a una bóveda cifrada a la que ninguna otra aplicación ni administrador de archivos podrá acceder (las carpetas excluidas permanecerán sin cambios). La bóveda permanecerá en tu almacenamiento, por lo que seguirá allí aunque desinstales Lumen; podrás volver a abrirla con tu bloqueo de Lumen.\n\nSi desinstalas Lumen y olvidas tu bloqueo, nadie podrá recuperar estos archivos. Una contraseña es más segura que un PIN corto.</string>
+    <string name="main_encrypt">Cifrar</string>
+    <string name="main_decrypt_hidden_title">¿Dejar de cifrar los elementos ocultos?</string>
+    <string name="main_decrypt_hidden_message">Todo el contenido de la bóveda se descifrará y volverá a su ubicación original, oculto de la forma habitual: no aparecerá en tu biblioteca, pero los administradores de archivos y algunas aplicaciones de galería podrán verlo.</string>
+    <string name="main_decrypt">Descifrar</string>
+    <string name="main_import_settings_title">¿Importar configuración?</string>
+    <string name="main_import_settings_message">Tus ajustes actuales, la organización de los álbumes y las exclusiones se reemplazarán por los de la copia de seguridad. Los favoritos incluidos en ella se añadirán a los tuyos.</string>
+    <string name="main_import">Importar</string>
+    <string name="main_hidden">Oculto</string>
+    <string name="main_album_empty_hint">Este álbum está vacío.\nAñade fotos mediante ⋯ → Mover al álbum o Copiar al álbum.</string>
+    <string name="main_empty_trash">Vacío</string>
+    <string name="main_empty_trash_title">¿Vaciar «Eliminados recientemente»?</string>
+    <string name="main_empty_trash_message_one">Este elemento se eliminará para siempre.</string>
+    <plurals name="main_empty_trash_message">
+        <item quantity="one">Se eliminará permanentemente %1$d elemento.</item>
+        <item quantity="many">Se eliminarán permanentemente todos los %1$d elementos.</item>
+        <item quantity="other">Se eliminarán permanentemente todos los %1$d elementos.</item>
+    </plurals>
+    <string name="main_delete_forever_title_case">Eliminar por Siempre</string>
+    <plurals name="main_trash_message">
+        <item quantity="one">Permanecerá en «Eliminados recientemente» durante 30 días.</item>
+        <item quantity="many">Permanecerán en «Eliminados recientemente» durante 30 días.</item>
+        <item quantity="other">Permanecerán en «Eliminados recientemente» durante 30 días.</item>
+    </plurals>
+    <plurals name="main_delete_forever_message">
+        <item quantity="one">%1$d elemento se eliminará para siempre.</item>
+        <item quantity="many">%1$d elementos se eliminarán para siempre.</item>
+        <item quantity="other">%1$d elementos se eliminarán para siempre.</item>
+    </plurals>
+    <string name="main_pick_add_count">Añadir %1$d</string>
+    <string name="main_view_options">Ver opciones</string>
+    <string name="main_album_options">Opciones de álbum</string>
+    <string name="main_sort_by">Ordenar por %1$s</string>
 </resources>
