@@ -5,7 +5,7 @@
 --><resources>
     <string name="common_cancel">Cancelar</string>
     <string name="common_done">Hecho</string>
-    <string name="common_delete">Borrar</string>
+    <string name="common_delete">Eliminar</string>
     <string name="common_share">Compartir</string>
     <string name="common_copy">Copiar</string>
     <string name="common_remove">Eliminar</string>
