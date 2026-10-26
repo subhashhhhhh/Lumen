@@ -135,12 +135,14 @@ fun Onboarding(
         step = if (step == Step.Done && !downloading) Step.Smart else Step.entries[step.ordinal - 1]
     }
 
-    // Opaque, and every touch stays here: the Library is already built underneath.
+    // Opaque, and every touch stays here: the Library is already built underneath. Being hit is
+    // enough (a touch goes to the topmost sibling only); consuming the events too cancelled the
+    // buttons' taps on screens that report tiny finger movements (Samsung, #1).
     Box(
         Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .pointerInput(Unit) { awaitPointerEventScope { while (true) awaitPointerEvent().changes.forEach { it.consume() } } },
+            .pointerInput(Unit) { awaitPointerEventScope { while (true) awaitPointerEvent() } },
     ) {
         // Plain: the glass sits on black.
         Box(Modifier.fillMaxSize().layerBackdrop(backdrop))
