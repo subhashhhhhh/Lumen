@@ -131,6 +131,15 @@ baselineProfile {
     mergeIntoMain = true
 }
 
+// Lumen Lab builds unpack native libraries onto the phone: Qualcomm's NPU runtime is loaded from
+// the app's library folder, not from inside the APK. Release builds are unchanged.
+if (hasLab) {
+    androidComponents {
+        onVariants(selector().withBuildType("debug")) { it.packaging.jniLibs.useLegacyPackaging.set(true) }
+        onVariants(selector().withBuildType("profile")) { it.packaging.jniLibs.useLegacyPackaging.set(true) }
+    }
+}
+
 dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.test.ext.junit)
@@ -183,6 +192,14 @@ dependencies {
     if (hasLab) {
         debugImplementation(libs.litertlm.android)
         "profileImplementation"(libs.litertlm.android)
+    }
+    // Lumen Lab only: the Qualcomm NPU (LiteRT's dispatch library and Qualcomm's QAIRT runtime,
+    // which is proprietary). Never in release.
+    if (hasLab) {
+        for (config in listOf("debugImplementation", "profileImplementation")) {
+            config(libs.litert.npu.qualcomm) { exclude(group = "com.google.android.play") }
+            config(libs.qnn.runtime)
+        }
     }
 
 }

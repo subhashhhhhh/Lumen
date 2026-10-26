@@ -28,6 +28,8 @@ print = "1.1.0"
 onnxruntime = "1.28.0"
 litertlm = "0.18.1"
 litert = "2.3.0"
+# Lumen Lab only: the Qualcomm NPU through LiteRT; QAIRT 2.50 is the version LiteRT 2.3.0 is built against.
+qnnRuntime = "2.50.0"
 work = "2.12.0"
 # Maps (Details → Location): MapLibre Native, open source, no telemetry, no Google services.
 # The OpenGL build: the default one requires Vulkan, which would hide Lumen from some phones in Play.
@@ -39,6 +41,8 @@ lumen-ai = { module = "app.lumen-photos:lumen-ai", version.ref = "lumenAi" }
 maplibre-android = { module = "org.maplibre.gl:android-sdk-opengl", version.ref = "maplibre" }
 litert = { module = "com.google.ai.edge.litert:litert", version.ref = "litert" }
 litert-gpu = { module = "com.google.ai.edge.litert:litert-gpu", version.ref = "litert" }
+litert-npu-qualcomm = { module = "com.google.ai.edge.litert:litert-npu-runtime-qualcomm", version.ref = "litert" }
+qnn-runtime = { module = "com.qualcomm.qti:qnn-runtime", version.ref = "qnnRuntime" }
 androidx-work-runtime = { module = "androidx.work:work-runtime", version.ref = "work" }
 onnxruntime-android = { module = "com.microsoft.onnxruntime:onnxruntime-android", version.ref = "onnxruntime" }
 litertlm-android = { module = "com.google.ai.edge.litertlm:litertlm-android", version.ref = "litertlm" }
