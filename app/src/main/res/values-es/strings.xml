@@ -43,4 +43,11 @@
     </plurals>
     <string name="main_search_looking_inside">Analizando el contenido de las fotos…</string>
     <string name="main_search_show_less">Mostrar Menos</string>
+    <string name="main_search_see_all">Mostrar Todo</string>
+    <string name="main_search_no_results_hint">Intenta describir lo que aparece en la foto, por ejemplo, «gato en un sofá» (con las «Funciones inteligentes» de «Ajustes»), o el nombre de un archivo, una carpeta, un mes o un año.</string>
+    <string name="main_search_recent">Recientes</string>
+    <string name="main_search_clear">Limpiar</string>
+    <string name="main_search_from_your_photos">Desde tus fotos</string>
+    <string name="main_search_try">Intentar</string>
+    <string name="main_search_field_hint">Archivos, carpetas, meses, años…</string>
 </resources>
