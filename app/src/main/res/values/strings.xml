@@ -786,6 +786,18 @@
     <string name="smart_index_on_battery_subtitle">Keep scanning off the charger; stops when the battery runs low</string>
     <string name="smart_unrestricted_battery">Unrestricted Battery</string>
     <string name="smart_unrestricted_battery_subtitle">Lets indexing keep going after you leave Lumen; otherwise Android holds it back</string>
+    <string name="smart_video_text_title">Text in Videos</string>
+    <string name="smart_video_text_short">Short Videos</string>
+    <string name="smart_video_text_short_subtitle">Up to 1 minute</string>
+    <string name="smart_video_text_medium">Medium Videos</string>
+    <string name="smart_video_text_medium_subtitle">1 to 2 minutes</string>
+    <string name="smart_video_text_long">Long Videos</string>
+    <string name="smart_video_text_long_subtitle">Over 2 minutes</string>
+    <!-- After the frames-a-second number, e.g. "2 /s" -->
+    <string name="smart_video_text_unit">/s</string>
+    <string name="smart_video_text_footer">How many frames each second are read for text. More frames catch quicker captions. Never more than the video has. Applies to videos read from now on.</string>
+    <string name="smart_video_text_slow">More frames make reading slower: every frame takes a fraction of a second, so 10 a second reads a 1-minute video about 5 times slower than 2 a second.</string>
+    <string name="settings_kw_video_text">text captions subtitles frames per second fps video ocr read</string>
     <string name="smart_video_detail">Video Detail</string>
     <string name="smart_video_detail_subtitle">Frame size for faces and text in videos; lower is faster on older phones</string>
     <string name="smart_wifi_only">Download on Wi-Fi Only</string>

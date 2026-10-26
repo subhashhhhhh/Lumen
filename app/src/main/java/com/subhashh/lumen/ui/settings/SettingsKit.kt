@@ -40,6 +40,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -235,6 +236,50 @@ private fun RowShell(
             if (subtitle != null) Text(subtitle, fontSize = 13.sp, color = colors.secondary)
         }
         trailing()
+    }
+}
+
+/**
+ * A whole number typed in, from [min] to [max], with [unit] after it. A number above [max] is
+ * taken as [max]; leaving the field empty puts the last number back.
+ */
+@Composable
+internal fun NumberRow(
+    title: String,
+    value: Int,
+    onValueChange: (Int) -> Unit,
+    min: Int,
+    max: Int,
+    unit: String,
+    subtitle: String? = null,
+    icon: ImageVector? = null,
+    iconColor: Color = Gray,
+) {
+    val colors = groupColors()
+    var text by remember(value) { mutableStateOf(value.toString()) }
+    RowShell(title, subtitle, icon, iconColor, onClick = null) {
+        Spacer(Modifier.width(8.dp))
+        androidx.compose.foundation.text.BasicTextField(
+            value = text,
+            onValueChange = { typed ->
+                val digits = typed.filter(Char::isDigit).take(max.toString().length)
+                val number = digits.toIntOrNull()
+                text = if (number != null && number > max) max.toString() else digits
+                number?.coerceAtMost(max)?.takeIf { it >= min }?.let(onValueChange)
+            },
+            singleLine = true,
+            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+            textStyle = androidx.compose.ui.text.TextStyle(color = colors.text, fontSize = 16.sp, textAlign = androidx.compose.ui.text.style.TextAlign.End),
+            cursorBrush = androidx.compose.ui.graphics.SolidColor(Blue),
+            modifier = Modifier
+                .width(56.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(colors.secondary.copy(alpha = 0.12f))
+                .padding(horizontal = 8.dp, vertical = 6.dp)
+                .onFocusChanged { if (!it.isFocused && (text.toIntOrNull() ?: 0) < min) text = value.toString() },
+        )
+        Spacer(Modifier.width(6.dp))
+        Text(unit, fontSize = 16.sp, color = colors.secondary)
     }
 }
 

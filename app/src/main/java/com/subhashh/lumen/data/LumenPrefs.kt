@@ -268,6 +268,19 @@ class LumenPrefs(context: Context) {
         get() = VideoDetail.entries.firstOrNull { it.name == prefs.getString(KeyVideoDetail, null) } ?: VideoDetail.High
         set(value) = prefs.edit { putString(KeyVideoDetail, value.name) }
 
+    /** Settings → Smart Search → Text in Videos: frames a second read in short, medium and long videos. */
+    var videoTextRates: com.subhashh.lumen.ai.VideoTextRates
+        get() = com.subhashh.lumen.ai.VideoTextRates(
+            prefs.getInt(KeyTextRateShort, 2),
+            prefs.getInt(KeyTextRateMedium, 1),
+            prefs.getInt(KeyTextRateLong, 1),
+        )
+        set(value) = prefs.edit {
+            putInt(KeyTextRateShort, value.short)
+            putInt(KeyTextRateMedium, value.medium)
+            putInt(KeyTextRateLong, value.long)
+        }
+
     /** Settings → Smart Search → Index on Battery: the backlog runs without the charger too. */
     var indexOnBattery: Boolean
         get() = prefs.getBoolean(KeyIndexOnBattery, false)
@@ -305,6 +318,9 @@ class LumenPrefs(context: Context) {
         const val KeyCurvedEdge = "curved_edge"
         const val KeyPeopleSquare = "people_square"
         const val KeyVideoDetail = "video_detail"
+        const val KeyTextRateShort = "text_rate_short"
+        const val KeyTextRateMedium = "text_rate_medium"
+        const val KeyTextRateLong = "text_rate_long"
         const val KeyIndexOnBattery = "index_on_battery"
         const val KeyModelWifiOnly = "model_wifi_only"
         const val KeyModelQueue = "model_queue"

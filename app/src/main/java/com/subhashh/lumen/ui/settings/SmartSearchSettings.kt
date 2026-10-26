@@ -456,6 +456,33 @@ internal fun SmartSearchGroup(
             )
         }
     }
+
+    // How many frames a second are read for text, by video length; more is slower.
+    var rates by remember { mutableStateOf(prefs.videoTextRates) }
+    val defaults = com.subhashh.lumen.ai.VideoTextRates()
+    val slower = rates.short > defaults.short || rates.medium > defaults.medium || rates.long > defaults.long
+    Group(
+        stringResource(R.string.smart_video_text_title),
+        footer = stringResource(R.string.smart_video_text_footer) + if (slower) "\n\n" + stringResource(R.string.smart_video_text_slow) else "",
+    ) {
+        val unit = stringResource(R.string.smart_video_text_unit)
+        val max = com.subhashh.lumen.ai.VideoTextRates.Max
+        fun save(new: com.subhashh.lumen.ai.VideoTextRates) {
+            rates = new
+            prefs.videoTextRates = new
+        }
+        Anchor("video-text-short", highlight) {
+            NumberRow(stringResource(R.string.smart_video_text_short), rates.short, { save(rates.copy(short = it)) }, 1, max, unit, stringResource(R.string.smart_video_text_short_subtitle))
+        }
+        Divider()
+        Anchor("video-text-medium", highlight) {
+            NumberRow(stringResource(R.string.smart_video_text_medium), rates.medium, { save(rates.copy(medium = it)) }, 1, max, unit, stringResource(R.string.smart_video_text_medium_subtitle))
+        }
+        Divider()
+        Anchor("video-text-long", highlight) {
+            NumberRow(stringResource(R.string.smart_video_text_long), rates.long, { save(rates.copy(long = it)) }, 1, max, unit, stringResource(R.string.smart_video_text_long_subtitle))
+        }
+    }
 }
 
 /** "1:00 AM" or "01:00", as the phone shows times. */

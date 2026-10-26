@@ -132,6 +132,7 @@ private val Entries = listOf(
     SettingEntry("index-on-battery", R.string.settings_entry_index_on_battery, SettingsCategory.SmartSearch, R.string.settings_kw_index_on_battery),
     SettingEntry("unrestricted-battery", R.string.settings_entry_unrestricted_battery, SettingsCategory.SmartSearch, R.string.settings_kw_unrestricted_battery),
     SettingEntry("video-detail", R.string.settings_entry_video_detail, SettingsCategory.SmartSearch, R.string.settings_kw_video_detail),
+    SettingEntry("video-text-short", R.string.smart_video_text_title, SettingsCategory.SmartSearch, R.string.settings_kw_video_text),
     SettingEntry("face-model", R.string.settings_entry_face_models, SettingsCategory.SmartSearch, R.string.settings_kw_face_model),
     SettingEntry("faces", R.string.settings_entry_faces, SettingsCategory.SmartSearch, R.string.settings_kw_faces),
     SettingEntry("text-model", R.string.settings_entry_text_reader, SettingsCategory.SmartSearch, R.string.settings_kw_text_model),
