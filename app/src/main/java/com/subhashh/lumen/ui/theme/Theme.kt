@@ -39,6 +39,17 @@ private val LightGlass = GlassColors(
 
 val LocalGlassColors = staticCompositionLocalOf { DarkGlass }
 
+/**
+ * Glass over photos and videos (the viewer's controls). Dark mode's glass is a light veil with
+ * white icons, which vanishes over a white photo or screenshot (#6): over media it's smoked
+ * instead, so the white icons read on white and on black. Light mode's carries black icons already.
+ */
+@Composable
+fun overMediaGlass(): GlassColors {
+    val colors = LocalGlassColors.current
+    return if (LocalDarkTheme.current) colors.copy(tint = Color(0x8C1C1C1E)) else colors
+}
+
 /** Whether Lumen is drawing dark, which can differ from the phone (Settings → Appearance). */
 val LocalDarkTheme = staticCompositionLocalOf { true }
 

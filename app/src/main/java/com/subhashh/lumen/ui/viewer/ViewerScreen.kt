@@ -80,6 +80,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import com.subhashh.lumen.data.MediaFiles
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.setValue
@@ -562,136 +563,138 @@ fun ViewerScreen(
             exit = fadeOut(),
         ) {
             if (current == null) return@AnimatedVisibility
-            Box(Modifier.fillMaxSize()) {
-                TopBar(
-                    backdrop = backdrop,
-                    item = current,
-                    onBack = { close(Velocity.Zero) },
-                    // Recently Deleted items only get restore / delete forever.
-                    onMore = if (inTrash || inHidden) null else ({ moreOpen = !moreOpen }),
-                    // Live Text's button: only when the photo has text.
-                    liveTextOn = if (liveText.hasText && liveText.item?.id == current.id) liveText.showAll else null,
-                    onLiveText = {
-                        liveText.showAll = !liveText.showAll
-                        liveText.clear()
-                    },
-                    modifier = Modifier.align(Alignment.TopCenter),
-                )
-                Column(
-                    Modifier
-                        .align(Alignment.BottomCenter)
-                        .graphicsLayer { alpha = 1f - infoFraction() }
-                        .navigationBarsPadding()
-                        .onSizeChanged { bottomChromeHeight = it.height }
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                ) {
-                    if (current.isVideo) {
-                        if (speechReady) {
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                                CaptionsButton(backdrop, on = captions, onClick = { captions = !captions })
-                            }
-                            Spacer(Modifier.height(8.dp))
-                        }
-                        if (player != null) VideoControls(backdrop, player)
-                        Spacer(Modifier.height(12.dp))
-                    }
-                    if (items.size > 1 && !external && filmStrip != FilmStripSize.Off) {
-                        FilmStrip(items, pager, filmStrip.heightDp.dp)
-                        Spacer(Modifier.height(12.dp))
-                    }
-                    val launch = { sender: android.content.IntentSender ->
-                        playingBeforeRequest = player?.isPlaying == true
-                        requestLauncher.launch(IntentSenderRequest.Builder(sender).build())
-                    }
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
+            CompositionLocalProvider(LocalGlassColors provides com.subhashh.lumen.ui.theme.overMediaGlass()) {
+                Box(Modifier.fillMaxSize()) {
+                    TopBar(
+                        backdrop = backdrop,
+                        item = current,
+                        onBack = { close(Velocity.Zero) },
+                        // Recently Deleted items only get restore / delete forever.
+                        onMore = if (inTrash || inHidden) null else ({ moreOpen = !moreOpen }),
+                        // Live Text's button: only when the photo has text.
+                        liveTextOn = if (liveText.hasText && liveText.item?.id == current.id) liveText.showAll else null,
+                        onLiveText = {
+                            liveText.showAll = !liveText.showAll
+                            liveText.clear()
+                        },
+                        modifier = Modifier.align(Alignment.TopCenter),
+                    )
+                    Column(
+                        Modifier
+                            .align(Alignment.BottomCenter)
+                            .graphicsLayer { alpha = 1f - infoFraction() }
+                            .navigationBarsPadding()
+                            .onSizeChanged { bottomChromeHeight = it.height }
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
                     ) {
-                        if (external) {
-                            GlassIconButton(
-                                backdrop = backdrop,
-                                icon = LumenIcons.Share,
-                                contentDescription = stringResource(R.string.common_share),
-                                onClick = { MediaActions.share(context, current) },
-                            )
-                            GlassIconButton(
-                                backdrop = backdrop,
-                                icon = LumenIcons.Info,
-                                contentDescription = stringResource(R.string.common_details),
-                                onClick = motion::openInfo,
-                            )
-                        } else if (inHidden) {
-                            GlassIconButton(
-                                backdrop = backdrop,
-                                icon = LumenIcons.Share,
-                                contentDescription = stringResource(R.string.common_share),
-                                onClick = { onShareHidden(current) },
-                            )
-                            GlassIconButton(
-                                backdrop = backdrop,
-                                icon = LumenIcons.Info,
-                                contentDescription = stringResource(R.string.common_details),
-                                onClick = motion::openInfo,
-                            )
-                            GlassIconButton(
-                                backdrop = backdrop,
-                                icon = LumenIcons.Unhide,
-                                contentDescription = stringResource(R.string.common_unhide),
-                                onClick = { onUnhide(current) },
-                            )
-                            GlassIconButton(
-                                backdrop = backdrop,
-                                icon = LumenIcons.DeleteForever,
-                                contentDescription = stringResource(R.string.viewer_delete_permanently),
-                                tint = Color(0xFFFF453A),
-                                onClick = { onDeleteHidden(current) },
-                            )
-                        } else if (inTrash) {
-                            GlassIconButton(
-                                backdrop = backdrop,
-                                icon = LumenIcons.Restore,
-                                contentDescription = stringResource(R.string.common_restore),
-                                onClick = { launch(MediaActions.restoreRequest(context, current)) },
-                            )
-                            GlassIconButton(
-                                backdrop = backdrop,
-                                icon = LumenIcons.DeleteForever,
-                                contentDescription = stringResource(R.string.viewer_delete_forever),
-                                tint = Color(0xFFFF453A),
-                                onClick = { onConfirmDelete(current, true) { launch(MediaActions.deleteForeverRequest(context, current)) } },
-                            )
-                        } else {
-                            GlassIconButton(
-                                backdrop = backdrop,
-                                icon = LumenIcons.Share,
-                                contentDescription = stringResource(R.string.common_share),
-                                onClick = { MediaActions.share(context, current) },
-                            )
-                            GlassIconButton(
-                                backdrop = backdrop,
-                                icon = if (current.isFavorite) LumenIcons.HeartFilled else LumenIcons.Heart,
-                                contentDescription = stringResource(R.string.common_favorite),
-                                tint = if (current.isFavorite) Color(0xFFFF375F) else LocalGlassColors.current.content,
-                                onClick = {
-                                    haptics.performHapticFeedback(
-                                        if (current.isFavorite) HapticFeedbackType.ToggleOff else HapticFeedbackType.ToggleOn,
-                                    )
-                                    if (MediaActions.setFavoriteDirectly(context, listOf(current), !current.isFavorite)) onMediaChanged()
-                                    else launch(MediaActions.favoriteRequest(context, current))
-                                },
-                            )
-                            GlassIconButton(
-                                backdrop = backdrop,
-                                icon = LumenIcons.Info,
-                                contentDescription = stringResource(R.string.common_details),
-                                onClick = motion::openInfo,
-                            )
-                            GlassIconButton(
-                                backdrop = backdrop,
-                                icon = LumenIcons.Delete,
-                                contentDescription = stringResource(R.string.common_delete),
-                                onClick = { onConfirmDelete(current, false) { launch(MediaActions.trashRequest(context, current)) } },
-                            )
+                        if (current.isVideo) {
+                            if (speechReady) {
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                                    CaptionsButton(backdrop, on = captions, onClick = { captions = !captions })
+                                }
+                                Spacer(Modifier.height(8.dp))
+                            }
+                            if (player != null) VideoControls(backdrop, player)
+                            Spacer(Modifier.height(12.dp))
+                        }
+                        if (items.size > 1 && !external && filmStrip != FilmStripSize.Off) {
+                            FilmStrip(items, pager, filmStrip.heightDp.dp)
+                            Spacer(Modifier.height(12.dp))
+                        }
+                        val launch = { sender: android.content.IntentSender ->
+                            playingBeforeRequest = player?.isPlaying == true
+                            requestLauncher.launch(IntentSenderRequest.Builder(sender).build())
+                        }
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            if (external) {
+                                GlassIconButton(
+                                    backdrop = backdrop,
+                                    icon = LumenIcons.Share,
+                                    contentDescription = stringResource(R.string.common_share),
+                                    onClick = { MediaActions.share(context, current) },
+                                )
+                                GlassIconButton(
+                                    backdrop = backdrop,
+                                    icon = LumenIcons.Info,
+                                    contentDescription = stringResource(R.string.common_details),
+                                    onClick = motion::openInfo,
+                                )
+                            } else if (inHidden) {
+                                GlassIconButton(
+                                    backdrop = backdrop,
+                                    icon = LumenIcons.Share,
+                                    contentDescription = stringResource(R.string.common_share),
+                                    onClick = { onShareHidden(current) },
+                                )
+                                GlassIconButton(
+                                    backdrop = backdrop,
+                                    icon = LumenIcons.Info,
+                                    contentDescription = stringResource(R.string.common_details),
+                                    onClick = motion::openInfo,
+                                )
+                                GlassIconButton(
+                                    backdrop = backdrop,
+                                    icon = LumenIcons.Unhide,
+                                    contentDescription = stringResource(R.string.common_unhide),
+                                    onClick = { onUnhide(current) },
+                                )
+                                GlassIconButton(
+                                    backdrop = backdrop,
+                                    icon = LumenIcons.DeleteForever,
+                                    contentDescription = stringResource(R.string.viewer_delete_permanently),
+                                    tint = Color(0xFFFF453A),
+                                    onClick = { onDeleteHidden(current) },
+                                )
+                            } else if (inTrash) {
+                                GlassIconButton(
+                                    backdrop = backdrop,
+                                    icon = LumenIcons.Restore,
+                                    contentDescription = stringResource(R.string.common_restore),
+                                    onClick = { launch(MediaActions.restoreRequest(context, current)) },
+                                )
+                                GlassIconButton(
+                                    backdrop = backdrop,
+                                    icon = LumenIcons.DeleteForever,
+                                    contentDescription = stringResource(R.string.viewer_delete_forever),
+                                    tint = Color(0xFFFF453A),
+                                    onClick = { onConfirmDelete(current, true) { launch(MediaActions.deleteForeverRequest(context, current)) } },
+                                )
+                            } else {
+                                GlassIconButton(
+                                    backdrop = backdrop,
+                                    icon = LumenIcons.Share,
+                                    contentDescription = stringResource(R.string.common_share),
+                                    onClick = { MediaActions.share(context, current) },
+                                )
+                                GlassIconButton(
+                                    backdrop = backdrop,
+                                    icon = if (current.isFavorite) LumenIcons.HeartFilled else LumenIcons.Heart,
+                                    contentDescription = stringResource(R.string.common_favorite),
+                                    tint = if (current.isFavorite) Color(0xFFFF375F) else LocalGlassColors.current.content,
+                                    onClick = {
+                                        haptics.performHapticFeedback(
+                                            if (current.isFavorite) HapticFeedbackType.ToggleOff else HapticFeedbackType.ToggleOn,
+                                        )
+                                        if (MediaActions.setFavoriteDirectly(context, listOf(current), !current.isFavorite)) onMediaChanged()
+                                        else launch(MediaActions.favoriteRequest(context, current))
+                                    },
+                                )
+                                GlassIconButton(
+                                    backdrop = backdrop,
+                                    icon = LumenIcons.Info,
+                                    contentDescription = stringResource(R.string.common_details),
+                                    onClick = motion::openInfo,
+                                )
+                                GlassIconButton(
+                                    backdrop = backdrop,
+                                    icon = LumenIcons.Delete,
+                                    contentDescription = stringResource(R.string.common_delete),
+                                    onClick = { onConfirmDelete(current, false) { launch(MediaActions.trashRequest(context, current)) } },
+                                )
+                            }
                         }
                     }
                 }
@@ -970,7 +973,7 @@ private fun TopBar(
         }
         // Plain text like iOS, not a glass capsule. A soft glow in the background color keeps it
         // readable where a tall photo runs up behind it.
-        val glow = Shadow(color = MaterialTheme.colorScheme.background.copy(alpha = 0.7f), blurRadius = 10f)
+        val glow = Shadow(color = MaterialTheme.colorScheme.background.copy(alpha = 0.95f), blurRadius = 14f)
         Column(
             Modifier.align(Alignment.Center),
             horizontalAlignment = Alignment.CenterHorizontally,

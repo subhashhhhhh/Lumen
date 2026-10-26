@@ -10,7 +10,13 @@ import com.subhashh.lumen.data.HiddenMedia
 import com.subhashh.lumen.data.LumenPrefs
 import com.subhashh.lumen.data.MediaItem
 import com.subhashh.lumen.data.MediaRepository
+import android.database.ContentObserver
+import android.os.Handler
+import android.os.Looper
+import android.provider.MediaStore
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -39,6 +45,39 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
 
     private val _trash = MutableStateFlow<List<MediaItem>>(emptyList())
     val trash: StateFlow<List<MediaItem>> = _trash.asStateFlow()
+
+    private var reload: Job? = null
+    private var watching = false
+    private val mediaObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
+        override fun onChange(selfChange: Boolean) {
+            // A burst of changes (the camera's pending file, then the saved one) is one reload.
+            reload?.cancel()
+            reload = viewModelScope.launch {
+                delay(500)
+                refresh()
+            }
+        }
+    }
+
+    /**
+     * Reloads when MediaStore changes, while [on]: new photos and screenshots appear while Lumen is
+     * on screen (a screenshot doesn't pause it), and a camera that finishes saving after Lumen came
+     * back (#7). Off while Lumen isn't shown; coming back reloads anyway.
+     */
+    fun watchMedia(on: Boolean) {
+        if (on == watching) return
+        watching = on
+        val resolver = getApplication<Application>().contentResolver
+        if (on) {
+            resolver.registerContentObserver(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, true, mediaObserver)
+            resolver.registerContentObserver(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, true, mediaObserver)
+        } else {
+            resolver.unregisterContentObserver(mediaObserver)
+            reload?.cancel()
+        }
+    }
+
+    override fun onCleared() = watchMedia(false)
 
     fun refresh() {
         viewModelScope.launch {

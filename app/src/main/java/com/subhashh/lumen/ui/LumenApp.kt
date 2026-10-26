@@ -164,6 +164,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.ImageLoader
 import coil3.compose.setSingletonImageLoaderFactory
@@ -237,6 +238,11 @@ fun LumenApp(
         hasAccess = context.hasMediaAccess()
         if (hasAccess) viewModel.refresh()
         onPauseOrDispose { }
+    }
+
+    LifecycleStartEffect(hasAccess) {
+        viewModel.watchMedia(hasAccess)
+        onStopOrDispose { viewModel.watchMedia(false) }
     }
 
     // First launch: onboarding. Someone who already had access before onboarding existed has
