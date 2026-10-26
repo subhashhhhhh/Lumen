@@ -1,5 +1,5 @@
 [versions]
-lumenAi = "0.1.0"
+lumenAi = "0.1.1"
 testRunner = "1.7.0"
 orgJson = "20260814"
 avifCoder = "3.0.0"
