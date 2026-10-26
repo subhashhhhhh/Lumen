@@ -211,4 +211,24 @@
     </plurals>
     <string name="main_delete_hidden_message">Los elementos ocultos no se pueden mover a «Eliminados recientemente», por lo que se eliminarán permanentemente.</string>
     <string name="main_deleted">Eliminado</string>
+    <string name="main_delete_failed">No se pudieron eliminar %1$d de %2$d elementos</string>
+    <string name="main_excluded_name">Se excluyó \"%1$s\". Puedes deshacerlo en Ajustes → Carpetas excluidas</string>
+    <plurals name="main_excluded_folders">
+        <item quantity="one">Se excluyó %1$d carpeta. Puedes deshacerlo en Ajustes → Carpetas excluidas</item>
+        <item quantity="many">Se excluyeron %1$d carpetas. Puedes deshacerlo en Ajustes → Carpetas excluidas</item>
+        <item quantity="other">Se excluyeron %1$d carpetas. Puedes deshacerlo en Ajustes → Carpetas excluidas</item>
+    </plurals>
+    <string name="main_rotating">Rotando…</string>
+    <string name="main_rotate_failed">No se pudieron rotar %1$d de %2$d elementos</string>
+    <string name="main_merge_with_ellipsis">Combinar con…</string>
+    <string name="main_select_people">Seleccionar Personas</string>
+    <plurals name="main_n_selected">
+        <item quantity="one">%1$d seleccionado</item>
+        <item quantity="many">%1$d seleccionados</item>
+        <item quantity="other">%1$d seleccionados</item>
+    </plurals>
+    <string name="main_this_person">esta persona</string>
+    <string name="main_the_person_you_chose">la persona que elegiste</string>
+    <string name="main_merge_people_title">¿Combinar Personas?</string>
+    <string name="main_merge_people_message_named">Las fotos de %1$s y %2$s se mostrarán como una sola persona, con el nombre %3$s.</string>
 </resources>
