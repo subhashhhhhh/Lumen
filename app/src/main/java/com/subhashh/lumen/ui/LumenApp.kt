@@ -486,6 +486,10 @@ private fun MainScaffold(
     var mergeFrom by rememberSaveable { mutableStateOf<Long?>(null) }
     var showHiddenPeople by rememberSaveable { mutableStateOf(false) }
     var personNameRequest by remember { mutableStateOf<com.subhashh.lumen.ai.Person?>(null) }
+    /** The name request is for a face just made into a person ([com.subhashh.lumen.ai.FaceStore.startPerson]). */
+    var faceStarted by remember { mutableStateOf<Long?>(null) }
+    /** After naming a face, grouping gathers that person's other faces that match (in the background). */
+    val regroup = { scope.launch(Dispatchers.IO) { runCatching { com.subhashh.lumen.ai.FaceGrouping.run(com.subhashh.lumen.ai.FaceStore.of(context)) } } }
     /** A name that another person already has: merge them, or keep both with it. */
     var mergeProposal by remember { mutableStateOf<MergeProposal?>(null) }
     var personMenuOpen by remember { mutableStateOf(false) }
@@ -2325,6 +2329,13 @@ private fun MainScaffold(
                     searchQuery = query
                     searching = true
                 },
+                onNameFace = { item, face ->
+                    scope.launch {
+                        val person = withContext(Dispatchers.IO) { com.subhashh.lumen.ai.FaceStore.of(context).startPerson(face, item.id) }
+                        faceStarted = person.id
+                        personNameRequest = person
+                    }
+                },
                 onOpenPerson = open@{ person ->
                     // That person's page over the viewer, its face growing into the header. The
                     // viewer waits underneath (parked) for Back, from wherever it was opened.
@@ -2573,13 +2584,21 @@ private fun MainScaffold(
                 val person = personNameRequest
                 personNameRequest = null
                 personNameSuggestion = null
+                val started = faceStarted != null
+                faceStarted = null
                 val proposal = person?.let { mergeProposalFor(it, name, allPeople) }
                 if (proposal != null) mergeProposal = proposal
-                else if (person != null) scope.launch(Dispatchers.IO) { com.subhashh.lumen.ai.FaceStore.of(context).rename(person.id, name) }
+                else if (person != null) scope.launch(Dispatchers.IO) {
+                    com.subhashh.lumen.ai.FaceStore.of(context).rename(person.id, name)
+                    if (started) regroup()
+                }
             },
             onDismiss = {
                 personNameRequest = null
                 personNameSuggestion = null
+                // A face made into a person only to be named, and not named after all: it waits again.
+                faceStarted?.let { id -> scope.launch(Dispatchers.IO) { com.subhashh.lumen.ai.FaceStore.of(context).unstartPerson(id) } }
+                faceStarted = null
             },
         )
         MergePeopleDialog(
@@ -2588,7 +2607,10 @@ private fun MainScaffold(
                 mergeProposal = null
                 // Its page becomes the merged person's.
                 if (openCollection == CollectionKeys.person(p.person.id)) openCollection = CollectionKeys.person(p.match.id)
-                scope.launch(Dispatchers.IO) { com.subhashh.lumen.ai.FaceStore.of(context).merge(keep = p.match.id, gone = p.person.id) }
+                scope.launch(Dispatchers.IO) {
+                    com.subhashh.lumen.ai.FaceStore.of(context).merge(keep = p.match.id, gone = p.person.id)
+                    regroup()
+                }
             },
             onKeepSeparate = { p ->
                 mergeProposal = null

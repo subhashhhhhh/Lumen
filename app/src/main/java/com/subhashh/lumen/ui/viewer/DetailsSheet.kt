@@ -76,6 +76,7 @@ import com.subhashh.lumen.data.PlaceLookup
 import com.subhashh.lumen.data.RawExtensions
 import com.subhashh.lumen.data.VideoInfo
 import com.subhashh.lumen.ai.FaceStore
+import androidx.compose.runtime.collectAsState
 import com.subhashh.lumen.ai.Person
 import com.subhashh.lumen.data.isRaw
 import com.subhashh.lumen.ui.components.glass
@@ -119,6 +120,8 @@ fun DetailsSheet(
     locationRefresh: Int,
     people: List<Pair<Person, MediaItem>>,
     onOpenPerson: (Person) -> Unit,
+    /** A face that has no person yet was tapped: name them. */
+    onNameFace: (MediaItem, com.subhashh.lumen.ai.FaceIn) -> Unit,
     /** Lets a face grow into its person's page (and land back here on the way back). */
     coverTransition: com.subhashh.lumen.ui.transition.CoverTransition? = null,
     /** Settings → Photos & Videos → Maps: a map of the spot; off, its name and coordinates only. */
@@ -144,13 +147,17 @@ fun DetailsSheet(
     val details by produceState<MediaDetails?>(null, item.id, locationRefresh) {
         value = MediaDetailsLoader.load(context, item)
     }
-    val inPhoto by produceState(emptyList<Pair<Long, Long?>>(), item.id) {
-        value = withContext(Dispatchers.IO) { runCatching { FaceStore.of(context).peopleIn(item.id) }.getOrDefault(emptyList()) }
+    // Every face here, read again when faces change (one was just named).
+    val faceVersion by FaceStore.changes.collectAsState()
+    val inPhoto by produceState(emptyList<com.subhashh.lumen.ai.FaceIn>(), item.id, faceVersion) {
+        value = withContext(Dispatchers.IO) { runCatching { FaceStore.of(context).facesIn(item.id) }.getOrDefault(emptyList()) }
     }
     val shown = remember(inPhoto, people) {
         val byId = people.associateBy { it.first.id }
-        inPhoto.mapNotNull { (id, _) -> byId[id] }.filterNot { it.first.hidden }
+        inPhoto.mapNotNull { it.person }.distinct().mapNotNull { byId[it] }.filterNot { it.first.hidden }
     }
+    /** Faces grouping couldn't place yet: shown so they can be named. */
+    val waiting = remember(inPhoto) { inPhoto.filter { it.person == null } }
     // Their pages' header photos, ready before a tap, so the face flies the moment it's touched.
     LaunchedEffect(shown) {
         if (coverTransition == null) return@LaunchedEffect
@@ -197,7 +204,7 @@ fun DetailsSheet(
         CaptionRow(caption, colors) { onEditCaption(item, caption) }
         Spacer(Modifier.height(14.dp))
 
-        if (shown.isNotEmpty()) {
+        if (shown.isNotEmpty() || waiting.isNotEmpty()) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(14.dp),
                 modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 4.dp),
@@ -224,6 +231,33 @@ fun DetailsSheet(
                             fontSize = 13.sp,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(top = 4.dp),
+                        )
+                    }
+                }
+                for (face in waiting) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .width(98.dp)
+                            .pressable({ onNameFace(item, face) }, pressedScale = 0.94f),
+                    ) {
+                        if (face.atMs != null) {
+                            // A video's face: the crop saved while indexing (its thumbnail may not show them).
+                            coil3.compose.AsyncImage(
+                                model = remember(face.id) { FaceStore.cropFile(context, face.id) },
+                                contentDescription = null,
+                                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                                modifier = Modifier.size(90.dp).clip(CircleShape),
+                            )
+                        } else {
+                            FaceAvatar(item, face.box, Modifier.size(90.dp))
+                        }
+                        Text(
+                            stringResource(R.string.main_add_name),
+                            color = colors.secondary,
+                            fontSize = 13.sp,
+                            maxLines = 1,
                             modifier = Modifier.padding(top = 4.dp),
                         )
                     }

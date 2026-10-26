@@ -182,6 +182,7 @@ fun ViewerScreen(
     /** Everyone Faces found, with cover photos: the details sheet shows who's in this one. */
     people: List<Pair<com.subhashh.lumen.ai.Person, MediaItem>> = emptyList(),
     onOpenPerson: (com.subhashh.lumen.ai.Person) -> Unit = {},
+    onNameFace: (MediaItem, com.subhashh.lumen.ai.FaceIn) -> Unit = { _, _ -> },
     /** Live Text's Search: look for the selected words in Lumen. */
     onSearchText: (String) -> Unit = {},
     /** Faces in the details sheet grow into their person's page. */
@@ -745,6 +746,7 @@ fun ViewerScreen(
                 locationRefresh = locationRefresh,
                 people = people,
                 onOpenPerson = onOpenPerson,
+                onNameFace = onNameFace,
                 coverTransition = coverTransition,
                 onRename = onRename,
                 onAdjustDate = onAdjustDate,
