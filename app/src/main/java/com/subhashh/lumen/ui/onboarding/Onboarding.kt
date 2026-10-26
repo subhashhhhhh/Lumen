@@ -284,6 +284,9 @@ private fun ColumnScope.Photos(backdrop: Backdrop, hasAccess: Boolean, onRequest
     }
     val allFiles = remember(refresh) { Environment.isExternalStorageManager() }
     val manage = remember(refresh) { Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && MediaStore.canManageMedia(context) }
+    val unrestricted = remember(refresh) {
+        context.getSystemService(android.os.PowerManager::class.java).isIgnoringBatteryOptimizations(context.packageName)
+    }
     val askLocation = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { refresh++ }
 
     Title(stringResource(R.string.onboarding_photos_title), stringResource(R.string.onboarding_photos_subtitle))
@@ -305,6 +308,13 @@ private fun ColumnScope.Photos(backdrop: Backdrop, hasAccess: Boolean, onRequest
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 Item(LumenIcons.Delete, stringResource(R.string.onboarding_media_management), stringResource(R.string.onboarding_media_management_detail)) {
                     Toggle(manage) { context.openSpecial(Settings.ACTION_REQUEST_MANAGE_MEDIA) }
+                }
+            }
+            Item(LumenIcons.Timer, stringResource(R.string.onboarding_unrestricted_battery), stringResource(R.string.onboarding_unrestricted_battery_detail)) {
+                Toggle(unrestricted) {
+                    context.openSpecial(
+                        if (unrestricted) Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS else Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                    )
                 }
             }
         }
@@ -442,8 +452,8 @@ private fun ColumnScope.Smart(backdrop: Backdrop, onNext: (downloading: Boolean)
                 }
             }
             Item(LumenIcons.Document, stringResource(R.string.onboarding_text), stringResource(R.string.onboarding_text_detail, megabytes(OcrModel.bytes))) { Switch(text, { text = it }) }
-            Item(LumenIcons.Image, stringResource(R.string.onboarding_faces), stringResource(R.string.onboarding_faces_detail, megabytes(FaceModel.bytes))) { Switch(faces, { faces = it }) }
-            Item(LumenIcons.Video, stringResource(R.string.onboarding_subtitles), stringResource(R.string.onboarding_subtitles_detail, megabytes(SpeechModel.bytes))) { Switch(subtitles, { subtitles = it }) }
+            Item(LumenIcons.Face, stringResource(R.string.onboarding_faces), stringResource(R.string.onboarding_faces_detail, megabytes(FaceModel.bytes))) { Switch(faces, { faces = it }) }
+            Item(LumenIcons.Subtitles, stringResource(R.string.onboarding_subtitles), stringResource(R.string.onboarding_subtitles_detail, megabytes(SpeechModel.bytes))) { Switch(subtitles, { subtitles = it }) }
         }
         Spacer(Modifier.height(12.dp))
         Card(backdrop) {

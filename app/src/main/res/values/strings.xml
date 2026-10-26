@@ -977,6 +977,8 @@
     <string name="onboarding_all_files_detail">Manage folders and hidden files, like Fossify</string>
     <string name="onboarding_media_management">Media Management</string>
     <string name="onboarding_media_management_detail">Delete and favourite without asking each time</string>
+    <string name="onboarding_unrestricted_battery">Unrestricted Battery</string>
+    <string name="onboarding_unrestricted_battery_detail">Keep indexing after you leave Lumen</string>
     <string name="onboarding_allow_access">Allow Access</string>
 
     <!-- Onboarding: appearance -->
