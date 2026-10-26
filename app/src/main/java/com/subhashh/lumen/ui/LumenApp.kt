@@ -2513,6 +2513,10 @@ private fun MainScaffold(
                 }
             }
         }
+        // Hidden on screen (its grid, a folder, or the viewer opened from it): no screenshots unless allowed.
+        com.subhashh.lumen.ui.hidden.SecureWhile(
+            hiddenUnlocked && (CollectionKeys.isHidden(openCollection) || CollectionKeys.isHidden(viewerSource)) && !prefs.hiddenScreenshots,
+        )
         com.subhashh.lumen.ui.components.StarRequest(
             prefs,
             canShow = announce == null && confirmation == null && !viewerOpen && !selecting && settingsPage == null && pick == null,

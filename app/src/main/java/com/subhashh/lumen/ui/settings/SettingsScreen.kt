@@ -122,6 +122,7 @@ private val Entries = listOf(
     SettingEntry("lock-after", R.string.settings_lock_after, SettingsCategory.Privacy, R.string.settings_kw_lock_after),
     SettingEntry("hidden", R.string.settings_hidden, SettingsCategory.Privacy, R.string.settings_kw_hidden),
     SettingEntry("encrypt", R.string.settings_encrypt_hidden, SettingsCategory.Privacy, R.string.settings_kw_encrypt),
+    SettingEntry("hidden-screenshots", R.string.settings_hidden_screenshots, SettingsCategory.Privacy, R.string.settings_kw_hidden_screenshots),
     SettingEntry("search-quality", R.string.settings_entry_search_quality, SettingsCategory.SmartSearch, R.string.settings_kw_search_quality),
     SettingEntry("search-model", R.string.settings_entry_search_model, SettingsCategory.SmartSearch, R.string.settings_kw_search_model),
     SettingEntry("indexed", R.string.settings_entry_indexed, SettingsCategory.SmartSearch, R.string.settings_kw_indexed),
@@ -735,6 +736,21 @@ private fun ColumnScope.PrivacyPage(
                 onCheckedChange = onToggleEncryptHidden,
                 icon = LumenIcons.Shield,
                 iconColor = Green,
+            )
+        }
+        Divider()
+        var screenshots by remember { mutableStateOf(prefs.hiddenScreenshots) }
+        Anchor("hidden-screenshots", highlight) {
+            ToggleRow(
+                title = stringResource(R.string.settings_hidden_screenshots),
+                subtitle = stringResource(R.string.settings_hidden_screenshots_subtitle),
+                checked = screenshots,
+                onCheckedChange = {
+                    screenshots = it
+                    prefs.hiddenScreenshots = it
+                },
+                icon = LumenIcons.Image,
+                iconColor = Indigo,
             )
         }
     }

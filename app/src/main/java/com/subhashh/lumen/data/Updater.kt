@@ -27,7 +27,15 @@ object Updater {
     const val RepoUrl = "https://github.com/subhashhhhhh/Lumen"
     private const val LatestApi = "https://api.github.com/repos/subhashhhhhh/Lumen/releases/latest"
 
-    class Release(val version: String, val notes: String, val apkUrl: String, val apkBytes: Long, val pageUrl: String)
+    class Release(
+        val version: String,
+        val notes: String,
+        val apkUrl: String,
+        val apkBytes: Long,
+        val pageUrl: String,
+        /** The APK's SHA-256 (hex) as GitHub reports it; the download must match. Null if GitHub gave none. */
+        val apkSha256: String? = null,
+    )
 
     sealed interface Check {
         data object UpToDate : Check
@@ -72,6 +80,7 @@ object Updater {
                         apkUrl = apk.getString("browser_download_url"),
                         apkBytes = apk.optLong("size"),
                         pageUrl = json.optString("html_url", RepoUrl),
+                        apkSha256 = apk.optString("digest").takeIf { it.startsWith("sha256:") }?.removePrefix("sha256:")?.lowercase(),
                     ),
                 )
             } finally {
@@ -123,7 +132,25 @@ object Updater {
         } finally {
             connection.disconnect()
         }
+        // A cut-off or altered download stops here, before the installer sees it.
+        if (release.apkSha256 != null && sha256(file) != release.apkSha256) {
+            file.delete()
+            throw java.io.IOException("The download doesn't match the release's checksum")
+        }
         file
+    }
+
+    private fun sha256(file: File): String {
+        val digest = java.security.MessageDigest.getInstance("SHA-256")
+        file.inputStream().use { input ->
+            val buffer = ByteArray(64 * 1024)
+            while (true) {
+                val n = input.read(buffer)
+                if (n < 0) break
+                digest.update(buffer, 0, n)
+            }
+        }
+        return digest.digest().joinToString("") { "%02x".format(it) }
     }
 
     /** True when [apk] is Lumen, signed with the same key as this install. */
@@ -133,8 +160,11 @@ object Updater {
         val theirs = pm.getPackageArchiveInfo(apk.path, flags) ?: return false
         if (theirs.packageName != context.packageName) return false
         val ours = pm.getPackageInfo(context.packageName, flags)
-        val a = ours.signingInfo?.apkContentsSigners?.map { it.toByteArray().contentHashCode() }?.toSet() ?: return false
-        val b = theirs.signingInfo?.apkContentsSigners?.map { it.toByteArray().contentHashCode() }?.toSet() ?: return false
+        // Each signing certificate by its SHA-256, the same fingerprint the release notes publish.
+        fun fingerprints(signers: Array<android.content.pm.Signature>?) =
+            signers?.map { java.security.MessageDigest.getInstance("SHA-256").digest(it.toByteArray()).toList() }?.toSet()
+        val a = fingerprints(ours.signingInfo?.apkContentsSigners) ?: return false
+        val b = fingerprints(theirs.signingInfo?.apkContentsSigners) ?: return false
         return a.isNotEmpty() && a == b
     }
 

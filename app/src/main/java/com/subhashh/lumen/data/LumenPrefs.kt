@@ -278,6 +278,11 @@ class LumenPrefs(context: Context) {
         get() = prefs.getBoolean(KeyPeopleSquare, false)
         set(value) = prefs.edit { putBoolean(KeyPeopleSquare, value) }
 
+    /** Settings → Privacy → Hidden → Allow Screenshots: off blocks screenshots and recordings of Hidden. */
+    var hiddenScreenshots: Boolean
+        get() = prefs.getBoolean(KeyHiddenScreenshots, false)
+        set(value) = prefs.edit { putBoolean(KeyHiddenScreenshots, value) }
+
     /** Settings → Privacy → App Lock: Lumen asks for its lock when opened. */
     var appLock: Boolean
         get() = prefs.getBoolean(KeyAppLock, false)
@@ -316,6 +321,7 @@ class LumenPrefs(context: Context) {
         const val KeyFirstDayUsed = "first_day_used"
         const val KeyLastDayUsed = "last_day_used"
         const val KeyStarAsked = "star_asked"
+        const val KeyHiddenScreenshots = "hidden_screenshots"
         const val KeyIndexScheduleOn = "index_schedule_on"
         const val KeyIndexScheduleStart = "index_schedule_start"
         const val KeyIndexScheduleEnd = "index_schedule_end"

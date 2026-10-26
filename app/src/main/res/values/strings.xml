@@ -596,6 +596,9 @@
     <string name="settings_hidden_subtitle">Out of your library and most apps, locked in Lumen</string>
     <string name="settings_encrypt_hidden">Encrypt Hidden</string>
     <string name="settings_encrypt_hidden_subtitle">So no other app or file manager can see them</string>
+    <string name="settings_hidden_screenshots">Allow Screenshots</string>
+    <string name="settings_hidden_screenshots_subtitle">Off: Hidden can’t be screenshotted or recorded, and is blank in recent apps</string>
+    <string name="settings_kw_hidden_screenshots">screenshot screen recording recents secure hidden privacy</string>
 
     <!-- Settings: Permissions -->
     <string name="settings_group_android_permissions">Android Permissions</string>

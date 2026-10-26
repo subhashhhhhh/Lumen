@@ -143,7 +143,7 @@ object MediaFiles {
 
     private fun rotateExif(context: Context, item: MediaItem, degrees: Int) {
         context.contentResolver.openFileDescriptor(item.uri, "rw").use { pfd ->
-            val exif = ExifInterface(pfd!!.fileDescriptor)
+            val exif = ExifInterface(checkNotNull(pfd) { "Couldn't open ${item.name}" }.fileDescriptor)
             // Many files carry 0 ("undefined"), which ExifInterface.rotate() leaves untouched:
             // the file was rewritten but the photo never turned. Treat it as upright instead.
             val current = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
@@ -183,7 +183,7 @@ object MediaFiles {
             check(rotated.compress(format, 100, out))
             out.toByteArray()
         }
-        resolver.openOutputStream(item.uri, "rwt").use { it!!.write(bytes) }
+        resolver.openOutputStream(item.uri, "rwt").use { checkNotNull(it) { "Couldn't write ${item.name}" }.write(bytes) }
         source.recycle()
         rotated.recycle()
     }
@@ -201,7 +201,7 @@ object MediaFiles {
         val temp = File.createTempFile("rotate", ".mp4", context.cacheDir)
         try {
             val extractor = MediaExtractor()
-            resolver.openFileDescriptor(item.uri, "r").use { pfd -> extractor.setDataSource(pfd!!.fileDescriptor) }
+            resolver.openFileDescriptor(item.uri, "r").use { pfd -> extractor.setDataSource(checkNotNull(pfd) { "Couldn't open ${item.name}" }.fileDescriptor) }
             val muxer = MediaMuxer(temp.absolutePath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
             muxer.setOrientationHint((current + degrees) % 360)
             val trackMap = HashMap<Int, Int>()
@@ -230,7 +230,7 @@ object MediaFiles {
             muxer.stop()
             muxer.release()
             extractor.release()
-            resolver.openOutputStream(item.uri, "rwt").use { out -> temp.inputStream().use { it.copyTo(out!!) } }
+            resolver.openOutputStream(item.uri, "rwt").use { out -> temp.inputStream().use { it.copyTo(checkNotNull(out) { "Couldn't write ${item.name}" }) } }
         } finally {
             temp.delete()
         }
