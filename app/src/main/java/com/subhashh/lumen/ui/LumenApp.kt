@@ -2535,6 +2535,7 @@ private fun MainScaffold(
             title = stringResource(if (personNameRequest?.name == null) R.string.main_add_name else R.string.common_rename),
             confirm = stringResource(R.string.common_done),
             keepExtension = false,
+            acceptUnchanged = personNameRequest?.name == null,
             onRename = { name ->
                 val person = personNameRequest
                 personNameRequest = null

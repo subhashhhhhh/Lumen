@@ -65,6 +65,8 @@ fun RenameDialog(
     keepExtension: Boolean = true,
     /** Any text, "/" included, and blank to clear (captions); names must be non-blank, no "/". */
     freeText: Boolean = false,
+    /** A suggested name (a new person's, from search) can be accepted as it stands. */
+    acceptUnchanged: Boolean = false,
 ) {
     val open = currentName != null
     BackHandler(enabled = open, onBack = onDismiss)
@@ -91,7 +93,7 @@ fun RenameDialog(
         val card = if (dark) Color(0xFF2C2C2E) else Color.White
         val text = if (dark) Color.White else Color.Black
         val secondary = if (dark) Color(0x99EBEBF5) else Color(0x993C3C43)
-        val valid = field.text != base && (freeText || (field.text.isNotBlank() && '/' !in field.text))
+        val valid = (acceptUnchanged || field.text != base) && (freeText || (field.text.isNotBlank() && '/' !in field.text))
         val submit = { if (valid) onRename(field.text.trim() + ext) }
 
         Box(Modifier.fillMaxSize().imePadding(), contentAlignment = Alignment.Center) {
