@@ -66,12 +66,27 @@ object Vault {
         synchronized(listed) { listed.clear() }
     }
 
+    /**
+     * The recovery file's slow rewrites (a new lock, the Argon2id upgrade), one at a time and in
+     * the order asked: changing the lock sends the old secret, then the new one.
+     */
+    val keyWork = kotlinx.coroutines.Dispatchers.IO.limitedParallelism(1)
+
     /** A new, empty vault sealed with [secret]; open afterwards. */
+    @Synchronized
     fun create(context: Context, secret: String) {
         key = keys(context).create(secret)
     }
 
+    /** The user entered their lock: an older recovery copy is rewritten with Argon2id (slow: not on Main). */
+    @Synchronized
+    fun upgradeRecovery(context: Context, secret: String) {
+        val keys = keys(context)
+        if (keys.exists) keys.upgradeIfNeeded(secret)
+    }
+
     /** The Lumen lock changed: reseal the recovery copy with the new one. */
+    @Synchronized
     fun changeSecret(context: Context, newSecret: String) {
         val keys = keys(context)
         if (!keys.exists) return

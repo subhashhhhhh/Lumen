@@ -1,5 +1,6 @@
 [versions]
 lumenAi = "0.1.1"
+bouncyCastle = "1.86"
 testRunner = "1.7.0"
 orgJson = "20260814"
 avifCoder = "3.0.0"
@@ -33,6 +34,7 @@ work = "2.12.0"
 maplibre = "13.7.1"
 
 [libraries]
+bouncycastle-prov = { module = "org.bouncycastle:bcprov-jdk18on", version.ref = "bouncyCastle" }
 lumen-ai = { module = "app.lumen-photos:lumen-ai", version.ref = "lumenAi" }
 maplibre-android = { module = "org.maplibre.gl:android-sdk-opengl", version.ref = "maplibre" }
 litert = { module = "com.google.ai.edge.litert:litert", version.ref = "litert" }

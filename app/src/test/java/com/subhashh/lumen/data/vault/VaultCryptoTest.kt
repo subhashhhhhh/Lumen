@@ -2,6 +2,7 @@ package com.subhashh.lumen.data.vault
 
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
@@ -99,10 +100,19 @@ class VaultCryptoTest {
 
     @Test
     fun recoveryFileOpensOnlyWithTheRightLock() {
-        val text = VaultKeyFile.write(key, "1234", iterations = 1_000)
+        val text = VaultKeyFile.write(key, "1234", memoryKiB = 1024, passes = 1)
         assertArrayEquals(key.encoded, VaultKeyFile.read(text, "1234")!!.encoded)
         assertNull(VaultKeyFile.read(text, "1235"))
         assertNull(VaultKeyFile.read("not json", "1234"))
+        assertTrue(VaultKeyFile.isCurrent(text))
+    }
+
+    @Test
+    fun oldRecoveryFileStillOpensAndAsksForUpgrade() {
+        val text = VaultKeyFile.writePbkdf2(key, "1234", iterations = 1_000)
+        assertArrayEquals(key.encoded, VaultKeyFile.read(text, "1234")!!.encoded)
+        assertNull(VaultKeyFile.read(text, "1235"))
+        assertFalse(VaultKeyFile.isCurrent(text))
     }
 
     private fun assertFails(block: () -> Unit) {

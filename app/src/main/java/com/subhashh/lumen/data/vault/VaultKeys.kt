@@ -60,6 +60,17 @@ class VaultKeys(
         return masterKey
     }
 
+    /**
+     * The recovery copy in an older format (PBKDF2) is rewritten with Argon2id, once the user has
+     * entered their lock ([secret]). Nothing to do if it's current, or if [secret] doesn't open it.
+     */
+    fun upgradeIfNeeded(secret: String) {
+        val text = runCatching { recoveryFile.readText() }.getOrNull() ?: return
+        if (VaultKeyFile.isCurrent(text)) return
+        val masterKey = VaultKeyFile.read(text, secret) ?: return
+        writeAtomically(recoveryFile, VaultKeyFile.write(masterKey, secret))
+    }
+
     /** The lock changed: reseal the recovery copy with the new one. */
     fun changeSecret(masterKey: SecretKey, newSecret: String) {
         writeAtomically(recoveryFile, VaultKeyFile.write(masterKey, newSecret))

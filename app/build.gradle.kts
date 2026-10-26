@@ -140,6 +140,8 @@ dependencies {
     implementation(libs.androidx.profileinstaller)
     baselineProfile(project(":baselineprofile"))
     implementation(libs.androidx.core.ktx)
+    // Argon2id for the Hidden vault's recovery file (MIT-style Bouncy Castle licence).
+    implementation(libs.bouncycastle.prov)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.exifinterface)
     implementation(libs.androidx.print)

@@ -2455,8 +2455,15 @@ private fun MainScaffold(
                 store = lockStore,
                 onSecret = { secret ->
                     enteredSecret = secret
-                    // A new lock (set up, changed, or after Forgot) reseals the vault's recovery copy.
-                    if (flow == LockFlow.Setup || flow == LockFlow.Change) Vault.changeSecret(appContext, secret)
+                    // A new lock (set up, changed, or after Forgot) reseals the vault's recovery copy;
+                    // entering the current one upgrades an older copy to Argon2id. Both take a
+                    // second or two, so they run in the background.
+                    kotlinx.coroutines.CoroutineScope(Vault.keyWork).launch {
+                        runCatching {
+                            if (flow == LockFlow.Setup || flow == LockFlow.Change) Vault.changeSecret(appContext, secret)
+                            else Vault.upgradeRecovery(appContext, secret)
+                        }.onFailure { android.util.Log.w("LumenVault", "Couldn't update the recovery file", it) }
+                    }
                 },
                 onDone = {
                     lockFlow = null
