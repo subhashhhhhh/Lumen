@@ -348,6 +348,11 @@ fun ViewerScreen(
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 playing = isPlaying
             }
+
+            // Videos sometimes pause a second after opening: log who asked, to find out why.
+            override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+                android.util.Log.d("LumenVideo", "playWhenReady=$playWhenReady reason=$reason", if (playWhenReady) null else Throwable("paused here"))
+            }
         }
         player?.addListener(listener)
         onDispose { player?.removeListener(listener) }
