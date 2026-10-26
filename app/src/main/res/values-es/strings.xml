@@ -31,4 +31,10 @@
     <string name="main_people">Personas</string>
     <string name="main_albums">Álbumes</string>
     <string name="main_add_name">Añadir Nombre</string>
+    <string name="common_copied">Copiado</string>
+    <string name="common_rename">Renombrar</string>
+    <string name="common_search">Buscar</string>
+    <string name="common_settings">Ajustes</string>
+    <string name="common_hide">Ocultar</string>
+    <string name="common_unhide">Mostrar</string>
 </resources>
