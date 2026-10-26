@@ -41,7 +41,7 @@
         <item quantity="many">%1$d Resultados</item>
         <item quantity="other">%1$,d Resultados</item>
     </plurals>
-    <string name="main_search_looking_inside">Analizando el contenido de las fotos…</string>
+    <string name="main_search_looking_inside">Examinando las fotos…</string>
     <string name="main_search_show_less">Mostrar Menos</string>
     <string name="main_search_see_all">Mostrar Todo</string>
     <string name="main_search_no_results_hint">Intenta describir lo que aparece en la foto, por ejemplo, «gato en un sofá» (con las «Funciones inteligentes» de «Ajustes»), o el nombre de un archivo, una carpeta, un mes o un año.</string>
@@ -50,4 +50,68 @@
     <string name="main_search_from_your_photos">Desde tus fotos</string>
     <string name="main_search_try">Intentar</string>
     <string name="main_search_field_hint">Archivos, carpetas, meses, años…</string>
+    <string name="main_merge_with_name">%1$s Personas</string>
+    <string name="main_merge_proposal_message">Ya tienes a alguien llamado %1$s. Si se trata de esa persona, combina los perfiles para que todos los elementos de %2$s aparezcan como una sola persona.</string>
+    <plurals name="main_merge_photo_count">
+        <item quantity="one">%1$,d foto</item>
+        <item quantity="many">%1$,d fotos</item>
+        <item quantity="other">%1$,d fotos</item>
+    </plurals>
+    <string name="main_merge">Combinar</string>
+    <string name="main_keep_separate">Mantener separados</string>
+    <plurals name="main_person_photo_count">
+        <item quantity="one">%1$,d foto</item>
+        <item quantity="many">%1$,d fotos</item>
+        <item quantity="other">%1$,d fotos</item>
+    </plurals>
+    <string name="common_not_now">Ahora no</string>
+    <string name="main_deselect_all">Deseleccionar Todo</string>
+    <string name="main_cancel_selection">Cancelar Selección</string>
+    <string name="main_delete_permanently">Eliminar permanentemente</string>
+    <string name="main_more">Más</string>
+    <string name="main_delete_forever">Eliminar definitivamente</string>
+    <string name="main_selected">Seleccionado</string>
+    <string name="main_new_album_ellipsis">Nuevo Álbum…</string>
+    <string name="main_album_name_hint">Nombre del Álbum</string>
+    <string name="main_create">Crear</string>
+    <string name="main_utilities">Utilidades</string>
+    <string name="main_hidden_locked">Bloqueado</string>
+    <string name="main_hidden_set_up">Configuración</string>
+    <string name="main_album_empty">Vacío</string>
+    <string name="main_pinned">Fijado</string>
+    <plurals name="main_hero_photos">
+        <item quantity="one">%1$,d Foto</item>
+        <item quantity="many">%1$,d Fotos</item>
+        <item quantity="other">%1$,d Fotos</item>
+    </plurals>
+    <plurals name="main_hero_videos">
+        <item quantity="one">%1$,d Video</item>
+        <item quantity="many">%1$,d Videos</item>
+        <item quantity="other">%1$,d Videos</item>
+    </plurals>
+    <string name="main_list_separator">", "</string>
+    <string name="main_library">Galería</string>
+    <string name="main_collections">Colecciones</string>
+    <string name="main_tabs">Pestañas</string>
+    <string name="main_zoom_years">Años</string>
+    <string name="main_zoom_months">Meses</string>
+    <string name="main_zoom_all">Todo</string>
+    <plurals name="main_item_count">
+        <item quantity="one">%1$d elemento</item>
+        <item quantity="many">%1$d elementos</item>
+        <item quantity="other">%1$d elementos</item>
+    </plurals>
+    <string name="main_section_none">Ninguno</string>
+    <string name="main_section_months">Meses</string>
+    <string name="main_section_days">Días</string>
+    <string name="main_today">Hoy</string>
+    <string name="main_yesterday">Ayer</string>
+    <string name="main_no_photos_or_videos">No hay fotos ni vídeos</string>
+    <string name="main_badge_raw">RAW</string>
+    <string name="main_badge_gif">GIF</string>
+    <string name="main_view_filter">Filtro</string>
+    <string name="main_view_sort">Ordenar</string>
+    <string name="main_view_grid">Cuadrícula</string>
+    <string name="main_view_square">Cuadrado</string>
+    <string name="main_view_aspect_ratio">Relación de Aspecto</string>
 </resources>
