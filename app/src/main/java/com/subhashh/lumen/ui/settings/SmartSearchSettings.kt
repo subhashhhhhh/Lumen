@@ -22,6 +22,7 @@ import kotlinx.coroutines.withContext
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -138,7 +139,7 @@ internal fun SmartSearchGroup(
 
     /** One pack's row: its state, and Download / Update / Cancel / Retry / Remove. */
     @Composable
-    fun PackRow(pack: ModelPack, title: String, removeTitle: String, removeMessage: String, iconColor: Color) {
+    fun PackRow(pack: ModelPack, title: String, removeTitle: String, removeMessage: String, iconColor: Color, icon: ImageVector = LumenIcons.Import) {
         val (status, action) = remember(state, refresh, changed, chosenId) { packStatus(context, pack, state, wifiOnly) }
         SettingsRow(
             title = title,
@@ -165,7 +166,7 @@ internal fun SmartSearchGroup(
                     else -> download(pack)
                 }
             },
-            icon = LumenIcons.Import,
+            icon = icon,
             iconColor = iconColor,
         )
     }
@@ -253,6 +254,7 @@ internal fun SmartSearchGroup(
                 ModelPack.Faces, stringResource(R.string.smart_faces_model), stringResource(R.string.smart_faces_remove_title),
                 stringResource(R.string.smart_faces_remove_message),
                 Purple,
+                LumenIcons.Face,
             )
         }
         if (faceProgress != null) {
@@ -269,7 +271,7 @@ internal fun SmartSearchGroup(
                     },
                     value = if (complete) stringResource(R.string.smart_all_count, progress.total) else stringResource(R.string.smart_count_of, progress.indexed, progress.total),
                     onClick = null,
-                    icon = LumenIcons.Image,
+                    icon = LumenIcons.Face,
                     iconColor = Purple,
                 )
             }
@@ -287,7 +289,7 @@ internal fun SmartSearchGroup(
                 options = SpeechModel.tiers.map { stringResource(R.string.smart_option_size, modelLabel(context, it.label), megabytes(SpeechModel.bytes)) },
                 selected = 0,
                 onSelect = {},
-                icon = LumenIcons.Video,
+                icon = LumenIcons.Subtitles,
                 iconColor = Purple,
             )
         }

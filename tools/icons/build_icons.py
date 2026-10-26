@@ -47,6 +47,8 @@ ICONS = [
     ("Edit", "edit", "regular"),
     ("LiveText", "scan_text", "regular"),
     ("LiveTextFilled", "scan_text", "filled"),
+    ("Subtitles", "closed_caption", "regular"),
+    ("Face", "emoji", "regular"),
 ]
 
 src_dir, out = sys.argv[1], sys.argv[2]
