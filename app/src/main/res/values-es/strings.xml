@@ -114,4 +114,12 @@
     <string name="main_view_grid">Cuadrícula</string>
     <string name="main_view_square">Cuadrado</string>
     <string name="main_view_aspect_ratio">Relación de Aspecto</string>
+    <string name="main_unlock_lumen">Desbloquear Lumen</string>
+    <string name="main_pick_choose_photos">Seleccionar Fotos</string>
+    <string name="main_pick_choose_a_photo">Selecciona una Foto</string>
+    <string name="main_pick_choose_videos">Seleccionar Videos</string>
+    <string name="main_pick_choose_a_video">Selecciona un Vídeo</string>
+    <string name="main_pick_choose_items">Seleccionar Elementos</string>
+    <string name="main_pick_choose_an_item">Seleccionar un Elemento</string>
+    <string name="main_favorites_import_bad_file">Ese no es un archivo de favoritos de Fossify ni de Aves</string>
 </resources>
