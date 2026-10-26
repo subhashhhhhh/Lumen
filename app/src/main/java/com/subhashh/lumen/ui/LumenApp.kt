@@ -1171,6 +1171,26 @@ private fun MainScaffold(
             }
         }
     }
+    // With Media management on, Android trashes and deletes without asking, so Lumen asks instead.
+    // Without it Android shows its own prompt; a second one from Lumen would be one too many.
+    val confirmDelete: (List<MediaItem>, Boolean, () -> Unit) -> Unit = { items, forever, proceed ->
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S || !android.provider.MediaStore.canManageMedia(context)) {
+            proceed()
+        } else {
+            val n = items.size
+            confirmation = Confirmation(
+                title = if (n == 1) context.getString(R.string.main_delete_this_item) else context.resources.getQuantityString(R.plurals.main_delete_items_title, n, n),
+                message = when {
+                    !forever -> context.resources.getQuantityString(R.plurals.main_trash_message, n, n)
+                    n == 1 -> context.getString(R.string.main_empty_trash_message_one)
+                    else -> context.resources.getQuantityString(R.plurals.main_delete_forever_message, n, n)
+                },
+                confirm = context.getString(if (forever) R.string.main_delete_forever_title_case else R.string.common_delete),
+                destructive = true,
+                onConfirm = proceed,
+            )
+        }
+    }
     // Re-lock as soon as Hidden is left: its grid and the viewer over it are the only ways in.
     LaunchedEffect(openCollection, viewerSource) {
         if (!CollectionKeys.isHidden(openCollection) && !CollectionKeys.isHidden(viewerSource)) hiddenUnlocked = false
@@ -2151,12 +2171,18 @@ private fun MainScaffold(
                     // Empty new albums have nothing to trash; deleting one just forgets it.
                     val emptyPaths = folders.filter { it.key in albumSelection.orEmpty() && it.count == 0 }.map { it.relativePath }.toSet()
                     if (emptyPaths.isNotEmpty()) updateAlbums { it.copy(created = it.created.filterNot(emptyPaths::contains)) }
-                    if (selectedItems.isNotEmpty()) launch(MediaActions.trashRequest(context, selectedItems)) else endSelection()
+                    if (selectedItems.isNotEmpty()) {
+                        val items = selectedItems
+                        confirmDelete(items, false) { launch(MediaActions.trashRequest(context, items)) }
+                    } else {
+                        endSelection()
+                    }
                 },
                 onRestore = { launch(MediaActions.restoreRequest(context, selectedItems)) },
                 onDeleteForever = {
-                    if (CollectionKeys.isHidden(selectionScope)) deleteHidden(selectedItems)
-                    else launch(MediaActions.deleteForeverRequest(context, selectedItems))
+                    val items = selectedItems
+                    if (CollectionKeys.isHidden(selectionScope)) deleteHidden(items)
+                    else confirmDelete(items, true) { launch(MediaActions.deleteForeverRequest(context, items)) }
                 },
                 onUnhide = { unhide(selectedItems) },
                 onMore = { selectionMenuOpen = !selectionMenuOpen },
@@ -2301,6 +2327,7 @@ private fun MainScaffold(
                 },
                 onUnhide = { unhide(listOf(it)) },
                 onDeleteHidden = { deleteHidden(listOf(it)) },
+                onConfirmDelete = { item, forever, proceed -> confirmDelete(listOf(item), forever, proceed) },
                 onClose = { exit ->
                     viewerSource = null
                     slideshowOf = null

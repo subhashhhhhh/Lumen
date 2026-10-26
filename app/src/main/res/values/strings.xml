@@ -272,6 +272,14 @@
         <item quantity="other">All %1$d items will be deleted forever.</item>
     </plurals>
     <string name="main_delete_forever_title_case">Delete Forever</string>
+    <plurals name="main_trash_message">
+        <item quantity="one">It stays in Recently Deleted for 30 days.</item>
+        <item quantity="other">They stay in Recently Deleted for 30 days.</item>
+    </plurals>
+    <plurals name="main_delete_forever_message">
+        <item quantity="one">%1$d item will be deleted forever.</item>
+        <item quantity="other">%1$d items will be deleted forever.</item>
+    </plurals>
     <string name="main_pick_add_count">Add %1$d</string>
     <string name="main_view_options">View options</string>
     <string name="main_album_options">Album options</string>

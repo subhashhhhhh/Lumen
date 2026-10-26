@@ -154,6 +154,8 @@ fun ViewerScreen(
     inHidden: Boolean = false,
     onUnhide: (MediaItem) -> Unit = {},
     onDeleteHidden: (MediaItem) -> Unit = {},
+    /** Trash ([forever] false) or delete forever: asks first when Android won't, then [proceed]. */
+    onConfirmDelete: (item: MediaItem, forever: Boolean, proceed: () -> Unit) -> Unit = { _, _, proceed -> proceed() },
     onCopyToAlbum: (MediaItem) -> Unit = {},
     onMoveToAlbum: (MediaItem) -> Unit = {},
     onRename: (MediaItem) -> Unit = {},
@@ -656,7 +658,7 @@ fun ViewerScreen(
                                 icon = LumenIcons.DeleteForever,
                                 contentDescription = stringResource(R.string.viewer_delete_forever),
                                 tint = Color(0xFFFF453A),
-                                onClick = { launch(MediaActions.deleteForeverRequest(context, current)) },
+                                onClick = { onConfirmDelete(current, true) { launch(MediaActions.deleteForeverRequest(context, current)) } },
                             )
                         } else {
                             GlassIconButton(
@@ -688,7 +690,7 @@ fun ViewerScreen(
                                 backdrop = backdrop,
                                 icon = LumenIcons.Delete,
                                 contentDescription = stringResource(R.string.common_delete),
-                                onClick = { launch(MediaActions.trashRequest(context, current)) },
+                                onClick = { onConfirmDelete(current, false) { launch(MediaActions.trashRequest(context, current)) } },
                             )
                         }
                     }
