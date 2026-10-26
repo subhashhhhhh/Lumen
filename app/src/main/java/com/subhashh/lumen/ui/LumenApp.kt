@@ -613,9 +613,10 @@ private fun MainScaffold(
     var searchExpanded by remember { mutableStateOf(emptySet<String>()) }
     LaunchedEffect(searchQuery) { searchExpanded = emptySet() }
     // A face group, not yet named, that Smart Search's matches are about: offered in the People row.
+    // Smart Search's result is from before any naming, so once it's named it shows as a match instead.
     val unnamedSubject = remember(smart, allPeople) {
         val id = smart?.second?.unnamedSubject?.id ?: return@remember null
-        allPeople.firstOrNull { it.first.id == id && !it.first.hidden }
+        allPeople.firstOrNull { it.first.id == id && !it.first.hidden && it.first.name == null }
     }
     /** What "Add Name" from Search fills in: the search, as a name. */
     var personNameSuggestion by remember { mutableStateOf<String?>(null) }
