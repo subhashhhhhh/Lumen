@@ -83,7 +83,7 @@ class GlassSetting(
     val blurScale: Float get() = if (reduceBlur) 0.3f else 1f
 }
 
-val LocalGlass = staticCompositionLocalOf { GlassSetting(liquid = true, reduceBlur = false, onLiquid = {}, onReduceBlur = {}) }
+val LocalGlass = staticCompositionLocalOf { GlassSetting(liquid = false, reduceBlur = false, onLiquid = {}, onReduceBlur = {}) }
 
 private val DarkScheme = darkColorScheme(
     primary = Color(0xFF0A84FF),

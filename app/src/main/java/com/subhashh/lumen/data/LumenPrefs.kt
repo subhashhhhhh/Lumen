@@ -143,7 +143,7 @@ class LumenPrefs(context: Context) {
 
     /** Settings → Appearance → Liquid Glass: glass that bends what's behind it. */
     var liquidGlass: Boolean
-        get() = prefs.getBoolean(KeyLiquidGlass, true)
+        get() = prefs.getBoolean(KeyLiquidGlass, false)
         set(value) = prefs.edit { putBoolean(KeyLiquidGlass, value) }
 
     /** Settings → Appearance → Reduce Blur: solid fills instead of frosted glass. */
