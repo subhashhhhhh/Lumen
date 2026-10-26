@@ -8,7 +8,7 @@
     <string name="common_delete">Eliminar</string>
     <string name="common_share">Compartir</string>
     <string name="common_copy">Copiar</string>
-    <string name="common_remove">Eliminar</string>
+    <string name="common_remove">Remover</string>
     <string name="common_save">Guardar</string>
     <string name="common_back">Volver</string>
     <string name="common_open">Abrir</string>
@@ -50,7 +50,7 @@
     <string name="main_search_from_your_photos">Desde tus fotos</string>
     <string name="main_search_try">Intentar</string>
     <string name="main_search_field_hint">Archivos, carpetas, meses, años…</string>
-    <string name="main_merge_with_name">%1$s Personas</string>
+    <string name="main_merge_with_name">Combinar con %1$s</string>
     <string name="main_merge_proposal_message">Ya tienes a alguien llamado %1$s. Si se trata de esa persona, combina los perfiles para que todos los elementos de %2$s aparezcan como una sola persona.</string>
     <plurals name="main_merge_photo_count">
         <item quantity="one">%1$,d foto</item>
@@ -122,4 +122,71 @@
     <string name="main_pick_choose_items">Seleccionar Elementos</string>
     <string name="main_pick_choose_an_item">Seleccionar un Elemento</string>
     <string name="main_favorites_import_bad_file">Ese no es un archivo de favoritos de Fossify ni de Aves</string>
+    <plurals name="main_favorites_import_none">
+        <item quantity="one">Ninguno de sus %1$d favoritos está en este teléfono.</item>
+        <item quantity="many">Ninguno de sus %1$d favoritos está en este teléfono</item>
+        <item quantity="other">Ninguno de sus %1$d favoritos está en este teléfono</item>
+    </plurals>
+    <plurals name="main_favorites_import_already">
+        <item quantity="one">Todos los %1$d ya están en favoritos</item>
+        <item quantity="many">Todos los %1$d ya están en favoritos</item>
+        <item quantity="other">Todos los %1$d ya están en favoritos</item>
+    </plurals>
+    <string name="main_favorites_import_found">Se encontraron %1$d de %2$d; se marcarán %3$d como favoritos</string>
+    <string name="main_settings_exported">Configuración exportada</string>
+    <string name="main_backup_save_failed">No se ha podido guardar la copia de seguridad</string>
+    <string name="main_backup_bad_file">Eso no es una copia de seguridad de Lumen</string>
+    <string name="main_settings_restored">Configuración restaurada</string>
+    <string name="main_all_files_title">Ocultar necesita &lt;&lt;Acceso a todos los archivos&gt;&gt;</string>
+    <string name="main_all_files_message">El índice multimedia de Android omite intencionalmente las fotos ocultas, por lo que Lumen debe acceder directamente al almacenamiento para ocultarlas y mostrarlas. Ningún archivo sale de tu teléfono.</string>
+    <string name="main_open_settings">Abrir Configuración</string>
+    <string name="main_reset_lock_title">¿Restablecer el bloqueo de elementos ocultos?</string>
+    <string name="main_reset_lock_message">Tu móvil no tiene bloqueo de pantalla, así que cualquiera que lo tenga en sus manos podría hacer esto. Las fotos ocultas siguen ocultas; a continuación, configurarás un nuevo bloqueo.</string>
+    <string name="main_reset">Reiniciar</string>
+    <string name="main_unhidden">No Oculto</string>
+    <string name="main_unhide_failed_count">No se pudo mostrar %1$d</string>
+    <string name="main_unhide_failed">No se pudo mostrar</string>
+    <string name="main_unhide_dot_folder">La carpeta «%1$s» está oculta porque su nombre comienza con un punto; cámbiale el nombre desde un administrador de archivos para volver a mostrarla</string>
+    <string name="main_unhide_folder_title">¿Mostrar %1$s?</string>
+    <plurals name="main_unhide_folders_title">
+        <item quantity="one">¿Mostrar %1$d carpeta oculta?</item>
+        <item quantity="many">¿Mostrar %1$d carpetas ocultas?</item>
+        <item quantity="other">¿Mostrar %1$d carpetas ocultas?</item>
+    </plurals>
+    <plurals name="main_unhide_folders_message">
+        <item quantity="one">Esta carpeta está oculta por completo, por lo que los %1$d elementos que contienen volverán a aparecer en la biblioteca de Lumen y en otras aplicaciones de galería.</item>
+        <item quantity="many">Estas carpetas están ocultas por completo, por lo que los %1$d elementos que contienen volverán a aparecer en la biblioteca de Lumen y en otras aplicaciones de galería.</item>
+        <item quantity="other">Estas carpetas están ocultas por completo, por lo que los %1$d elementos que contienen volverán a aparecer en la biblioteca de Lumen y en otras aplicaciones de galería.</item>
+    </plurals>
+    <string name="main_hidden_encrypted_find">Oculto y cifrado. Lo encontrarás en Colecciones → Oculto</string>
+    <string name="main_hidden_find">Oculto. Encuéntralo en Colecciones → Oculto</string>
+    <string name="main_hidden_and_encrypted">Oculto y cifrado</string>
+    <string name="main_hid_n_of">Se ocultaron %1$d de %2$d elementos</string>
+    <string name="main_hide_some_folders_failed">No se pudieron ocultar algunas carpetas</string>
+    <string name="main_hide_folder_title">¿Ocultar \"%1$s\"?</string>
+    <plurals name="main_hide_folders_title">
+        <item quantity="one">¿Ocultar %1$d carpeta?</item>
+        <item quantity="many">¿Ocultar %1$d carpetas?</item>
+        <item quantity="other">¿Ocultar %1$d carpetas?</item>
+    </plurals>
+    <plurals name="main_hide_folder_encrypt_message">
+        <item quantity="one">Todos los %1$d elementos que contiene se cifrarán y se guardarán en la bóveda de Lumen: ninguna otra aplicación podrá verlos. Estarán en Colecciones → Ocultos.</item>
+        <item quantity="many">Todos los %1$d elementos que contienen se cifrarán y se guardarán en la bóveda de Lumen: ninguna otra aplicación podrá verlos. Estarán en Colecciones → Ocultos.</item>
+        <item quantity="other">Todos los %1$d elementos que contienen se cifrarán y se guardarán en la bóveda de Lumen: ninguna otra aplicación podrá verlos. Estarán en Colecciones → Ocultos.</item>
+    </plurals>
+    <plurals name="main_hide_folders_encrypt_message">
+        <item quantity="one">Todos los %1$d elementos que contienen se cifrarán y se guardarán en la bóveda de Lumen: ninguna otra aplicación podrá verlos. Estarán en Colecciones → Ocultos.</item>
+        <item quantity="many">Todos los %1$d elementos que contienen se cifrarán y se guardarán en la bóveda de Lumen: ninguna otra aplicación podrá verlos. Estarán en Colecciones → Ocultos.</item>
+        <item quantity="other">Todos los %1$d elementos que contienen se cifrarán y se guardarán en la bóveda de Lumen: ninguna otra aplicación podrá verlos. Estarán en Colecciones → Ocultos.</item>
+    </plurals>
+    <plurals name="main_hide_folder_message">
+        <item quantity="one">Todos los %1$d elementos que contiene se ocultarán de la biblioteca de Lumen y de las aplicaciones que utilizan el índice multimedia de Android, como Google Fotos. Los administradores de archivos y las galerías que acceden directamente al almacenamiento aún podrán verlos. Estarán en Colecciones → Ocultos.</item>
+        <item quantity="many">Todos los %1$d elementos que contiene se ocultarán de la biblioteca de Lumen y de las aplicaciones que utilizan el índice multimedia de Android, como Google Fotos. Los administradores de archivos y las galerías que acceden directamente al almacenamiento aún podrán verlos. Estarán en Colecciones → Ocultos.</item>
+        <item quantity="other">Todos los %1$d elementos que contiene se ocultarán de la biblioteca de Lumen y de las aplicaciones que utilizan el índice multimedia de Android, como Google Fotos. Los administradores de archivos y las galerías que acceden directamente al almacenamiento aún podrán verlos. Estarán en Colecciones → Ocultos.</item>
+    </plurals>
+    <plurals name="main_hide_folders_message">
+        <item quantity="one">Todos los %1$d elementos que contienen se ocultarán de la biblioteca de Lumen y de las aplicaciones que utilizan el índice multimedia de Android, como Google Fotos. Los administradores de archivos y las aplicaciones de galería que acceden directamente al almacenamiento aún podrán verlos. Estarán en Colecciones → Ocultos.</item>
+        <item quantity="many">Todos los %1$d elementos que contienen se ocultarán de la biblioteca de Lumen y de las aplicaciones que utilizan el índice multimedia de Android, como Google Fotos. Los administradores de archivos y las aplicaciones de galería que acceden directamente al almacenamiento aún podrán verlos. Estarán en Colecciones → Ocultos.</item>
+        <item quantity="other">Todos los %1$d elementos que contienen se ocultarán de la biblioteca de Lumen y de las aplicaciones que utilizan el índice multimedia de Android, como Google Fotos. Los administradores de archivos y las aplicaciones de galería que acceden directamente al almacenamiento aún podrán verlos. Estarán en Colecciones → Ocultos.</item>
+    </plurals>
 </resources>
