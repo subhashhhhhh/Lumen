@@ -80,6 +80,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.CompositionLocalProvider
 import com.subhashh.lumen.data.MediaFiles
 import androidx.compose.animation.core.tween
@@ -194,7 +195,11 @@ fun ViewerScreen(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    val pager = rememberPagerState(initialPage = initialIndex) { items.size }
+    // The list can change while the viewer is open (a screenshot, a delete). The pager reads its
+    // page count and its keys at different moments, so both read this one state: with the list
+    // captured separately, a list that grew gave a page count one past the keys' list (a crash).
+    val pages = rememberUpdatedState(items)
+    val pager = rememberPagerState(initialPage = initialIndex) { pages.value.size }
     val current = items.getOrNull(pager.currentPage)
     val backdrop = rememberLayerBackdrop()
     val scope = rememberCoroutineScope()
@@ -488,7 +493,7 @@ fun ViewerScreen(
         ) {
             HorizontalPager(
                 state = pager,
-                key = { items[it].id },
+                key = { pages.value.getOrNull(it)?.id ?: -1L - it },
                 // Neighbors come a couple of frames after the first page, so the viewer's first
                 // frame builds one page instead of three.
                 beyondViewportPageCount = if (preloadNeighbors) 1 else 0,
@@ -497,7 +502,7 @@ fun ViewerScreen(
                     .fillMaxSize()
                     .graphicsLayer { alpha = slideshowAlpha.value },
             ) { page ->
-                val item = items[page]
+                val item = pages.value.getOrNull(page) ?: return@HorizontalPager
                 val isCurrent = page == pager.currentPage
                 val pageModifier = if (isCurrent) {
                     Modifier.graphicsLayer {
