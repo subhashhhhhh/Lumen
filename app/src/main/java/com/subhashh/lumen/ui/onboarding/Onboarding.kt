@@ -28,6 +28,7 @@ import android.os.Environment
 import android.provider.MediaStore
 import android.provider.Settings
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
@@ -63,6 +64,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
@@ -241,32 +243,39 @@ private fun Item(icon: ImageVector, title: String, subtitle: String, trailing: @
 
 @Composable
 private fun ColumnScope.Welcome(backdrop: Backdrop, onNext: () -> Unit) {
-    Spacer(Modifier.weight(1f))
-    // The app icon as the home screen shows it: background, flare and the phone's icon shape.
-    com.subhashh.lumen.ui.components.AppIcon(132.dp, Modifier.align(Alignment.CenterHorizontally))
-    Spacer(Modifier.height(18.dp))
-    Text(
-        stringResource(R.string.app_name),
-        color = ink,
-        fontSize = 44.sp,
-        fontWeight = FontWeight.Bold,
-        modifier = Modifier.align(Alignment.CenterHorizontally),
-    )
-    Spacer(Modifier.height(8.dp))
-    Text(
-        stringResource(R.string.onboarding_tagline),
-        color = ink.copy(alpha = 0.8f),
-        fontSize = 18.sp,
-        textAlign = TextAlign.Center,
-        modifier = Modifier.fillMaxWidth(),
-    )
-    Spacer(Modifier.height(32.dp))
-    Card(backdrop) {
-        Item(LumenIcons.Lock, stringResource(R.string.onboarding_no_account), stringResource(R.string.onboarding_no_account_detail))
-        Item(LumenIcons.Shield, stringResource(R.string.onboarding_no_cloud), stringResource(R.string.onboarding_no_cloud_detail))
-        Item(LumenIcons.Hide, stringResource(R.string.onboarding_no_google), stringResource(R.string.onboarding_no_google_detail))
+    // Centered, and scrolls when it's taller than the screen (small screens, large text).
+    BoxWithConstraints(Modifier.weight(1f)) {
+        val height = maxHeight
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+            Column(Modifier.fillMaxWidth().heightIn(min = height), verticalArrangement = Arrangement.Center) {
+                // The app icon as the home screen shows it: background, flare and the phone's icon shape.
+                com.subhashh.lumen.ui.components.AppIcon(132.dp, Modifier.align(Alignment.CenterHorizontally))
+                Spacer(Modifier.height(18.dp))
+                Text(
+                    stringResource(R.string.app_name),
+                    color = ink,
+                    fontSize = 44.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    stringResource(R.string.onboarding_tagline),
+                    color = ink.copy(alpha = 0.8f),
+                    fontSize = 18.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(Modifier.height(32.dp))
+                Card(backdrop) {
+                    Item(LumenIcons.Lock, stringResource(R.string.onboarding_no_account), stringResource(R.string.onboarding_no_account_detail))
+                    Item(LumenIcons.Shield, stringResource(R.string.onboarding_no_cloud), stringResource(R.string.onboarding_no_cloud_detail))
+                    Item(LumenIcons.Hide, stringResource(R.string.onboarding_no_google), stringResource(R.string.onboarding_no_google_detail))
+                }
+            }
+        }
     }
-    Spacer(Modifier.weight(1f))
+    Spacer(Modifier.height(12.dp))
     PrimaryButton(backdrop, stringResource(R.string.onboarding_get_started), onClick = onNext)
 }
 
@@ -287,39 +296,50 @@ private fun ColumnScope.Photos(backdrop: Backdrop, hasAccess: Boolean, onRequest
     val unrestricted = remember(refresh) {
         context.getSystemService(android.os.PowerManager::class.java).isIgnoringBatteryOptimizations(context.packageName)
     }
-    val askLocation = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { refresh++ }
+    val activity = LocalActivity.current
+    val askLocation = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        refresh++
+        // Denied twice, Android answers at once without asking: App Info is the only way left.
+        if (!granted && activity?.shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_MEDIA_LOCATION) == false) {
+            context.openSpecial(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+        }
+    }
 
-    Title(stringResource(R.string.onboarding_photos_title), stringResource(R.string.onboarding_photos_subtitle))
-    Card(backdrop) {
-        Item(LumenIcons.Library, stringResource(R.string.onboarding_photos_videos), stringResource(R.string.onboarding_photos_videos_detail)) {
-            Toggle(hasAccess) { if (!hasAccess) onRequestAccess() }
-        }
-    }
-    if (hasAccess) {
-        Spacer(Modifier.height(16.dp))
-        Text(stringResource(R.string.onboarding_optional), color = ink.copy(alpha = 0.6f), fontSize = 13.sp, modifier = Modifier.padding(start = 8.dp, bottom = 8.dp))
+    // Scrolls, with Continue fixed below: on small screens or with large text the list is taller
+    // than the screen.
+    Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+        Title(stringResource(R.string.onboarding_photos_title), stringResource(R.string.onboarding_photos_subtitle))
         Card(backdrop) {
-            Item(LumenIcons.Location, stringResource(R.string.onboarding_location), stringResource(R.string.onboarding_location_detail)) {
-                Toggle(location) { if (!location) askLocation.launch(Manifest.permission.ACCESS_MEDIA_LOCATION) }
+            Item(LumenIcons.Library, stringResource(R.string.onboarding_photos_videos), stringResource(R.string.onboarding_photos_videos_detail)) {
+                Toggle(hasAccess) { if (!hasAccess) onRequestAccess() }
             }
-            Item(LumenIcons.Folder, stringResource(R.string.onboarding_all_files), stringResource(R.string.onboarding_all_files_detail)) {
-                Toggle(allFiles) { context.openSpecial(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION) }
-            }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                Item(LumenIcons.Delete, stringResource(R.string.onboarding_media_management), stringResource(R.string.onboarding_media_management_detail)) {
-                    Toggle(manage) { context.openSpecial(Settings.ACTION_REQUEST_MANAGE_MEDIA) }
+        }
+        if (hasAccess) {
+            Spacer(Modifier.height(16.dp))
+            Text(stringResource(R.string.onboarding_optional), color = ink.copy(alpha = 0.6f), fontSize = 13.sp, modifier = Modifier.padding(start = 8.dp, bottom = 8.dp))
+            Card(backdrop) {
+                Item(LumenIcons.Location, stringResource(R.string.onboarding_location), stringResource(R.string.onboarding_location_detail)) {
+                    Toggle(location) { if (!location) askLocation.launch(Manifest.permission.ACCESS_MEDIA_LOCATION) }
                 }
-            }
-            Item(LumenIcons.Timer, stringResource(R.string.onboarding_unrestricted_battery), stringResource(R.string.onboarding_unrestricted_battery_detail)) {
-                Toggle(unrestricted) {
-                    context.openSpecial(
-                        if (unrestricted) Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS else Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
-                    )
+                Item(LumenIcons.Folder, stringResource(R.string.onboarding_all_files), stringResource(R.string.onboarding_all_files_detail)) {
+                    Toggle(allFiles) { context.openSpecial(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION) }
+                }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    Item(LumenIcons.Delete, stringResource(R.string.onboarding_media_management), stringResource(R.string.onboarding_media_management_detail)) {
+                        Toggle(manage) { context.openSpecial(Settings.ACTION_REQUEST_MANAGE_MEDIA) }
+                    }
+                }
+                Item(LumenIcons.Timer, stringResource(R.string.onboarding_unrestricted_battery), stringResource(R.string.onboarding_unrestricted_battery_detail)) {
+                    // An app can't remove its own exemption: turning it off opens Android's battery list.
+                    Toggle(
+                        unrestricted,
+                        onTurnOff = { context.openSpecial(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS) },
+                    ) { context.openSpecial(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS) }
                 }
             }
         }
     }
-    Spacer(Modifier.weight(1f))
+    Spacer(Modifier.height(12.dp))
     PrimaryButton(backdrop, if (hasAccess) stringResource(R.string.common_continue) else stringResource(R.string.onboarding_allow_access)) { if (hasAccess) onNext() else onRequestAccess() }
 }
 
@@ -365,16 +385,16 @@ private fun ColumnScope.Look(backdrop: Backdrop, onNext: () -> Unit) {
 }
 
 @Composable
-private fun Toggle(on: Boolean, onTurnOn: () -> Unit) {
+private fun Toggle(on: Boolean, onTurnOff: () -> Unit = {}, onTurnOn: () -> Unit) {
     Switch(
         checked = on,
-        onCheckedChange = { if (it) onTurnOn() },
+        onCheckedChange = { if (it) onTurnOn() else onTurnOff() },
         colors = SwitchDefaults.colors(checkedTrackColor = Color(0xFF34C759)),
     )
 }
 
 /** Opens a special-access page for Lumen in system settings. */
-private fun Context.openSpecial(action: String) {
+internal fun Context.openSpecial(action: String) {
     val intent = Intent(action, Uri.parse("package:$packageName")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     runCatching { startActivity(intent) }.onFailure { runCatching { startActivity(Intent(action).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }
 }
@@ -482,29 +502,31 @@ private fun ColumnScope.Schedule(backdrop: Backdrop, onNext: () -> Unit) {
     val prefs = remember { LumenPrefs(context) }
     var overnight by rememberSaveable { mutableStateOf(prefs.indexScheduleOn) }
 
-    Title(stringResource(R.string.onboarding_schedule_title), stringResource(R.string.onboarding_schedule_subtitle))
-    for ((night, title, subtitle) in listOf(
-        Triple(false, stringResource(R.string.onboarding_while_charging), stringResource(R.string.onboarding_while_charging_detail)),
-        Triple(true, stringResource(R.string.onboarding_overnight), stringResource(R.string.onboarding_overnight_detail)),
-    )) {
-        val selected = overnight == night
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .padding(bottom = 12.dp)
-                .glass(backdrop, RoundedCornerShape(24.dp), blurRadius = 16.dp, tint = glassTint(if (selected) 0.26f else 0.1f))
-                .border(1.5.dp, ink.copy(alpha = if (selected) 0.7f else 0f), RoundedCornerShape(24.dp))
-                .pressable({ overnight = night }, pressedScale = 0.97f)
-                .padding(18.dp),
-        ) {
-            Column {
-                Text(title, color = ink, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-                Spacer(Modifier.height(4.dp))
-                Text(subtitle, color = ink.copy(alpha = 0.7f), fontSize = 14.sp)
+    Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+        Title(stringResource(R.string.onboarding_schedule_title), stringResource(R.string.onboarding_schedule_subtitle))
+        for ((night, title, subtitle) in listOf(
+            Triple(false, stringResource(R.string.onboarding_while_charging), stringResource(R.string.onboarding_while_charging_detail)),
+            Triple(true, stringResource(R.string.onboarding_overnight), stringResource(R.string.onboarding_overnight_detail)),
+        )) {
+            val selected = overnight == night
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp)
+                    .glass(backdrop, RoundedCornerShape(24.dp), blurRadius = 16.dp, tint = glassTint(if (selected) 0.26f else 0.1f))
+                    .border(1.5.dp, ink.copy(alpha = if (selected) 0.7f else 0f), RoundedCornerShape(24.dp))
+                    .pressable({ overnight = night }, pressedScale = 0.97f)
+                    .padding(18.dp),
+            ) {
+                Column {
+                    Text(title, color = ink, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.height(4.dp))
+                    Text(subtitle, color = ink.copy(alpha = 0.7f), fontSize = 14.sp)
+                }
             }
         }
     }
-    Spacer(Modifier.weight(1f))
+    Spacer(Modifier.height(12.dp))
     PrimaryButton(backdrop, stringResource(R.string.common_continue)) {
         prefs.indexScheduleOn = overnight
         SmartIndex.schedule(context, replace = true)

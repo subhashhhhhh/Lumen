@@ -85,6 +85,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.core.net.toUri
 import androidx.activity.compose.LocalActivity
 import android.provider.Settings
+import com.subhashh.lumen.ui.onboarding.openSpecial
 import android.content.Intent
 import com.subhashh.lumen.ui.settings.ExcludedFoldersScreen
 import com.subhashh.lumen.data.ExcludedFolders
@@ -217,11 +218,18 @@ fun LumenApp(
     val viewModel: LibraryViewModel = viewModel()
     var hasAccess by rememberSaveable { mutableStateOf(context.hasMediaAccess()) }
 
+    val activity = LocalActivity.current
     val launcher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
     ) {
         hasAccess = context.hasMediaAccess()
-        if (hasAccess) viewModel.refresh()
+        if (hasAccess) {
+            viewModel.refresh()
+        } else if (activity != null && MediaPermissions.none { activity.shouldShowRequestPermissionRationale(it) }) {
+            // Denied twice, Android answers at once without asking, so the button would do nothing:
+            // App Info is the only way left. Coming back re-checks access (on resume, below).
+            context.openSpecial(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+        }
     }
 
     // Re-check on resume: access can change in system settings, and new photos may have been taken.
