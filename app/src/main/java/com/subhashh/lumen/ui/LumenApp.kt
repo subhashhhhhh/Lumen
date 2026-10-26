@@ -444,12 +444,14 @@ private fun MainScaffold(
     }
     val folders = remember(library, albumSettings) { MediaCollections.folders(library.orEmpty(), albumSettings) }
     // People (Settings → Smart Search → Faces), reloaded as the face pass finds them: at most
-    // every couple of seconds, since it saves after every photo.
-    val peopleRows by produceState(emptyList<com.subhashh.lumen.ai.Person>()) {
+    // every couple of seconds, since it saves after every photo. Also when the library changes:
+    // covers come only from photos it shows, so a deleted cover is replaced at once.
+    val peopleRows by produceState(emptyList<com.subhashh.lumen.ai.Person>(), library) {
+        val shown = library?.mapTo(HashSet()) { it.id }
         val load = suspend {
             withContext(Dispatchers.IO) {
                 if (!com.subhashh.lumen.ai.FaceModel.installed(context)) emptyList()
-                else com.subhashh.lumen.ai.FaceStore.of(context).people()
+                else com.subhashh.lumen.ai.FaceStore.of(context).people { shown == null || it in shown }
             }
         }
         // Right away at launch, so Collections has People from its first frame; after that only
