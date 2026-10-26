@@ -348,11 +348,6 @@ fun ViewerScreen(
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 playing = isPlaying
             }
-
-            // Videos sometimes pause a second after opening: log who asked, to find out why.
-            override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
-                android.util.Log.d("LumenVideo", "playWhenReady=$playWhenReady reason=$reason", if (playWhenReady) null else Throwable("paused here"))
-            }
         }
         player?.addListener(listener)
         onDispose { player?.removeListener(listener) }
@@ -1157,6 +1152,26 @@ private fun SubtitleOverlay(item: MediaItem, player: Player, modifier: Modifier 
     }
 }
 
+/**
+ * Android can take a hardware decoder back while a video plays ("Released by resource manager"),
+ * for example when the background indexer is decoding videos too: the player stops with an
+ * error and the video looks paused. Prepare again, which picks up at the same position.
+ * A few tries per video, so a file that really can't play doesn't loop.
+ */
+private fun recoverFromDecoderLoss(player: ExoPlayer) = object : Player.Listener {
+    private var tries = 0
+
+    override fun onMediaItemTransition(mediaItem: PlayerMediaItem?, reason: Int) {
+        tries = 0
+    }
+
+    override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+        if (tries++ >= 3) return
+        android.util.Log.w("LumenVideo", "Playback error, preparing again", error)
+        player.prepare()
+    }
+}
+
 private val Speeds = listOf(1f, 1.25f, 1.5f, 2f, 0.5f)
 
 private fun formatSpeed(speed: Float): String =
@@ -1188,7 +1203,10 @@ private fun rememberViewerPlayer(current: MediaItem?): Player? {
                 // Vault videos decrypt as they play; everything else reads as usual.
                 .setMediaSourceFactory(DefaultMediaSourceFactory(VaultDataSource.Factory(context)))
                 .build()
-                .also { player = it }
+                .also {
+                    player = it
+                    it.addListener(recoverFromDecoderLoss(it))
+                }
             active.repeatMode = if (prefs.videoLoop) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
             active.volume = if (prefs.videoMuted) 0f else 1f
             active.setMediaItem(PlayerMediaItem.fromUri(current.uri))
