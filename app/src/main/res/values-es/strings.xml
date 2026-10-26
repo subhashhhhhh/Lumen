@@ -189,4 +189,26 @@
         <item quantity="many">Todos los %1$d elementos que contienen se ocultarán de la biblioteca de Lumen y de las aplicaciones que utilizan el índice multimedia de Android, como Google Fotos. Los administradores de archivos y las aplicaciones de galería que acceden directamente al almacenamiento aún podrán verlos. Estarán en Colecciones → Ocultos.</item>
         <item quantity="other">Todos los %1$d elementos que contienen se ocultarán de la biblioteca de Lumen y de las aplicaciones que utilizan el índice multimedia de Android, como Google Fotos. Los administradores de archivos y las aplicaciones de galería que acceden directamente al almacenamiento aún podrán verlos. Estarán en Colecciones → Ocultos.</item>
     </plurals>
+    <string name="main_vault_wrong_lock">Esta bóveda se creó con un bloqueo de Lumen diferente. Introduce ese bloqueo para abrirla</string>
+    <string name="main_vault_partial_encrypt">Se cifraron %1$d elementos; no se pudieron cifrar %2$d y permanecieron sin cambios</string>
+    <string name="main_vault_partial_decrypt">Se descifraron %1$d elementos; no se pudieron descifrar %2$d y permanecieron sin cambios</string>
+    <string name="main_encrypt_hidden_on">El cifrado de elementos ocultos está activado</string>
+    <plurals name="main_encrypted_items">
+        <item quantity="one">Se cifró %1$d elemento oculto</item>
+        <item quantity="many">Se cifraron %1$d elementos ocultos</item>
+        <item quantity="other">Se cifraron %1$d elementos ocultos</item>
+    </plurals>
+    <plurals name="main_decrypted_items">
+        <item quantity="one">Se descifró %1$d elemento; ahora vuelve a estar oculto de la forma habitual</item>
+        <item quantity="many">Se descifraron %1$d elementos; ahora vuelven a estar ocultos de la forma habitual</item>
+        <item quantity="other">Se descifraron %1$d elementos; ahora vuelven a estar ocultos de la forma habitual</item>
+    </plurals>
+    <string name="main_delete_this_item">¿Eliminar este elemento?</string>
+    <plurals name="main_delete_items_title">
+        <item quantity="one">¿Eliminar %1$d elemento?</item>
+        <item quantity="many">¿Eliminar %1$d elementos?</item>
+        <item quantity="other">¿Eliminar %1$d elementos?</item>
+    </plurals>
+    <string name="main_delete_hidden_message">Los elementos ocultos no se pueden mover a «Eliminados recientemente», por lo que se eliminarán permanentemente.</string>
+    <string name="main_deleted">Eliminado</string>
 </resources>
