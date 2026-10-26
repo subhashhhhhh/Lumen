@@ -3,4 +3,32 @@
   Lumen's English text. Translations live in values-<language>/strings.xml and are edited on
   Weblate; keep placeholders (%1$s, %2$d) and plural forms as they are.
 --><resources>
-    </resources>
+    <string name="common_cancel">Cancelar</string>
+    <string name="common_done">Hecho</string>
+    <string name="common_delete">Borrar</string>
+    <string name="common_share">Compartir</string>
+    <string name="common_copy">Copiar</string>
+    <string name="common_remove">Eliminar</string>
+    <string name="common_save">Guardar</string>
+    <string name="common_back">Volver</string>
+    <string name="common_open">Abrir</string>
+    <string name="common_select_all">Seleccionar Todo</string>
+    <string name="common_details">Detalles</string>
+    <string name="common_restore">Restaurar</string>
+    <string name="common_favorite">Marcar Favorito</string>
+    <string name="common_unfavorite">Desmarcar Favorito</string>
+    <string name="common_continue">Continuar</string>
+    <string name="common_next">Siguiente</string>
+    <string name="common_not_now">Ahora No</string>
+    <string name="common_download">Descargar</string>
+    <string name="common_install">Instalar</string>
+    <string name="common_update">Actualizar</string>
+    <string name="common_retry">Reintentar</string>
+    <string name="common_allow">Permitir</string>
+    <string name="common_add">Agregar</string>
+    <string name="common_on">Encendido</string>
+    <string name="common_off">Apagado</string>
+    <string name="main_people">Personas</string>
+    <string name="main_albums">Álbumes</string>
+    <string name="main_add_name">Añadir Nombre</string>
+</resources>
