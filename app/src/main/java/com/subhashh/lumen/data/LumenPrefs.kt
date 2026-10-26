@@ -221,6 +221,25 @@ class LumenPrefs(context: Context) {
         get() = prefs.getString(KeyAnnouncedUpdate, null)
         set(value) = prefs.edit { putString(KeyAnnouncedUpdate, value) }
 
+    /** Days Lumen was opened on, each counted once, and when the first was: for the GitHub star request. */
+    val daysUsed: Int get() = prefs.getInt(KeyDaysUsed, 0)
+    val firstDayUsed: Long get() = prefs.getLong(KeyFirstDayUsed, 0L)
+
+    /** Counts today as a day Lumen was used, once. Days are epoch days in the phone's time zone. */
+    fun countDayUsed(today: Long = java.time.LocalDate.now().toEpochDay()) {
+        if (prefs.getLong(KeyLastDayUsed, -1L) == today) return
+        prefs.edit {
+            putLong(KeyLastDayUsed, today)
+            putInt(KeyDaysUsed, daysUsed + 1)
+            if (!prefs.contains(KeyFirstDayUsed)) putLong(KeyFirstDayUsed, today)
+        }
+    }
+
+    /** The GitHub star request has been shown (it's shown once). */
+    var starAsked: Boolean
+        get() = prefs.getBoolean(KeyStarAsked, false)
+        set(value) = prefs.edit { putBoolean(KeyStarAsked, value) }
+
     /** Settings → Developer Options is shown (tapping Version seven times in About). */
     var developerOptions: Boolean
         get() = prefs.getBoolean(KeyDeveloperOptions, false)
@@ -293,6 +312,10 @@ class LumenPrefs(context: Context) {
         const val KeyTextVideoVersion = "text_video_version"
         const val KeyOnboardingDone = "onboarding_done"
         const val KeyAnnouncedUpdate = "announced_update"
+        const val KeyDaysUsed = "days_used"
+        const val KeyFirstDayUsed = "first_day_used"
+        const val KeyLastDayUsed = "last_day_used"
+        const val KeyStarAsked = "star_asked"
         const val KeyIndexScheduleOn = "index_schedule_on"
         const val KeyIndexScheduleStart = "index_schedule_start"
         const val KeyIndexScheduleEnd = "index_schedule_end"

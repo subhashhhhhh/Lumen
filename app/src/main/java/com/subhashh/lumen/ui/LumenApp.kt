@@ -2507,6 +2507,11 @@ private fun MainScaffold(
                 }
             }
         }
+        com.subhashh.lumen.ui.components.StarRequest(
+            prefs,
+            canShow = announce == null && confirmation == null && !viewerOpen && !selecting && settingsPage == null && pick == null,
+            show = { confirmation = it },
+        )
         ConfirmDialog(confirmation, onDismiss = { confirmation = null })
 
         RenameDialog(
