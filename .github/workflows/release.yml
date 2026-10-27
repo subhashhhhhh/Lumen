@@ -30,9 +30,12 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
-      - uses: android-actions/setup-android@v3
+      # The runner has the Android SDK; this adds the versions the build asks for.
       - name: SDK, NDK and CMake versions the build asks for
-        run: sdkmanager "platforms;android-37" "ndk;30.0.16248370" "cmake;4.1.2" > /dev/null
+        run: |
+          sdkmanager=$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | sort -V | tail -1)
+          yes | "$sdkmanager" --licenses > /dev/null || true
+          "$sdkmanager" "platforms;android-37" "ndk;30.0.16248370" "cmake;4.1.2" > /dev/null
       - uses: gradle/actions/setup-gradle@v4
       - name: Release key
         env:
