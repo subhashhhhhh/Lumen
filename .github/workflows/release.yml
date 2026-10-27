@@ -1,5 +1,5 @@
 # Release APKs, built and signed on GitHub instead of the owner's Mac. Pushing a v* tag builds
-# that commit against lumen-ai's main (checked out next to it, as on the Mac), signs with the
+# that commit against lumen-ai's app-<tag> tag (checked out next to it, as on the Mac), signs with the
 # release key (repository secrets), checks the signature, and attaches the APKs and checksums to
 # a draft release; notes are added and the draft published by hand.
 name: Release
@@ -22,9 +22,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.tag || github.ref }}
+      # lumen-ai's app-<tag> tag, made with each app release: rebuilding a tag later gives the same APK.
       - name: lumen-ai, next to the app (settings.gradle.kts builds it from source)
         run: |
-          git clone --depth 1 https://github.com/subhashhhhhh/lumen-ai.git ../lumen-ai
+          git clone --depth 1 --branch "app-$TAG" https://github.com/subhashhhhhh/lumen-ai.git ../lumen-ai \
+            || { echo "::error::lumen-ai has no app-$TAG tag: tag the lumen-ai commit this release uses"; exit 1; }
           echo "LUMEN_AI_COMMIT=$(git -C ../lumen-ai rev-parse --short HEAD)" >> "$GITHUB_ENV"
       - uses: actions/setup-java@v4
         with:
