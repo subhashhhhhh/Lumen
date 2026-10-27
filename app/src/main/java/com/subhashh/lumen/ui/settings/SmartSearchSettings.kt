@@ -251,6 +251,36 @@ internal fun SmartSearchGroup(
         stringResource(R.string.smart_faces_title),
         footer = stringResource(R.string.smart_faces_footer),
     ) {
+        // Accurate runs only on a supported NPU: elsewhere it shows, faded, and says why.
+        val accurate = remember(refresh) { com.subhashh.lumen.ai.FaceModel.accurate(context) }
+        val faceRecognizer = remember(refresh, changed) { com.subhashh.lumen.ai.FaceModel.recognizer(context) }
+        Anchor("face-quality", highlight) {
+            PickerRow(
+                title = stringResource(R.string.smart_faces_quality),
+                options = listOf(
+                    accurate?.let { stringResource(R.string.smart_option_size, modelLabel(context, "Accurate"), megabytes(com.subhashh.lumen.ai.FaceModel.bytes(it))) }
+                        ?: modelLabel(context, "Accurate"),
+                    stringResource(R.string.smart_option_size, modelLabel(context, "Fast"), megabytes(com.subhashh.lumen.ai.FaceModel.bytes(com.subhashh.lumen.ai.FaceModel.Fast))),
+                ),
+                selected = if (faceRecognizer.id == com.subhashh.lumen.ai.FaceModel.AccurateId) 0 else 1,
+                onSelect = { index ->
+                    val id = if (index == 0) com.subhashh.lumen.ai.FaceModel.AccurateId else com.subhashh.lumen.ai.FaceModel.Fast.id
+                    if (id != faceRecognizer.id) {
+                        prefs.faceModel = id
+                        changed++
+                        // Faces already read move over to it once it's downloaded; names stay.
+                        if (FaceModel.installed(context)) ModelDownloads.start(context, ModelPack.Faces, wifiOnly)
+                    }
+                },
+                unavailable = if (accurate == null) setOf(0) else emptySet(),
+                onUnavailable = {
+                    android.widget.Toast.makeText(context, R.string.smart_faces_no_npu, android.widget.Toast.LENGTH_LONG).show()
+                },
+                icon = LumenIcons.Face,
+                iconColor = Purple,
+            )
+        }
+        Divider()
         Anchor("face-model", highlight) {
             PackRow(
                 ModelPack.Faces, stringResource(R.string.smart_faces_model), stringResource(R.string.smart_faces_remove_title),

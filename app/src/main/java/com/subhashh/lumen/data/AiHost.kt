@@ -39,6 +39,7 @@ class AiHost(context: Context) : LumenAiHost {
 
     override val settings = object : AiSettings {
         override val searchModelId get() = prefs.searchModel
+        override val faceModelId get() = prefs.faceModel
         override val videoDetailPx get() = prefs.videoDetail.px
         override val indexOnBattery get() = prefs.indexOnBattery
         override val indexSchedule

@@ -436,13 +436,16 @@ internal fun PickerRow(
     subtitle: String? = null,
     icon: ImageVector? = null,
     iconColor: Color = Gray,
+    /** Options shown faded that can't be chosen here; tapping one calls [onUnavailable]. */
+    unavailable: Set<Int> = emptySet(),
+    onUnavailable: (Int) -> Unit = {},
 ) {
     val colors = groupColors()
     val host = LocalPickerHost.current
     var bounds by remember { mutableStateOf(Rect.Zero) }
     RowShell(
         title, subtitle, icon, iconColor,
-        onClick = { host?.open(PickerRequest(bounds, options, selected, onSelect)) },
+        onClick = { host?.open(PickerRequest(bounds, options, selected, onSelect, unavailable, onUnavailable)) },
         modifier = Modifier.onGloballyPositioned { bounds = it.boundsInRoot() },
     ) {
         Spacer(Modifier.width(8.dp))
@@ -473,6 +476,8 @@ private data class PickerRequest(
     val options: List<String>,
     val selected: Int,
     val onSelect: (Int) -> Unit,
+    val unavailable: Set<Int>,
+    val onUnavailable: (Int) -> Unit,
 )
 
 @Stable
@@ -540,7 +545,7 @@ private fun PickerOverlay(host: PickerHost, backdrop: Backdrop) {
                             .height(PickerItemHeight)
                             .clickable {
                                 host.close()
-                                shown.onSelect(index)
+                                if (index in shown.unavailable) shown.onUnavailable(index) else shown.onSelect(index)
                             }
                             .padding(horizontal = 14.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -550,7 +555,10 @@ private fun PickerOverlay(host: PickerHost, backdrop: Backdrop) {
                                 Icon(LumenIcons.Check, null, tint = colors.text, modifier = Modifier.size(17.dp))
                             }
                         }
-                        Text(option, fontSize = 16.sp, color = colors.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(
+                            option, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            color = if (index in shown.unavailable) colors.text.copy(alpha = 0.38f) else colors.text,
+                        )
                     }
                 }
             }

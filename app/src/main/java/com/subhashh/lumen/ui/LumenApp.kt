@@ -493,7 +493,7 @@ private fun MainScaffold(
     /** The name request is for a face just made into a person ([com.subhashh.lumen.ai.FaceStore.startPerson]). */
     var faceStarted by remember { mutableStateOf<Long?>(null) }
     /** After naming a face, grouping gathers that person's other faces that match (in the background). */
-    val regroup = { scope.launch(Dispatchers.IO) { runCatching { com.subhashh.lumen.ai.FaceGrouping.run(com.subhashh.lumen.ai.FaceStore.of(context)) } } }
+    val regroup = { scope.launch(Dispatchers.IO) { runCatching { com.subhashh.lumen.ai.FaceGrouping.run(com.subhashh.lumen.ai.FaceStore.of(context), com.subhashh.lumen.ai.FaceModel.recognizer(context)) } } }
     /** A name that another person already has: merge them, or keep both with it. */
     var mergeProposal by remember { mutableStateOf<MergeProposal?>(null) }
     var personMenuOpen by remember { mutableStateOf(false) }
@@ -2540,6 +2540,11 @@ private fun MainScaffold(
         // Hidden on screen (its grid, a folder, or the viewer opened from it): no screenshots unless allowed.
         com.subhashh.lumen.ui.hidden.SecureWhile(
             hiddenUnlocked && (CollectionKeys.isHidden(openCollection) || CollectionKeys.isHidden(viewerSource)) && !prefs.hiddenScreenshots,
+        )
+        com.subhashh.lumen.ui.components.FaceUpgradeRequest(
+            prefs,
+            canShow = announce == null && confirmation == null && !viewerOpen && !selecting && settingsPage == null && pick == null,
+            show = { confirmation = it },
         )
         com.subhashh.lumen.ui.components.StarRequest(
             prefs,

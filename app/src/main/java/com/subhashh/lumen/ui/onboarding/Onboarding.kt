@@ -441,7 +441,7 @@ private fun ColumnScope.Smart(backdrop: Backdrop, onNext: (downloading: Boolean)
     var wifiOnly by rememberSaveable { mutableStateOf(prefs.modelWifiOnly) }
     val model = ModelCatalog.byId(tier)
     val total = (if (search) model.bytes else 0) + (if (text) OcrModel.bytes else 0) +
-        (if (faces) FaceModel.bytes else 0) + (if (subtitles) SpeechModel.bytes else 0)
+        (if (faces) FaceModel.bytes(context) else 0) + (if (subtitles) SpeechModel.bytes else 0)
 
     fun start() {
         prefs.searchModel = tier
@@ -481,7 +481,7 @@ private fun ColumnScope.Smart(backdrop: Backdrop, onNext: (downloading: Boolean)
                 }
             }
             Item(LumenIcons.Document, stringResource(R.string.onboarding_text), stringResource(R.string.onboarding_text_detail, megabytes(com.subhashh.lumen.ai.ModelDownloads.bytes(context, com.subhashh.lumen.ai.ModelPack.Text)))) { Switch(text, { text = it }) }
-            Item(LumenIcons.Face, stringResource(R.string.onboarding_faces), stringResource(R.string.onboarding_faces_detail, megabytes(FaceModel.bytes))) { Switch(faces, { faces = it }) }
+            Item(LumenIcons.Face, stringResource(R.string.onboarding_faces), stringResource(R.string.onboarding_faces_detail, megabytes(FaceModel.bytes(context)))) { Switch(faces, { faces = it }) }
             Item(LumenIcons.Subtitles, stringResource(R.string.onboarding_subtitles), stringResource(R.string.onboarding_subtitles_detail, megabytes(SpeechModel.bytes))) { Switch(subtitles, { subtitles = it }) }
         }
         Spacer(Modifier.height(12.dp))

@@ -49,6 +49,8 @@ data class Confirmation(
     val details: String? = null,
     /** The dismiss button's label; Cancel when null. */
     val cancel: String? = null,
+    /** Runs when that button is tapped (not when the dialog is just closed). */
+    val onCancel: (() -> Unit)? = null,
     val onConfirm: () -> Unit,
 )
 
@@ -111,7 +113,7 @@ fun ConfirmDialog(confirmation: Confirmation?, onDismiss: () -> Unit) {
                         textAlign = TextAlign.Center,
                         modifier = Modifier
                             .weight(1f)
-                            .clickable(onClick = onDismiss)
+                            .clickable { onDismiss(); c.onCancel?.invoke() }
                             .padding(vertical = 13.dp),
                     )
                     Box(Modifier.width(0.5.dp).height(48.dp).background(secondary.copy(alpha = 0.3f)))

@@ -1199,6 +1199,12 @@
     <string name="data_source_camera">Camera</string>
     <string name="data_source_downloads">Downloads</string>
     <string name="smart_runs_on">Runs On</string>
+    <string name="smart_faces_quality">Recognition</string>
+    <string name="smart_faces_no_npu">No compatible NPU detected. Accurate needs a supported Snapdragon NPU.</string>
+    <string name="main_faces_upgrade_title">Better Face Recognition</string>
+    <string name="main_faces_upgrade_message">Your phone’s NPU can run a much more accurate face model (%1$s). Lumen downloads it on Wi-Fi and looks at your faces again: people you named stay, and the rest are grouped anew.</string>
+    <string name="main_faces_upgrade_confirm">Update</string>
+    <string name="main_faces_upgrade_later">Not Now</string>
     <string name="smart_runs_on_npu">NPU · %1$s</string>
     <string name="smart_runs_on_gpu">GPU</string>
     <string name="smart_runs_on_cpu">CPU</string>

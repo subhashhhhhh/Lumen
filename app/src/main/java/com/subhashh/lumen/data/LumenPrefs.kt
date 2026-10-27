@@ -168,6 +168,11 @@ class LumenPrefs(context: Context) {
         get() = prefs.getString(KeySearchModel, null)
         set(value) = prefs.edit { putString(KeySearchModel, value) }
 
+    /** The face recognizer chosen (a FaceRecognizer id); null means the default, Accurate where the NPU runs it. */
+    var faceModel: String?
+        get() = prefs.getString(KeyFaceModel, null)
+        set(value) = prefs.edit { putString(KeyFaceModel, value) }
+
     /** Smart Search model download waits for an unmetered network. */
     var modelWifiOnly: Boolean
         get() = prefs.getBoolean(KeyModelWifiOnly, true)
@@ -346,6 +351,7 @@ class LumenPrefs(context: Context) {
         const val KeyIndexScheduleEnd = "index_schedule_end"
         const val KeySearchDetails = "search_details"
         const val KeySearchModel = "search_model"
+        const val KeyFaceModel = "face_model"
         const val KeySections = "section_mode"
         const val KeyReduceMotion = "reduce_motion"
         const val KeyHdr = "hdr_photos"
