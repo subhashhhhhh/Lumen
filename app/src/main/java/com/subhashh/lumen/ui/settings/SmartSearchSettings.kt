@@ -178,7 +178,7 @@ internal fun SmartSearchGroup(
         Anchor("search-quality", highlight) {
             PickerRow(
                 title = stringResource(R.string.smart_search_quality),
-                options = ModelCatalog.all.map { stringResource(R.string.smart_option_size, modelLabel(context, it.label), megabytes(it.bytes)) },
+                options = ModelCatalog.all.map { stringResource(R.string.smart_option_size, modelLabel(context, it.label), megabytes(it.bytes(context))) },
                 selected = ModelCatalog.all.indexOf(chosen),
                 onSelect = {
                     val next = ModelCatalog.all[it]

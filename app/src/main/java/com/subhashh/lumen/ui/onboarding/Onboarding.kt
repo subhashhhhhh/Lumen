@@ -460,7 +460,7 @@ private fun ColumnScope.Smart(backdrop: Backdrop, onNext: (downloading: Boolean)
     Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
         Title(stringResource(R.string.onboarding_smart_title), stringResource(R.string.onboarding_smart_subtitle))
         Card(backdrop) {
-            Item(LumenIcons.Search, stringResource(R.string.onboarding_smart_search), stringResource(R.string.onboarding_smart_search_detail, megabytes(model.bytes))) { Switch(search, { search = it }) }
+            Item(LumenIcons.Search, stringResource(R.string.onboarding_smart_search), stringResource(R.string.onboarding_smart_search_detail, megabytes(model.bytes(context)))) { Switch(search, { search = it }) }
             if (search) {
                 Row(Modifier.fillMaxWidth().padding(start = 38.dp, bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     for (m in ModelCatalog.all) {
@@ -480,7 +480,7 @@ private fun ColumnScope.Smart(backdrop: Backdrop, onNext: (downloading: Boolean)
                     }
                 }
             }
-            Item(LumenIcons.Document, stringResource(R.string.onboarding_text), stringResource(R.string.onboarding_text_detail, megabytes(OcrModel.bytes))) { Switch(text, { text = it }) }
+            Item(LumenIcons.Document, stringResource(R.string.onboarding_text), stringResource(R.string.onboarding_text_detail, megabytes(com.subhashh.lumen.ai.ModelDownloads.bytes(context, com.subhashh.lumen.ai.ModelPack.Text)))) { Switch(text, { text = it }) }
             Item(LumenIcons.Face, stringResource(R.string.onboarding_faces), stringResource(R.string.onboarding_faces_detail, megabytes(FaceModel.bytes))) { Switch(faces, { faces = it }) }
             Item(LumenIcons.Subtitles, stringResource(R.string.onboarding_subtitles), stringResource(R.string.onboarding_subtitles_detail, megabytes(SpeechModel.bytes))) { Switch(subtitles, { subtitles = it }) }
         }
