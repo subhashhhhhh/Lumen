@@ -131,12 +131,19 @@ baselineProfile {
     mergeIntoMain = true
 }
 
-// Lumen Lab builds unpack native libraries onto the phone: Qualcomm's NPU runtime is loaded from
-// the app's library folder, not from inside the APK. Release builds are unchanged.
-if (hasLab) {
-    androidComponents {
-        onVariants(selector().withBuildType("debug")) { it.packaging.jniLibs.useLegacyPackaging.set(true) }
-        onVariants(selector().withBuildType("profile")) { it.packaging.jniLibs.useLegacyPackaging.set(true) }
+// Native libraries are unpacked onto the phone: Qualcomm's NPU runtime is loaded from the app's
+// library folder, not from inside the APK. Only the Lab compiles models on the phone; everything
+// else uses models compiled ahead of time (lumen-npu-build), so the 85 MB compiler stays out, and
+// so do the Snapdragon 888's (v68) and older DSPs' libraries, which those models can't run on.
+androidComponents {
+    onVariants { variant ->
+        variant.packaging.jniLibs.useLegacyPackaging.set(true)
+        val lab = hasLab && variant.buildType in listOf("debug", "profile")
+        if (!lab) {
+            variant.packaging.jniLibs.excludes.addAll(
+                "**/libQnnHtpPrepare.so", "**/libQnnHtpV68*.so", "**/libQnnDsp*.so", "**/libQnnGpu.so",
+            )
+        }
     }
 }
 
@@ -193,13 +200,9 @@ dependencies {
         debugImplementation(libs.litertlm.android)
         "profileImplementation"(libs.litertlm.android)
     }
-    // Lumen Lab only: the Qualcomm NPU (LiteRT's dispatch library and Qualcomm's QAIRT runtime,
-    // which is proprietary). Never in release.
-    if (hasLab) {
-        for (config in listOf("debugImplementation", "profileImplementation")) {
-            config(libs.litert.npu.qualcomm) { exclude(group = "com.google.android.play") }
-            config(libs.qnn.runtime)
-        }
-    }
+    // Qualcomm's NPU: LiteRT's dispatch library and Qualcomm's QAIRT runtime (proprietary; a
+    // build for F-Droid will need a flavour without them). Lumen AI uses it on supported chips.
+    implementation(libs.litert.npu.qualcomm) { exclude(group = "com.google.android.play") }
+    implementation(libs.qnn.runtime)
 
 }

@@ -1198,4 +1198,8 @@
     <string name="data_source_screen_recording">Screen recording</string>
     <string name="data_source_camera">Camera</string>
     <string name="data_source_downloads">Downloads</string>
+    <string name="smart_runs_on">Runs On</string>
+    <string name="smart_runs_on_npu">NPU · %1$s</string>
+    <string name="smart_runs_on_gpu">GPU</string>
+    <string name="smart_runs_on_cpu">CPU</string>
 </resources>

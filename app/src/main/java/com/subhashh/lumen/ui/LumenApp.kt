@@ -245,6 +245,10 @@ fun LumenApp(
         onStopOrDispose { viewModel.watchMedia(false) }
     }
 
+    // A phone whose NPU Lumen AI can use, with models from before NPU support: fetches the NPU's
+    // files on Wi-Fi, without asking. Search keeps working and moves over once they're in.
+    LaunchedEffect(Unit) { withContext(Dispatchers.IO) { com.subhashh.lumen.ai.Models.fetchNpuFiles(context) } }
+
     // First launch: onboarding. Someone who already had access before onboarding existed has
     // been using Lumen, so they skip it.
     val prefs = remember { com.subhashh.lumen.data.LumenPrefs(context) }

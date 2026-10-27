@@ -216,6 +216,7 @@ internal fun SmartSearchGroup(
                 )
             }
         }
+        ProcessorRow(ModelPack.Search, refresh)
     }
 
     Group(
@@ -243,6 +244,7 @@ internal fun SmartSearchGroup(
                 )
             }
         }
+        ProcessorRow(ModelPack.Text, refresh)
     }
 
     Group(
@@ -568,4 +570,27 @@ private fun videoDetailLabel(detail: VideoDetail): Int = when (detail) {
     VideoDetail.High -> R.string.smart_video_high
     VideoDetail.Medium -> R.string.smart_video_medium
     VideoDetail.Low -> R.string.smart_video_low
+}
+
+/**
+ * What ran [pack]'s main model last: the NPU (with the chip), the GPU or the CPU. Hidden until it
+ * has run once. Tells a slow report from a phone that fell back.
+ */
+@Composable
+private fun ProcessorRow(pack: ModelPack, refresh: Any?) {
+    val context = LocalContext.current
+    val processor = remember(refresh) { com.subhashh.lumen.ai.Models.processor(context, pack) } ?: return
+    val chip = remember { com.subhashh.lumen.ai.Models.npuChip(context) }
+    Divider()
+    SettingsRow(
+        title = stringResource(R.string.smart_runs_on),
+        value = when (processor) {
+            "NPU" -> stringResource(R.string.smart_runs_on_npu, chip.orEmpty())
+            "GPU" -> stringResource(R.string.smart_runs_on_gpu)
+            else -> stringResource(R.string.smart_runs_on_cpu)
+        },
+        onClick = null,
+        icon = LumenIcons.Code,
+        iconColor = Gray,
+    )
 }
