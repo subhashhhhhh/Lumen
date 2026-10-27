@@ -5,22 +5,30 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.view.ActionMode
+import android.view.Menu
+import android.view.MenuItem
+import android.view.View
+import android.view.textclassifier.TextClassification
+import android.view.textclassifier.TextClassificationManager
+import androidx.compose.foundation.Image
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.produceState
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalView
+import androidx.core.graphics.drawable.toBitmap
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import android.util.Patterns
 import android.widget.Toast
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
@@ -44,21 +52,16 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
-import com.kyant.backdrop.Backdrop
 import com.subhashh.lumen.data.MediaItem
 import com.subhashh.lumen.ai.LiveText
-import com.subhashh.lumen.ui.components.glass
-import com.subhashh.lumen.ui.components.pressable
-import com.subhashh.lumen.ui.theme.LocalGlassColors
 import kotlin.math.hypot
 import kotlin.math.roundToInt
 
 /**
  * Live Text for the photo on screen: its text ([result]), what's selected, and whether all of
  * it is shown (the text button). The photo page draws it ([LiveTextLayer]); the viewer's chrome
- * shows the menu ([LiveTextMenu]). Characters are numbered through the whole photo, lines
+ * shows Android's text toolbar ([LiveTextToolbar]). Characters are numbered through the whole photo, lines
  * joined by newlines, so a selection can run across lines.
  */
 @Stable
@@ -223,7 +226,10 @@ private fun open(context: Context, kind: Smart, value: String) {
 fun LiveTextLayer(state: LiveTextState, bounds: Rect?, modifier: Modifier = Modifier) {
     val result = state.result
     if (result == null || bounds == null || bounds.isEmpty) return
-    val accent = MaterialTheme.colorScheme.primary
+    val context = LocalContext.current
+    val view = LocalView.current
+    // The system's own selection look: its highlight colour and handle drawables (the theme is DeviceDefault).
+    val look = remember(context) { SelectionLook.of(context) }
     val selection = state.selection
     var coords by remember { mutableStateOf<LayoutCoordinates?>(null) }
     val frames = frames(result, bounds)
@@ -259,18 +265,22 @@ fun LiveTextLayer(state: LiveTextState, bounds: Rect?, modifier: Modifier = Modi
                     val from = maxOf(selection.first, starts[i]) - starts[i]
                     val to = minOf(selection.last, starts[i] + line.text.length - 1) - starts[i]
                     if (from > to || from !in line.starts.indices || to !in line.ends.indices) continue
-                    drawPath(quad(f, line.starts[from], line.ends[to], 0.08f), accent.copy(alpha = 0.35f))
+                    drawPath(quad(f, line.starts[from], line.ends[to], 0.08f), look.highlight)
                 }
             }
         }
         if (selection != null && ends != null) {
-            Handle(ends.first.first, top = true, accent) { p ->
-                hit(state, bounds, p, strict = false)?.let { i ->
+            val magnifier = remember(view) { android.widget.Magnifier.Builder(view).build() }
+            val toView = { p: Offset -> coords?.takeIf { it.isAttached }?.localToRoot(p) ?: p }
+            // A point just inside the text from a handle's tip (tips sit on the line's bottom edge).
+            val lift = with(LocalDensity.current) { 8.dp.toPx() }
+            Handle(ends.first.first, start = true, look, magnifier, toView) { p ->
+                hit(state, bounds, p - Offset(0f, lift), strict = false)?.let { i ->
                     if (i <= selection.last) state.selection = i..selection.last
                 }
             }
-            Handle(ends.first.second, top = false, accent) { p ->
-                hit(state, bounds, p, strict = false)?.let { i ->
+            Handle(ends.first.second, start = false, look, magnifier, toView) { p ->
+                hit(state, bounds, p - Offset(0f, lift), strict = false)?.let { i ->
                     if (i >= selection.first) state.selection = selection.first..i
                 }
             }
@@ -278,7 +288,7 @@ fun LiveTextLayer(state: LiveTextState, bounds: Rect?, modifier: Modifier = Modi
     }
 }
 
-/** The selection's start point (top), end point (bottom), and the box around it. */
+/** Where the selection's handles point (the bottom of its first and last character), and the box around it. */
 private fun selectionEnds(state: LiveTextState, frames: List<LineFrame>, starts: IntArray): Pair<Pair<Offset, Offset>, Rect>? {
     val result = state.result ?: return null
     val sel = state.selection ?: return null
@@ -290,7 +300,7 @@ private fun selectionEnds(state: LiveTextState, frames: List<LineFrame>, starts:
         val from = maxOf(sel.first, starts[i]) - starts[i]
         val to = minOf(sel.last, starts[i] + line.text.length - 1) - starts[i]
         if (from > to || from !in line.starts.indices || to !in line.ends.indices) continue
-        if (start == null) start = f.at(line.starts[from], 0f)
+        if (start == null) start = f.at(line.starts[from], 1f)
         end = f.at(line.ends[to], 1f)
         val pts = listOf(f.at(line.starts[from], 0f), f.at(line.ends[to], 0f), f.at(line.ends[to], 1f), f.at(line.starts[from], 1f))
         val r = Rect(pts.minOf { it.x }, pts.minOf { it.y }, pts.maxOf { it.x }, pts.maxOf { it.y })
@@ -299,90 +309,200 @@ private fun selectionEnds(state: LiveTextState, frames: List<LineFrame>, starts:
     return if (start != null && end != null && box != null) (start to end) to box else null
 }
 
-/** A selection handle: a bar along the text's edge with a knob, dragged to move that end. */
-@Composable
-private fun Handle(at: Offset, top: Boolean, color: Color, onDrag: (Offset) -> Unit) {
-    val density = LocalDensity.current
-    val knob = with(density) { 14.dp.toPx() }
-    // A generous touch area around the knob.
-    val touch = with(density) { 44.dp.toPx() }
-    val current by rememberUpdatedState(at)
-    val drag by rememberUpdatedState(onDrag)
-    var dragAt = at
-    Box(
-        Modifier
-            .offset { IntOffset((at.x - touch / 2).roundToInt(), (at.y - touch / 2 + if (top) -knob else knob).roundToInt()) }
-            .size(with(density) { touch.toDp() })
-            .pointerInput(top) {
-                detectDragGestures(onDragStart = { dragAt = current }) { change, amount ->
-                    change.consume()
-                    dragAt += amount
-                    drag(dragAt)
-                }
-            },
-    ) {
-        Box(
-            Modifier
-                .offset { IntOffset((touch / 2 - knob / 2).roundToInt(), (touch / 2 - knob / 2).roundToInt()) }
-                .size(14.dp)
-                .background(color, CircleShape)
-                .border(2.dp, Color.White, CircleShape),
-        )
+/** The theme's text highlight colour and selection handles, as a TextView draws them. */
+private class SelectionLook(val highlight: Color, val left: ImageBitmap, val right: ImageBitmap) {
+    companion object {
+        fun of(context: Context): SelectionLook {
+            val a = context.obtainStyledAttributes(
+                intArrayOf(android.R.attr.textColorHighlight, android.R.attr.textSelectHandleLeft, android.R.attr.textSelectHandleRight),
+            )
+            try {
+                val highlight = Color(a.getColor(0, 0x6633B5E5))
+                val left = checkNotNull(a.getDrawable(1)).toBitmap().asImageBitmap()
+                val right = checkNotNull(a.getDrawable(2)).toBitmap().asImageBitmap()
+                return SelectionLook(highlight, left, right)
+            } finally {
+                a.recycle()
+            }
+        }
     }
 }
 
 /**
- * The glass menu above (or below) the selection: Copy, Select All, Search, Share, and Open,
- * Call or Email when the selection is one. With all text shown and nothing selected: Copy All.
+ * A selection handle, the system's teardrop hanging below the text at [at]; dragged to move that
+ * end, with the system magnifier over the text meanwhile (as in any text field).
  */
 @Composable
-fun LiveTextMenu(state: LiveTextState, backdrop: Backdrop, onSearch: (String) -> Unit, modifier: Modifier = Modifier) {
+private fun Handle(
+    at: Offset,
+    start: Boolean,
+    look: SelectionLook,
+    magnifier: android.widget.Magnifier,
+    toView: (Offset) -> Offset,
+    onDrag: (Offset) -> Unit,
+) {
+    val image = if (start) look.left else look.right
+    // Where the drawable's tip is, as TextView places them: ¾ across for the start one, ¼ for the end.
+    val hotspotX = if (start) image.width * 3 / 4f else image.width / 4f
+    val current by rememberUpdatedState(at)
+    val drag by rememberUpdatedState(onDrag)
+    var dragAt = at
+    val density = LocalDensity.current
+    Image(
+        image, null,
+        Modifier
+            .offset { IntOffset((at.x - hotspotX).roundToInt(), at.y.roundToInt()) }
+            .size(with(density) { image.width.toDp() }, with(density) { image.height.toDp() })
+            .pointerInput(start) {
+                detectDragGestures(
+                    onDragStart = { dragAt = current },
+                    onDragEnd = { magnifier.dismiss() },
+                    onDragCancel = { magnifier.dismiss() },
+                ) { change, amount ->
+                    change.consume()
+                    dragAt += amount
+                    drag(dragAt)
+                    val p = toView(current - Offset(0f, 8.dp.toPx()))
+                    magnifier.show(p.x, p.y)
+                }
+            },
+    )
+}
+
+/**
+ * Android's own floating text toolbar for the selection (the ActionMode every text field uses):
+ * the text classifier's action for it (Open, Call, Email, Map… with the app's icon), Copy, Share,
+ * Select All, Lumen's Search, and the apps that process text (Translate…). Cut and Paste don't
+ * apply: text in a photo can't be edited. With all text shown and nothing selected: Copy All and
+ * Select All, at the bottom. Dismissing it (back, tapping elsewhere) clears the selection.
+ */
+@Composable
+fun LiveTextToolbar(state: LiveTextState, visible: Boolean, onSearch: (String) -> Unit) {
+    val view = LocalView.current
     val context = LocalContext.current
-    val glass = LocalGlassColors.current
+    val selection = state.selection
+    val show = visible && (selection != null || state.showAll)
     val selected = state.selectedText.trim()
-    val actions = buildList<Pair<String, () -> Unit>> {
-        if (state.selection == null) {
-            if (!state.showAll) return@buildList
-            add(context.getString(R.string.viewer_copy_all) to { copy(context, state.text) })
-            add(context.getString(R.string.common_select_all) to { state.selection = 0..(state.text.length - 1).coerceAtLeast(0) })
-            return@buildList
+    val classification by produceState<TextClassification?>(null, selected) {
+        value = if (selected.isEmpty()) null else withContext(Dispatchers.IO) {
+            runCatching {
+                context.getSystemService(TextClassificationManager::class.java).textClassifier
+                    .classifyText(TextClassification.Request.Builder(selected, 0, selected.length).build())
+            }.getOrNull()
         }
-        smartSpans(selected).singleOrNull()?.takeIf { it.first.first == 0 && it.first.last == selected.lastIndex }?.let { (_, kind) ->
-            add(
-                when (kind) {
-                    Smart.Link -> context.getString(R.string.common_open)
-                    Smart.Phone -> context.getString(R.string.viewer_call)
-                    Smart.Email -> context.getString(R.string.viewer_email)
-                } to { open(context, kind, selected) },
-            )
-        }
-        add(context.getString(R.string.common_copy) to {
-            copy(context, selected)
-            state.clear()
-        })
-        if (state.selection != 0..(state.text.length - 1)) add(context.getString(R.string.common_select_all) to { state.selection = 0..(state.text.length - 1).coerceAtLeast(0) })
-        add(context.getString(R.string.common_search) to { onSearch(selected.take(80)) })
-        add(context.getString(R.string.common_share) to {
-            val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, selected)
-            runCatching { context.startActivity(Intent.createChooser(send, null).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
-        })
     }
-    if (actions.isEmpty()) return
-    Row(
-        modifier
-            .glass(backdrop, RoundedCornerShape(50), tint = glass.fallbackTint.copy(alpha = 0.82f))
-            .padding(horizontal = 6.dp),
-    ) {
-        for ((label, action) in actions) {
-            Text(
-                label,
-                color = glass.content,
-                fontSize = 15.sp,
-                modifier = Modifier.pressable(action, pressedScale = 0.92f).padding(horizontal = 12.dp, vertical = 12.dp),
-            )
+    val processors = remember(context) {
+        context.packageManager.queryIntentActivities(Intent(Intent.ACTION_PROCESS_TEXT).setType("text/plain"), 0)
+            .filter { it.activityInfo.packageName != context.packageName }
+    }
+    val latest = rememberUpdatedState(Triple(selected, classification, onSearch))
+    val bottomGap = with(LocalDensity.current) { 160.dp.roundToPx() }
+    var mode by remember { mutableStateOf<ActionMode?>(null) }
+    var closing by remember { mutableStateOf(false) }
+
+    val callback = remember(state, view) {
+        object : ActionMode.Callback2() {
+            override fun onCreateActionMode(mode: ActionMode, menu: Menu) = true
+
+            override fun onPrepareActionMode(mode: ActionMode, menu: Menu): Boolean {
+                menu.clear()
+                val (text, smart, _) = latest.value
+                val all = state.text
+                if (state.selection == null) {
+                    menu.add(Menu.NONE, ItemCopyAll, 0, R.string.viewer_copy_all)
+                    menu.add(Menu.NONE, ItemSelectAll, 1, android.R.string.selectAll)
+                    return true
+                }
+                smart?.actions?.firstOrNull()?.let { action ->
+                    menu.add(Menu.NONE, ItemSmart, 0, action.title).apply {
+                        if (action.shouldShowIcon()) icon = action.icon.loadDrawable(context)
+                        setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
+                    }
+                }
+                menu.add(Menu.NONE, ItemCopy, 1, android.R.string.copy)
+                menu.add(Menu.NONE, ItemShare, 2, R.string.common_share)
+                if (state.selection != 0..(all.length - 1)) menu.add(Menu.NONE, ItemSelectAll, 3, android.R.string.selectAll)
+                menu.add(Menu.NONE, ItemSearch, 4, R.string.common_search)
+                processors.forEachIndexed { i, info ->
+                    menu.add(Menu.NONE, ItemProcess + i, 10 + i, info.loadLabel(context.packageManager)).setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER)
+                }
+                return text.isNotEmpty()
+            }
+
+            override fun onActionItemClicked(mode: ActionMode, item: MenuItem): Boolean {
+                val (text, smart, search) = latest.value
+                when (val id = item.itemId) {
+                    ItemSmart -> runCatching { smart?.actions?.firstOrNull()?.actionIntent?.send() }
+                    ItemCopy -> { copy(context, text); finish() }
+                    ItemCopyAll -> { copy(context, state.text); finish() }
+                    ItemShare -> {
+                        val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text)
+                        runCatching { context.startActivity(Intent.createChooser(send, null).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                        finish()
+                    }
+                    ItemSelectAll -> state.selection = 0..(state.text.length - 1).coerceAtLeast(0)
+                    ItemSearch -> { finish(); search(text.take(80)) }
+                    else -> processors.getOrNull(id - ItemProcess)?.let { info ->
+                        runCatching {
+                            context.startActivity(
+                                Intent(Intent.ACTION_PROCESS_TEXT).setType("text/plain")
+                                    .setClassName(info.activityInfo.packageName, info.activityInfo.name)
+                                    .putExtra(Intent.EXTRA_PROCESS_TEXT, text)
+                                    .putExtra(Intent.EXTRA_PROCESS_TEXT_READONLY, true)
+                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                            )
+                        }
+                    }
+                }
+                return true
+            }
+
+            override fun onDestroyActionMode(mode: ActionMode) {
+                // Closed by Android (back, a tap elsewhere): the selection goes too, as in any app.
+                if (!closing) state.clear()
+            }
+
+            override fun onGetContentRect(mode: ActionMode, view: View, outRect: android.graphics.Rect) {
+                val b = state.selectionBounds
+                if (b != null) {
+                    outRect.set(b.left.roundToInt(), b.top.roundToInt(), b.right.roundToInt(), b.bottom.roundToInt())
+                } else {
+                    val y = view.height - bottomGap
+                    outRect.set(view.width / 2 - 1, y, view.width / 2 + 1, y + 1)
+                }
+            }
+
+            private fun finish() {
+                state.clear()
+            }
         }
+    }
+
+    DisposableEffect(show) {
+        if (show) {
+            closing = false
+            mode = view.startActionMode(callback, ActionMode.TYPE_FLOATING)
+        }
+        onDispose {
+            closing = true
+            mode?.finish()
+            mode = null
+        }
+    }
+    // The selection moved or grew, or the classifier answered: re-place and rebuild the toolbar.
+    SideEffect {
+        mode?.invalidateContentRect()
+        mode?.invalidate()
     }
 }
+
+private const val ItemSmart = 1
+private const val ItemCopy = 2
+private const val ItemCopyAll = 3
+private const val ItemShare = 4
+private const val ItemSelectAll = 5
+private const val ItemSearch = 6
+private const val ItemProcess = 100
 
 private fun copy(context: Context, text: String) {
     context.getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("Text", text))

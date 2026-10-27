@@ -766,41 +766,16 @@ fun ViewerScreen(
                     .nestedScroll(motion.sheetScroll),
             )
         }
-        // Live Text's menu: above the selection (below it when that's too close to the top), or
-        // at the bottom with all text shown and nothing selected.
-        if (current != null && liveText.item?.id == current.id && atRest && !sheetVisible) {
-            val density = LocalDensity.current
-            val bounds = liveText.selectionBounds
-            val topLimit = with(density) { (WindowInsets.statusBars.getTop(this) + 72.dp.roundToPx()).toFloat() }
-            var menuHeight by remember { mutableIntStateOf(0) }
-            var menuWidth by remember { mutableIntStateOf(0) }
-            LiveTextMenu(
-                liveText,
-                backdrop,
-                onSearch = { query ->
-                    liveText.clear()
-                    onSearchText(query)
-                },
-                modifier = Modifier
-                    .onSizeChanged {
-                        menuHeight = it.height
-                        menuWidth = it.width
-                    }
-                    .then(
-                        if (bounds != null) {
-                            Modifier.offset {
-                                val gap = 12.dp.roundToPx()
-                                val above = bounds.top - menuHeight - gap
-                                val y = if (above > topLimit) above else bounds.bottom + gap + 24.dp.roundToPx()
-                                val x = (bounds.center.x - menuWidth / 2f).coerceIn(8.dp.toPx(), (width - menuWidth - 8.dp.toPx()).coerceAtLeast(8.dp.toPx()))
-                                IntOffset(x.roundToInt(), y.roundToInt())
-                            }
-                        } else {
-                            Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 96.dp)
-                        },
-                    ),
-            )
-        }
+        // Live Text's toolbar: Android's own, above the selection (or near the bottom with all text
+        // shown and nothing selected).
+        LiveTextToolbar(
+            liveText,
+            visible = current != null && liveText.item?.id == current.id && atRest && !sheetVisible,
+            onSearch = { query ->
+                liveText.clear()
+                onSearchText(query)
+            },
+        )
         com.subhashh.lumen.ui.components.RenameDialog(
             currentName = captionEdit?.second,
             title = stringResource(R.string.viewer_caption),

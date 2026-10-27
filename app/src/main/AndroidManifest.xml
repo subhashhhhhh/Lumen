@@ -51,6 +51,14 @@
 
     <!-- Lumen AI's manifest adds its services (GPU check, model downloads) and the GPU driver
          libraries. -->
+    <queries>
+        <!-- Live Text's toolbar lists apps that act on selected text (Translate…). -->
+        <intent>
+            <action android:name="android.intent.action.PROCESS_TEXT" />
+            <data android:mimeType="text/plain" />
+        </intent>
+    </queries>
+
     <application
         android:name=".LumenApplication"
         android:allowBackup="true"

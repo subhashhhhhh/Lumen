@@ -1,5 +1,8 @@
 <resources>
-    <style name="Theme.Lumen" parent="android:Theme.Material.NoActionBar">
+    <!-- DeviceDefault: what Android draws itself (text selection handles and toolbar) looks like the phone's own. -->
+    <style name="Theme.Lumen" parent="android:Theme.DeviceDefault.DayNight">
+        <item name="android:windowActionBar">false</item>
+        <item name="android:windowNoTitle">true</item>
         <item name="android:windowBackground">@android:color/black</item>
     </style>
 </resources>
