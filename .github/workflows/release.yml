@@ -35,7 +35,7 @@ jobs:
         run: |
           sdkmanager=$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | sort -V | tail -1)
           yes | "$sdkmanager" --licenses > /dev/null || true
-          "$sdkmanager" "platforms;android-37" "ndk;30.0.16248370" "cmake;4.1.2" > /dev/null
+          "$sdkmanager" "platforms;android-37.0" "ndk;30.0.16248370" "cmake;4.1.2" > /dev/null
       - uses: gradle/actions/setup-gradle@v4
       - name: Release key
         env:
