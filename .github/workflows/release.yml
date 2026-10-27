@@ -1,0 +1,67 @@
+# Release APKs, built and signed on GitHub instead of the owner's Mac. Pushing a v* tag builds
+# that commit against lumen-ai's main (checked out next to it, as on the Mac), signs with the
+# release key (repository secrets), checks the signature, and attaches the APKs and checksums to
+# a draft release; notes are added and the draft published by hand.
+name: Release
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag to build (must exist)
+        required: true
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    env:
+      TAG: ${{ inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+      - name: lumen-ai, next to the app (settings.gradle.kts builds it from source)
+        run: |
+          git clone --depth 1 https://github.com/subhashhhhhh/lumen-ai.git ../lumen-ai
+          echo "LUMEN_AI_COMMIT=$(git -C ../lumen-ai rev-parse --short HEAD)" >> "$GITHUB_ENV"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v3
+      - name: SDK, NDK and CMake versions the build asks for
+        run: sdkmanager "platforms;android-37" "ndk;30.0.16248370" "cmake;4.1.2" > /dev/null
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Release key
+        env:
+          KEYSTORE: ${{ secrets.LUMEN_KEYSTORE_B64 }}
+        run: |
+          echo "$KEYSTORE" | base64 -d > "$RUNNER_TEMP/lumen-release.jks"
+          echo "LUMEN_KEYSTORE=$RUNNER_TEMP/lumen-release.jks" >> "$GITHUB_ENV"
+      - name: Build
+        env:
+          LUMEN_KEY_PASSWORD: ${{ secrets.LUMEN_KEY_PASSWORD }}
+        run: ./gradlew :app:assembleRelease --no-daemon
+      - name: Name, check signature, checksums
+        run: |
+          version="${TAG#v}"
+          mkdir out
+          for abi in arm64-v8a armeabi-v7a x86_64 universal; do
+            cp "app/build/outputs/apk/release/app-$abi-release.apk" "out/Lumen-$version-$abi.apk"
+          done
+          apksigner=$(ls -d "$ANDROID_HOME"/build-tools/* | tail -1)/apksigner
+          for f in out/*.apk; do
+            "$apksigner" verify --print-certs "$f" | grep -q "SHA-256 digest: 442f3c6c65e3c125a149bb8572605fdf96617fb25d4aea01f5185bbbbd38abbc" \
+              || { echo "::error::$f is not signed with Lumen's release key"; exit 1; }
+          done
+          (cd out && sha256sum Lumen-*.apk > SHA256SUMS.txt && cat SHA256SUMS.txt)
+          rm -f "$LUMEN_KEYSTORE"
+      - name: Draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "$TAG" > /dev/null 2>&1 || gh release create "$TAG" --draft --title "Lumen ${TAG#v}" \
+            --notes "Built from ${GITHUB_SHA::7} with lumen-ai ${LUMEN_AI_COMMIT}. Notes to come."
+          gh release upload "$TAG" out/* --clobber
