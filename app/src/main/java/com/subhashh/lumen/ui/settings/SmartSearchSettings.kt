@@ -308,6 +308,7 @@ internal fun SmartSearchGroup(
                 )
             }
         }
+        ProcessorRow(ModelPack.Faces, refresh)
     }
 
     // Subtitles: made on the phone when CC is tapped on a video.
