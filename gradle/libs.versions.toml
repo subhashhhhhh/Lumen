@@ -1,5 +1,5 @@
 [versions]
-lumenAi = "0.1.6"
+lumenAi = "0.1.7"
 bouncyCastle = "1.86"
 testRunner = "1.7.0"
 orgJson = "20260814"
