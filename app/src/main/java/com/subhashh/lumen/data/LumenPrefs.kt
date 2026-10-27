@@ -74,6 +74,7 @@ class LumenPrefs(context: Context) {
         get() = AlbumSettings(
             sort = prefs.getString(KeyAlbumSort, null)?.let { name -> AlbumSort.entries.firstOrNull { it.name == name } }
                 ?: AlbumSort.Recent,
+            reversed = prefs.getBoolean(KeyAlbumSortReversed, false),
             pinned = prefs.getString(KeyPinned, null)?.lines()?.filter { it.isNotEmpty() }.orEmpty(),
             covers = prefs.getString(KeyCovers, null)?.lines()?.mapNotNull { line ->
                 val path = line.substringBefore('\t')
@@ -83,6 +84,7 @@ class LumenPrefs(context: Context) {
         )
         set(value) = prefs.edit {
             putString(KeyAlbumSort, value.sort.name)
+            putBoolean(KeyAlbumSortReversed, value.reversed)
             putString(KeyPinned, value.pinned.joinToString("\n"))
             putString(KeyCovers, value.covers.entries.joinToString("\n") { "${it.key}\t${it.value}" })
             putString(KeyCreated, value.created.joinToString("\n"))
@@ -167,6 +169,14 @@ class LumenPrefs(context: Context) {
     var searchModel: String?
         get() = prefs.getString(KeySearchModel, null)
         set(value) = prefs.edit { putString(KeySearchModel, value) }
+
+    /** A person's page order (Sort, by its filter button); newest first by default. */
+    var personSort: LibrarySort
+        get() = prefs.getString(KeyPersonSort, null)?.let { name -> LibrarySort.entries.firstOrNull { it.name == name } } ?: LibrarySort.Date
+        set(value) = prefs.edit { putString(KeyPersonSort, value.name) }
+    var personSortDescending: Boolean
+        get() = prefs.getBoolean(KeyPersonSortDescending, true)
+        set(value) = prefs.edit { putBoolean(KeyPersonSortDescending, value) }
 
     /** The face recognizer chosen (a FaceRecognizer id); null means the default, Accurate where the NPU runs it. */
     var faceModel: String?
@@ -352,6 +362,8 @@ class LumenPrefs(context: Context) {
         const val KeySearchDetails = "search_details"
         const val KeySearchModel = "search_model"
         const val KeyFaceModel = "face_model"
+        const val KeyPersonSort = "person_sort"
+        const val KeyPersonSortDescending = "person_sort_descending"
         const val KeySections = "section_mode"
         const val KeyReduceMotion = "reduce_motion"
         const val KeyHdr = "hdr_photos"
@@ -367,6 +379,7 @@ class LumenPrefs(context: Context) {
         const val KeySort = "library_sort"
         const val KeySortDescending = "library_sort_descending"
         const val KeyAlbumSort = "album_sort"
+        const val KeyAlbumSortReversed = "album_sort_reversed"
         const val KeyPinned = "pinned_albums"
         const val KeyCovers = "album_covers"
         const val KeyCreated = "created_albums"

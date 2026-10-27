@@ -91,7 +91,11 @@ data class MediaCollection(
 )
 
 /** How the Albums section is ordered; pinned albums always come first. */
-enum class AlbumSort(@StringRes val label: Int) { Recent(R.string.data_album_sort_recent), Name(R.string.data_sort_name), Count(R.string.data_album_sort_count) }
+enum class AlbumSort(@StringRes val label: Int, @StringRes val forwardLabel: Int, @StringRes val reversedLabel: Int) {
+    Recent(R.string.data_album_sort_recent, R.string.data_sort_newest, R.string.data_sort_oldest),
+    Name(R.string.data_sort_name, R.string.data_sort_a_z, R.string.data_sort_z_a),
+    Count(R.string.data_album_sort_count, R.string.data_sort_most, R.string.data_sort_fewest),
+}
 
 /**
  * The user's album arrangement, keyed by folder path so it survives MediaStore id changes:
@@ -101,6 +105,8 @@ enum class AlbumSort(@StringRes val label: Int) { Recent(R.string.data_album_sor
 @Immutable
 data class AlbumSettings(
     val sort: AlbumSort = AlbumSort.Recent,
+    /** [sort] the other way round: oldest, Z to A or fewest first. */
+    val reversed: Boolean = false,
     val pinned: List<String> = emptyList(),
     val covers: Map<String, Long> = emptyMap(),
     val created: List<String> = emptyList(),
@@ -166,7 +172,7 @@ object MediaCollections {
             AlbumSort.Recent -> (real + empty).sortedByDescending { it.latestAt }
             AlbumSort.Name -> (real + empty).sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.title })
             AlbumSort.Count -> (real + empty).sortedByDescending { it.count }
-        }
+        }.let { if (settings.reversed) it.reversed() else it }
         val (pinned, rest) = sorted.partition { it.pinned }
         return pinned.sortedBy { settings.pinned.indexOf(it.relativePath) } + rest
     }

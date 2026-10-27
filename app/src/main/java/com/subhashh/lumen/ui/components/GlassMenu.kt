@@ -54,6 +54,14 @@ data class MenuItem(
     val submenu: List<MenuItem>? = null,
     /** Shows a checkmark: the current choice in a pick-one section. */
     val checked: Boolean = false,
+    /** The current choice, shown next to a submenu's arrow ("All", "Date"). */
+    val value: String? = null,
+    /** The current sort's direction, as an arrow: true down (newest, A to Z, most), false up. */
+    val direction: Boolean? = null,
+    /** Choosing it leaves the menu open (a sort that can be tapped again to reverse it). */
+    val keepOpen: Boolean = false,
+    /** In a submenu: a divider above this item, starting a new group (sort keys, then direction). */
+    val startsGroup: Boolean = false,
     val onClick: () -> Unit = {},
 )
 
@@ -116,7 +124,10 @@ fun GlassMenu(
                     Text(parent.label, color = colors.content, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                 }
                 HorizontalDivider(color = colors.contentSecondary.copy(alpha = 0.2f), modifier = Modifier.padding(vertical = 4.dp))
-                parent.submenu.orEmpty().forEach { item -> MenuRow(item, colors) { onDismiss(); item.onClick() } }
+                parent.submenu.orEmpty().forEach { item ->
+                    if (item.startsGroup) HorizontalDivider(color = colors.contentSecondary.copy(alpha = 0.2f), modifier = Modifier.padding(vertical = 4.dp))
+                    MenuRow(item, colors) { onDismiss(); item.onClick() }
+                }
             } else {
                 sections.filter { it.isNotEmpty() }.forEachIndexed { index, section ->
                     if (index > 0) {
@@ -127,11 +138,13 @@ fun GlassMenu(
                     }
                     section.forEach { item ->
                         MenuRow(item, colors) {
-                            if (item.submenu != null) {
-                                submenu = item
-                            } else {
-                                onDismiss()
-                                item.onClick()
+                            when {
+                                item.submenu != null -> submenu = item
+                                item.keepOpen -> item.onClick()
+                                else -> {
+                                    onDismiss()
+                                    item.onClick()
+                                }
                             }
                         }
                     }
@@ -157,8 +170,20 @@ private fun MenuRow(item: MenuItem, colors: GlassColors, onClick: () -> Unit) {
             fontSize = 16.sp,
             modifier = Modifier.weight(1f),
         )
-        if (item.checked) {
+        if (item.direction != null) {
+            Icon(
+                LumenIcons.Back,
+                contentDescription = stringResource(R.string.components_selected),
+                tint = colors.content,
+                modifier = Modifier
+                    .size(16.dp)
+                    .graphicsLayer { rotationZ = if (item.direction) -90f else 90f },
+            )
+        } else if (item.checked) {
             Icon(LumenIcons.Check, contentDescription = stringResource(R.string.components_selected), tint = colors.content, modifier = Modifier.size(18.dp))
+        }
+        if (item.value != null) {
+            Text(item.value, color = colors.contentSecondary, fontSize = 15.sp, maxLines = 1, modifier = Modifier.padding(end = 6.dp))
         }
         if (item.submenu != null) {
             Icon(

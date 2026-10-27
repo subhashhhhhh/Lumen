@@ -1163,6 +1163,8 @@
     <string name="data_sort_z_a">Z to A</string>
     <string name="data_sort_smallest">Smallest First</string>
     <string name="data_sort_largest">Largest First</string>
+    <string name="data_sort_most">Most First</string>
+    <string name="data_sort_fewest">Fewest First</string>
     <string name="data_filter_all">All Items</string>
     <string name="data_filter_photos">Photos</string>
     <string name="data_filter_videos">Videos</string>

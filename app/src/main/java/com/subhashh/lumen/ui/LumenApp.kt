@@ -135,7 +135,6 @@ import com.subhashh.lumen.ui.settings.UpdateSession
 import com.subhashh.lumen.ui.settings.SettingsCategory
 import com.subhashh.lumen.ui.settings.LicensesScreen
 import com.subhashh.lumen.ui.theme.LocalGlassColors
-import com.subhashh.lumen.ui.library.ViewMenu
 import com.subhashh.lumen.data.LumenPrefs
 import com.subhashh.lumen.data.LibraryFilter
 import com.subhashh.lumen.data.LibrarySort
@@ -389,6 +388,10 @@ private fun MainScaffold(
     var aspectRatioGrid by remember { mutableStateOf(prefs.aspectRatioGrid) }
     var sort by remember { mutableStateOf(prefs.librarySort) }
     var sortDescending by remember { mutableStateOf(prefs.sortDescending) }
+    // A person's Show filter is for this visit: opening another person starts at All again.
+    var personFilter by remember { mutableStateOf(LibraryFilter.All) }
+    var personSort by remember { mutableStateOf(prefs.personSort) }
+    var personSortDescending by remember { mutableStateOf(prefs.personSortDescending) }
     /** The fast-scroll label in the current sort: month, first letter, or size. */
     val scrollLabel: (MediaItem) -> String = remember(sort) {
         when (sort) {
@@ -497,6 +500,8 @@ private fun MainScaffold(
     /** A name that another person already has: merge them, or keep both with it. */
     var mergeProposal by remember { mutableStateOf<MergeProposal?>(null) }
     var personMenuOpen by remember { mutableStateOf(false) }
+    var personViewMenuOpen by remember { mutableStateOf(false) }
+    LaunchedEffect(CollectionKeys.personId(openCollection)) { personFilter = LibraryFilter.All }
     var peopleMenuOpen by remember { mutableStateOf(false) }
     var peopleSquare by remember { mutableStateOf(prefs.peopleSquare) }
     /** The open person came from the People page, so Back returns there. */
@@ -690,7 +695,11 @@ private fun MainScaffold(
             CollectionKeys.Search -> searchSections?.firstOrNull { it.id == searchSection }?.items.orEmpty()
             CollectionKeys.Hidden -> if (hiddenUnlocked) hidden.orEmpty() else emptyList()
             else -> personOf(key)?.let { person ->
-                sort.apply(library.orEmpty().filter { it.id in person.mediaIds }, coverPageDescending)
+                // A person's page has its own Show and Sort (its ⋯ menu).
+                personSort.apply(
+                    library.orEmpty().filter { it.id in person.mediaIds && (personFilter == LibraryFilter.All || personFilter.matches(it)) },
+                    personSortDescending,
+                )
             } ?: CollectionKeys.hiddenFolderId(key)?.let { id ->
                 if (hiddenUnlocked) hidden.orEmpty().filter { it.bucketId == id } else emptyList()
             } ?: CollectionKeys.items(key, library.orEmpty(), trash).let {
@@ -714,7 +723,7 @@ private fun MainScaffold(
     val gridSectionMode = if (sort == LibrarySort.Date) sectionMode else SectionMode.None
     val librarySections = remember(libraryItems, gridSectionMode) { GridSections.of(context, libraryItems, gridSectionMode) }
     /** The open album's photos and their headers, shared by its grid and the viewer's close flight. */
-    val openItems = remember(openCollection, library, trash, hidden, hiddenUnlocked, sort, sortDescending, allPeople) {
+    val openItems = remember(openCollection, library, trash, hidden, hiddenUnlocked, sort, sortDescending, allPeople, personFilter, personSort, personSortDescending) {
         openCollection?.takeIf { it != CollectionKeys.Hidden }?.let(itemsOf)
     }
     val collectionSections = remember(openItems, gridSectionMode, openCollection) {
@@ -1905,9 +1914,16 @@ private fun MainScaffold(
             open = collectionsMenuOpen && tab == LumenTab.Collections && openCollection == null && !viewerOpen && settingsPage == null,
             onDismiss = { collectionsMenuOpen = false },
             sections = listOf(
+                // Tapping the current sort reverses it; another one starts in its usual order. The
+                // menu stays open, so the order can be flipped right away.
                 AlbumSort.entries.map { sort ->
-                    MenuItem(context.getString(R.string.main_sort_by, context.getString(sort.label)), checked = sort == albumSettings.sort) {
-                        updateAlbums { it.copy(sort = sort) }
+                    val current = sort == albumSettings.sort
+                    MenuItem(
+                        context.getString(sort.label),
+                        direction = if (current) !albumSettings.reversed else null,
+                        keepOpen = true,
+                    ) {
+                        updateAlbums { it.copy(sort = sort, reversed = current && !it.reversed) }
                     }
                 },
                 listOf(MenuItem(stringResource(R.string.main_new_album_ellipsis)) { albumNameRequest = AlbumNameRequest(album = null) }),
@@ -1970,17 +1986,60 @@ private fun MainScaffold(
                     .padding(horizontal = 16.dp, vertical = 8.dp),
             )
         } else if (openPerson != null) {
-            GlassIconButton(
-                backdrop = backdrop,
-                icon = LumenIcons.More,
-                contentDescription = stringResource(R.string.main_person_options),
-                onClick = { personMenuOpen = !personMenuOpen },
+            // Show and Sort, as in the Library (blue while a filter is on), then ⋯ for the person.
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .statusBarsPadding()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
-            )
+            ) {
+                GlassIconButton(
+                    backdrop = backdrop,
+                    icon = LumenIcons.Filter,
+                    contentDescription = stringResource(R.string.main_view_options),
+                    onClick = {
+                        personMenuOpen = false
+                        personViewMenuOpen = !personViewMenuOpen
+                    },
+                    tint = if (personFilter != LibraryFilter.All) MaterialTheme.colorScheme.primary else LocalGlassColors.current.content,
+                )
+                GlassIconButton(
+                    backdrop = backdrop,
+                    icon = LumenIcons.More,
+                    contentDescription = stringResource(R.string.main_person_options),
+                    onClick = {
+                        personViewMenuOpen = false
+                        personMenuOpen = !personMenuOpen
+                    },
+                )
+            }
         }
+        BackHandler(enabled = personViewMenuOpen) { personViewMenuOpen = false }
+        GlassMenu(
+            backdrop = backdrop,
+            open = personViewMenuOpen && openPerson != null,
+            onDismiss = { personViewMenuOpen = false },
+            sections = listOf(
+                com.subhashh.lumen.ui.library.viewMenuItems(
+                    filter = personFilter,
+                    onFilter = { personFilter = it },
+                    sort = personSort,
+                    descending = personSortDescending,
+                    onSort = { newSort, descending ->
+                        personSort = newSort
+                        personSortDescending = descending
+                        prefs.personSort = newSort
+                        prefs.personSortDescending = descending
+                    },
+                ),
+            ),
+            origin = TransformOrigin(1f, 0f),
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .statusBarsPadding()
+                .padding(top = 64.dp, end = 16.dp + 48.dp + 10.dp),
+        )
         BackHandler(enabled = personMenuOpen) { personMenuOpen = false }
         GlassMenu(
             backdrop = backdrop,
@@ -2086,28 +2145,33 @@ private fun MainScaffold(
             )
         }
 
-        ViewMenu(
+        GlassMenu(
             backdrop = backdrop,
             open = menuOpen && tab == LumenTab.Library && !viewerOpen && settingsPage == null,
             onDismiss = { menuOpen = false },
-            filter = filter,
-            onFilter = {
-                filter = it
-                prefs.libraryFilter = it
-            },
-            aspectRatioGrid = aspectRatioGrid,
-            onAspectRatioGrid = {
-                aspectRatioGrid = it
-                prefs.aspectRatioGrid = it
-            },
-            sort = sort,
-            descending = sortDescending,
-            onSort = { newSort, descending ->
-                sort = newSort
-                sortDescending = descending
-                prefs.librarySort = newSort
-                prefs.sortDescending = descending
-            },
+            sections = listOf(
+                com.subhashh.lumen.ui.library.viewMenuItems(
+                    filter = filter,
+                    onFilter = {
+                        filter = it
+                        prefs.libraryFilter = it
+                    },
+                    sort = sort,
+                    descending = sortDescending,
+                    onSort = { newSort, descending ->
+                        sort = newSort
+                        sortDescending = descending
+                        prefs.librarySort = newSort
+                        prefs.sortDescending = descending
+                    },
+                    aspectRatioGrid = aspectRatioGrid,
+                    onAspectRatioGrid = {
+                        aspectRatioGrid = it
+                        prefs.aspectRatioGrid = it
+                    },
+                ),
+            ),
+            origin = TransformOrigin(1f, 0f),
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .statusBarsPadding()
