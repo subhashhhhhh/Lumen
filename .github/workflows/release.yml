@@ -1,7 +1,12 @@
-# Release APKs, built and signed on GitHub instead of the owner's Mac. Pushing a v* tag builds
-# that commit against lumen-ai's app-<tag> tag (checked out next to it, as on the Mac), signs with the
-# release key (repository secrets), checks the signature, and attaches the APKs and checksums to
-# a draft release; notes are added and the draft published by hand.
+# Release APKs, built and signed on GitHub instead of the owner's Mac. Pushing a v* tag builds that
+# commit against the lumen-ai commit pinned in .github/lumen-ai.commit (so a tag always rebuilds
+# the same APKs), signs them with the release key (repository secrets), checks the signature, and
+# attaches the APKs and checksums to a draft release; notes are added and the draft published by
+# hand.
+#
+# Two jobs: the build runs Gradle and every plugin and dependency, so it gets read-only access
+# and no stored git credentials; only the release job, which runs no build code, may write.
+# Actions are pinned to commits, not movable tags.
 name: Release
 on:
   push:
@@ -11,24 +16,26 @@ on:
       tag:
         description: Tag to build (must exist)
         required: true
-permissions:
-  contents: write
+env:
+  TAG: ${{ inputs.tag || github.ref_name }}
 jobs:
-  release:
+  build:
     runs-on: ubuntu-24.04
-    env:
-      TAG: ${{ inputs.tag || github.ref_name }}
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ inputs.tag || github.ref }}
-      # lumen-ai's app-<tag> tag, made with each app release: rebuilding a tag later gives the same APK.
-      - name: lumen-ai, next to the app (settings.gradle.kts builds it from source)
+          persist-credentials: false
+      - name: lumen-ai at its pinned commit, next to the app (settings.gradle.kts builds it from source)
         run: |
-          git clone --depth 1 --branch "app-$TAG" https://github.com/subhashhhhhh/lumen-ai.git ../lumen-ai \
-            || { echo "::error::lumen-ai has no app-$TAG tag: tag the lumen-ai commit this release uses"; exit 1; }
-          echo "LUMEN_AI_COMMIT=$(git -C ../lumen-ai rev-parse --short HEAD)" >> "$GITHUB_ENV"
-      - uses: actions/setup-java@v4
+          commit=$(tr -d '[:space:]' < .github/lumen-ai.commit)
+          git init -q ../lumen-ai
+          git -C ../lumen-ai fetch -q --depth 1 https://github.com/subhashhhhhh/lumen-ai.git "$commit"
+          git -C ../lumen-ai checkout -q FETCH_HEAD
+          echo "LUMEN_AI_COMMIT=$commit" >> "$GITHUB_ENV"
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
         with:
           distribution: temurin
           java-version: "17"
@@ -38,7 +45,7 @@ jobs:
           sdkmanager=$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | sort -V | tail -1)
           yes | "$sdkmanager" --licenses > /dev/null || true
           "$sdkmanager" "platforms;android-37.0" "ndk;30.0.16248370" "cmake;4.1.2" > /dev/null
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
       - name: Release key
         env:
           KEYSTORE: ${{ secrets.LUMEN_KEYSTORE_B64 }}
@@ -51,6 +58,7 @@ jobs:
         run: ./gradlew :app:assembleRelease --no-daemon
       - name: Name, check signature, checksums
         run: |
+          rm -f "$LUMEN_KEYSTORE"
           version="${TAG#v}"
           mkdir out
           for abi in arm64-v8a armeabi-v7a x86_64 universal; do
@@ -62,11 +70,26 @@ jobs:
               || { echo "::error::$f is not signed with Lumen's release key"; exit 1; }
           done
           (cd out && sha256sum Lumen-*.apk > SHA256SUMS.txt && cat SHA256SUMS.txt)
-          rm -f "$LUMEN_KEYSTORE"
+          echo "Built from $(git rev-parse --short HEAD) with lumen-ai ${LUMEN_AI_COMMIT::7}" > out/BUILD.txt
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release
+          path: out/
+          retention-days: 3
+  release:
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release
+          path: out
       - name: Draft release
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
-          gh release view "$TAG" > /dev/null 2>&1 || gh release create "$TAG" --draft --title "Lumen ${TAG#v}" \
-            --notes "Built from ${GITHUB_SHA::7} with lumen-ai ${LUMEN_AI_COMMIT}. Notes to come."
-          gh release upload "$TAG" out/* --clobber
+          gh release view "$TAG" > /dev/null 2>&1 || gh release create "$TAG" --draft --title "Lumen ${TAG#v}" --notes "$(cat out/BUILD.txt). Notes to come."
+          gh release upload "$TAG" out/Lumen-*.apk out/SHA256SUMS.txt --clobber
