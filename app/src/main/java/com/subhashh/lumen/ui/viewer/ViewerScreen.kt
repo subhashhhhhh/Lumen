@@ -244,7 +244,9 @@ fun ViewerScreen(
             return@LaunchedEffect
         }
         if (known == com.subhashh.lumen.ai.TextStore.Known.NotRead) delay(300)
-        liveText.show(item, com.subhashh.lumen.ai.LiveText.read(context, item.toRef()))
+        // Text from Hidden (and encrypted files) stays in memory: the text index on disk is plain.
+        val persist = !inHidden && !com.subhashh.lumen.data.vault.Vault.isVault(item)
+        liveText.show(item, com.subhashh.lumen.ai.LiveText.read(context, item.toRef(), persist))
     }
     // The text models load as the viewer opens, not on its first photo, and stay a little after
     // it closes, so opening the next photo doesn't wait for them.
@@ -376,7 +378,8 @@ fun ViewerScreen(
             readAt = at
             liveText.clear()
             liveText.show(item, null)
-            val result = com.subhashh.lumen.ai.LiveText.readVideoFrame(context, item.toRef(), at)
+            val persist = !inHidden && !com.subhashh.lumen.data.vault.Vault.isVault(item)
+            val result = com.subhashh.lumen.ai.LiveText.readVideoFrame(context, item.toRef(), at, persist)
             if (p.currentPosition == at && !p.isPlaying) liveText.show(item, result)
         }
     }
@@ -770,6 +773,7 @@ fun ViewerScreen(
         // shown and nothing selected).
         LiveTextToolbar(
             liveText,
+            sensitive = inHidden,
             visible = current != null && liveText.item?.id == current.id && atRest && !sheetVisible,
             onSearch = { query ->
                 liveText.clear()

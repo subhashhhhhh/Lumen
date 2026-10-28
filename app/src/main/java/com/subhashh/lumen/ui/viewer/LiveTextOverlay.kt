@@ -377,7 +377,7 @@ private fun Handle(
  * Select All, at the bottom. Dismissing it (back, tapping elsewhere) clears the selection.
  */
 @Composable
-fun LiveTextToolbar(state: LiveTextState, visible: Boolean, onSearch: (String) -> Unit) {
+fun LiveTextToolbar(state: LiveTextState, sensitive: Boolean, visible: Boolean, onSearch: (String) -> Unit) {
     val view = LocalView.current
     val context = LocalContext.current
     val selection = state.selection
@@ -433,8 +433,8 @@ fun LiveTextToolbar(state: LiveTextState, visible: Boolean, onSearch: (String) -
                 val (text, smart, search) = latest.value
                 when (val id = item.itemId) {
                     ItemSmart -> runCatching { smart?.actions?.firstOrNull()?.actionIntent?.send() }
-                    ItemCopy -> { copy(context, text); finish() }
-                    ItemCopyAll -> { copy(context, state.text); finish() }
+                    ItemCopy -> { copy(context, text, sensitive); finish() }
+                    ItemCopyAll -> { copy(context, state.text, sensitive); finish() }
                     ItemShare -> {
                         val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text)
                         runCatching { context.startActivity(Intent.createChooser(send, null).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
@@ -504,8 +504,15 @@ private const val ItemSelectAll = 5
 private const val ItemSearch = 6
 private const val ItemProcess = 100
 
-private fun copy(context: Context, text: String) {
-    context.getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("Text", text))
+/** [sensitive] (text from Hidden): Android 13+ hides it in its clipboard preview. */
+private fun copy(context: Context, text: String, sensitive: Boolean = false) {
+    val clip = ClipData.newPlainText("Text", text)
+    if (sensitive) {
+        clip.description.extras = android.os.PersistableBundle().apply {
+            putBoolean(if (android.os.Build.VERSION.SDK_INT >= 33) android.content.ClipDescription.EXTRA_IS_SENSITIVE else "android.content.extra.IS_SENSITIVE", true)
+        }
+    }
+    context.getSystemService(ClipboardManager::class.java).setPrimaryClip(clip)
     // Android 13+ shows its own confirmation.
     if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.TIRAMISU) {
         Toast.makeText(context, context.getString(R.string.common_copied), Toast.LENGTH_SHORT).show()
