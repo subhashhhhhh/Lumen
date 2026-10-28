@@ -42,14 +42,46 @@ the same features on Android, without Google and without the cloud.
 - **Open source.** Anyone can read and do a check of the code.
 - **No cost.**
 
+## Lumen and Google Photos
+
+✅ Lumen has it · ◐ Lumen has part of it · 🚧 Lumen is working on it · ❌ Lumen does not have it
+
+| Feature | Google Photos | Lumen |
+|---|---|---|
+| Find photos from a description ("cat on a sofa") | ✅ On the servers of Google | ✅ On your phone |
+| Find photos from the words in them | ✅ | ✅ |
+| Select and copy text in a photo | ✅ With Google Lens | ✅ |
+| Find the text in videos | ❌ | ✅ |
+| Put the photos of each person together | ✅ | ✅ |
+| Name, merge and hide people | ✅ | ✅ |
+| Put the photos of each pet together | ✅ | ❌ |
+| Subtitles for the speech in your videos | ❌ | ✅ |
+| Albums | ✅ | ✅ The folders on your phone |
+| Favorites and Recently Deleted | ✅ | ✅ |
+| Locked folder | ✅ | ✅ Hidden, with encryption |
+| Map of your photos | ✅ | ◐ The place of each photo |
+| Memories | ✅ | ❌ |
+| Edit photos (crop, light, filters) | ✅ | ◐ Rotate and resize |
+| Cut out a person or an object | ✅ | 🚧 |
+| Magic Eraser | ✅ | 🚧 |
+| Ultra HDR photos | ✅ | ✅ |
+| Back up to the cloud | ✅ | ❌ Lumen keeps your photos on your phone |
+| Shared albums and links | ✅ | ❌ |
+| Smart features without the internet | ❌ | ✅ |
+| Works without a Google account | ❌ | ✅ |
+| Works without Google Play services | ❌ | ✅ |
+| Open source | ❌ | ✅ |
+
 ## Contents
 
 - [Why Lumen](#why-lumen)
+- [Lumen and Google Photos](#lumen-and-google-photos)
 - [Features](#features)
 - [Privacy](#privacy)
 - [Requirements](#requirements)
 - [Install Lumen](#install-lumen)
 - [Smart features](#smart-features)
+- [Faster on Snapdragon](#faster-on-snapdragon)
 - [Permissions](#permissions)
 - [Build Lumen from the source code](#build-lumen-from-the-source-code)
 - [Report a bug](#report-a-bug)
@@ -60,15 +92,19 @@ the same features on Android, without Google and without the cloud.
 ### Library and albums
 
 - See all of your photos and videos in one grid. The newest photo is at the bottom.
+- New photos and screenshots appear at once.
 - Pinch the grid to show more or fewer columns.
 - Show the photos by year or by month.
+- Show only photos, videos, favorites, or screenshots. Sort by date, name, or size.
 - See each folder on your phone as an album. Sort, pin, rename, and set the cover of an album.
+  Tap a sort again to reverse it.
 - Open Favorites, Videos, Screenshots, and Recently Deleted from Collections.
 - Hide folders that you do not want to see, for example folders of app icons.
 
 ### Viewer
 
-- Swipe between photos. Swipe down to close a photo. Swipe up to see its details.
+- Swipe between photos. Swipe down to close a photo. Swipe up to see its details and the
+  people in it.
 - See the date, the camera data, the file data, and the place where you took the photo.
 - See a map of the place, if you turn on Maps.
 - Use the film strip at the bottom to move quickly through many photos.
@@ -77,6 +113,17 @@ the same features on Android, without Google and without the cloud.
   screen.
 - Play videos at a different speed. Double tap a video to pause it or to skip 10 seconds.
 - Start a slideshow.
+- Select the text in a photo with the text tools of Android: copy, share, translate, or open a
+  link, a phone number, or an address.
+- Turn on subtitles for a video, made on your phone.
+
+### People
+
+- See the people in your photos and videos. Lumen puts the photos of each person together.
+- Name a person, merge two people, or hide a person.
+- Take a photo out of a person with Not This Person.
+- Name a face that Lumen did not put with a person, from the details of a photo.
+- On the page of a person, show only photos, videos, favorites, or screenshots, and sort them.
 
 ### Tools
 
@@ -93,6 +140,7 @@ the same features on Android, without Google and without the cloud.
 - Lock Hidden with a PIN, a pattern, or a password, and unlock it with your fingerprint or face.
 - Encrypt the photos in Hidden, if you turn on Encrypt Hidden.
 - Lock all of Lumen with the App Lock.
+- Lumen blocks screenshots and screen recordings of Hidden. You can allow them in Settings.
 
 ## Privacy
 
@@ -111,8 +159,9 @@ your phone. It reads only the location that the camera put in each photo.
 ## Requirements
 
 - An Android phone with Android 11 or later.
-- For the smart features, space on the phone for the models. The models need about 340 MB with
-  the Fast search model, or about 770 MB with the Accurate search model.
+- For the smart features, space on the phone for the models. All the models need about 310 MB
+  with the Fast search model, or about 730 MB with the Accurate search model (about 680 MB on a
+  phone with a supported Snapdragon NPU).
 
 The smart features are optional. Lumen works as a gallery without them.
 
@@ -139,8 +188,8 @@ photo. Lumen does not include the models in the app. Lumen downloads them when y
 | Feature | What it does | Model |
 |---|---|---|
 | Smart Search | Finds photos from a description, for example "cat on a sofa" | SigLIP 2 for Accurate, or OpenCLIP for Fast |
-| Text in photos | Finds photos from the words in them. Lets you select and copy text in a photo | PP-OCRv6 |
-| People | Finds faces and puts the photos of each person together | YuNet and SFace |
+| Text in photos and videos | Finds photos and videos from the words in them. Lets you select and copy text in a photo | PP-OCRv6 |
+| People | Finds faces and puts the photos of each person together | YuNet, and AdaFace for Accurate or EdgeFace for Fast |
 | Subtitles | Writes subtitles for the speech in your videos | Whistle and Silero VAD |
 
 After the download, Lumen makes an index of your photos. By default, this work occurs only
@@ -149,6 +198,20 @@ You can also set a time of night for this work in Scheduled Indexing.
 
 The models are on [Hugging Face](https://huggingface.co/subhashhhhhh). Each model has a fixed
 version. Lumen does a check of each file with its SHA-256 checksum before it uses the file.
+
+## Faster on Snapdragon
+
+Many phones with a Snapdragon processor have an NPU, a part of the processor for AI. On these
+phones, Lumen runs Smart Search, text detection, and Accurate face recognition on the NPU:
+
+- Indexing photos for Smart Search is about 9 times faster than on the CPU.
+- The Accurate search model is a smaller download, about 480 MB instead of 670 MB.
+- Accurate face recognition is available only with an NPU. Other phones use Fast.
+
+Lumen supports 40 Snapdragon processors, from the Snapdragon 7 Gen 1 and 8 Gen 1 to the
+newest ones. The Snapdragon 888 and 888+ are not supported. Before Lumen uses the NPU, it makes
+sure that the NPU gives the correct results. If it does not, Lumen uses the GPU or the CPU. To see
+which one Lumen uses, go to Settings, then Smart Search, and look at Runs On.
 
 ## Permissions
 
@@ -196,6 +259,9 @@ Do these steps:
 
 The debug app has a different app ID, `com.subhashh.lumen.debug`. It does not replace a release
 version of Lumen.
+
+The release APKs are built and signed by GitHub Actions from the tagged source code of Lumen
+and Lumen AI, so you can see how each release was made.
 
 The `tools` folder has scripts for the place names, the icons, and the speed checks. You do not
 need them to build the app. The scripts that make the model files are in a different repository.
