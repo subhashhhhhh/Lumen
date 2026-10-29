@@ -255,10 +255,11 @@ fun ViewerScreen(
         com.subhashh.lumen.ai.LiveText.warm(context)
         onDispose { com.subhashh.lumen.ai.LiveText.release() }
     }
-    // Cutout: touch and hold a subject. Its model loads with the viewer, like Live Text's.
+    // Cutout: touch and hold a subject. Its model (~300 MB in memory on the GPU) loads on the first
+    // hold, not with the viewer: preloading it kept phones short of memory, hot and laggy even when
+    // no one cut anything out. Its GPU programs are kept on disk, so that first hold takes ~2 s.
     val cutout = remember { CutoutState() }
     DisposableEffect(Unit) {
-        com.subhashh.lumen.ai.Cutout.warm(context)
         onDispose { com.subhashh.lumen.ai.Cutout.release() }
     }
     LaunchedEffect(current?.id) { cutout.clear() }
