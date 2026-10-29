@@ -5,10 +5,10 @@
 --><resources>
     <string name="common_cancel">Cancelar</string>
     <string name="common_done">Hecho</string>
-    <string name="common_delete">Eliminar</string>
+    <string name="common_delete">Remover</string>
     <string name="common_share">Compartir</string>
     <string name="common_copy">Copiar</string>
-    <string name="common_remove">Remover</string>
+    <string name="common_remove">Eliminar</string>
     <string name="common_save">Guardar</string>
     <string name="common_back">Volver</string>
     <string name="common_open">Abrir</string>
@@ -137,7 +137,7 @@
     <string name="main_backup_save_failed">No se ha podido guardar la copia de seguridad</string>
     <string name="main_backup_bad_file">Eso no es una copia de seguridad de Lumen</string>
     <string name="main_settings_restored">Configuración restaurada</string>
-    <string name="main_all_files_title">Ocultar necesita &lt;&lt;Acceso a todos los archivos&gt;&gt;</string>
+    <string name="main_all_files_title">Ocultar necesita ««Acceso a todos los archivos</string>
     <string name="main_all_files_message">El índice multimedia de Android omite intencionalmente las fotos ocultas, por lo que Lumen debe acceder directamente al almacenamiento para ocultarlas y mostrarlas. Ningún archivo sale de tu teléfono.</string>
     <string name="main_open_settings">Abrir Configuración</string>
     <string name="main_reset_lock_title">¿Restablecer el bloqueo de elementos ocultos?</string>
@@ -273,4 +273,21 @@
     <string name="main_view_options">Ver opciones</string>
     <string name="main_album_options">Opciones de álbum</string>
     <string name="main_sort_by">Ordenar por %1$s</string>
+    <string name="main_people_options">Opciones de «Personas»</string>
+    <string name="main_people_circles">Círculos</string>
+    <string name="main_people_squares">Cuadrados</string>
+    <string name="main_show_hidden_people">Mostrar Personas Ocultas</string>
+    <string name="main_person_options">Opciones de «Persona»</string>
+    <string name="main_add_name_ellipsis">Añadir Nombre…</string>
+    <string name="main_rename_ellipsis">Renombrar…</string>
+    <string name="main_unhide_person">Mostrar Persona Oculta</string>
+    <string name="main_hide_person">Ocultar Persona</string>
+    <string name="main_merge_select_two">Selecciona dos o más personas para combinarlas</string>
+    <plurals name="main_merge_people_count_title">
+        <item quantity="one">¿Combinar %1$d persona?</item>
+        <item quantity="many">¿Combinar %1$d personas?</item>
+        <item quantity="other">¿Combinar %1$d personas?</item>
+    </plurals>
+    <string name="main_merge_many_message">Sus fotos se mostrarán como una sola persona.</string>
+    <string name="main_merge_many_message_named">Sus fotos se mostrarán como una sola persona, con el nombre %1$s.</string>
 </resources>
