@@ -723,7 +723,7 @@ private fun ColumnScope.PrivacyPage(
     val context = LocalContext.current
     val lockType = remember(encryptHidden) { com.subhashh.lumen.data.HiddenLockStore(context).type }
     val weakLock = encryptHidden && (lockType == com.subhashh.lumen.data.LockType.Pin || lockType == com.subhashh.lumen.data.LockType.Pattern)
-    Group(stringResource(R.string.settings_hidden), footer = if (weakLock) stringResource(R.string.settings_encrypt_weak_lock) else null) {
+    Group(stringResource(R.string.settings_hidden), note = if (weakLock) stringResource(R.string.settings_encrypt_weak_lock) else null) {
         Anchor("hidden", highlight) {
             SettingsRow(
                 title = stringResource(R.string.settings_hidden),

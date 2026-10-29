@@ -3,6 +3,14 @@ package com.subhashh.lumen.ui.settings
 import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import com.subhashh.lumen.R
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.res.stringResource
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
@@ -149,21 +157,57 @@ internal fun LargeTitle(text: String) {
     )
 }
 
-/** A section: small caps header, a card, an optional footer. */
+/**
+ * A section: small caps header, a card. [footer] explains the section: behind an info button at the
+ * header's right, open on tap (always shown for an untitled group). [note] stays under the card:
+ * for warnings that shouldn't be missed.
+ */
 @Composable
-internal fun Group(title: String, footer: String? = null, content: @Composable ColumnScope.() -> Unit) {
+internal fun Group(title: String, footer: String? = null, note: String? = null, content: @Composable ColumnScope.() -> Unit) {
     val colors = groupColors()
+    var info by rememberSaveable(title) { mutableStateOf(false) }
     if (title.isBlank()) {
         // Untitled groups (Settings' main list) are just separated, like iOS: no header line.
         Spacer(Modifier.height(18.dp))
     } else {
-        Text(
-            title.uppercase(),
-            fontSize = 13.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = colors.secondary,
-            modifier = Modifier.padding(start = 16.dp, top = 24.dp, bottom = 8.dp),
-        )
+        Row(
+            Modifier.fillMaxWidth().padding(start = 16.dp, top = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                title.uppercase(),
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = colors.secondary,
+                modifier = Modifier.weight(1f).padding(top = 12.dp, bottom = 8.dp),
+            )
+            if (footer != null) {
+                val label = stringResource(R.string.settings_group_info, title)
+                Box(
+                    Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .clickable(onClickLabel = label) { info = !info }
+                        .semantics { contentDescription = label; stateDescription = if (info) "open" else "closed" },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        LumenIcons.Info,
+                        contentDescription = null,
+                        tint = if (info) colors.text else colors.secondary,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+            }
+        }
+        AnimatedVisibility(visible = info && footer != null, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
+            Text(
+                footer.orEmpty(),
+                fontSize = 13.sp,
+                color = colors.secondary,
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 10.dp),
+            )
+        }
     }
     Column(
         Modifier
@@ -172,9 +216,10 @@ internal fun Group(title: String, footer: String? = null, content: @Composable C
             .background(cardColor()),
         content = content,
     )
-    if (footer != null) {
+    val under = listOfNotNull(footer.takeIf { title.isBlank() }, note).joinToString("\n\n").takeIf { it.isNotEmpty() }
+    if (under != null) {
         Text(
-            footer,
+            under,
             fontSize = 13.sp,
             color = colors.secondary,
             modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp),

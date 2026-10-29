@@ -511,7 +511,8 @@ internal fun SmartSearchGroup(
     val slower = rates.short > defaults.short || rates.medium > defaults.medium || rates.long > defaults.long
     Group(
         stringResource(R.string.smart_video_text_title),
-        footer = stringResource(R.string.smart_video_text_footer) + if (slower) "\n\n" + stringResource(R.string.smart_video_text_slow) else "",
+        footer = stringResource(R.string.smart_video_text_footer),
+        note = if (slower) stringResource(R.string.smart_video_text_slow) else null,
     ) {
         val unit = stringResource(R.string.smart_video_text_unit)
         val max = com.subhashh.lumen.ai.VideoTextRates.Max

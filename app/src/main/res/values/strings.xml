@@ -1226,4 +1226,5 @@
     <string name="smart_runs_on_npu">NPU · %1$s</string>
     <string name="smart_runs_on_gpu">GPU</string>
     <string name="smart_runs_on_cpu">CPU</string>
+    <string name="settings_group_info">About %1$s</string>
 </resources>
