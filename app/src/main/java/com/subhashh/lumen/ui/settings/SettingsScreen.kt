@@ -907,6 +907,19 @@ private fun ColumnScope.AboutPage(
                 iconColor = Gray,
             )
         }
+        Divider()
+        // The chip as Android reports it, and whether Lumen has NPU models for it: for bug reports.
+        val chip = remember {
+            val reported = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) android.os.Build.SOC_MODEL else android.os.Build.HARDWARE
+            if (com.subhashh.lumen.ai.Models.npuChip(context) != null) context.getString(R.string.settings_chip_npu, reported) else reported
+        }
+        SettingsRow(
+            title = stringResource(R.string.settings_chip),
+            value = chip,
+            onClick = null,
+            icon = LumenIcons.Code,
+            iconColor = Gray,
+        )
     }
 }
 

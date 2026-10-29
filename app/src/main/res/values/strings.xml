@@ -631,6 +631,8 @@
     <string name="settings_report_bug">Report a Bug</string>
     <string name="settings_licenses">Open-Source Licenses</string>
     <string name="settings_version">Version</string>
+    <string name="settings_chip">Chip</string>
+    <string name="settings_chip_npu">%1$s · NPU</string>
     <string name="settings_version_value">Version %1$s</string>
     <!-- %1$s is the developer's name, shown as a link -->
     <string name="settings_made_by">Made by %1$s</string>
