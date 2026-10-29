@@ -43,7 +43,7 @@ import com.subhashh.lumen.ui.components.Confirmation
 import com.subhashh.lumen.ui.icons.LumenIcons
 
 /**
- * Settings → Smart Features: Smart Search, Text Reading, Faces and Subtitles, each downloaded,
+ * Settings → Smart Features: Smart Search, Text Reading, Faces, Subtitles and Cutout, each downloaded,
  * updated and removed on its own ([ModelPack]); then indexing and download options. The only
  * part of Lumen that touches the network.
  */
@@ -336,6 +336,21 @@ internal fun SmartSearchGroup(
         }
     }
 
+    // Cutout: touch and hold a subject in the viewer.
+    Group(
+        stringResource(R.string.smart_cutout_title),
+        footer = stringResource(R.string.smart_cutout_footer),
+    ) {
+        Anchor("cutout-model", highlight) {
+            PackRow(
+                ModelPack.Cutout, stringResource(R.string.smart_cutout_model), stringResource(R.string.smart_cutout_remove_title),
+                stringResource(R.string.smart_cutout_remove_message),
+                Indigo,
+            )
+        }
+        ProcessorRow(ModelPack.Cutout, refresh)
+    }
+
     Group(
         stringResource(R.string.smart_schedule_title),
         footer = if (scheduleOn) {
@@ -587,6 +602,7 @@ private fun packLabel(pack: ModelPack): Int = when (pack) {
     ModelPack.Text -> R.string.smart_pack_text
     ModelPack.Faces -> R.string.smart_pack_faces
     ModelPack.Subtitles -> R.string.smart_pack_subtitles
+    ModelPack.Cutout -> R.string.smart_pack_cutout
 }
 
 /** A model tier's name ("Accurate", "Fast") from its English library label; unknown ones as they are. */

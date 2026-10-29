@@ -128,6 +128,7 @@ private val Entries = listOf(
     SettingEntry("indexed", R.string.settings_entry_indexed, SettingsCategory.SmartSearch, R.string.settings_kw_indexed),
     SettingEntry("subtitle-quality", R.string.settings_entry_subtitle_quality, SettingsCategory.SmartSearch, R.string.settings_kw_subtitle_quality),
     SettingEntry("subtitles-model", R.string.settings_entry_subtitles_model, SettingsCategory.SmartSearch, R.string.settings_kw_subtitles_model),
+    SettingEntry("cutout-model", R.string.settings_entry_cutout_model, SettingsCategory.SmartSearch, R.string.settings_kw_cutout_model),
     SettingEntry("scheduled-indexing", R.string.settings_entry_scheduled_indexing, SettingsCategory.SmartSearch, R.string.settings_kw_scheduled_indexing),
     SettingEntry("index-on-battery", R.string.settings_entry_index_on_battery, SettingsCategory.SmartSearch, R.string.settings_kw_index_on_battery),
     SettingEntry("unrestricted-battery", R.string.settings_entry_unrestricted_battery, SettingsCategory.SmartSearch, R.string.settings_kw_unrestricted_battery),

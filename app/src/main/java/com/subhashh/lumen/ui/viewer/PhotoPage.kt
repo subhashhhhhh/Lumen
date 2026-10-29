@@ -10,6 +10,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.runtime.getValue
@@ -35,6 +37,11 @@ fun PhotoPage(
     onTap: () -> Unit,
     /** Live Text for this page, when it's the one on screen. */
     liveText: LiveTextState? = null,
+    /**
+     * Touch and hold away from text (Cutout): the press as fractions of the photo's width and
+     * height, the press on screen, and where the photo sits on screen.
+     */
+    onLongPress: ((fraction: Offset, at: Offset, bounds: Rect) -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -56,6 +63,7 @@ fun PhotoPage(
     // until the viewer was opened on that photo.
     val currentLiveText by rememberUpdatedState(liveText)
     val currentOnTap by rememberUpdatedState(onTap)
+    val currentOnLongPress by rememberUpdatedState(onLongPress)
     var viewport by remember { mutableStateOf(IntSize.Zero) }
     val doubleClick = remember { FillOnDoubleClick { viewport } }
     Box(modifier.fillMaxSize().onSizeChanged { viewport = it }) {
@@ -82,10 +90,16 @@ fun PhotoPage(
             }
         },
         onDoubleClick = doubleClick,
-        // Long-press on text selects the word there.
+        // Long-press on text selects the word there; anywhere else lifts the subject out.
         onLongClick = { p ->
-            if (currentLiveText?.selectAt(state.zoomableState.transformedContentBounds, p) == true) {
+            val bounds = state.zoomableState.transformedContentBounds
+            if (currentLiveText?.selectAt(bounds, p) == true) {
                 haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+            } else if (bounds.contains(p) && bounds.width > 0f && bounds.height > 0f) {
+                currentOnLongPress?.let { press ->
+                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                    press(Offset((p.x - bounds.left) / bounds.width, (p.y - bounds.top) / bounds.height), p, bounds)
+                }
             }
         },
         modifier = Modifier.fillMaxSize(),

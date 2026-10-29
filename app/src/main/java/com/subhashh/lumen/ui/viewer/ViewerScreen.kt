@@ -40,6 +40,7 @@ import android.os.Handler
 import android.os.Looper
 import android.Manifest
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.text.TextStyle
@@ -253,6 +254,31 @@ fun ViewerScreen(
     DisposableEffect(Unit) {
         com.subhashh.lumen.ai.LiveText.warm(context)
         onDispose { com.subhashh.lumen.ai.LiveText.release() }
+    }
+    // Cutout: touch and hold a subject. Its model loads with the viewer, like Live Text's.
+    val cutout = remember { CutoutState() }
+    DisposableEffect(Unit) {
+        com.subhashh.lumen.ai.Cutout.warm(context)
+        onDispose { com.subhashh.lumen.ai.Cutout.release() }
+    }
+    LaunchedEffect(current?.id) { cutout.clear() }
+    val cutOut: (MediaItem, Offset, Offset, Rect) -> Unit = { item, fraction, at, bounds ->
+        if (!com.subhashh.lumen.ai.Cutout.available(context)) {
+            android.widget.Toast.makeText(context, R.string.cutout_download, android.widget.Toast.LENGTH_LONG).show()
+        } else {
+            cutout.start(item, at, bounds)
+            scope.launch {
+                val result = com.subhashh.lumen.ai.Cutout.cut(context, item.toRef(), fraction.x, fraction.y)
+                when {
+                    cutout.item?.id != item.id -> result?.bitmap?.recycle()
+                    result == null -> {
+                        cutout.clear()
+                        android.widget.Toast.makeText(context, R.string.cutout_nothing, android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                    else -> cutout.show(item, result)
+                }
+            }
+        }
     }
     /** The caption being edited from the details sheet: the item and its caption so far. */
     var captionEdit by remember { mutableStateOf<Pair<MediaItem, String>?>(null) }
@@ -479,6 +505,7 @@ fun ViewerScreen(
         BackHandler(enabled = !parked) { close(Velocity.Zero) }
         BackHandler(enabled = !parked && motion.infoOpen) { motion.closeInfo() }
         BackHandler(enabled = !parked && moreOpen) { moreOpen = false }
+        BackHandler(enabled = !parked && cutout.open) { cutout.clear() }
         BackHandler(enabled = !parked && (liveText.showAll || liveText.selection != null)) {
             if (liveText.selection != null) liveText.clear() else liveText.showAll = false
         }
@@ -544,6 +571,7 @@ fun ViewerScreen(
                         onZoomedChange = { zoomed = it },
                         onTap = toggleChrome,
                         liveText = if (isCurrent) liveText else null,
+                        onLongPress = { fraction, at, bounds -> cutOut(item, fraction, at, bounds) },
                         modifier = pageModifier,
                     )
                 }
@@ -769,6 +797,8 @@ fun ViewerScreen(
                     .nestedScroll(motion.sheetScroll),
             )
         }
+        CutoutLayer(cutout)
+        CutoutToolbar(cutout)
         // Live Text's toolbar: Android's own, above the selection (or near the bottom with all text
         // shown and nothing selected).
         LiveTextToolbar(

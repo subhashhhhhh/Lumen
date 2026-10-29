@@ -461,6 +461,7 @@
     <string name="settings_entry_indexed">Indexed</string>
     <string name="settings_entry_subtitle_quality">Subtitle Quality</string>
     <string name="settings_entry_subtitles_model">Subtitles Model</string>
+    <string name="settings_entry_cutout_model">Cutout Model</string>
     <string name="settings_entry_scheduled_indexing">Scheduled Indexing</string>
     <string name="settings_entry_index_on_battery">Index on Battery</string>
     <string name="settings_entry_unrestricted_battery">Unrestricted Battery</string>
@@ -505,6 +506,7 @@
     <string name="settings_kw_indexed">indexing progress smart search</string>
     <string name="settings_kw_subtitle_quality">subtitles captions cc transcription speech model</string>
     <string name="settings_kw_subtitles_model">subtitles captions cc transcription speech download</string>
+    <string name="settings_kw_cutout_model">cutout cut out lift subject sticker background remove copy download</string>
     <string name="settings_kw_scheduled_indexing">overnight night time schedule hours indexing background sleep</string>
     <string name="settings_kw_index_on_battery">charging battery background scan indexing</string>
     <string name="settings_kw_unrestricted_battery">battery optimization optimisation background indexing doze unrestricted</string>
@@ -703,6 +705,7 @@
     <string name="smart_pack_text">Text Reading</string>
     <string name="smart_pack_faces">Faces</string>
     <string name="smart_pack_subtitles">Subtitles</string>
+    <string name="smart_pack_cutout">Cutout</string>
     <string name="smart_tier_accurate">Accurate</string>
     <string name="smart_tier_fast">Fast</string>
     <string name="smart_video_high">High</string>
@@ -771,6 +774,19 @@
     <string name="smart_subtitles_model">Subtitles Model</string>
     <string name="smart_subtitles_remove_title">Remove Subtitles?</string>
     <string name="smart_subtitles_remove_message">CC can\'t make new subtitles until you download it again. Subtitles already made stay</string>
+    <string name="smart_cutout_title">Cutout</string>
+    <string name="smart_cutout_footer">Touch and hold a person, pet or thing in a photo to lift it off the background, then copy, share or save it. Works on this phone, without the internet.</string>
+    <string name="smart_cutout_model">Cutout Model</string>
+    <string name="smart_cutout_remove_title">Remove Cutout?</string>
+    <string name="smart_cutout_remove_message">Touch and hold won\'t lift subjects out of photos until you download it again</string>
+    <string name="cutout_copy">Copy</string>
+    <string name="cutout_share">Share</string>
+    <string name="cutout_save">Save</string>
+    <string name="cutout_copied">Cutout copied</string>
+    <string name="cutout_saved">Saved to Pictures/Cutouts</string>
+    <string name="cutout_save_failed">Couldn\'t save the cutout</string>
+    <string name="cutout_nothing">No subject found here</string>
+    <string name="cutout_download">To lift subjects out of photos, download Cutout in Settings → Smart Features</string>
 
     <!-- Scheduled Indexing -->
     <string name="smart_schedule_title">Scheduled Indexing</string>
