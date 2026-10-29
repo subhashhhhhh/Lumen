@@ -38,6 +38,15 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathMeasure
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -69,6 +78,9 @@ class CutoutState {
     /** Where the press was, while the cutout is still being made (for the spinner). */
     var pressedAt by mutableStateOf<Offset?>(null)
         private set
+    /** Where the finger is: the subject comes forward from there. */
+    var press by mutableStateOf(Offset.Zero)
+        private set
     var result by mutableStateOf<Cutout.Result?>(null)
         private set
     /** The photo's place on screen when it was pressed: the cutout lifts from the same spot. */
@@ -80,6 +92,7 @@ class CutoutState {
     fun start(item: MediaItem, at: Offset, bounds: Rect) {
         this.item = item
         pressedAt = at
+        press = at
         photoBounds = bounds
         result = null
     }
@@ -134,11 +147,14 @@ fun CutoutLayer(state: CutoutState, modifier: Modifier = Modifier) {
                     .offset { IntOffset(bounds.left.roundToInt(), bounds.top.roundToInt()) }
                     .size(with(density) { bounds.width.toDp() }, with(density) { bounds.height.toDp() })
                     .graphicsLayer {
-                        // Up a little and towards the viewer, with a shadow, like it came off the page.
-                        val s = 1f + 0.04f * lift.value
+                        // Forward, towards the finger: it grows from under it, as if picked up there.
+                        transformOrigin = TransformOrigin(
+                            ((state.press.x - bounds.left) / bounds.width).coerceIn(0f, 1f),
+                            ((state.press.y - bounds.top) / bounds.height).coerceIn(0f, 1f),
+                        )
+                        val s = 1f + 0.06f * lift.value
                         scaleX = s
                         scaleY = s
-                        translationY = -12.dp.toPx() * lift.value
                     },
             )
         }
@@ -280,4 +296,57 @@ private suspend fun save(context: Context, bitmap: Bitmap, photo: MediaItem): Bo
     }
     resolver.update(uri, ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) }, null, null)
     true
+}
+
+/**
+ * The outline of the people in the photo ([Cutout.outline]) drawing itself, as the photo settles on
+ * screen: from where a person meets the photo's edge, up and around, to the other side. Then it
+ * fades. Says they can be touched and held to lift them out. [bounds] is the photo on screen.
+ */
+@Composable
+fun OutlineSweep(lines: List<FloatArray>, bounds: Rect, modifier: Modifier = Modifier) {
+    val draw = remember(lines) { Animatable(0f) }
+    val fade = remember(lines) { Animatable(1f) }
+    LaunchedEffect(lines) {
+        // One pen: a subject takes 1.8 s, each more adds a little.
+        draw.animateTo(1f, tween(1800 + 500 * (lines.size - 1).coerceAtLeast(0), easing = FastOutSlowInEasing))
+        delay(250)
+        fade.animateTo(0f, tween(600))
+    }
+    if (fade.value <= 0f || bounds.width <= 0f) return
+    val paths = remember(lines, bounds) {
+        lines.map { line ->
+            Path().apply {
+                moveTo(bounds.left + line[0] * bounds.width, bounds.top + line[1] * bounds.height)
+                for (i in 2 until line.size step 2) lineTo(bounds.left + line[i] * bounds.width, bounds.top + line[i + 1] * bounds.height)
+            }.let { it to PathMeasure().apply { setPath(it, false) }.length }
+        }
+    }
+    val total = remember(paths) { paths.sumOf { it.second.toDouble() }.toFloat() }
+    val measure = remember { PathMeasure() }
+    val part = remember { Path() }
+    Canvas(modifier.fillMaxSize()) {
+        if (total <= 0f) return@Canvas
+        val alpha = fade.value
+        val glow = Stroke(width = 9.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+        val core = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+        // How far the pen has gone along all the lines, one after another.
+        var left = total * draw.value
+        for ((path, length) in paths) {
+            if (length <= 0f || left <= 0f) continue
+            val end = minOf(length, left)
+            left -= length
+            part.reset()
+            measure.setPath(path, false)
+            measure.getSegment(0f, end, part, true)
+            drawPath(part, Color.White.copy(alpha = 0.22f * alpha), style = glow)
+            drawPath(part, Color.White.copy(alpha = 0.95f * alpha), style = core)
+            // The pen: a brighter point where the line is being drawn.
+            if (end < length) {
+                val tip = measure.getPosition(end)
+                drawCircle(Color.White.copy(alpha = 0.5f * alpha), radius = 7.dp.toPx(), center = tip)
+                drawCircle(Color.White.copy(alpha = alpha), radius = 3.dp.toPx(), center = tip)
+            }
+        }
+    }
 }

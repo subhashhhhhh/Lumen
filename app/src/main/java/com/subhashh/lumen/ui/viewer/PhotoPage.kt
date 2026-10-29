@@ -42,6 +42,8 @@ fun PhotoPage(
      * height, the press on screen, and where the photo sits on screen.
      */
     onLongPress: ((fraction: Offset, at: Offset, bounds: Rect) -> Unit)? = null,
+    /** The outline of the people in it, run over once as it settles ([OutlineSweep]). */
+    outline: List<FloatArray>? = null,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -106,6 +108,10 @@ fun PhotoPage(
     )
     if (liveText != null && liveText.item?.id == item.id) {
         LiveTextLayer(liveText, state.zoomableState.transformedContentBounds)
+    }
+    // Not over a zoomed photo: the line is traced at the mask's 512 px and would be off.
+    if (outline != null && (state.zoomableState.zoomFraction ?: 0f) <= 0.01f) {
+        OutlineSweep(outline, state.zoomableState.transformedContentBounds)
     }
     }
 }

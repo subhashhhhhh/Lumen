@@ -288,6 +288,19 @@ fun ViewerScreen(
     var mapOf by remember { mutableStateOf<com.subhashh.lumen.data.GeoPoint?>(null) }
     // Composition only cares whether the photo is displaced, not by how much.
     val atRest by remember { derivedStateOf { motion.dismissX == 0f && motion.dismissY == 0f } }
+    // A photo with people that stays on screen gets a light along their outline, once: they can be
+    // lifted out. Swiping past runs nothing; which photos have people is already indexed.
+    var outline by remember { mutableStateOf<Pair<Long, List<FloatArray>>?>(null) }
+    LaunchedEffect(current?.id, current?.modified) {
+        val item = current?.takeIf { !it.isVideo } ?: return@LaunchedEffect
+        if (!com.subhashh.lumen.ai.Cutout.available(context)) return@LaunchedEffect
+        delay(900)
+        if (!atRest || zoomed || cutout.open) return@LaunchedEffect
+        val ref = item.toRef()
+        if (!com.subhashh.lumen.ai.Cutout.hasPeople(context, ref)) return@LaunchedEffect
+        val line = com.subhashh.lumen.ai.Cutout.outline(context, ref) ?: return@LaunchedEffect
+        if (current?.id == item.id && !cutout.open) outline = item.id to line
+    }
     var locationRefresh by remember { mutableIntStateOf(0) }
     var moreOpen by remember { mutableStateOf(false) }
     // Slideshow: hides the chrome and advances on a timer (Settings → Slideshow: interval, slide
@@ -573,6 +586,7 @@ fun ViewerScreen(
                         onTap = toggleChrome,
                         liveText = if (isCurrent) liveText else null,
                         onLongPress = { fraction, at, bounds -> cutOut(item, fraction, at, bounds) },
+                        outline = outline?.takeIf { isCurrent && it.first == item.id }?.second,
                         modifier = pageModifier,
                     )
                 }
