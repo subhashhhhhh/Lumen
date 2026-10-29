@@ -23,8 +23,8 @@
 </p>
 
 Lumen is a photo gallery for Android. It does the same tasks as Google Photos and the Photos app
-on iPhone. It finds a photo from a description, reads the text in your photos, and puts the photos
-of each person together. Lumen does all of this work on your phone. Your photos, your faces, and
+on iPhone. It finds a photo from a description, reads the text in your photos, puts the photos
+of each person together, and cuts a person out of a photo. Lumen does all of this work on your phone. Your photos, your faces, and
 your index never leave it.
 
 ## Why Lumen
@@ -62,7 +62,7 @@ the same features on Android, without Google and without the cloud.
 | Map of your photos | ✅ | ◐ The place of each photo |
 | Memories | ✅ | ❌ |
 | Edit photos (crop, light, filters) | ✅ | ◐ Rotate and resize |
-| Cut out a person or an object | ✅ | 🚧 |
+| Cut out a person or an object | ✅ | ✅ |
 | Magic Eraser | ✅ | 🚧 |
 | Ultra HDR photos | ✅ | ✅ |
 | Back up to the cloud | ✅ | ❌ Lumen keeps your photos on your phone |
@@ -116,6 +116,9 @@ the same features on Android, without Google and without the cloud.
 - Select the text in a photo with the text tools of Android: copy, share, translate, or open a
   link, a phone number, or an address.
 - Turn on subtitles for a video, made on your phone.
+- Touch and hold a person or an object to cut it out of the photo. Then copy it, share it, or
+  save it as a new image with a transparent background. When you open a photo of people, a line
+  draws around them to show that you can cut them out.
 
 ### People
 
@@ -159,8 +162,8 @@ your phone. It reads only the location that the camera put in each photo.
 ## Requirements
 
 - An Android phone with Android 11 or later.
-- For the smart features, space on the phone for the models. All the models need about 310 MB
-  with the Fast search model, or about 730 MB with the Accurate search model (about 680 MB on a
+- For the smart features, space on the phone for the models. All the models need about 440 MB
+  with the Fast search model, or about 860 MB with the Accurate search model (about 810 MB on a
   phone with a supported Snapdragon NPU).
 
 The smart features are optional. Lumen works as a gallery without them.
@@ -191,6 +194,7 @@ photo. Lumen does not include the models in the app. Lumen downloads them when y
 | Text in photos and videos | Finds photos and videos from the words in them. Lets you select and copy text in a photo | PP-OCRv6 |
 | People | Finds faces and puts the photos of each person together | YuNet, and AdaFace for Accurate or EdgeFace for Fast |
 | Subtitles | Writes subtitles for the speech in your videos | Whistle and Silero VAD |
+| Cutout | Cuts a person or an object out of a photo | BiRefNet-lite, changed by Lumen to run on phones |
 
 After the download, Lumen makes an index of your photos. By default, this work occurs only
 while your phone charges. Lumen stops the work when the phone gets warm, and starts again later.
@@ -212,6 +216,9 @@ Lumen supports 40 Snapdragon processors, from the Snapdragon 7 Gen 1 and 8 Gen 1
 newest ones. The Snapdragon 888 and 888+ are not supported. Before Lumen uses the NPU, it makes
 sure that the NPU gives the correct results. If it does not, Lumen uses the GPU or the CPU. To see
 which one Lumen uses, go to Settings, then Smart Search, and look at Runs On.
+
+Cutout runs on the GPU of the phone, because on the phones that we tested, the GPU is faster than
+the NPU for this model. It needs about 0.2 seconds on a Snapdragon 7 Gen 1.
 
 ## Permissions
 
