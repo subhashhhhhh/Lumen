@@ -38,7 +38,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathMeasure
 import androidx.compose.ui.graphics.StrokeCap
@@ -303,17 +303,13 @@ private suspend fun save(context: Context, bitmap: Bitmap, photo: MediaItem): Bo
  * screen: from where a person meets the photo's edge, up and around, to the other side. Then it
  * fades. Says they can be touched and held to lift them out. [bounds] is the photo on screen.
  */
+private const val PenDpPerSecond = 900f
+private val PenEasing = CubicBezierEasing(0.25f, 0.1f, 0.75f, 0.9f)
+
 @Composable
 fun OutlineSweep(lines: List<FloatArray>, bounds: Rect, modifier: Modifier = Modifier) {
     val draw = remember(lines) { Animatable(0f) }
     val fade = remember(lines) { Animatable(1f) }
-    LaunchedEffect(lines) {
-        // One pen: a subject takes 1.8 s, each more adds a little.
-        draw.animateTo(1f, tween(1800 + 500 * (lines.size - 1).coerceAtLeast(0), easing = FastOutSlowInEasing))
-        delay(250)
-        fade.animateTo(0f, tween(600))
-    }
-    if (fade.value <= 0f || bounds.width <= 0f) return
     val paths = remember(lines, bounds) {
         lines.map { line ->
             Path().apply {
@@ -323,6 +319,16 @@ fun OutlineSweep(lines: List<FloatArray>, bounds: Rect, modifier: Modifier = Mod
         }
     }
     val total = remember(paths) { paths.sumOf { it.second.toDouble() }.toFloat() }
+    val pxPerDp = LocalDensity.current.density
+    LaunchedEffect(lines) {
+        // One pen at a steady speed, so every photo feels the same: a small person isn't slow,
+        // a big one isn't rushed. Within 0.8 to 2.6 s; eased only at the very start and end.
+        val ms = (total / pxPerDp / PenDpPerSecond * 1000).toInt().coerceIn(800, 2600)
+        draw.animateTo(1f, tween(ms, easing = PenEasing))
+        delay(250)
+        fade.animateTo(0f, tween(600))
+    }
+    if (fade.value <= 0f || bounds.width <= 0f) return
     val measure = remember { PathMeasure() }
     val part = remember { Path() }
     Canvas(modifier.fillMaxSize()) {
