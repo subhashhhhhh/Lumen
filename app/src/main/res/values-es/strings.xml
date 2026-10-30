@@ -1,0 +1,293 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Lumen's English text. Translations live in values-<language>/strings.xml and are edited on
+  Weblate; keep placeholders (%1$s, %2$d) and plural forms as they are.
+--><resources>
+    <string name="common_cancel">Cancelar</string>
+    <string name="common_done">Hecho</string>
+    <string name="common_delete">Remover</string>
+    <string name="common_share">Compartir</string>
+    <string name="common_copy">Copiar</string>
+    <string name="common_remove">Eliminar</string>
+    <string name="common_save">Guardar</string>
+    <string name="common_back">Volver</string>
+    <string name="common_open">Abrir</string>
+    <string name="common_select_all">Seleccionar Todo</string>
+    <string name="common_details">Detalles</string>
+    <string name="common_restore">Restaurar</string>
+    <string name="common_favorite">Marcar Favorito</string>
+    <string name="common_unfavorite">Desmarcar Favorito</string>
+    <string name="common_continue">Continuar</string>
+    <string name="common_next">Siguiente</string>
+    <string name="common_download">Descargar</string>
+    <string name="common_install">Instalar</string>
+    <string name="common_update">Actualizar</string>
+    <string name="common_retry">Reintentar</string>
+    <string name="common_allow">Permitir</string>
+    <string name="common_add">Agregar</string>
+    <string name="common_on">Encendido</string>
+    <string name="common_off">Apagado</string>
+    <string name="main_people">Personas</string>
+    <string name="main_albums">Álbumes</string>
+    <string name="main_add_name">Añadir Nombre</string>
+    <string name="common_copied">Copiado</string>
+    <string name="common_rename">Renombrar</string>
+    <string name="common_search">Buscar</string>
+    <string name="common_settings">Ajustes</string>
+    <string name="common_hide">Ocultar</string>
+    <string name="common_unhide">Mostrar</string>
+    <plurals name="main_search_results">
+        <item quantity="one">%1$d Resultado</item>
+        <item quantity="many">%1$d Resultados</item>
+        <item quantity="other">%1$,d Resultados</item>
+    </plurals>
+    <string name="main_search_looking_inside">Examinando las fotos…</string>
+    <string name="main_search_show_less">Mostrar Menos</string>
+    <string name="main_search_see_all">Mostrar Todo</string>
+    <string name="main_search_no_results_hint">Intenta describir lo que aparece en la foto, por ejemplo, «gato en un sofá» (con las «Funciones inteligentes» de «Ajustes»), o el nombre de un archivo, una carpeta, un mes o un año.</string>
+    <string name="main_search_recent">Recientes</string>
+    <string name="main_search_clear">Limpiar</string>
+    <string name="main_search_from_your_photos">Desde tus fotos</string>
+    <string name="main_search_try">Intentar</string>
+    <string name="main_search_field_hint">Archivos, carpetas, meses, años…</string>
+    <string name="main_merge_with_name">Combinar con %1$s</string>
+    <string name="main_merge_proposal_message">Ya tienes a alguien llamado %1$s. Si se trata de esa persona, combina los perfiles para que todos los elementos de %2$s aparezcan como una sola persona.</string>
+    <plurals name="main_merge_photo_count">
+        <item quantity="one">%1$,d foto</item>
+        <item quantity="many">%1$,d fotos</item>
+        <item quantity="other">%1$,d fotos</item>
+    </plurals>
+    <string name="main_merge">Combinar</string>
+    <string name="main_keep_separate">Mantener separados</string>
+    <plurals name="main_person_photo_count">
+        <item quantity="one">%1$,d foto</item>
+        <item quantity="many">%1$,d fotos</item>
+        <item quantity="other">%1$,d fotos</item>
+    </plurals>
+    <string name="common_not_now">Ahora no</string>
+    <string name="main_deselect_all">Deseleccionar Todo</string>
+    <string name="main_cancel_selection">Cancelar Selección</string>
+    <string name="main_delete_permanently">Eliminar permanentemente</string>
+    <string name="main_more">Más</string>
+    <string name="main_delete_forever">Eliminar definitivamente</string>
+    <string name="main_selected">Seleccionado</string>
+    <string name="main_new_album_ellipsis">Nuevo Álbum…</string>
+    <string name="main_album_name_hint">Nombre del Álbum</string>
+    <string name="main_create">Crear</string>
+    <string name="main_utilities">Utilidades</string>
+    <string name="main_hidden_locked">Bloqueado</string>
+    <string name="main_hidden_set_up">Configuración</string>
+    <string name="main_album_empty">Vacío</string>
+    <string name="main_pinned">Fijado</string>
+    <plurals name="main_hero_photos">
+        <item quantity="one">%1$,d Foto</item>
+        <item quantity="many">%1$,d Fotos</item>
+        <item quantity="other">%1$,d Fotos</item>
+    </plurals>
+    <plurals name="main_hero_videos">
+        <item quantity="one">%1$,d Video</item>
+        <item quantity="many">%1$,d Videos</item>
+        <item quantity="other">%1$,d Videos</item>
+    </plurals>
+    <string name="main_list_separator">", "</string>
+    <string name="main_library">Galería</string>
+    <string name="main_collections">Colecciones</string>
+    <string name="main_tabs">Pestañas</string>
+    <string name="main_zoom_years">Años</string>
+    <string name="main_zoom_months">Meses</string>
+    <string name="main_zoom_all">Todo</string>
+    <plurals name="main_item_count">
+        <item quantity="one">%1$d elemento</item>
+        <item quantity="many">%1$d elementos</item>
+        <item quantity="other">%1$d elementos</item>
+    </plurals>
+    <string name="main_section_none">Ninguno</string>
+    <string name="main_section_months">Meses</string>
+    <string name="main_section_days">Días</string>
+    <string name="main_today">Hoy</string>
+    <string name="main_yesterday">Ayer</string>
+    <string name="main_no_photos_or_videos">No hay fotos ni vídeos</string>
+    <string name="main_badge_raw">RAW</string>
+    <string name="main_badge_gif">GIF</string>
+    <string name="main_view_filter">Filtro</string>
+    <string name="main_view_sort">Ordenar</string>
+    <string name="main_view_grid">Cuadrícula</string>
+    <string name="main_view_square">Cuadrado</string>
+    <string name="main_view_aspect_ratio">Relación de Aspecto</string>
+    <string name="main_unlock_lumen">Desbloquear Lumen</string>
+    <string name="main_pick_choose_photos">Seleccionar Fotos</string>
+    <string name="main_pick_choose_a_photo">Selecciona una Foto</string>
+    <string name="main_pick_choose_videos">Seleccionar Videos</string>
+    <string name="main_pick_choose_a_video">Selecciona un Vídeo</string>
+    <string name="main_pick_choose_items">Seleccionar Elementos</string>
+    <string name="main_pick_choose_an_item">Seleccionar un Elemento</string>
+    <string name="main_favorites_import_bad_file">Ese no es un archivo de favoritos de Fossify ni de Aves</string>
+    <plurals name="main_favorites_import_none">
+        <item quantity="one">Ninguno de sus %1$d favoritos está en este teléfono.</item>
+        <item quantity="many">Ninguno de sus %1$d favoritos está en este teléfono</item>
+        <item quantity="other">Ninguno de sus %1$d favoritos está en este teléfono</item>
+    </plurals>
+    <plurals name="main_favorites_import_already">
+        <item quantity="one">Todos los %1$d ya están en favoritos</item>
+        <item quantity="many">Todos los %1$d ya están en favoritos</item>
+        <item quantity="other">Todos los %1$d ya están en favoritos</item>
+    </plurals>
+    <string name="main_favorites_import_found">Se encontraron %1$d de %2$d; se marcarán %3$d como favoritos</string>
+    <string name="main_settings_exported">Configuración exportada</string>
+    <string name="main_backup_save_failed">No se ha podido guardar la copia de seguridad</string>
+    <string name="main_backup_bad_file">Eso no es una copia de seguridad de Lumen</string>
+    <string name="main_settings_restored">Configuración restaurada</string>
+    <string name="main_all_files_title">Ocultar necesita ««Acceso a todos los archivos</string>
+    <string name="main_all_files_message">El índice multimedia de Android omite intencionalmente las fotos ocultas, por lo que Lumen debe acceder directamente al almacenamiento para ocultarlas y mostrarlas. Ningún archivo sale de tu teléfono.</string>
+    <string name="main_open_settings">Abrir Configuración</string>
+    <string name="main_reset_lock_title">¿Restablecer el bloqueo de elementos ocultos?</string>
+    <string name="main_reset_lock_message">Tu móvil no tiene bloqueo de pantalla, así que cualquiera que lo tenga en sus manos podría hacer esto. Las fotos ocultas siguen ocultas; a continuación, configurarás un nuevo bloqueo.</string>
+    <string name="main_reset">Reiniciar</string>
+    <string name="main_unhidden">No Oculto</string>
+    <string name="main_unhide_failed_count">No se pudo mostrar %1$d</string>
+    <string name="main_unhide_failed">No se pudo mostrar</string>
+    <string name="main_unhide_dot_folder">La carpeta «%1$s» está oculta porque su nombre comienza con un punto; cámbiale el nombre desde un administrador de archivos para volver a mostrarla</string>
+    <string name="main_unhide_folder_title">¿Mostrar %1$s?</string>
+    <plurals name="main_unhide_folders_title">
+        <item quantity="one">¿Mostrar %1$d carpeta oculta?</item>
+        <item quantity="many">¿Mostrar %1$d carpetas ocultas?</item>
+        <item quantity="other">¿Mostrar %1$d carpetas ocultas?</item>
+    </plurals>
+    <plurals name="main_unhide_folders_message">
+        <item quantity="one">Esta carpeta está oculta por completo, por lo que los %1$d elementos que contienen volverán a aparecer en la biblioteca de Lumen y en otras aplicaciones de galería.</item>
+        <item quantity="many">Estas carpetas están ocultas por completo, por lo que los %1$d elementos que contienen volverán a aparecer en la biblioteca de Lumen y en otras aplicaciones de galería.</item>
+        <item quantity="other">Estas carpetas están ocultas por completo, por lo que los %1$d elementos que contienen volverán a aparecer en la biblioteca de Lumen y en otras aplicaciones de galería.</item>
+    </plurals>
+    <string name="main_hidden_encrypted_find">Oculto y cifrado. Lo encontrarás en Colecciones → Oculto</string>
+    <string name="main_hidden_find">Oculto. Encuéntralo en Colecciones → Oculto</string>
+    <string name="main_hidden_and_encrypted">Oculto y cifrado</string>
+    <string name="main_hid_n_of">Se ocultaron %1$d de %2$d elementos</string>
+    <string name="main_hide_some_folders_failed">No se pudieron ocultar algunas carpetas</string>
+    <string name="main_hide_folder_title">¿Ocultar \"%1$s\"?</string>
+    <plurals name="main_hide_folders_title">
+        <item quantity="one">¿Ocultar %1$d carpeta?</item>
+        <item quantity="many">¿Ocultar %1$d carpetas?</item>
+        <item quantity="other">¿Ocultar %1$d carpetas?</item>
+    </plurals>
+    <plurals name="main_hide_folder_encrypt_message">
+        <item quantity="one">Todos los %1$d elementos que contiene se cifrarán y se guardarán en la bóveda de Lumen: ninguna otra aplicación podrá verlos. Estarán en Colecciones → Ocultos.</item>
+        <item quantity="many">Todos los %1$d elementos que contienen se cifrarán y se guardarán en la bóveda de Lumen: ninguna otra aplicación podrá verlos. Estarán en Colecciones → Ocultos.</item>
+        <item quantity="other">Todos los %1$d elementos que contienen se cifrarán y se guardarán en la bóveda de Lumen: ninguna otra aplicación podrá verlos. Estarán en Colecciones → Ocultos.</item>
+    </plurals>
+    <plurals name="main_hide_folders_encrypt_message">
+        <item quantity="one">Todos los %1$d elementos que contienen se cifrarán y se guardarán en la bóveda de Lumen: ninguna otra aplicación podrá verlos. Estarán en Colecciones → Ocultos.</item>
+        <item quantity="many">Todos los %1$d elementos que contienen se cifrarán y se guardarán en la bóveda de Lumen: ninguna otra aplicación podrá verlos. Estarán en Colecciones → Ocultos.</item>
+        <item quantity="other">Todos los %1$d elementos que contienen se cifrarán y se guardarán en la bóveda de Lumen: ninguna otra aplicación podrá verlos. Estarán en Colecciones → Ocultos.</item>
+    </plurals>
+    <plurals name="main_hide_folder_message">
+        <item quantity="one">Todos los %1$d elementos que contiene se ocultarán de la biblioteca de Lumen y de las aplicaciones que utilizan el índice multimedia de Android, como Google Fotos. Los administradores de archivos y las galerías que acceden directamente al almacenamiento aún podrán verlos. Estarán en Colecciones → Ocultos.</item>
+        <item quantity="many">Todos los %1$d elementos que contiene se ocultarán de la biblioteca de Lumen y de las aplicaciones que utilizan el índice multimedia de Android, como Google Fotos. Los administradores de archivos y las galerías que acceden directamente al almacenamiento aún podrán verlos. Estarán en Colecciones → Ocultos.</item>
+        <item quantity="other">Todos los %1$d elementos que contiene se ocultarán de la biblioteca de Lumen y de las aplicaciones que utilizan el índice multimedia de Android, como Google Fotos. Los administradores de archivos y las galerías que acceden directamente al almacenamiento aún podrán verlos. Estarán en Colecciones → Ocultos.</item>
+    </plurals>
+    <plurals name="main_hide_folders_message">
+        <item quantity="one">Todos los %1$d elementos que contienen se ocultarán de la biblioteca de Lumen y de las aplicaciones que utilizan el índice multimedia de Android, como Google Fotos. Los administradores de archivos y las aplicaciones de galería que acceden directamente al almacenamiento aún podrán verlos. Estarán en Colecciones → Ocultos.</item>
+        <item quantity="many">Todos los %1$d elementos que contienen se ocultarán de la biblioteca de Lumen y de las aplicaciones que utilizan el índice multimedia de Android, como Google Fotos. Los administradores de archivos y las aplicaciones de galería que acceden directamente al almacenamiento aún podrán verlos. Estarán en Colecciones → Ocultos.</item>
+        <item quantity="other">Todos los %1$d elementos que contienen se ocultarán de la biblioteca de Lumen y de las aplicaciones que utilizan el índice multimedia de Android, como Google Fotos. Los administradores de archivos y las aplicaciones de galería que acceden directamente al almacenamiento aún podrán verlos. Estarán en Colecciones → Ocultos.</item>
+    </plurals>
+    <string name="main_vault_wrong_lock">Esta bóveda se creó con un bloqueo de Lumen diferente. Introduce ese bloqueo para abrirla</string>
+    <string name="main_vault_partial_encrypt">Se cifraron %1$d elementos; no se pudieron cifrar %2$d y permanecieron sin cambios</string>
+    <string name="main_vault_partial_decrypt">Se descifraron %1$d elementos; no se pudieron descifrar %2$d y permanecieron sin cambios</string>
+    <string name="main_encrypt_hidden_on">El cifrado de elementos ocultos está activado</string>
+    <plurals name="main_encrypted_items">
+        <item quantity="one">Se cifró %1$d elemento oculto</item>
+        <item quantity="many">Se cifraron %1$d elementos ocultos</item>
+        <item quantity="other">Se cifraron %1$d elementos ocultos</item>
+    </plurals>
+    <plurals name="main_decrypted_items">
+        <item quantity="one">Se descifró %1$d elemento; ahora vuelve a estar oculto de la forma habitual</item>
+        <item quantity="many">Se descifraron %1$d elementos; ahora vuelven a estar ocultos de la forma habitual</item>
+        <item quantity="other">Se descifraron %1$d elementos; ahora vuelven a estar ocultos de la forma habitual</item>
+    </plurals>
+    <string name="main_delete_this_item">¿Eliminar este elemento?</string>
+    <plurals name="main_delete_items_title">
+        <item quantity="one">¿Eliminar %1$d elemento?</item>
+        <item quantity="many">¿Eliminar %1$d elementos?</item>
+        <item quantity="other">¿Eliminar %1$d elementos?</item>
+    </plurals>
+    <string name="main_delete_hidden_message">Los elementos ocultos no se pueden mover a «Eliminados recientemente», por lo que se eliminarán permanentemente.</string>
+    <string name="main_deleted">Eliminado</string>
+    <string name="main_delete_failed">No se pudieron eliminar %1$d de %2$d elementos</string>
+    <string name="main_excluded_name">Se excluyó \"%1$s\". Puedes deshacerlo en Ajustes → Carpetas excluidas</string>
+    <plurals name="main_excluded_folders">
+        <item quantity="one">Se excluyó %1$d carpeta. Puedes deshacerlo en Ajustes → Carpetas excluidas</item>
+        <item quantity="many">Se excluyeron %1$d carpetas. Puedes deshacerlo en Ajustes → Carpetas excluidas</item>
+        <item quantity="other">Se excluyeron %1$d carpetas. Puedes deshacerlo en Ajustes → Carpetas excluidas</item>
+    </plurals>
+    <string name="main_rotating">Rotando…</string>
+    <string name="main_rotate_failed">No se pudieron rotar %1$d de %2$d elementos</string>
+    <string name="main_merge_with_ellipsis">Combinar con…</string>
+    <string name="main_select_people">Seleccionar Personas</string>
+    <plurals name="main_n_selected">
+        <item quantity="one">%1$d seleccionado</item>
+        <item quantity="many">%1$d seleccionados</item>
+        <item quantity="other">%1$d seleccionados</item>
+    </plurals>
+    <string name="main_this_person">esta persona</string>
+    <string name="main_the_person_you_chose">la persona que elegiste</string>
+    <string name="main_merge_people_title">¿Combinar Personas?</string>
+    <string name="main_merge_people_message_named">Las fotos de %1$s y %2$s se mostrarán como una sola persona, con el nombre %3$s.</string>
+    <string name="main_merge_people_message">Las fotos de %1$s y %2$s se mostrarán como una sola persona.</string>
+    <string name="main_biometrics_missing">Primero, añade una huella dactilar o configura el reconocimiento facial en los ajustes de tu teléfono</string>
+    <string name="main_lock_needed_for_encrypt">Primero, configura un bloqueo de Lumen (Privacidad → Configurar bloqueo de Lumen)</string>
+    <string name="main_encrypt_hidden_title">¿Cifrar elementos ocultos?</string>
+    <plurals name="main_encrypt_hidden_message_count">
+        <item quantity="one">Los %1$d elementos ocultos se trasladarán a una bóveda cifrada a la que ninguna otra aplicación ni administrador de archivos podrá acceder (las carpetas excluidas permanecerán sin cambios). La bóveda permanecerá en tu almacenamiento, por lo que seguirá allí aunque desinstales Lumen; podrás volver a abrirla con tu bloqueo de Lumen.\n\nSi desinstalas Lumen y olvidas tu bloqueo, nadie podrá recuperar estos archivos. Una contraseña es más segura que un PIN corto.</item>
+        <item quantity="many">Los %1$d elementos ocultos se trasladarán a una bóveda cifrada a la que ninguna otra aplicación ni administrador de archivos podrá acceder (las carpetas excluidas permanecerán sin cambios). La bóveda permanecerá en tu almacenamiento, por lo que seguirá allí aunque desinstales Lumen; podrás volver a abrirla con tu bloqueo de Lumen.\n\nSi desinstalas Lumen y olvidas tu bloqueo, nadie podrá recuperar estos archivos. Una contraseña es más segura que un PIN corto.</item>
+        <item quantity="other">Los %1$d elementos ocultos se trasladarán a una bóveda cifrada a la que ninguna otra aplicación ni administrador de archivos podrá acceder (las carpetas excluidas permanecerán sin cambios). La bóveda permanecerá en tu almacenamiento, por lo que seguirá allí aunque desinstales Lumen; podrás volver a abrirla con tu bloqueo de Lumen.\n\nSi desinstalas Lumen y olvidas tu bloqueo, nadie podrá recuperar estos archivos. Una contraseña es más segura que un PIN corto.</item>
+    </plurals>
+    <string name="main_encrypt_hidden_message_all">Todo el contenido de Ocultos se trasladará a una bóveda cifrada a la que ninguna otra aplicación ni administrador de archivos podrá acceder (las carpetas excluidas permanecerán sin cambios). La bóveda permanecerá en tu almacenamiento, por lo que seguirá allí aunque desinstales Lumen; podrás volver a abrirla con tu bloqueo de Lumen.\n\nSi desinstalas Lumen y olvidas tu bloqueo, nadie podrá recuperar estos archivos. Una contraseña es más segura que un PIN corto.</string>
+    <string name="main_encrypt">Cifrar</string>
+    <string name="main_decrypt_hidden_title">¿Dejar de cifrar los elementos ocultos?</string>
+    <string name="main_decrypt_hidden_message">Todo el contenido de la bóveda se descifrará y volverá a su ubicación original, oculto de la forma habitual: no aparecerá en tu biblioteca, pero los administradores de archivos y algunas aplicaciones de galería podrán verlo.</string>
+    <string name="main_decrypt">Descifrar</string>
+    <string name="main_import_settings_title">¿Importar configuración?</string>
+    <string name="main_import_settings_message">Tus ajustes actuales, la organización de los álbumes y las exclusiones se reemplazarán por los de la copia de seguridad. Los favoritos incluidos en ella se añadirán a los tuyos.</string>
+    <string name="main_import">Importar</string>
+    <string name="main_hidden">Oculto</string>
+    <string name="main_album_empty_hint">Este álbum está vacío.\nAñade fotos mediante ⋯ → Mover al álbum o Copiar al álbum.</string>
+    <string name="main_empty_trash">Vacío</string>
+    <string name="main_empty_trash_title">¿Vaciar «Eliminados recientemente»?</string>
+    <string name="main_empty_trash_message_one">Este elemento se eliminará para siempre.</string>
+    <plurals name="main_empty_trash_message">
+        <item quantity="one">Se eliminará permanentemente %1$d elemento.</item>
+        <item quantity="many">Se eliminarán permanentemente todos los %1$d elementos.</item>
+        <item quantity="other">Se eliminarán permanentemente todos los %1$d elementos.</item>
+    </plurals>
+    <string name="main_delete_forever_title_case">Eliminar por Siempre</string>
+    <plurals name="main_trash_message">
+        <item quantity="one">Permanecerá en «Eliminados recientemente» durante 30 días.</item>
+        <item quantity="many">Permanecerán en «Eliminados recientemente» durante 30 días.</item>
+        <item quantity="other">Permanecerán en «Eliminados recientemente» durante 30 días.</item>
+    </plurals>
+    <plurals name="main_delete_forever_message">
+        <item quantity="one">%1$d elemento se eliminará para siempre.</item>
+        <item quantity="many">%1$d elementos se eliminarán para siempre.</item>
+        <item quantity="other">%1$d elementos se eliminarán para siempre.</item>
+    </plurals>
+    <string name="main_pick_add_count">Añadir %1$d</string>
+    <string name="main_view_options">Ver opciones</string>
+    <string name="main_album_options">Opciones de álbum</string>
+    <string name="main_sort_by">Ordenar por %1$s</string>
+    <string name="main_people_options">Opciones de «Personas»</string>
+    <string name="main_people_circles">Círculos</string>
+    <string name="main_people_squares">Cuadrados</string>
+    <string name="main_show_hidden_people">Mostrar Personas Ocultas</string>
+    <string name="main_person_options">Opciones de «Persona»</string>
+    <string name="main_add_name_ellipsis">Añadir Nombre…</string>
+    <string name="main_rename_ellipsis">Renombrar…</string>
+    <string name="main_unhide_person">Mostrar Persona Oculta</string>
+    <string name="main_hide_person">Ocultar Persona</string>
+    <string name="main_merge_select_two">Selecciona dos o más personas para combinarlas</string>
+    <plurals name="main_merge_people_count_title">
+        <item quantity="one">¿Combinar %1$d persona?</item>
+        <item quantity="many">¿Combinar %1$d personas?</item>
+        <item quantity="other">¿Combinar %1$d personas?</item>
+    </plurals>
+    <string name="main_merge_many_message">Sus fotos se mostrarán como una sola persona.</string>
+    <string name="main_merge_many_message_named">Sus fotos se mostrarán como una sola persona, con el nombre %1$s.</string>
+</resources>
