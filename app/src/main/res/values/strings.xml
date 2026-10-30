@@ -1228,6 +1228,8 @@
     <string name="smart_runs_on_npu">NPU · %1$s</string>
     <string name="smart_runs_on_gpu">GPU</string>
     <string name="smart_runs_on_cpu">CPU</string>
+    <string name="smart_runs_on_npu_ready">The NPU version is on this phone: new photos are indexed on the NPU.</string>
+    <string name="smart_runs_on_npu_waiting">The NPU version for this phone downloads on Wi-Fi while Lumen is open.</string>
     <string name="smart_runs_on_needs_accurate">This phone\'s NPU runs the Accurate model only.</string>
     <string name="smart_runs_on_npu_failed">The NPU didn\'t pass Lumen\'s check, so it isn\'t used: %1$s. Lumen tries again after an update.</string>
     <string name="settings_group_info">About %1$s</string>

@@ -635,6 +635,12 @@ private fun ProcessorRow(pack: ModelPack, refresh: Any?) {
         // larger standard model is then offered for download, and this says why.
         com.subhashh.lumen.ai.Models.npuFailure(context, pack)?.let { context.getString(R.string.smart_runs_on_npu_failed, it) }
             ?: context.getString(R.string.smart_runs_on_needs_accurate).takeIf { processor != "NPU" && com.subhashh.lumen.ai.Models.npuNeedsAccurate(context, pack) }
+            // "Runs On" is what ran the last photos indexed: until new ones are, it can still say GPU.
+            ?: when (com.subhashh.lumen.ai.Models.npuFile(context, pack).takeIf { processor != "NPU" }) {
+                com.subhashh.lumen.ai.NpuFileState.Ready -> context.getString(R.string.smart_runs_on_npu_ready)
+                com.subhashh.lumen.ai.NpuFileState.Waiting -> context.getString(R.string.smart_runs_on_npu_waiting)
+                null -> null
+            }
     }
     Divider()
     SettingsRow(
