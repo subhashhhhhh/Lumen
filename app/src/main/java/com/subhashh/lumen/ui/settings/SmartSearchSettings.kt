@@ -629,9 +629,17 @@ private fun ProcessorRow(pack: ModelPack, refresh: Any?) {
     val context = LocalContext.current
     val processor = remember(refresh) { com.subhashh.lumen.ai.Models.processor(context, pack) } ?: return
     val chip = remember { com.subhashh.lumen.ai.Models.npuChip(context) }
+    // Why a phone with an NPU isn't using it: for the user, and for bug reports.
+    val why = remember(refresh) {
+        // A recorded failure shows even while the row still names the NPU from the last run: the
+        // larger standard model is then offered for download, and this says why.
+        com.subhashh.lumen.ai.Models.npuFailure(context, pack)?.let { context.getString(R.string.smart_runs_on_npu_failed, it) }
+            ?: context.getString(R.string.smart_runs_on_needs_accurate).takeIf { processor != "NPU" && com.subhashh.lumen.ai.Models.npuNeedsAccurate(context, pack) }
+    }
     Divider()
     SettingsRow(
         title = stringResource(R.string.smart_runs_on),
+        subtitle = why,
         value = when (processor) {
             "NPU" -> stringResource(R.string.smart_runs_on_npu, chip.orEmpty())
             "GPU" -> stringResource(R.string.smart_runs_on_gpu)
