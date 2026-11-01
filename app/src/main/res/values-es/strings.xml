@@ -119,7 +119,7 @@
     <string name="main_pick_choose_a_photo">Selecciona una Foto</string>
     <string name="main_pick_choose_videos">Seleccionar Videos</string>
     <string name="main_pick_choose_a_video">Selecciona un Vídeo</string>
-    <string name="main_pick_choose_items">Seleccionar Elementos</string>
+    <string name="main_pick_choose_items">Elegir Elementos</string>
     <string name="main_pick_choose_an_item">Seleccionar un Elemento</string>
     <string name="main_favorites_import_bad_file">Ese no es un archivo de favoritos de Fossify ni de Aves</string>
     <plurals name="main_favorites_import_none">
@@ -290,4 +290,98 @@
     </plurals>
     <string name="main_merge_many_message">Sus fotos se mostrarán como una sola persona.</string>
     <string name="main_merge_many_message_named">Sus fotos se mostrarán como una sola persona, con el nombre %1$s.</string>
+    <string name="main_merge_many_message_named_others">Sus fotos se mostrarán como una sola persona, con el nombre %1$s. Los demás nombres (%2$s) se eliminarán.</string>
+    <string name="main_exclude_folder">Excluir Carpeta</string>
+    <string name="main_exclude_folders">Excluir Carpetas</string>
+    <string name="main_hide_folder">Ocultar Carpeta</string>
+    <string name="main_hide_folders">Ocultar Carpetas</string>
+    <string name="main_rename_album_ellipsis">Renombrar Álbum…</string>
+    <string name="main_unpin">Desfijar</string>
+    <string name="main_pin_to_top">Fijar en la Parte Superior</string>
+    <string name="main_reset_cover">Restablecer Portada</string>
+    <string name="main_move_to_album_ellipsis">Mover al Álbum…</string>
+    <string name="main_copy_to_album_ellipsis">Copiar al Álbum…</string>
+    <string name="main_adjust_date_time_ellipsis">Ajustar Fecha y Hora…</string>
+    <string name="main_resize_or_convert_ellipsis">Cambiar Tamaño o Convertir…</string>
+    <string name="main_slideshow">Presentación de Diapositivas</string>
+    <string name="main_album_cover_updated">Portada del álbum actualizada</string>
+    <string name="main_cover_updated">Portada actualizada</string>
+    <string name="main_make_person_cover">Establecer como Portada de Persona</string>
+    <string name="main_make_album_cover">Establecer como Portada de Álbum</string>
+    <string name="main_removed_from">Se quitó de %1$s</string>
+    <string name="main_move_to_album">Mover al Álbum</string>
+    <string name="main_copy_to_album">Copiar al Álbum</string>
+    <string name="main_app_lock_on">Bloqueo de la Aplicación Activado</string>
+    <string name="main_lock_changed">Bloqueo de Lumen cambiado</string>
+    <string name="main_hf_token_title">Token de Hugging Face</string>
+    <string name="main_renamed_to">Renombrado a %1$s</string>
+    <string name="main_rename_failed">No se pudo renombrar: es posible que ese nombre ya esté en uso</string>
+    <string name="main_new_album">Nuevo Álbum</string>
+    <string name="main_rename_album">Renombrar Álbum</string>
+    <string name="main_album_exists">Ya existe un álbum llamado “%1$s”</string>
+    <string name="main_album_exists_there">Ya existe un álbum llamado “%1$s” allí</string>
+    <string name="main_rename_album_needs_access">No se pudo renombrar “%1$s”: esa carpeta necesita acceso a todos los archivos (Ajustes → Permisos)</string>
+    <string name="main_rename_album_partial">Se renombraron %1$d de %2$d; no se pudieron mover %3$d</string>
+    <plurals name="main_saving_copies">
+        <item quantity="one">Guardando %1$d copia…</item>
+        <item quantity="many">Guardando %1$d copias…</item>
+        <item quantity="other">Guardando %1$d copias…</item>
+    </plurals>
+    <string name="main_save_copy_failed">No se pudo guardar la copia</string>
+    <string name="main_saved_n_of">Guardados %1$d de %2$d</string>
+    <string name="main_saved_copy_in">Se guardó una copia en %1$s</string>
+    <plurals name="main_saved_copies_in">
+        <item quantity="one">Se guardó %1$d copia en %2$s</item>
+        <item quantity="many">Se guardaron %1$d copias en %2$s</item>
+        <item quantity="other">Se guardaron %1$d copias en %2$s</item>
+    </plurals>
+    <plurals name="main_saved_copies">
+        <item quantity="one">Se guardó %1$d copia</item>
+        <item quantity="many">Se guardaron %1$d copias</item>
+        <item quantity="other">Se guardaron %1$d copias</item>
+    </plurals>
+    <string name="main_date_changed">Fecha cambiada</string>
+    <string name="main_dates_changed">Fechas cambiadas</string>
+    <string name="main_dates_changed_needs_access">Se cambiaron %1$d de %2$d: los videos y GIF necesitan acceso a todos los archivos (Ajustes → Permisos)</string>
+    <string name="main_dates_changed_heic">Se cambiaron %1$d de %2$d: las fotos HEIC y AVIF no pueden guardar una nueva fecha</string>
+    <string name="main_file_already_in">Ya está en %1$s</string>
+    <plurals name="main_file_moved">
+        <item quantity="one">Se movió %1$d elemento a %2$s</item>
+        <item quantity="many">Se movieron %1$d elementos a %2$s</item>
+        <item quantity="other">Se movieron %1$d elementos a %2$s</item>
+    </plurals>
+    <plurals name="main_file_copied">
+        <item quantity="one">Se copió %1$d elemento a %2$s</item>
+        <item quantity="many">Se copiaron %1$d elementos a %2$s</item>
+        <item quantity="other">Se copiaron %1$d elementos a %2$s</item>
+    </plurals>
+    <string name="main_file_move_needs_access">No se pudo mover a %1$s: esa carpeta necesita acceso a todos los archivos (Ajustes → Permisos)</string>
+    <string name="main_file_copy_needs_access">No se pudo copiar en %1$s: esa carpeta necesita acceso a todos los archivos (Ajustes → Permisos)</string>
+    <string name="main_file_move_failed">No se pudo mover a %1$s</string>
+    <string name="main_file_copy_failed">No se pudo copiar a %1$s</string>
+    <plurals name="main_file_moved_some_failed">
+        <item quantity="one">Se movió %1$d elemento a %2$s; %3$d falló</item>
+        <item quantity="many">Se movieron %1$d elementos a %2$s; %3$d fallaron</item>
+        <item quantity="other">Se movieron %1$d elementos a %2$s; %3$d fallaron</item>
+    </plurals>
+    <plurals name="main_file_copied_some_failed">
+        <item quantity="one">Se copió %1$d elemento a %2$s; %3$d falló</item>
+        <item quantity="many">Se copiaron %1$d elementos a %2$s; %3$d fallaron</item>
+        <item quantity="other">Se copiaron %1$d elementos a %2$s; %3$d fallaron</item>
+    </plurals>
+    <string name="main_not_person">No es %1$s</string>
+    <string name="main_not_this_person">No es Esta Persona</string>
+    <string name="main_select_albums">Seleccionar Álbumes</string>
+    <string name="main_select_folders">Seleccionar Carpetas</string>
+    <plurals name="main_albums_selected">
+        <item quantity="one">%1$d Álbum Seleccionado</item>
+        <item quantity="many">%1$d Álbumes Seleccionados</item>
+        <item quantity="other">%1$d Álbumes Seleccionados</item>
+    </plurals>
+    <plurals name="main_folders_selected">
+        <item quantity="one">%1$d Carpeta Seleccionada</item>
+        <item quantity="many">%1$d Carpetas Seleccionadas</item>
+        <item quantity="other">%1$d Carpetas Seleccionadas</item>
+    </plurals>
+    <string name="main_select_items">Seleccionar Elementos</string>
 </resources>
