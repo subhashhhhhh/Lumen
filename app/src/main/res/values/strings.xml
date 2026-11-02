@@ -1233,4 +1233,32 @@
     <string name="smart_runs_on_needs_accurate">This phone\'s NPU runs the Accurate model only.</string>
     <string name="smart_runs_on_npu_failed">The NPU didn\'t pass Lumen\'s check, so it isn\'t used: %1$s. Lumen tries again after an update.</string>
     <string name="settings_group_info">About %1$s</string>
+    <!-- Photo Reminders (Developer Options) -->
+    <string name="reminder_menu">Remind Me of This…</string>
+    <string name="reminder_dialog_title">Remind Me</string>
+    <plurals name="reminder_dialog_items">
+        <item quantity="one">%d photo</item>
+        <item quantity="other">%d photos</item>
+    </plurals>
+    <string name="reminder_note_hint">Description</string>
+    <string name="reminder_set">Set</string>
+    <string name="reminder_in_past">Choose a time in the future.</string>
+    <string name="reminder_not_exact">Android may send this reminder a few minutes late. To send it on time, allow Alarms &amp; Reminders for Lumen.</string>
+    <string name="reminder_saved">Reminder set for %1$s</string>
+    <string name="reminder_notifications_off">Reminder set, but Lumen can\'t show notifications. Allow them in App Info.</string>
+    <string name="reminder_photo_gone">This photo is no longer in your library.</string>
+    <string name="reminder_channel">Photo reminders</string>
+    <string name="reminder_channel_description">Reminders you set on photos</string>
+    <plurals name="reminder_title">
+        <item quantity="one">Remember this photo</item>
+        <item quantity="other">Remember these %d photos</item>
+    </plurals>
+    <string name="settings_photo_reminders">Photo Reminders</string>
+    <string name="settings_photo_reminders_footer">Adds Remind Me of This… to the ⋯ menu in the viewer and to the menu for selected photos. At the time you set, Lumen sends a notification with the photo and your description.</string>
+    <string name="settings_kw_photo_reminders">remind reminder notification alarm photo developer</string>
+    <string name="settings_reminders_waiting">Waiting Reminders</string>
+    <string name="settings_reminders_waiting_footer">Tap a reminder to cancel it.</string>
+    <string name="settings_reminder_no_note">No description</string>
+    <string name="settings_reminder_cancel_title">Cancel This Reminder?</string>
+    <string name="settings_reminder_cancel">Cancel Reminder</string>
 </resources>

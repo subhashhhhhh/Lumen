@@ -260,6 +260,11 @@ class LumenPrefs(context: Context) {
         get() = prefs.getBoolean(KeyDeveloperOptions, false)
         set(value) = prefs.edit { putBoolean(KeyDeveloperOptions, value) }
 
+    /** Developer Options → Photo Reminders: ⋯ and selection menus offer "Remind Me of This…". */
+    var photoReminders: Boolean
+        get() = prefs.getBoolean(KeyPhotoReminders, false)
+        set(value) = prefs.edit { putBoolean(KeyPhotoReminders, value) }
+
     /** Developer Options → Search Details: results split by how they matched, with scores. */
     var searchDetails: Boolean
         get() = prefs.getBoolean(KeySearchDetails, false)
@@ -360,6 +365,7 @@ class LumenPrefs(context: Context) {
         const val KeyIndexScheduleStart = "index_schedule_start"
         const val KeyIndexScheduleEnd = "index_schedule_end"
         const val KeySearchDetails = "search_details"
+        const val KeyPhotoReminders = "photo_reminders"
         const val KeySearchModel = "search_model"
         const val KeyFaceModel = "face_model"
         const val KeyPersonSort = "person_sort"

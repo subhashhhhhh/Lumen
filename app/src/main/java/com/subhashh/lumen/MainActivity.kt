@@ -14,6 +14,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val pick = PickRequest.from(intent)
+        // A photo reminder's notification: open its photo (not again when recreated).
+        if (savedInstanceState == null) com.subhashh.lumen.data.PhotoReminders.handle(intent)
         // Software Update: once a day, if it's on (Settings → About).
         if (savedInstanceState == null) com.subhashh.lumen.ui.settings.UpdateSession.checkIfDue(applicationContext)
         setLumenContent {
@@ -26,6 +28,13 @@ class MainActivity : ComponentActivity() {
                 },
             )
         }
+    }
+
+    // Already open (the notification brings it to the front): same request, through the new intent.
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        com.subhashh.lumen.data.PhotoReminders.handle(intent)
     }
 
     /** Hands the chosen items back to the app that asked, with permission to read them. */

@@ -178,6 +178,8 @@ fun ViewerScreen(
     onAdjustDate: (MediaItem) -> Unit = {},
     onSetWallpaper: (MediaItem) -> Unit = {},
     onResize: (MediaItem) -> Unit = {},
+    /** Developer Options → Photo Reminders: ⋯ offers Remind Me of This…; null hides it. */
+    onRemind: ((MediaItem) -> Unit)? = null,
     /** Hidden's Share: encrypted items need a decrypted copy first. */
     onShareHidden: (MediaItem) -> Unit = {},
     /** Everyone Faces found, with cover photos: the details sheet shows who's in this one. */
@@ -775,6 +777,7 @@ fun ViewerScreen(
                     onAdjustDate = onAdjustDate,
                     onSetWallpaper = onSetWallpaper,
                     onResize = onResize,
+                    onRemind = onRemind,
                 ),
                 origin = TransformOrigin(1f, 0f),
                 modifier = Modifier
@@ -872,6 +875,7 @@ private fun viewerMenu(
     onAdjustDate: (MediaItem) -> Unit,
     onSetWallpaper: (MediaItem) -> Unit,
     onResize: (MediaItem) -> Unit,
+    onRemind: ((MediaItem) -> Unit)?,
 ): List<List<MenuItem>> {
     val photo = !item.isVideo
     return listOfNotNull(
@@ -894,6 +898,7 @@ private fun viewerMenu(
         ),
         listOfNotNull(
             MenuItem(context.getString(R.string.viewer_slideshow)) { onSlideshow() },
+            onRemind?.let { MenuItem(context.getString(R.string.reminder_menu)) { it(item) } },
             if (notPerson == null) onMakeCover?.let { MenuItem(coverLabel) { it(item) } } else null,
         ),
         // Folder actions live on albums (Collections → long-press), not on a single photo.

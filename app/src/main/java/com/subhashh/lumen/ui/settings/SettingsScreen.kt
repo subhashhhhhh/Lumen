@@ -71,6 +71,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import com.subhashh.lumen.data.PhotoReminders
+import com.subhashh.lumen.ui.components.Confirmation
 import com.subhashh.lumen.R
 import com.subhashh.lumen.ui.icons.LumenIcons
 
@@ -140,6 +142,7 @@ private val Entries = listOf(
     SettingEntry("text-read", R.string.settings_entry_text_read, SettingsCategory.SmartSearch, R.string.settings_kw_text_read),
     SettingEntry("wifi-only", R.string.settings_entry_wifi_only, SettingsCategory.SmartSearch, R.string.settings_kw_wifi_only),
     SettingEntry("search-details", R.string.settings_search_details, SettingsCategory.Developer, R.string.settings_kw_search_details),
+    SettingEntry("photo-reminders", R.string.settings_photo_reminders, SettingsCategory.Developer, R.string.settings_kw_photo_reminders),
     SettingEntry("hf-token", R.string.settings_entry_hf_token, SettingsCategory.SmartSearch, R.string.settings_kw_hf_token),
     SettingEntry("media-management", R.string.settings_media_management, SettingsCategory.Permissions, R.string.settings_kw_media_management),
     SettingEntry("all-files", R.string.settings_all_files, SettingsCategory.Permissions, R.string.settings_kw_all_files),
@@ -299,7 +302,7 @@ fun SettingsScreen(
                     SettingsCategory.Permissions -> PermissionsPage(status, highlight)
                     SettingsCategory.Backup -> BackupPage(highlight, onExport, onImport, onImportFavorites)
                     SettingsCategory.About -> AboutPage(prefs, highlight, onOpenLicenses, onConfirm)
-                    SettingsCategory.Developer -> DeveloperPage(prefs, highlight)
+                    SettingsCategory.Developer -> DeveloperPage(prefs, highlight, onConfirm)
                 }
             }
         }
@@ -956,7 +959,7 @@ private const val DeveloperUrl = "https://github.com/subhashhhhhh"
 private const val RepoUrl = "https://github.com/subhashhhhhh/Lumen"
 
 @Composable
-private fun ColumnScope.DeveloperPage(prefs: LumenPrefs, highlight: String?) {
+private fun ColumnScope.DeveloperPage(prefs: LumenPrefs, highlight: String?, onConfirm: (Confirmation) -> Unit) {
     var details by remember { mutableStateOf(prefs.searchDetails) }
     var shown by remember { mutableStateOf(prefs.developerOptions) }
     Group(
@@ -976,6 +979,7 @@ private fun ColumnScope.DeveloperPage(prefs: LumenPrefs, highlight: String?) {
             )
         }
     }
+    PhotoRemindersGroup(highlight, onConfirm)
     Group(stringResource(R.string.settings_group_onboarding), footer = stringResource(R.string.settings_onboarding_footer)) {
         Anchor("show-onboarding", highlight) {
             val context = LocalContext.current
@@ -1002,6 +1006,58 @@ private fun ColumnScope.DeveloperPage(prefs: LumenPrefs, highlight: String?) {
                 icon = LumenIcons.Settings,
                 iconColor = Gray,
             )
+        }
+    }
+}
+
+/** Developer Options → Photo Reminders, and the reminders waiting to ring (tap one to cancel it). */
+@Composable
+private fun ColumnScope.PhotoRemindersGroup(highlight: String?, onConfirm: (Confirmation) -> Unit) {
+    val context = LocalContext.current
+    val on = PhotoReminders.enabled(context)
+    var waiting by remember { mutableStateOf(PhotoReminders.all(context)) }
+    LifecycleResumeEffect(Unit) {
+        waiting = PhotoReminders.all(context)
+        onPauseOrDispose { }
+    }
+    Group("", footer = stringResource(R.string.settings_photo_reminders_footer)) {
+        Anchor("photo-reminders", highlight) {
+            ToggleRow(
+                title = stringResource(R.string.settings_photo_reminders),
+                checked = on,
+                onCheckedChange = { PhotoReminders.setEnabled(context, it) },
+                icon = LumenIcons.Timer,
+                iconColor = Orange,
+            )
+        }
+    }
+    if (waiting.isNotEmpty()) {
+        Group(stringResource(R.string.settings_reminders_waiting), footer = stringResource(R.string.settings_reminders_waiting_footer)) {
+            val format = remember { java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT) }
+            waiting.forEach { r ->
+                SettingsRow(
+                    title = r.note.ifEmpty { stringResource(R.string.settings_reminder_no_note) },
+                    subtitle = format.format(java.util.Date(r.at)),
+                    value = r.mediaIds.size.takeIf { it > 1 }?.let {
+                        context.resources.getQuantityString(R.plurals.reminder_dialog_items, it, it)
+                    },
+                    onClick = {
+                        onConfirm(
+                            Confirmation(
+                                title = context.getString(R.string.settings_reminder_cancel_title),
+                                message = r.note.ifEmpty { format.format(java.util.Date(r.at)) },
+                                confirm = context.getString(R.string.settings_reminder_cancel),
+                                destructive = true,
+                            ) {
+                                PhotoReminders.cancel(context, r.id)
+                                waiting = PhotoReminders.all(context)
+                            },
+                        )
+                    },
+                    icon = LumenIcons.Timer,
+                    iconColor = Orange,
+                )
+            }
         }
     }
 }

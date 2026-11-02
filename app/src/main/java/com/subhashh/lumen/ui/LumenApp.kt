@@ -101,6 +101,7 @@ import kotlinx.coroutines.Dispatchers
 import com.subhashh.lumen.ui.components.RenameDialog
 import com.subhashh.lumen.ai.HfTokenStore
 import com.subhashh.lumen.ui.components.DateTimeDialog
+import com.subhashh.lumen.data.PhotoReminders
 import com.subhashh.lumen.data.MediaDates
 import com.subhashh.lumen.data.vault.Vault
 import com.subhashh.lumen.data.vault.VaultMigration
@@ -526,6 +527,8 @@ private fun MainScaffold(
     var wallpaperItem by remember { mutableStateOf<MediaItem?>(null) }
     /** Items waiting for a new date from Adjust Date & Time. */
     var dateRequest by remember { mutableStateOf<List<MediaItem>?>(null) }
+    /** Items waiting for Remind Me of This… (Developer Options → Photo Reminders). */
+    var remindRequest by remember { mutableStateOf<List<MediaItem>?>(null) }
     /** Album name prompt: renaming [album], or making a new one when null. */
     var albumNameRequest by remember { mutableStateOf<AlbumNameRequest?>(null) }
     // The Library tab is filtered by the ≡ menu; the viewer and selection page through the same list.
@@ -1379,6 +1382,13 @@ private fun MainScaffold(
             withFrameNanos { }
             transition.finish()
         }
+    }
+
+    // A photo reminder's notification was tapped: open its photo once the library is in.
+    OpenFromReminder(ready = library != null) { id ->
+        val index = itemsOf(CollectionKeys.Library).indexOfFirst { it.id == id }
+        if (index >= 0) openViewer(CollectionKeys.Library, index)
+        index >= 0
     }
 
     // Collections and People: also drawn under an album or person while its cover flies.
@@ -2357,7 +2367,7 @@ private fun MainScaffold(
                     } else null,
                 ),
                 listOf(MenuItem(stringResource(R.string.common_hide)) { hide(selectedItems) }),
-                listOf(
+                listOfNotNull(
                     MenuItem(stringResource(R.string.main_slideshow)) {
                         val key = selectableKey ?: return@MenuItem
                         val ids = selectedItems.mapTo(HashSet()) { it.id }
@@ -2367,6 +2377,7 @@ private fun MainScaffold(
                         endSelection()
                         openViewer(key, first)
                     },
+                    if (PhotoReminders.enabled(context)) MenuItem(stringResource(R.string.reminder_menu)) { remindRequest = selectedItems } else null,
                 ),
             ),
             origin = TransformOrigin(1f, 1f),
@@ -2476,6 +2487,7 @@ private fun MainScaffold(
                 onAdjustDate = { dateRequest = listOf(it) },
                 onSetWallpaper = { wallpaperItem = it },
                 onResize = { resizeRequest = listOf(it) },
+                onRemind = if (PhotoReminders.enabled(context)) { item -> remindRequest = listOf(item) } else null,
                 // Inside a folder album: make this photo its cover, like iOS's Make Key Photo.
                 onMakeCover = when {
                     CollectionKeys.isFolder(source) -> { item ->
@@ -2755,58 +2767,13 @@ private fun MainScaffold(
             )
         }
 
-        ResizeDialog(
-            count = resizeRequest?.size,
-            onSave = { target, format, quality ->
-                val items = resizeRequest.orEmpty()
-                resizeRequest = null
-                scope.launch {
-                    if (items.size > 1) toast(context.resources.getQuantityString(R.plurals.main_saving_copies, items.size, items.size))
-                    val result = ImageExport.export(context, items, target, format, quality)
-                    val where = result.folders.singleOrNull()?.trimEnd('/')?.substringAfterLast('/')
-                    finish(
-                        when {
-                            result.saved == 0 -> context.getString(R.string.main_save_copy_failed)
-                            result.failed > 0 -> context.getString(R.string.main_saved_n_of, result.saved, items.size)
-                            where != null -> if (result.saved == 1) context.getString(R.string.main_saved_copy_in, where)
-                            else context.resources.getQuantityString(R.plurals.main_saved_copies_in, result.saved, result.saved, where)
-                            else -> context.resources.getQuantityString(R.plurals.main_saved_copies, result.saved, result.saved)
-                        },
-                    )
-                }
-            },
-            onDismiss = { resizeRequest = null },
-        )
+        ResizeSheet(resizeRequest, onClose = { resizeRequest = null }, toast = toast, finish = { finish(it) })
 
         vaultProgress?.let { VaultProgressScreen(it.encrypting, it.progress) }
 
-        DateTimeDialog(
-            original = dateRequest?.minOf { it.takenAt },
-            count = dateRequest?.size ?: 0,
-            onAdjust = { newTime ->
-                val items = dateRequest.orEmpty()
-                dateRequest = null
-                if (items.isNotEmpty()) {
-                    // Everything moves by the same amount, so the earliest lands where it was set.
-                    val delta = newTime - items.minOf { it.takenAt }
-                    val run = {
-                        scope.launch {
-                            val result = MediaDates.shift(context, items, delta)
-                            finish(
-                                when {
-                                    result.failed == 0 -> context.getString(if (items.size == 1) R.string.main_date_changed else R.string.main_dates_changed)
-                                    result.needsAllFilesAccess ->
-                                        context.getString(R.string.main_dates_changed_needs_access, result.done, items.size)
-                                    else -> context.getString(R.string.main_dates_changed_heic, result.done, items.size)
-                                },
-                            )
-                        }
-                    }
-                    if (Environment.isExternalStorageManager()) run() else withWriteAccess(items) { run() }
-                }
-            },
-            onDismiss = { dateRequest = null },
-        )
+        AdjustDateSheet(dateRequest, onClose = { dateRequest = null }, withWriteAccess = withWriteAccess, finish = { finish(it) })
+
+        PhotoReminderSheet(remindRequest, onClose = { remindRequest = null }, onSaved = { finish(it) })
 
         PhotoTransitionOverlay(transition)
         entrance?.let { exit ->
@@ -2937,3 +2904,71 @@ private val ZoomBarSwitchDistance = 40.dp
 
 /** Moving files into or out of the vault, and how far along (null while it gets ready). */
 private data class VaultProgress(val encrypting: Boolean, val progress: VaultMigration.Progress?)
+
+/** Resize or Convert for [items] (null: closed): saves copies, then [finish] with what happened. */
+@Composable
+private fun ResizeSheet(items: List<MediaItem>?, onClose: () -> Unit, toast: (String) -> Unit, finish: (String) -> Unit) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    ResizeDialog(
+        count = items?.size,
+        onSave = { target, format, quality ->
+            val chosen = items.orEmpty()
+            onClose()
+            scope.launch {
+                if (chosen.size > 1) toast(context.resources.getQuantityString(R.plurals.main_saving_copies, chosen.size, chosen.size))
+                val result = ImageExport.export(context, chosen, target, format, quality)
+                val where = result.folders.singleOrNull()?.trimEnd('/')?.substringAfterLast('/')
+                finish(
+                    when {
+                        result.saved == 0 -> context.getString(R.string.main_save_copy_failed)
+                        result.failed > 0 -> context.getString(R.string.main_saved_n_of, result.saved, chosen.size)
+                        where != null -> if (result.saved == 1) context.getString(R.string.main_saved_copy_in, where)
+                        else context.resources.getQuantityString(R.plurals.main_saved_copies_in, result.saved, result.saved, where)
+                        else -> context.resources.getQuantityString(R.plurals.main_saved_copies, result.saved, result.saved)
+                    },
+                )
+            }
+        },
+        onDismiss = onClose,
+    )
+}
+
+/** Adjust Date & Time for [items] (null: closed): every item moves by the same amount. */
+@Composable
+private fun AdjustDateSheet(
+    items: List<MediaItem>?,
+    onClose: () -> Unit,
+    withWriteAccess: (List<MediaItem>, () -> Unit) -> Unit,
+    finish: (String) -> Unit,
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    DateTimeDialog(
+        original = items?.minOf { it.takenAt },
+        count = items?.size ?: 0,
+        onAdjust = { newTime ->
+            val chosen = items.orEmpty()
+            onClose()
+            if (chosen.isNotEmpty()) {
+                // Everything moves by the same amount, so the earliest lands where it was set.
+                val delta = newTime - chosen.minOf { it.takenAt }
+                val run = {
+                    scope.launch {
+                        val result = MediaDates.shift(context, chosen, delta)
+                        finish(
+                            when {
+                                result.failed == 0 -> context.getString(if (chosen.size == 1) R.string.main_date_changed else R.string.main_dates_changed)
+                                result.needsAllFilesAccess ->
+                                    context.getString(R.string.main_dates_changed_needs_access, result.done, chosen.size)
+                                else -> context.getString(R.string.main_dates_changed_heic, result.done, chosen.size)
+                            },
+                        )
+                    }
+                }
+                if (Environment.isExternalStorageManager()) run() else withWriteAccess(chosen) { run() }
+            }
+        },
+        onDismiss = onClose,
+    )
+}
