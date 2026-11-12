@@ -101,6 +101,13 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
+    // Local tests run on Robolectric where they need Android (Uri, preferences, SQLite, strings).
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+        // Robolectric reaches into the JDK's file descriptor internals, which newer JDKs lock away.
+        unitTests.all { it.jvmArgs("--add-exports=java.base/jdk.internal.access=ALL-UNNAMED", "--add-opens=java.base/java.io=ALL-UNNAMED") }
+    }
+
     buildFeatures {
         compose = true
     }
@@ -153,6 +160,7 @@ dependencies {
     androidTestImplementation(libs.androidx.test.runner)
     // Android's org.json is a stub in local tests; the real one stands in.
     testImplementation(libs.org.json)
+    testImplementation(libs.robolectric)
     implementation(libs.androidx.profileinstaller)
     baselineProfile(project(":baselineprofile"))
     implementation(libs.androidx.core.ktx)

@@ -5,6 +5,7 @@ testRunner = "1.7.0"
 orgJson = "20260814"
 avifCoder = "3.0.0"
 junit = "4.13.2"
+robolectric = "4.17"
 agp = "9.4.1"
 kotlin = "2.4.21"
 composeBom = "2026.09.00"
@@ -48,6 +49,7 @@ onnxruntime-android = { module = "com.microsoft.onnxruntime:onnxruntime-android"
 litertlm-android = { module = "com.google.ai.edge.litertlm:litertlm-android", version.ref = "litertlm" }
 androidx-test-runner = { module = "androidx.test:runner", version.ref = "testRunner" }
 org-json = { module = "org.json:json", version.ref = "orgJson" }
+robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
 junit = { module = "junit:junit", version.ref = "junit" }
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
 androidx-exifinterface = { module = "androidx.exifinterface:exifinterface", version.ref = "exifinterface" }
