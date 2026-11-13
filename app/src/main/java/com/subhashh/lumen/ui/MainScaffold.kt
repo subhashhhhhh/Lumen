@@ -607,56 +607,10 @@ private fun MainState.Scaffold(
     BackHandler(enabled = selectionMenuOpen) { selectionMenuOpen = false }
     val toast = { message: String -> Toast.makeText(context, message, Toast.LENGTH_LONG).show() }
     val activity = LocalActivity.current
-    // Settings → Backup → Import Favorites: Fossify's .txt or Aves's .json, matched to files here.
-    val favoritesLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) scope.launch {
-            val found = FavoritesImport.read(context, uri, library.orEmpty())
-            if (found == null) {
-                toast(context.getString(R.string.main_favorites_import_bad_file))
-                return@launch
-            }
-            val toMark = found.matched.filterNot { it.isFavorite }
-            when {
-                found.matched.isEmpty() -> toast(context.resources.getQuantityString(R.plurals.main_favorites_import_none, found.listed, found.listed))
-                toMark.isEmpty() -> toast(context.resources.getQuantityString(R.plurals.main_favorites_import_already, found.matched.size, found.matched.size))
-                else -> {
-                    toast(context.getString(R.string.main_favorites_import_found, found.matched.size, found.listed, toMark.size))
-                    selectionLauncher.launch(
-                        IntentSenderRequest.Builder(MediaActions.favoriteRequest(context, toMark, favorite = true)).build(),
-                    )
-                }
-            }
-        }
-    }
-    // Settings → Backup. Importing replaces every setting, so the screen restarts afterwards to
-    // pick them all up; any favorites to restore are asked for first.
-    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
-        if (uri != null) scope.launch {
-            val ok = SettingsBackup.export(context, library.orEmpty().filter { it.isFavorite }, uri)
-            toast(context.getString(if (ok) R.string.main_settings_exported else R.string.main_backup_save_failed))
-        }
-    }
-    val restoreFavoritesLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) {
-        activity?.recreate()
-    }
-    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) scope.launch {
-            val imported = SettingsBackup.import(context, uri)
-            if (imported == null) {
-                toast(context.getString(R.string.main_backup_bad_file))
-                return@launch
-            }
-            toast(context.getString(R.string.main_settings_restored))
-            val toFavorite = library.orEmpty().filter { !it.isFavorite && (it.relativePath + it.name) in imported.favoritePaths }
-            if (toFavorite.isEmpty()) {
-                activity?.recreate()
-            } else {
-                restoreFavoritesLauncher.launch(
-                    IntentSenderRequest.Builder(MediaActions.favoriteRequest(context, toFavorite, favorite = true)).build(),
-                )
-            }
-        }
-    }
+    val backup = backupLaunchers(library, activity, toast, selectionLauncher)
+    val favoritesLauncher = backup.favoritesLauncher
+    val exportLauncher = backup.exportLauncher
+    val importLauncher = backup.importLauncher
     val hiddenActions = hiddenActions(library, hidden, excluded, activity, toast, endSelection)
     val needsAllFiles = hiddenActions.needsAllFiles
     val openHidden = hiddenActions.openHidden
