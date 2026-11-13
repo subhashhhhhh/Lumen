@@ -96,6 +96,8 @@ class SearchIndex private constructor(
             w == q -> 4
             w.startsWith(q) -> 3
             q.length >= 3 && w.contains(q) -> 2
+            // A number one digit off is another number (2021 for 2022), not a typo.
+            q.all(Char::isDigit) -> 0
             q.length >= 4 && abs(w.length - q.length) <= 1 && typos(q, w) <= 1 -> 1
             // A typo in a prefix: "whatsap" for whatsapp, "screnshot" for screenshots.
             // A missing or extra letter shifts the rest, so try prefixes one shorter and longer too.
