@@ -2351,7 +2351,12 @@ private fun MainScaffold(
                         MenuItem(notPersonLabel(person)) {
                             val ids = selectedItems.map { it.id }
                             endSelection()
-                            scope.launch(Dispatchers.IO) { com.subhashh.lumen.ai.FaceStore.of(context).notThisPerson(person.id, ids) }
+                            scope.launch(Dispatchers.IO) {
+                                com.subhashh.lumen.ai.FaceStore.of(context).notThisPerson(person.id, ids)
+                                // The faces let go are grouped again now (with others like them, as
+                                // someone new), not at the next background pass or restart.
+                                runCatching { com.subhashh.lumen.ai.FaceGrouping.run(com.subhashh.lumen.ai.FaceStore.of(context), com.subhashh.lumen.ai.FaceModel.recognizer(context)) }
+                            }
                         },
                     )
                 },
@@ -2504,7 +2509,10 @@ private fun MainScaffold(
                 coverLabel = stringResource(if (personOf(source) != null) R.string.main_make_person_cover else R.string.main_make_album_cover),
                 notPerson = personOf(source)?.let { person ->
                     notPersonLabel(person) to { item ->
-                        scope.launch(Dispatchers.IO) { com.subhashh.lumen.ai.FaceStore.of(context).notThisPerson(person.id, listOf(item.id)) }
+                        scope.launch(Dispatchers.IO) {
+                            com.subhashh.lumen.ai.FaceStore.of(context).notThisPerson(person.id, listOf(item.id))
+                            runCatching { com.subhashh.lumen.ai.FaceGrouping.run(com.subhashh.lumen.ai.FaceStore.of(context), com.subhashh.lumen.ai.FaceModel.recognizer(context)) }
+                        }
                         toast(context.getString(R.string.main_removed_from, person.name ?: context.getString(R.string.main_this_person)))
                     }
                 },
