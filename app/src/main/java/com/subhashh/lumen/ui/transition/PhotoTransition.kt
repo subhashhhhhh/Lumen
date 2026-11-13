@@ -1,6 +1,10 @@
 package com.subhashh.lumen.ui.transition
 
 import androidx.compose.animation.core.Spring
+import androidx.activity.compose.BackHandler
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.layout.Box
@@ -60,6 +64,22 @@ class PhotoTransition {
     var opening by mutableStateOf(false)
         private set
 
+    /** True only while [open] is growing the photo: the viewer isn't built yet. */
+    var growing by mutableStateOf(false)
+        private set
+
+    /** The job running [open] and what follows it (building the viewer), set by the caller. */
+    var flight: Job? = null
+
+    /**
+     * Back while the photo is still growing. The viewer (and its own Back) isn't there yet, so
+     * without this the press would leave Lumen: the photo turns round and lands in its cell.
+     */
+    fun turnBack(scope: CoroutineScope) {
+        flight?.cancel()
+        scope.launch { land(Velocity.Zero) }
+    }
+
     /**
      * The photo's center and how grown it is (0 = cell size, 1 = full size) are animated
      * separately: position springs carry the finger's speed in each axis, so a flick keeps
@@ -107,13 +127,18 @@ class PhotoTransition {
     suspend fun open(item: MediaItem, target: Rect, background: Color) {
         start(item, from = cellRect(item), full = target, background = background, backgroundStart = 1f)
         opening = true
+        growing = true
         centerX = thumb.center.x
         centerY = thumb.center.y
         grown = 0f
-        coroutineScope {
-            launch { animate(centerX, full.center.x, animationSpec = OpenPosition) { v, _ -> centerX = v } }
-            launch { animate(centerY, full.center.y, animationSpec = OpenPosition) { v, _ -> centerY = v } }
-            launch { animate(0f, 1f, animationSpec = OpenSize) { v, _ -> grown = v } }
+        try {
+            coroutineScope {
+                launch { animate(centerX, full.center.x, animationSpec = OpenPosition) { v, _ -> centerX = v } }
+                launch { animate(centerY, full.center.y, animationSpec = OpenPosition) { v, _ -> centerY = v } }
+                launch { animate(0f, 1f, animationSpec = OpenSize) { v, _ -> grown = v } }
+            }
+        } finally {
+            growing = false
         }
     }
 
@@ -131,6 +156,7 @@ class PhotoTransition {
 
     suspend fun land(velocity: Velocity) {
         val current = item ?: return
+        opening = false
         cellRect(current)?.let {
             thumb = it
             landless = false
@@ -214,6 +240,8 @@ fun Modifier.transitionCell(transition: PhotoTransition, id: Long): Modifier = t
 /** The flying photo and the background fading behind it. Draws nothing when idle. */
 @Composable
 fun PhotoTransitionOverlay(transition: PhotoTransition) {
+    val scope = rememberCoroutineScope()
+    BackHandler(enabled = transition.growing) { transition.turnBack(scope) }
     val item = transition.item ?: return
     val context = LocalContext.current
     Box(

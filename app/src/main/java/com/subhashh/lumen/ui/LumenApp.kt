@@ -1373,7 +1373,7 @@ private fun MainScaffold(
             viewerSource = key
             return@open
         }
-        scope.launch {
+        transition.flight = scope.launch {
             val target = fullScreenRect(item, screenSize.width.toFloat(), screenSize.height.toFloat())
             transition.open(item, target, viewerBackground)
             viewerStart = index
@@ -2972,3 +2972,4 @@ private fun AdjustDateSheet(
         onDismiss = onClose,
     )
 }
+
