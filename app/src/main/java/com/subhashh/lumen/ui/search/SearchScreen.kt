@@ -33,7 +33,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -71,6 +74,28 @@ import com.subhashh.lumen.ui.components.pinchColumns
 import com.subhashh.lumen.ui.transition.PhotoTransition
 import com.subhashh.lumen.ui.transition.transitionCell
 
+/**
+ * The order of the one list of results: best match first (exact names and dates, then people and
+ * text, then Smart Search's best first), or by date. Tap the order beside the result count to
+ * change it. Kept for as long as Lumen runs. Applied by [SearchSection.ordered] where the list is
+ * shown and where the viewer pages through it, not in MainScaffold (JVM method size).
+ */
+enum class SearchOrder(@StringRes val label: Int) {
+    Best(R.string.main_search_order_best),
+    Newest(R.string.data_sort_newest),
+    Oldest(R.string.data_sort_oldest);
+
+    fun sorted(items: List<MediaItem>): List<MediaItem> = when (this) {
+        Best -> items
+        Newest -> items.sortedByDescending { it.takenAt }
+        Oldest -> items.sortedBy { it.takenAt }
+    }
+
+    companion object {
+        var current by mutableStateOf(Best)
+    }
+}
+
 /** One way of matching a search, shown as its own section: one row until See All. */
 data class SearchSection(
     val id: String,
@@ -80,6 +105,10 @@ data class SearchSection(
     /** Smart Search's score per item, shown on the cells in development builds only. */
     val scores: Map<Long, Float> = emptyMap(),
 ) {
+    /** The one list in the chosen [SearchOrder]; other sections as they are. */
+    fun ordered(): SearchSection =
+        if (id == All && SearchOrder.current != SearchOrder.Best) copy(items = SearchOrder.current.sorted(items)) else this
+
     companion object {
         const val Names = "names"
         const val People = "people"
@@ -186,7 +215,10 @@ fun SearchScreen(
     val placed = remember { HashMap<String, LayoutCoordinates>() }
     // Debug and profile builds (".debug"): Smart Search's scores on its cells, to tune its cutoff.
     val showScores = LocalContext.current.packageName.endsWith(".debug")
-    val shown = sections?.let { visibleSections(it, lookingInside) }.orEmpty()
+    val order = SearchOrder.current
+    val shown = remember(sections, lookingInside, order) {
+        sections?.let { visibleSections(it, lookingInside) }.orEmpty().map { it.ordered() }
+    }
     LazyVerticalGrid(
         columns = GridCells.Fixed(columns),
         state = gridState,
@@ -247,6 +279,10 @@ fun SearchScreen(
                             else -> pluralStringResource(R.plurals.main_search_results, n, n)
                         },
                         detail = if (lookingInside && n > 0) lookingText else null,
+                        action = if (n > 1) stringResource(SearchOrder.current.label) else null,
+                        onAction = {
+                            SearchOrder.current = SearchOrder.entries[(SearchOrder.current.ordinal + 1) % SearchOrder.entries.size]
+                        },
                     )
                 } else {
                     SectionTitle(

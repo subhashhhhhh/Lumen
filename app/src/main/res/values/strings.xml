@@ -51,6 +51,7 @@
     </plurals>
     <string name="main_search_show_less">Show Less</string>
     <string name="main_search_see_all">See All</string>
+    <string name="main_search_order_best">Best Match</string>
     <string name="main_search_no_results_hint">Try describing what\'s in the photo, like “cat on a sofa” (with Smart Features in Settings), or a file name, a folder, a month or a year.</string>
     <string name="main_search_recent">Recent</string>
     <string name="main_search_clear">Clear</string>

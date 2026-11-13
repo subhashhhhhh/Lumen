@@ -695,7 +695,7 @@ private fun MainScaffold(
     val itemsOf = { key: String ->
         when (key) {
             CollectionKeys.Library -> libraryItems
-            CollectionKeys.Search -> searchSections?.firstOrNull { it.id == searchSection }?.items.orEmpty()
+            CollectionKeys.Search -> searchSections?.firstOrNull { it.id == searchSection }?.ordered()?.items.orEmpty()
             CollectionKeys.Hidden -> if (hiddenUnlocked) hidden.orEmpty() else emptyList()
             else -> personOf(key)?.let { person ->
                 // A person's page has its own Show and Sort (its ⋯ menu).
