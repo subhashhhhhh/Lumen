@@ -669,86 +669,13 @@ private fun MainState.Scaffold(
     val shareHidden = hiddenActions.shareHidden
     val deleteHidden = hiddenActions.deleteHidden
     val confirmDelete = hiddenActions.confirmDelete
-    val excludeFolders: (List<MediaItem>) -> Unit = { items ->
-        val folders = items.map { it.relativePath }.distinct()
-        viewModel.exclude(folders)
-        endSelection()
-        val name = folders.singleOrNull()?.trimEnd('/')?.substringAfterLast('/')
-        toast(
-            if (name != null) context.getString(R.string.main_excluded_name, name)
-            else context.resources.getQuantityString(R.plurals.main_excluded_folders, folders.size, folders.size),
-        )
-    }
-
-    val excludeFromHidden: (List<MediaItem>) -> Unit = { items ->
-        val folders = items.map { it.relativePath }.distinct()
-        viewModel.exclude(folders)
-        endSelection()
-        // A folder whose contents just left Hidden would be empty: step back to the list.
-        if (CollectionKeys.hiddenFolderId(openCollection.orEmpty()) != null) openCollection = CollectionKeys.Hidden
-        val name = folders.singleOrNull()?.trimEnd('/')?.substringAfterLast('/')
-        toast(
-            if (name != null) context.getString(R.string.main_excluded_name, name)
-            else context.resources.getQuantityString(R.plurals.main_excluded_folders, folders.size, folders.size),
-        )
-    }
-
-    val writeLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartIntentSenderForResult(),
-    ) { result ->
-        val action = pendingWrite
-        pendingWrite = null
-        if (result.resultCode == Activity.RESULT_OK) action?.invoke()
-    }
-    val withWriteAccess: (List<MediaItem>, () -> Unit) -> Unit = { items, action ->
-        if (Environment.isExternalStorageManager()) {
-            action()
-        } else {
-            pendingWrite = action
-            val request = MediaStore.createWriteRequest(context.contentResolver, items.map { it.uri })
-            writeLauncher.launch(IntentSenderRequest.Builder(request.intentSender).build())
-        }
-    }
-    /** Refresh and leave selection; [message] only when there's something worth saying. */
-    val finish = { message: String? ->
-        viewModel.refresh()
-        endSelection()
-        if (message != null) toast(message)
-    }
-
-    val toAlbum: (AlbumRequest, AlbumTarget) -> Unit = { request, target ->
-        if (request.move) {
-            withWriteAccess(request.items) {
-                scope.launch {
-                    val result = MediaFiles.move(context, request.items, target.relativePath)
-                    finish(fileMessage(context, move = true, result, target.title))
-                }
-            }
-        } else {
-            scope.launch {
-                val result = MediaFiles.copy(context, request.items, target.relativePath)
-                finish(fileMessage(context, move = false, result, target.title))
-            }
-        }
-    }
-    val rotate: (List<MediaItem>, Int) -> Unit = { items, degrees ->
-        val rotatable = items.filter(MediaFiles::canRotate)
-        if (rotatable.isNotEmpty()) {
-            withWriteAccess(rotatable) {
-                scope.launch {
-                    // Videos are remuxed, which takes a moment for long ones.
-                    if (rotatable.any { it.isVideo }) toast(context.getString(R.string.main_rotating))
-                    val result = MediaFiles.rotate(context, rotatable, degrees)
-                    // Success shows itself (the photo turns); only a failure needs a message.
-                    finish(if (result.failed == 0) null else context.getString(R.string.main_rotate_failed, result.failed, rotatable.size))
-                }
-            }
-        }
-    }
-    LaunchedEffect(renameItem) {
-        renameName = renameItem?.let { item -> withContext(Dispatchers.IO) { MediaFiles.displayName(context, item) } }
-    }
-
+    val fileActions = fileActions(toast, endSelection)
+    val excludeFolders = fileActions.excludeFolders
+    val excludeFromHidden = fileActions.excludeFromHidden
+    val withWriteAccess = fileActions.withWriteAccess
+    val finish = fileActions.finish
+    val toAlbum = fileActions.toAlbum
+    val rotate = fileActions.rotate
     val statusTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val gridPadding = PaddingValues(top = statusTop + 96.dp, bottom = navBottom + 96.dp)
