@@ -488,6 +488,7 @@
     <string name="settings_kw_curved_edge">fast scroll scrollbar handle edge</string>
     <string name="settings_kw_ultra_hdr">hdr brightness glow</string>
     <string name="settings_kw_film_strip">thumbnails strip scrubber skim viewer height size</string>
+    <string name="settings_kw_swipe_up_details">swipe up gesture details info sheet viewer disable samsung</string>
     <string name="settings_kw_maps">map location openstreetmap openfreemap network privacy</string>
     <string name="settings_kw_autoplay">video play automatically</string>
     <string name="settings_kw_loop">repeat video</string>
@@ -558,8 +559,9 @@
     <string name="settings_hdr_footer">Ultra HDR photos can glow brighter than white. Match Brightness keeps to your brightness; Full HDR turns the screen all the way up while an HDR photo or video is shown, like Chrome.</string>
     <string name="settings_ultra_hdr">Ultra HDR</string>
     <string name="settings_group_viewer">Viewer</string>
-    <string name="settings_film_strip_footer">The thumbnails above the viewer\'s buttons: drag them to skim through photos.</string>
+    <string name="settings_film_strip_footer">Film Strip: the thumbnails above the viewer\'s buttons; drag them to skim through photos. Swipe Up for Details: off if it gets in the way of your phone\'s gestures; the info button still opens the details.</string>
     <string name="settings_film_strip">Film Strip</string>
+    <string name="settings_swipe_up_details">Swipe Up for Details</string>
     <string name="settings_group_location">Location</string>
     <string name="settings_maps_footer">Shows where photos were taken on a map in their details. Map tiles download from OpenFreeMap (OpenStreetMap data): it sees which area is shown, nothing else. Off: the place name and coordinates only, and Lumen doesn\'t contact it.</string>
     <string name="settings_maps">Maps</string>

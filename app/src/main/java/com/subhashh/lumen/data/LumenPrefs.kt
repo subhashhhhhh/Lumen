@@ -189,6 +189,11 @@ class LumenPrefs(context: Context) {
         set(value) = prefs.edit { putBoolean(KeyModelWifiOnly, value) }
 
     /** Details → Location shows a map (tiles from OpenFreeMap); off: place name and coordinates only. */
+    /** Viewer: swiping up on a photo opens its details. Off for phones whose own gestures swipe up. */
+    var swipeUpForDetails: Boolean
+        get() = prefs.getBoolean(KeySwipeUpDetails, true)
+        set(value) = prefs.edit { putBoolean(KeySwipeUpDetails, value) }
+
     var showMaps: Boolean
         get() = prefs.getBoolean(KeyShowMaps, true)
         set(value) = prefs.edit { putBoolean(KeyShowMaps, value) }
@@ -353,6 +358,7 @@ class LumenPrefs(context: Context) {
         const val KeyLastUpdateCheck = "last_update_check"
         const val KeyAvailableUpdate = "available_update"
         const val KeyShowMaps = "show_maps"
+        const val KeySwipeUpDetails = "swipe_up_details"
         const val KeyTextVideoVersion = "text_video_version"
         const val KeyOnboardingDone = "onboarding_done"
         const val KeyAnnouncedUpdate = "announced_update"

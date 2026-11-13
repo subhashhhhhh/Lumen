@@ -111,6 +111,7 @@ private val Entries = listOf(
     SettingEntry("curved-edge", R.string.settings_curved_edge, SettingsCategory.Library, R.string.settings_kw_curved_edge),
     SettingEntry("ultra-hdr", R.string.settings_ultra_hdr, SettingsCategory.PhotosVideos, R.string.settings_kw_ultra_hdr),
     SettingEntry("film-strip", R.string.settings_film_strip, SettingsCategory.PhotosVideos, R.string.settings_kw_film_strip),
+    SettingEntry("swipe-up-details", R.string.settings_swipe_up_details, SettingsCategory.PhotosVideos, R.string.settings_kw_swipe_up_details),
     SettingEntry("maps", R.string.settings_maps, SettingsCategory.PhotosVideos, R.string.settings_kw_maps),
     SettingEntry("autoplay", R.string.settings_autoplay_videos, SettingsCategory.PhotosVideos, R.string.settings_kw_autoplay),
     SettingEntry("loop", R.string.settings_loop_videos, SettingsCategory.PhotosVideos, R.string.settings_kw_loop),
@@ -529,6 +530,7 @@ private fun ColumnScope.PhotosPage(prefs: LumenPrefs, highlight: String?) {
         }
     }
     var filmStrip by remember { mutableStateOf(prefs.filmStrip) }
+    var swipeUpDetails by remember { mutableStateOf(prefs.swipeUpForDetails) }
     Group(
         stringResource(R.string.settings_group_viewer),
         footer = stringResource(R.string.settings_film_strip_footer),
@@ -544,6 +546,18 @@ private fun ColumnScope.PhotosPage(prefs: LumenPrefs, highlight: String?) {
                 },
                 icon = LumenIcons.Image,
                 iconColor = Blue,
+            )
+        }
+        Anchor("swipe-up-details", highlight) {
+            ToggleRow(
+                title = stringResource(R.string.settings_swipe_up_details),
+                checked = swipeUpDetails,
+                onCheckedChange = {
+                    swipeUpDetails = it
+                    prefs.swipeUpForDetails = it
+                },
+                icon = LumenIcons.Info,
+                iconColor = Gray,
             )
         }
     }

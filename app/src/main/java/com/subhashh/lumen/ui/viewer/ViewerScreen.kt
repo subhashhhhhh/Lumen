@@ -220,7 +220,7 @@ fun ViewerScreen(
     val motion = remember(scope, flingVelocity) {
         ViewerMotion(scope, flingVelocity, onSheetSnap = {
             haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
-        })
+        }).apply { swipeUpOpens = com.subhashh.lumen.data.LumenPrefs(context).swipeUpForDetails }
     }
     var preloadNeighbors by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {

@@ -69,6 +69,9 @@ class ViewerMotion(
 
     var sheetHeight = 1f
 
+    /** Settings → Photos & Videos → Swipe Up for Details. Off: only the info button opens the sheet. */
+    var swipeUpOpens = true
+
     private enum class Mode { None, Reveal, Dismiss }
 
     private var mode = Mode.None
@@ -81,7 +84,12 @@ class ViewerMotion(
         startReveal = reveal
         startNanos = System.nanoTime()
         // Up from rest, or any drag while the sheet is out, moves the sheet.
-        mode = if (reveal > 0f || firstDelta.y < 0f) Mode.Reveal else Mode.Dismiss
+        mode = when {
+            reveal > 0f -> Mode.Reveal
+            firstDelta.y >= 0f -> Mode.Dismiss
+            swipeUpOpens -> Mode.Reveal
+            else -> Mode.None
+        }
         if (mode == Mode.Dismiss) {
             pivot = TransformOrigin(
                 (touch.x / size.width.coerceAtLeast(1)).coerceIn(0f, 1f),
