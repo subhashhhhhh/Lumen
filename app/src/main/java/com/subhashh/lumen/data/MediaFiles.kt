@@ -40,8 +40,15 @@ data class FileResult(val done: Int, val failed: Int, val needsAllFilesAccess: B
  */
 object MediaFiles {
 
-    /** Folder for a new album; Pictures is open to both photos and videos. */
-    fun newAlbumPath(name: String) = "${Environment.DIRECTORY_PICTURES}/${name.trim().replace('/', '_')}/"
+    /**
+     * Folder for a new album; Pictures is open to both photos and videos. The name is one folder
+     * inside Pictures, whatever is typed: a slash can't make a subfolder, and "." or ".." (which
+     * as path segments mean this folder and the one above) can't lead out of Pictures.
+     */
+    fun newAlbumPath(name: String): String {
+        val folder = name.trim().replace('/', '_').let { if (it.all { c -> c == '.' }) it.replace('.', '_') else it }
+        return "${Environment.DIRECTORY_PICTURES}/$folder/"
+    }
 
     suspend fun copy(context: Context, items: List<MediaItem>, relativePath: String): FileResult =
         withContext(Dispatchers.IO) {
