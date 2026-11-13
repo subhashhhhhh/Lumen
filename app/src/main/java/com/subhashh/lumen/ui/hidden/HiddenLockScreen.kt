@@ -143,7 +143,7 @@ fun HiddenLockScreen(
         when (val s = step) {
             is Step.Verify -> {
                 val wait = store.lockedOutUntil() - System.currentTimeMillis()
-                if (wait > 0) return fail(context.getString(R.string.hidden_too_many_tries, (wait / 1000) + 1))
+                if (wait > 0) return fail(tooManyTries(context, wait))
                 busy = true
                 scope.launch {
                     // PBKDF2 is deliberately slow; keep it off the main thread.
@@ -158,7 +158,7 @@ fun HiddenLockScreen(
                         store.recordFailure()
                         val left = HiddenLockStore.MaxAttempts - store.failedAttempts() % HiddenLockStore.MaxAttempts
                         fail(
-                            if (left == HiddenLockStore.MaxAttempts) context.getString(R.string.hidden_too_many_tries, 30)
+                            if (left == HiddenLockStore.MaxAttempts) tooManyTries(context, store.currentLockoutMs())
                             else context.getString(sentence(store.type, R.string.hidden_wrong_pin, R.string.hidden_wrong_pattern, R.string.hidden_wrong_password, R.string.hidden_wrong_entry)),
                         )
                     }
@@ -562,3 +562,8 @@ private fun PasswordEntry(action: String, onSubmit: (String) -> Unit) {
         )
     }
 }
+
+/** "Too many tries" with the wait in seconds, or in minutes (rounded up) from two minutes on. */
+private fun tooManyTries(context: android.content.Context, waitMs: Long): String =
+    if (waitMs < 120_000L) context.getString(R.string.hidden_too_many_tries, (waitMs + 999) / 1000)
+    else context.getString(R.string.hidden_too_many_tries_minutes, (waitMs + 59_999) / 60_000)

@@ -57,9 +57,12 @@ class HiddenLockStore(context: Context) {
         val failures = failedAttempts() + 1
         prefs.edit {
             putInt(KeyFailures, failures)
-            if (failures % MaxAttempts == 0) putLong(KeyLockout, System.currentTimeMillis() + LockoutMs)
+            if (failures % MaxAttempts == 0) putLong(KeyLockout, System.currentTimeMillis() + lockoutMs(failures))
         }
     }
+
+    /** The pause now in force, set by the last wrong try that used up a round. */
+    fun currentLockoutMs() = lockoutMs(failedAttempts())
 
     fun recordSuccess() = prefs.edit {
         remove(KeyFailures)
@@ -78,6 +81,16 @@ class HiddenLockStore(context: Context) {
     companion object {
         const val MaxAttempts = 5
         const val LockoutMs = 30_000L
+
+        /** Pauses after each round of [MaxAttempts] misses in a row; the last one repeats. */
+        private val Lockouts = longArrayOf(LockoutMs, 60_000L, 5 * 60_000L, 15 * 60_000L, 60 * 60_000L)
+
+        /**
+         * The pause after [failures] misses in a row. It grows with every round, so guessing a
+         * short PIN takes months of waiting, not hours, while a few honest slips cost 30 seconds.
+         */
+        fun lockoutMs(failures: Int): Long =
+            Lockouts[(failures / MaxAttempts - 1).coerceIn(0, Lockouts.lastIndex)]
         private const val Iterations = 120_000
         private const val KeyType = "type"
         private const val KeySalt = "salt"

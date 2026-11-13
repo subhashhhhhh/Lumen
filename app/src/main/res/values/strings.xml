@@ -1093,6 +1093,7 @@
 
     <!-- Hidden: lock screen -->
     <string name="hidden_too_many_tries">Too many tries. Wait %1$d s.</string>
+    <string name="hidden_too_many_tries_minutes">Too many tries. Wait %1$d min.</string>
     <string name="hidden_pin_rule">Use 4 to 8 digits</string>
     <string name="hidden_pattern_rule">Connect at least 4 dots</string>
     <string name="hidden_password_rule">Use at least 4 characters</string>
