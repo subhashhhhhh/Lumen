@@ -41,6 +41,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.PaddingValues
@@ -2051,35 +2052,39 @@ private fun MainScaffold(
                 .padding(top = 64.dp, end = 16.dp + 48.dp + 10.dp),
         )
         BackHandler(enabled = personMenuOpen) { personMenuOpen = false }
-        GlassMenu(
-            backdrop = backdrop,
-            open = personMenuOpen && openPerson != null,
-            onDismiss = { personMenuOpen = false },
-            sections = listOf(
-                listOf(
-                    MenuItem(stringResource(if (openPerson?.name == null) R.string.main_add_name_ellipsis else R.string.main_rename_ellipsis)) { personNameRequest = openPerson },
-                    MenuItem(stringResource(R.string.main_merge_with_ellipsis)) {
-                        mergeFrom = openPerson?.id
-                        openCollection = CollectionKeys.People
-                    },
+        // Its own lambda (a separate JVM method), like the selection menu below.
+        val personMenu: @Composable BoxScope.() -> Unit = {
+            GlassMenu(
+                backdrop = backdrop,
+                open = personMenuOpen && openPerson != null,
+                onDismiss = { personMenuOpen = false },
+                sections = listOf(
+                    listOf(
+                        MenuItem(stringResource(if (openPerson?.name == null) R.string.main_add_name_ellipsis else R.string.main_rename_ellipsis)) { personNameRequest = openPerson },
+                        MenuItem(stringResource(R.string.main_merge_with_ellipsis)) {
+                            mergeFrom = openPerson?.id
+                            openCollection = CollectionKeys.People
+                        },
+                    ),
+                    listOf(
+                        if (openPerson?.hidden == true) MenuItem(stringResource(R.string.main_unhide_person)) {
+                            val id = openPerson.id
+                            scope.launch(Dispatchers.IO) { com.subhashh.lumen.ai.FaceStore.of(context).setHidden(id, false) }
+                        } else MenuItem(stringResource(R.string.main_hide_person)) {
+                            val id = openPerson?.id ?: return@MenuItem
+                            openCollection = if (personFromPeople) CollectionKeys.People else null
+                            scope.launch(Dispatchers.IO) { com.subhashh.lumen.ai.FaceStore.of(context).setHidden(id, true) }
+                        },
+                    ),
                 ),
-                listOf(
-                    if (openPerson?.hidden == true) MenuItem(stringResource(R.string.main_unhide_person)) {
-                        val id = openPerson.id
-                        scope.launch(Dispatchers.IO) { com.subhashh.lumen.ai.FaceStore.of(context).setHidden(id, false) }
-                    } else MenuItem(stringResource(R.string.main_hide_person)) {
-                        val id = openPerson?.id ?: return@MenuItem
-                        openCollection = if (personFromPeople) CollectionKeys.People else null
-                        scope.launch(Dispatchers.IO) { com.subhashh.lumen.ai.FaceStore.of(context).setHidden(id, true) }
-                    },
-                ),
-            ),
-            origin = TransformOrigin(1f, 0f),
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .statusBarsPadding()
-                .padding(top = 64.dp, end = 16.dp),
-        )
+                origin = TransformOrigin(1f, 0f),
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .statusBarsPadding()
+                    .padding(top = 64.dp, end = 16.dp),
+            )
+        }
+        personMenu()
 
         if ((inCollection || inSettings) && !viewerOpen) {
             GlassIconButton(
@@ -2295,101 +2300,105 @@ private fun MainScaffold(
             )
         }
 
-        GlassMenu(
-            backdrop = backdrop,
-            open = selectionMenuOpen && selecting && !viewerOpen,
-            onDismiss = { selectionMenuOpen = false },
-            sections = if (CollectionKeys.isHidden(selectionScope)) {
-                // Hidden files can't be moved around like library ones; they can be left out of Hidden.
-                val many = if (albumSelection != null) albumSelection.orEmpty().size > 1
-                else selectedItems.map { it.relativePath }.distinct().size > 1
-                listOf(
-                    listOf(MenuItem(stringResource(if (many) R.string.main_exclude_folders else R.string.main_exclude_folder)) { excludeFromHidden(selectedItems) }),
-                )
-            } else if (albumSelection != null) {
-                // Whole albums: arrange them, move or copy their contents, or hide / exclude the folders.
-                val chosen = folders.filter { it.key in albumSelection.orEmpty() }
-                listOf(
-                    listOfNotNull(
-                        chosen.singleOrNull()?.let { album -> MenuItem(stringResource(R.string.main_rename_album_ellipsis)) { albumNameRequest = AlbumNameRequest(album) } },
-                        if (chosen.isNotEmpty() && chosen.all { it.pinned }) {
-                            MenuItem(stringResource(R.string.main_unpin)) {
-                                val paths = chosen.map { it.relativePath }.toSet()
-                                updateAlbums { it.copy(pinned = it.pinned.filterNot(paths::contains)) }
+        // Its own lambda (a separate JVM method): MainScaffold is at the 64 KB method limit.
+        val selectionMenu: @Composable BoxScope.() -> Unit = {
+            GlassMenu(
+                backdrop = backdrop,
+                open = selectionMenuOpen && selecting && !viewerOpen,
+                onDismiss = { selectionMenuOpen = false },
+                sections = if (CollectionKeys.isHidden(selectionScope)) {
+                    // Hidden files can't be moved around like library ones; they can be left out of Hidden.
+                    val many = if (albumSelection != null) albumSelection.orEmpty().size > 1
+                    else selectedItems.map { it.relativePath }.distinct().size > 1
+                    listOf(
+                        listOf(MenuItem(stringResource(if (many) R.string.main_exclude_folders else R.string.main_exclude_folder)) { excludeFromHidden(selectedItems) }),
+                    )
+                } else if (albumSelection != null) {
+                    // Whole albums: arrange them, move or copy their contents, or hide / exclude the folders.
+                    val chosen = folders.filter { it.key in albumSelection.orEmpty() }
+                    listOf(
+                        listOfNotNull(
+                            chosen.singleOrNull()?.let { album -> MenuItem(stringResource(R.string.main_rename_album_ellipsis)) { albumNameRequest = AlbumNameRequest(album) } },
+                            if (chosen.isNotEmpty() && chosen.all { it.pinned }) {
+                                MenuItem(stringResource(R.string.main_unpin)) {
+                                    val paths = chosen.map { it.relativePath }.toSet()
+                                    updateAlbums { it.copy(pinned = it.pinned.filterNot(paths::contains)) }
+                                    endSelection()
+                                }
+                            } else {
+                                MenuItem(stringResource(R.string.main_pin_to_top)) {
+                                    val add = chosen.filterNot { it.pinned }.map { it.relativePath }
+                                    updateAlbums { it.copy(pinned = it.pinned + add) }
+                                    endSelection()
+                                }
+                            },
+                            if (chosen.any { it.customCover }) {
+                                MenuItem(stringResource(R.string.main_reset_cover)) {
+                                    val paths = chosen.map { it.relativePath }.toSet()
+                                    updateAlbums { it.copy(covers = it.covers.filterKeys { p -> p !in paths }) }
+                                    endSelection()
+                                }
+                            } else null,
+                        ),
+                        listOf(
+                            MenuItem(stringResource(R.string.main_move_to_album_ellipsis)) { albumRequest = AlbumRequest(move = true, items = selectedItems) },
+                            MenuItem(stringResource(R.string.main_copy_to_album_ellipsis)) { albumRequest = AlbumRequest(move = false, items = selectedItems) },
+                        ),
+                        listOf(
+                            MenuItem(stringResource(if (albumSelection.orEmpty().size > 1) R.string.main_hide_folders else R.string.main_hide_folder)) { hideFolders(selectedItems) },
+                            MenuItem(stringResource(if (albumSelection.orEmpty().size > 1) R.string.main_exclude_folders else R.string.main_exclude_folder)) {
+                                excludeFolders(selectedItems)
+                            },
+                        ),
+                    )
+                } else listOfNotNull(
+                    // In a person's album: these photos aren't them.
+                    personOf(selectableKey)?.let { person ->
+                        listOf(
+                            MenuItem(notPersonLabel(person)) {
+                                val ids = selectedItems.map { it.id }
                                 endSelection()
-                            }
-                        } else {
-                            MenuItem(stringResource(R.string.main_pin_to_top)) {
-                                val add = chosen.filterNot { it.pinned }.map { it.relativePath }
-                                updateAlbums { it.copy(pinned = it.pinned + add) }
-                                endSelection()
-                            }
-                        },
-                        if (chosen.any { it.customCover }) {
-                            MenuItem(stringResource(R.string.main_reset_cover)) {
-                                val paths = chosen.map { it.relativePath }.toSet()
-                                updateAlbums { it.copy(covers = it.covers.filterKeys { p -> p !in paths }) }
-                                endSelection()
-                            }
-                        } else null,
-                    ),
+                                scope.launch(Dispatchers.IO) {
+                                    com.subhashh.lumen.ai.FaceStore.of(context).notThisPerson(person.id, ids)
+                                    // The faces let go are grouped again now (with others like them, as
+                                    // someone new), not at the next background pass or restart.
+                                    runCatching { com.subhashh.lumen.ai.FaceGrouping.run(com.subhashh.lumen.ai.FaceStore.of(context), com.subhashh.lumen.ai.FaceModel.recognizer(context)) }
+                                }
+                            },
+                        )
+                    },
                     listOf(
                         MenuItem(stringResource(R.string.main_move_to_album_ellipsis)) { albumRequest = AlbumRequest(move = true, items = selectedItems) },
                         MenuItem(stringResource(R.string.main_copy_to_album_ellipsis)) { albumRequest = AlbumRequest(move = false, items = selectedItems) },
                     ),
-                    listOf(
-                        MenuItem(stringResource(if (albumSelection.orEmpty().size > 1) R.string.main_hide_folders else R.string.main_hide_folder)) { hideFolders(selectedItems) },
-                        MenuItem(stringResource(if (albumSelection.orEmpty().size > 1) R.string.main_exclude_folders else R.string.main_exclude_folder)) {
-                            excludeFolders(selectedItems)
-                        },
+                    listOfNotNull(
+                        if (selectedItems.any(MediaFiles::canRotate)) rotateMenu { rotate(selectedItems, it) } else null,
+                        MenuItem(stringResource(R.string.main_adjust_date_time_ellipsis)) { dateRequest = selectedItems },
+                        if (selectedItems.any { !it.isVideo }) MenuItem(stringResource(R.string.main_resize_or_convert_ellipsis)) {
+                            resizeRequest = selectedItems.filterNot { it.isVideo }
+                        } else null,
                     ),
-                )
-            } else listOfNotNull(
-                // In a person's album: these photos aren't them.
-                personOf(selectableKey)?.let { person ->
-                    listOf(
-                        MenuItem(notPersonLabel(person)) {
-                            val ids = selectedItems.map { it.id }
+                    listOf(MenuItem(stringResource(R.string.common_hide)) { hide(selectedItems) }),
+                    listOfNotNull(
+                        MenuItem(stringResource(R.string.main_slideshow)) {
+                            val key = selectableKey ?: return@MenuItem
+                            val ids = selectedItems.mapTo(HashSet()) { it.id }
+                            val first = selectableItems.indexOfFirst { it.id in ids }
+                            if (first < 0) return@MenuItem
+                            slideshowOf = ids
                             endSelection()
-                            scope.launch(Dispatchers.IO) {
-                                com.subhashh.lumen.ai.FaceStore.of(context).notThisPerson(person.id, ids)
-                                // The faces let go are grouped again now (with others like them, as
-                                // someone new), not at the next background pass or restart.
-                                runCatching { com.subhashh.lumen.ai.FaceGrouping.run(com.subhashh.lumen.ai.FaceStore.of(context), com.subhashh.lumen.ai.FaceModel.recognizer(context)) }
-                            }
+                            openViewer(key, first)
                         },
-                    )
-                },
-                listOf(
-                    MenuItem(stringResource(R.string.main_move_to_album_ellipsis)) { albumRequest = AlbumRequest(move = true, items = selectedItems) },
-                    MenuItem(stringResource(R.string.main_copy_to_album_ellipsis)) { albumRequest = AlbumRequest(move = false, items = selectedItems) },
+                        if (PhotoReminders.enabled(context)) MenuItem(stringResource(R.string.reminder_menu)) { remindRequest = selectedItems } else null,
+                    ),
                 ),
-                listOfNotNull(
-                    if (selectedItems.any(MediaFiles::canRotate)) rotateMenu { rotate(selectedItems, it) } else null,
-                    MenuItem(stringResource(R.string.main_adjust_date_time_ellipsis)) { dateRequest = selectedItems },
-                    if (selectedItems.any { !it.isVideo }) MenuItem(stringResource(R.string.main_resize_or_convert_ellipsis)) {
-                        resizeRequest = selectedItems.filterNot { it.isVideo }
-                    } else null,
-                ),
-                listOf(MenuItem(stringResource(R.string.common_hide)) { hide(selectedItems) }),
-                listOfNotNull(
-                    MenuItem(stringResource(R.string.main_slideshow)) {
-                        val key = selectableKey ?: return@MenuItem
-                        val ids = selectedItems.mapTo(HashSet()) { it.id }
-                        val first = selectableItems.indexOfFirst { it.id in ids }
-                        if (first < 0) return@MenuItem
-                        slideshowOf = ids
-                        endSelection()
-                        openViewer(key, first)
-                    },
-                    if (PhotoReminders.enabled(context)) MenuItem(stringResource(R.string.reminder_menu)) { remindRequest = selectedItems } else null,
-                ),
-            ),
-            origin = TransformOrigin(1f, 1f),
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(bottom = navBottom + 12.dp + 48.dp + 12.dp, end = 16.dp),
-        )
+                origin = TransformOrigin(1f, 1f),
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(bottom = navBottom + 12.dp + 48.dp + 12.dp, end = 16.dp),
+            )
+        }
+        selectionMenu()
 
         viewerSource?.let { source -> key(viewerSession) {
             val list = remember(source, library, trash, searchSections, searchSection) { itemsOf(source) }
