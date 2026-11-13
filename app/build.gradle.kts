@@ -120,6 +120,16 @@ android {
     }
 }
 
+// Robolectric's Android 16 runtime needs Java 21+, while builds run on whatever JAVA_HOME is
+// (JDK 17 on the owner's Mac). Unit tests alone run on JDK 27, found among installed JDKs.
+tasks.withType<Test>().configureEach {
+    javaLauncher.set(
+        project.extensions.getByType<JavaToolchainService>().launcherFor {
+            languageVersion.set(JavaLanguageVersion.of(27))
+        },
+    )
+}
+
 // Lumen drives Lumen AI's engine directly (its own search screen, settings, Lab), not just the
 // simple LumenAi calls.
 kotlin {
