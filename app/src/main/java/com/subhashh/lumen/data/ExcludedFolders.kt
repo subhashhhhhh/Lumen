@@ -21,6 +21,11 @@ object ExcludedFolders {
         "assets", "res", "drawable", "mipmap",
     )
 
+    /** Android's shared top-level folders, where people's own photos and files live. */
+    private val StandardFolders = setOf(
+        "dcim", "pictures", "movies", "download", "downloads", "documents", "music", "android",
+    )
+
     /**
      * Project folders holding images that are really code assets (icons, build output...): the
      * folder just above the first code-looking segment, e.g. "Developer/Fastlytics/" for
@@ -33,6 +38,9 @@ object ExcludedFolders {
             val segments = item.relativePath.trimEnd('/').split('/')
             val codeAt = segments.indexOfFirst { it.lowercase() in CodeSegments }
             if (codeAt <= 0) continue
+            // A suggestion hides everything under it: never the whole of Download or Pictures
+            // because one folder in it has a code-like name ("Download/dist/", "Pictures/Public/").
+            if (codeAt == 1 && segments[0].lowercase() in StandardFolders) continue
             val root = segments.take(codeAt).joinToString("/", postfix = "/")
             counts[root] = (counts[root] ?: 0) + 1
         }
