@@ -112,11 +112,16 @@ data class AlbumSettings(
     val created: List<String> = emptyList(),
 ) {
     /** The same arrangement after a folder moved from [old] to [new]. */
-    fun renamed(old: String, new: String) = copy(
-        pinned = pinned.map { if (it == old) new else it },
-        covers = covers.mapKeys { (path, _) -> if (path == old) new else path },
-        created = created.map { if (it == old) new else it },
-    )
+    fun renamed(old: String, new: String): AlbumSettings {
+        // Paths end with a slash, so a prefix is the folder itself or something inside it (its
+        // subfolders move with it on disk), never a neighbour with a longer name.
+        fun moved(path: String) = if (path.startsWith(old)) new + path.substring(old.length) else path
+        return copy(
+            pinned = pinned.map(::moved),
+            covers = covers.mapKeys { (path, _) -> moved(path) },
+            created = created.map(::moved),
+        )
+    }
 }
 
 object MediaCollections {
