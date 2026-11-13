@@ -76,6 +76,9 @@ class PhotoTransition {
      * without this the press would leave Lumen: the photo turns round and lands in its cell.
      */
     fun turnBack(scope: CoroutineScope) {
+        // The press can arrive in the frame the photo finished growing: the viewer is being built
+        // by then, and a photo flying home over it would leave it open underneath.
+        if (!growing) return
         flight?.cancel()
         scope.launch { land(Velocity.Zero) }
     }
