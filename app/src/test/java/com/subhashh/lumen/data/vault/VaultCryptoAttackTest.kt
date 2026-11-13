@@ -3,6 +3,7 @@ package com.subhashh.lumen.data.vault
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Rule
 import org.junit.Test
@@ -203,5 +204,38 @@ class VaultCryptoAttackTest {
             return
         }
         fail("$message: was accepted")
+    }
+
+    /**
+     * Files hidden by Lumen up to 0.4.2 are version 1: the same layout, the header bound to
+     * nothing. They must keep opening after the format moved to version 2.
+     */
+    @Test
+    fun versionOneFilesStillOpen() {
+        val plain = bytes(1000)
+        val header = "{\"name\":\"old.jpg\"}".toByteArray()
+        val fileId = bytes(8, seed = 7)
+        val sealedHeader = VaultCrypto.seal(key, header)
+        val chunk = javax.crypto.Cipher.getInstance("AES/GCM/NoPadding").run {
+            val nonce = fileId + ByteBuffer.allocate(4).putInt(0).array()
+            init(javax.crypto.Cipher.ENCRYPT_MODE, key, javax.crypto.spec.GCMParameterSpec(128, nonce))
+            updateAAD(byteArrayOf(1))
+            doFinal(plain)
+        }
+        val raw = "LUMENVT1".toByteArray() + fileId + ByteBuffer.allocate(4).putInt(sealedHeader.size).array() + sealedHeader + chunk
+        val f = file(raw)
+        assertArrayEquals(header, VaultCrypto.readHeader(key, f))
+        val out = ByteArrayOutputStream()
+        VaultCrypto.decrypt(key, f, out)
+        assertArrayEquals(plain, out.toByteArray())
+        assertTrue(readerAccepts(f))
+    }
+
+    /** A version 2 file relabelled as version 1 must not shed its header's binding. */
+    @Test
+    fun relabellingAsVersionOneIsCaught() {
+        val raw = encrypt(bytes(1000))
+        "LUMENVT1".toByteArray().copyInto(raw)
+        assertThrows("relabelled header") { VaultCrypto.readHeader(key, file(raw)) }
     }
 }

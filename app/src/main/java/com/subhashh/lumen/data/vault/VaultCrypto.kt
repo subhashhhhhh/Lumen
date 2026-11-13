@@ -18,21 +18,27 @@ import javax.crypto.spec.SecretKeySpec
  * travel inside it, encrypted, so the vault folder reveals nothing but random names and sizes.
  *
  * Layout:
- *   "LUMENVT1"                      8 bytes, magic + format version
+ *   "LUMENVT2"                      8 bytes, magic + format version
  *   file id                         8 random bytes; with the chunk number it makes each nonce
  *   header length                   4 bytes, big-endian
  *   header                          12-byte nonce + AES-GCM(JSON details) + 16-byte tag
  *   chunk 0, 1, …                   AES-GCM(up to ChunkSize bytes) + 16-byte tag each
  *
  * A chunk's nonce is the file id plus its number, and its associated data says whether it's the
- * last one, so chunks can't be swapped, reordered or cut off without the tag catching it.
+ * last one, so chunks can't be swapped, reordered or cut off without the tag catching it. The
+ * header's associated data is the magic and the file id, so a header only opens on the file it
+ * was written for: another file's header (its name and folder to restore to) is refused.
+ *
+ * Version 1 ("LUMENVT1", Lumen up to 0.4.2) is the same without the header's associated data.
+ * Those files are still read; new files are always version 2.
  */
 object VaultCrypto {
 
     const val ChunkSize = 256 * 1024
     private const val TagBytes = 16
     private const val NonceBytes = 12
-    private val Magic = "LUMENVT1".toByteArray()
+    private val Magic = "LUMENVT2".toByteArray()
+    private val MagicV1 = "LUMENVT1".toByteArray()
     private val random = SecureRandom()
 
     /** A new random 256-bit key. */
@@ -43,7 +49,7 @@ object VaultCrypto {
         val fileId = ByteArray(8).also(random::nextBytes)
         output.write(Magic)
         output.write(fileId)
-        val sealedHeader = seal(key, header)
+        val sealedHeader = seal(key, header, Magic + fileId)
         output.write(ByteBuffer.allocate(4).putInt(sealedHeader.size).array())
         output.write(sealedHeader)
 
@@ -66,7 +72,7 @@ object VaultCrypto {
         val sealed = ByteArray(layout.headerLength)
         raf.seek(layout.headerOffset)
         raf.readFully(sealed)
-        open(key, sealed)
+        open(key, sealed, layout.headerAad)
     }
 
     /** Decrypts the whole of [file] into [output], checking every chunk. */
@@ -80,7 +86,12 @@ object VaultCrypto {
     /** Random access to the plaintext of an encrypted file, chunk by chunk. */
     class Reader(private val key: SecretKey, file: File) : AutoCloseable {
         private val raf = RandomAccessFile(file, "r")
-        private val layout = Layout.read(raf)
+        private val layout = try {
+            Layout.read(raf)
+        } catch (e: Exception) {
+            raf.close()
+            throw e
+        }
         private var cachedIndex = -1
         private var cached = ByteArray(0)
 
@@ -106,6 +117,8 @@ object VaultCrypto {
 
     /** Where things are in an encrypted file, from its first bytes and its length. */
     private class Layout(
+        /** What the header is bound to; null in version 1 files, which bind it to nothing. */
+        val headerAad: ByteArray?,
         val fileId: ByteArray,
         val headerOffset: Long,
         val headerLength: Int,
@@ -130,28 +143,37 @@ object VaultCrypto {
                 val magic = ByteArray(Magic.size)
                 raf.seek(0)
                 raf.readFully(magic)
-                require(magic.contentEquals(Magic)) { "Not a Lumen vault file" }
+                val v1 = magic.contentEquals(MagicV1)
+                require(v1 || magic.contentEquals(Magic)) { "Not a Lumen vault file" }
                 val fileId = ByteArray(8).also(raf::readFully)
                 val headerLength = raf.readInt()
                 val headerOffset = raf.filePointer
+                require(headerLength >= NonceBytes + TagBytes) { "Bad header length" }
                 val bodyOffset = headerOffset + headerLength
-                return Layout(fileId, headerOffset, headerLength, bodyOffset, raf.length() - bodyOffset)
+                val bodyLength = raf.length() - bodyOffset
+                // Even an empty file has one chunk, which is at least its tag. Less than that
+                // (a file cut back to its header) would otherwise read as a valid empty file.
+                val lastChunk = bodyLength % (ChunkSize + TagBytes)
+                require(bodyLength >= TagBytes && (lastChunk == 0L || lastChunk >= TagBytes)) { "Vault file cut short" }
+                return Layout(if (v1) null else Magic + fileId, fileId, headerOffset, headerLength, bodyOffset, bodyLength)
             }
         }
     }
 
     /** AES-GCM with a random nonce stored in front: for small things (headers, wrapped keys). */
-    fun seal(key: SecretKey, plain: ByteArray): ByteArray {
+    fun seal(key: SecretKey, plain: ByteArray, aad: ByteArray? = null): ByteArray {
         val nonce = ByteArray(NonceBytes).also(random::nextBytes)
         val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply {
             init(Cipher.ENCRYPT_MODE, key, GCMParameterSpec(TagBytes * 8, nonce))
+            aad?.let(::updateAAD)
         }
         return nonce + cipher.doFinal(plain)
     }
 
-    fun open(key: SecretKey, sealed: ByteArray): ByteArray {
+    fun open(key: SecretKey, sealed: ByteArray, aad: ByteArray? = null): ByteArray {
         val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply {
             init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(TagBytes * 8, sealed, 0, NonceBytes))
+            aad?.let(::updateAAD)
         }
         return cipher.doFinal(sealed, NonceBytes, sealed.size - NonceBytes)
     }
