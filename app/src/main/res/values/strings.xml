@@ -483,7 +483,9 @@
     <string name="settings_kw_theme">dark mode light mode night appearance</string>
     <string name="settings_kw_reduce_motion">animations accessibility springs</string>
     <string name="settings_kw_style">design material you expressive android ios look language</string>
-    <string name="settings_kw_dynamic_color">material you monet wallpaper accent color colour palette</string>
+    <string name="settings_kw_accent">material you monet wallpaper accent color colour custom theme</string>
+    <string name="settings_kw_palette">palette vibrant expressive tonal monochrome rainbow colours</string>
+    <string name="settings_kw_pure_black">amoled oled black dark battery</string>
     <string name="settings_kw_liquid_glass">glass refraction lens effect gpu</string>
     <string name="settings_kw_reduce_blur">blur transparency solid frosted readability battery</string>
     <string name="settings_kw_date_headers">sections days months years grouping</string>
@@ -542,10 +544,17 @@
     <string name="settings_reduce_motion_subtitle">No flying photos, springs or bounces</string>
     <string name="settings_group_style">Style</string>
     <string name="settings_style">Style</string>
-    <string name="settings_style_footer">Lumen is the app\'s own look. Material 3 Expressive draws every screen in Android\'s design language: tonal colours, rounder shapes and springier motion. Liquid Glass belongs to Lumen\'s look.</string>
-    <string name="settings_dynamic_color">Wallpaper Colours</string>
-    <string name="settings_dynamic_color_subtitle">Colours taken from your wallpaper</string>
-    <string name="settings_dynamic_color_unavailable">Needs Android 12 or later</string>
+    <string name="settings_style_footer">Lumen is the app\'s own look. Material 3 Expressive is Android\'s: a top bar and a navigation bar, its own icons, shapes and bouncy motion, your colours, and the newest photos first. Liquid Glass belongs to Lumen\'s look.</string>
+    <string name="settings_group_colour">Colour</string>
+    <string name="settings_colour_footer">Colour is what Material builds its whole scheme from: your wallpaper\'s, one of these, or one you mix. Palette sets how far the other colours stray from it. Pure Black makes the dark theme\'s backgrounds black, which saves power on OLED screens.</string>
+    <string name="settings_accent">Colour</string>
+    <string name="settings_accent_wallpaper">Wallpaper</string>
+    <string name="settings_accent_default">Lumen blue</string>
+    <string name="settings_accent_custom">Custom</string>
+    <string name="settings_accent_hue">Hue</string>
+    <string name="settings_palette">Palette</string>
+    <string name="settings_pure_black">Pure Black</string>
+    <string name="settings_pure_black_subtitle">Black backgrounds in the dark theme</string>
     <string name="settings_group_glass">Glass</string>
     <string name="settings_glass_footer">Liquid Glass: buttons, bars, menus and switches made of glass that bends what\'s behind it. Off, they\'re solid. Reduce Blur keeps the glass with much less blur: clearer, and lighter on the GPU.</string>
     <string name="settings_liquid_glass">Liquid Glass</string>
@@ -1049,6 +1058,12 @@
     <string name="app_appearance_dark">Dark</string>
     <string name="app_style_lumen">Lumen</string>
     <string name="app_style_material">Material 3 Expressive</string>
+    <string name="app_palette_tonal">Tonal</string>
+    <string name="app_palette_vibrant">Vibrant</string>
+    <string name="app_palette_expressive">Expressive</string>
+    <string name="app_palette_fruit_salad">Fruit Salad</string>
+    <string name="app_palette_rainbow">Rainbow</string>
+    <string name="app_palette_monochrome">Monochrome</string>
 
     <!-- Onboarding: welcome -->
     <string name="onboarding_tagline">Your photos, smarter.\nAnd they never leave your phone.</string>

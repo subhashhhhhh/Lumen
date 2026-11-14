@@ -2,7 +2,7 @@
 Generate ui/icons/LumenIcons.kt from Fluent UI System Icons SVGs (MIT, Microsoft).
 
 Only the icons Lumen uses are converted, so the app doesn't ship a whole icon library.
-Usage: python3 build_icons.py tools/icons/svg app/src/main/java/com/subhashh/lumen/ui/icons/LumenIcons.kt
+Usage: python3 build_icons.py tools/icons/svg app/src/main/java/com/subhashh/lumen/ui/icons/FluentIcons.kt
 The SVGs are kept in tools/icons/svg (MIT) so the icon set can be regenerated offline.
 """
 import re

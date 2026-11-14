@@ -82,6 +82,7 @@ import com.subhashh.lumen.ui.settings.ToggleRow
 import com.subhashh.lumen.ui.theme.AlwaysDark
 import com.subhashh.lumen.ui.theme.DesignStyle
 import com.subhashh.lumen.ui.theme.LocalStyle
+import com.subhashh.lumen.ui.theme.MaterialPalette
 import com.subhashh.lumen.ui.theme.LumenTheme
 import com.subhashh.lumen.ui.theme.StyleSetting
 import com.subhashh.lumen.ui.transition.CoverTransition
@@ -108,14 +109,22 @@ class StyleRenderTest {
     @get:Rule
     val compose = createEmptyComposeRule()
 
-    private class Look(val name: String, val style: DesignStyle, val dark: Boolean, val dynamic: Boolean = false)
+    private class Look(
+        val name: String,
+        val style: DesignStyle,
+        val dark: Boolean,
+        val accent: Color? = null,
+        val palette: MaterialPalette = MaterialPalette.Tonal,
+        val pureBlack: Boolean = false,
+    )
 
     private val looks = listOf(
         Look("lumen-dark", DesignStyle.Lumen, dark = true),
         Look("lumen-light", DesignStyle.Lumen, dark = false),
         Look("material-dark", DesignStyle.Material, dark = true),
         Look("material-light", DesignStyle.Material, dark = false),
-        Look("material-wallpaper-dark", DesignStyle.Material, dark = true, dynamic = true),
+        Look("material-pink-black", DesignStyle.Material, dark = true, accent = Color(0xFFFF4F9A), palette = MaterialPalette.Expressive, pureBlack = true),
+        Look("material-fruit-light", DesignStyle.Material, dark = false, accent = Color(0xFF2FB344), palette = MaterialPalette.FruitSalad),
     )
 
     /** Draws [content] in every look, saving "<screen>-<look>.png". */
@@ -123,7 +132,7 @@ class StyleRenderTest {
         for (look in looks) {
             val controller = Robolectric.buildActivity(ComponentActivity::class.java).setup()
             controller.get().setContent {
-                CompositionLocalProvider(LocalStyle provides StyleSetting(look.style, look.dynamic, {}, {})) {
+                CompositionLocalProvider(LocalStyle provides StyleSetting(look.style, accent = look.accent, palette = look.palette, pureBlack = look.pureBlack)) {
                     LumenTheme(darkTheme = look.dark) {
                         Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) { content() }
                     }
@@ -147,7 +156,7 @@ class StyleRenderTest {
         val remembered = mutableListOf<Any>()
         val material = mutableListOf<Boolean>()
         Robolectric.buildActivity(ComponentActivity::class.java).setup().get().setContent {
-            CompositionLocalProvider(LocalStyle provides StyleSetting(style, false, {}, {})) {
+            CompositionLocalProvider(LocalStyle provides StyleSetting(style)) {
                 LumenTheme(darkTheme = true) {
                     val token = remember { Any() }
                     val isMaterial = Lumen.material

@@ -2,7 +2,10 @@ package com.subhashh.lumen.ui.theme
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.isSystemInDarkTheme
+import android.content.Context
 import android.os.Build
+import com.materialkolor.PaletteStyle
+import com.materialkolor.dynamicColorScheme
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialExpressiveTheme
@@ -170,6 +173,37 @@ private val MaterialLightScheme = lightColorScheme(
     surfaceContainerHighest = Color(0xFFE2E2E9),
 )
 
+/**
+ * Material's colours. With nothing chosen they are the wallpaper's as Android makes them (Material
+ * You, Android 12+) or the scheme above. A chosen [accent], a [palette] other than Tonal, or
+ * [pureBlack] builds the scheme from one colour instead: the accent, else the wallpaper's own.
+ */
+private fun materialScheme(context: Context, accent: Color?, palette: MaterialPalette, pureBlack: Boolean, dark: Boolean): ColorScheme {
+    val wallpaper = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+    if (accent == null && palette == MaterialPalette.Tonal && !(pureBlack && dark)) {
+        return when {
+            wallpaper -> if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+            dark -> MaterialDarkScheme
+            else -> MaterialLightScheme
+        }
+    }
+    val seed = accent
+        ?: if (wallpaper) Color(context.getColor(android.R.color.system_accent1_500)) else Color(0xFF0A84FF)
+    return dynamicColorScheme(
+        seedColor = seed,
+        isDark = dark,
+        isAmoled = pureBlack && dark,
+        style = when (palette) {
+            MaterialPalette.Tonal -> PaletteStyle.TonalSpot
+            MaterialPalette.Vibrant -> PaletteStyle.Vibrant
+            MaterialPalette.Expressive -> PaletteStyle.Expressive
+            MaterialPalette.FruitSalad -> PaletteStyle.FruitSalad
+            MaterialPalette.Rainbow -> PaletteStyle.Rainbow
+            MaterialPalette.Monochrome -> PaletteStyle.Monochrome
+        },
+    )
+}
+
 /** Material's floating controls are solid and tonal: the "glass" colours are just that surface. */
 private fun materialGlass(scheme: ColorScheme) = GlassColors(
     tint = scheme.surfaceContainerHigh,
@@ -192,18 +226,19 @@ fun LumenTheme(
 ) {
     val style = LocalStyle.current
     val material = style.material
+    // The icon set goes with the style. Set here, ahead of everything that draws an icon.
+    if (com.subhashh.lumen.ui.icons.LumenIcons.material != material) com.subhashh.lumen.ui.icons.LumenIcons.material = material
     val context = LocalContext.current
     // The two styles are two different theme calls. Movable, so the screens are carried from one
     // to the other with everything they remember, instead of being thrown away and rebuilt.
     val currentContent by rememberUpdatedState(content)
     val screens = remember { movableContentOf { currentContent() } }
-    val scheme = when {
-        !material -> if (darkTheme) DarkScheme else LightScheme
-        // The wallpaper's colours (Material You), from Android 12.
-        style.dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        darkTheme -> MaterialDarkScheme
-        else -> MaterialLightScheme
+    val scheme = if (!material) {
+        if (darkTheme) DarkScheme else LightScheme
+    } else {
+        remember(style.accent, style.palette, style.pureBlack, darkTheme, context) {
+            materialScheme(context, style.accent, style.palette, style.pureBlack, darkTheme)
+        }
     }
     CompositionLocalProvider(
         LocalGlassColors provides when {

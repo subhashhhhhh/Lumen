@@ -54,9 +54,13 @@ import androidx.annotation.StringRes
 import androidx.compose.ui.res.stringResource
 import com.subhashh.lumen.R
 
-enum class LumenTab(@StringRes val label: Int, val icon: ImageVector, val selectedIcon: ImageVector) {
-    Library(R.string.main_library, LumenIcons.Library, LumenIcons.LibraryFilled),
-    Collections(R.string.main_collections, LumenIcons.Collections, LumenIcons.CollectionsFilled),
+enum class LumenTab(@StringRes val label: Int) {
+    Library(R.string.main_library),
+    Collections(R.string.main_collections);
+
+    // Read each time, not kept: the icon set follows the style.
+    val icon: ImageVector get() = if (this == Library) LumenIcons.Library else LumenIcons.Collections
+    val selectedIcon: ImageVector get() = if (this == Library) LumenIcons.LibraryFilled else LumenIcons.CollectionsFilled
 }
 
 /**

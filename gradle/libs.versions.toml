@@ -13,6 +13,8 @@ composeBom = "2026.09.00"
 # Ahead of the BOM (1.4.0) for the Material 3 Expressive components and theme: Settings →
 # Appearance → Style. Built against the same Compose 1.12 the BOM brings.
 material3 = "1.5.0-rc01"
+# A whole Material colour scheme from one colour: Style → Colour (custom accents) and Pure Black.
+materialKolor = "5.0.1"
 activityCompose = "1.13.0"
 lifecycle = "2.11.0"
 coreKtx = "1.19.1"
@@ -64,6 +66,7 @@ compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeB
 compose-ui = { module = "androidx.compose.ui:ui" }
 compose-foundation = { module = "androidx.compose.foundation:foundation" }
 compose-material3 = { module = "androidx.compose.material3:material3", version.ref = "material3" }
+material-kolor = { module = "com.materialkolor:material-kolor", version.ref = "materialKolor" }
 compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
 compose-ui-test-junit4 = { module = "androidx.compose.ui:ui-test-junit4" }
 compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }

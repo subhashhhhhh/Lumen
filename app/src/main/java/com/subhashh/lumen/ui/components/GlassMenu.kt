@@ -198,7 +198,7 @@ private fun MenuRow(item: MenuItem, colors: GlassColors, onClick: () -> Unit) {
         }
         if (item.submenu != null) {
             Icon(
-                LumenIcons.Back,
+                LumenIcons.Chevron,
                 null,
                 tint = colors.contentSecondary,
                 modifier = Modifier

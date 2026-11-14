@@ -26,18 +26,45 @@ enum class DesignStyle(@StringRes val labelRes: Int) {
     Material(R.string.app_style_material),
 }
 
-/** The chosen [DesignStyle], whether Material takes its colours from the wallpaper, and how to change both. */
+/**
+ * How Material builds its colours out of the one it starts from: how far the other colours stray
+ * from it, and how loud they are. Settings → Appearance → Palette.
+ */
+enum class MaterialPalette(@StringRes val labelRes: Int) {
+    Tonal(R.string.app_palette_tonal),
+    Vibrant(R.string.app_palette_vibrant),
+    Expressive(R.string.app_palette_expressive),
+    FruitSalad(R.string.app_palette_fruit_salad),
+    Rainbow(R.string.app_palette_rainbow),
+    Monochrome(R.string.app_palette_monochrome),
+}
+
+/**
+ * The chosen [DesignStyle] and Material's own options: [accent] is the colour its scheme grows
+ * from (null: the wallpaper's, or Lumen's blue before Android 12), [palette] its character, and
+ * [pureBlack] turns the dark theme's backgrounds black for OLED screens.
+ */
 @Immutable
 class StyleSetting(
     val current: DesignStyle,
-    val dynamicColor: Boolean,
-    val onChange: (DesignStyle) -> Unit,
-    val onDynamicColor: (Boolean) -> Unit,
+    val accent: Color? = null,
+    val palette: MaterialPalette = MaterialPalette.Tonal,
+    val pureBlack: Boolean = false,
+    val onChange: (DesignStyle) -> Unit = {},
+    val onAccent: (Color?) -> Unit = {},
+    val onPalette: (MaterialPalette) -> Unit = {},
+    val onPureBlack: (Boolean) -> Unit = {},
 ) {
     val material: Boolean get() = current == DesignStyle.Material
 }
 
-val LocalStyle = staticCompositionLocalOf { StyleSetting(DesignStyle.Lumen, true, {}, {}) }
+val LocalStyle = staticCompositionLocalOf { StyleSetting(DesignStyle.Lumen) }
+
+/** The colours offered for Material's accent, besides the wallpaper's and one mixed by hand. */
+val AccentPresets = listOf(
+    Color(0xFF0A84FF), Color(0xFF7C5CFF), Color(0xFFFF4F9A), Color(0xFFE5484D),
+    Color(0xFFFF8A00), Color(0xFFF2C200), Color(0xFF2FB344), Color(0xFF00B3A6),
+)
 
 /**
  * The colours screens share, named for what they're for. Each style fills them in: iOS system

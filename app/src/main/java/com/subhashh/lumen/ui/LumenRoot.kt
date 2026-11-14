@@ -23,6 +23,7 @@ import com.subhashh.lumen.ui.theme.DesignStyle
 import com.subhashh.lumen.ui.theme.GlassSetting
 import com.subhashh.lumen.ui.theme.LocalStyle
 import com.subhashh.lumen.ui.theme.StyleSetting
+import androidx.compose.ui.graphics.toArgb
 import com.subhashh.lumen.ui.theme.LocalGlass
 import com.subhashh.lumen.ui.theme.MotionSetting
 import android.provider.Settings
@@ -50,7 +51,9 @@ fun ComponentActivity.setLumenContent(content: @Composable () -> Unit) {
         }
         var reduceMotion by remember { mutableStateOf(prefs.reduceMotion ?: systemReduce) }
         var designStyle by remember { mutableStateOf(prefs.designStyle) }
-        var dynamicColor by remember { mutableStateOf(prefs.dynamicColor) }
+        var accent by remember { mutableStateOf(prefs.materialAccent) }
+        var palette by remember { mutableStateOf(prefs.materialPalette) }
+        var pureBlack by remember { mutableStateOf(prefs.pureBlack) }
         var liquidGlass by remember { mutableStateOf(prefs.liquidGlass) }
         var reduceBlur by remember { mutableStateOf(prefs.reduceBlur) }
         val dark = when (appearance) {
@@ -75,14 +78,24 @@ fun ComponentActivity.setLumenContent(content: @Composable () -> Unit) {
             },
             LocalStyle provides StyleSetting(
                 current = designStyle,
-                dynamicColor = dynamicColor,
+                accent = accent?.let { androidx.compose.ui.graphics.Color(it) },
+                palette = palette,
+                pureBlack = pureBlack,
                 onChange = {
                     designStyle = it
                     prefs.designStyle = it
                 },
-                onDynamicColor = {
-                    dynamicColor = it
-                    prefs.dynamicColor = it
+                onAccent = { color ->
+                    accent = color?.toArgb()
+                    prefs.materialAccent = accent
+                },
+                onPalette = {
+                    palette = it
+                    prefs.materialPalette = it
+                },
+                onPureBlack = {
+                    pureBlack = it
+                    prefs.pureBlack = it
                 },
             ),
             LocalGlass provides GlassSetting(

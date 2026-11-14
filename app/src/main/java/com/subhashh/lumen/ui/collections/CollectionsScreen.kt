@@ -310,7 +310,7 @@ private fun UtilityGroup(
                 )
                 if (!material) Spacer(Modifier.width(6.dp))
                 if (!material) Icon(
-                    LumenIcons.Back,
+                    LumenIcons.Chevron,
                     contentDescription = null,
                     tint = colors.secondary,
                     // The back chevron turned around, as in Settings.

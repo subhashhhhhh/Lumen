@@ -381,7 +381,7 @@ internal fun SettingsRow(
         if (onClick != null && !Lumen.material) {
             Spacer(Modifier.width(6.dp))
             Icon(
-                LumenIcons.Back,
+                LumenIcons.Chevron,
                 contentDescription = null,
                 tint = colors.secondary,
                 // The back chevron, turned around: there's no forward one in the icon set yet.
@@ -548,11 +548,11 @@ internal fun PickerRow(
         // ⌃⌄, like iOS pop-up buttons: the two chevrons stacked.
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(
-                LumenIcons.Back, null, tint = colors.secondary,
+                LumenIcons.Chevron, null, tint = colors.secondary,
                 modifier = Modifier.size(11.dp).graphicsLayer { rotationZ = 90f },
             )
             Icon(
-                LumenIcons.Back, null, tint = colors.secondary,
+                LumenIcons.Chevron, null, tint = colors.secondary,
                 modifier = Modifier.size(11.dp).graphicsLayer { rotationZ = -90f },
             )
         }

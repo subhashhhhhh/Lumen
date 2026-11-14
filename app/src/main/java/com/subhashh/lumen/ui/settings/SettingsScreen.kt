@@ -33,6 +33,7 @@ import com.subhashh.lumen.ui.theme.Lumen
 import androidx.compose.foundation.shape.CircleShape
 import com.subhashh.lumen.ui.theme.Appearance
 import com.subhashh.lumen.ui.theme.DesignStyle
+import com.subhashh.lumen.ui.theme.MaterialPalette
 import com.subhashh.lumen.ui.theme.LocalAppearance
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.height
@@ -108,7 +109,9 @@ private val Entries = listOf(
     SettingEntry("theme", R.string.settings_theme, SettingsCategory.Appearance, R.string.settings_kw_theme),
     SettingEntry("reduce-motion", R.string.settings_reduce_motion, SettingsCategory.Appearance, R.string.settings_kw_reduce_motion),
     SettingEntry("style", R.string.settings_style, SettingsCategory.Appearance, R.string.settings_kw_style),
-    SettingEntry("dynamic-color", R.string.settings_dynamic_color, SettingsCategory.Appearance, R.string.settings_kw_dynamic_color),
+    SettingEntry("accent", R.string.settings_accent, SettingsCategory.Appearance, R.string.settings_kw_accent),
+    SettingEntry("palette", R.string.settings_palette, SettingsCategory.Appearance, R.string.settings_kw_palette),
+    SettingEntry("pure-black", R.string.settings_pure_black, SettingsCategory.Appearance, R.string.settings_kw_pure_black),
     SettingEntry("liquid-glass", R.string.settings_liquid_glass, SettingsCategory.Appearance, R.string.settings_kw_liquid_glass),
     SettingEntry("reduce-blur", R.string.settings_reduce_blur, SettingsCategory.Appearance, R.string.settings_kw_reduce_blur),
     SettingEntry("date-headers", R.string.settings_date_headers, SettingsCategory.Library, R.string.settings_kw_date_headers),
@@ -448,24 +451,38 @@ private fun ColumnScope.AppearancePage(highlight: String?) {
                 iconColor = Orange,
             )
         }
-        if (style.material) {
-            // The wallpaper's colours exist from Android 12; before it, Material uses Lumen's blue.
-            val available = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S
+    }
+    if (style.material) {
+        Group(
+            stringResource(R.string.settings_group_colour),
+            footer = stringResource(R.string.settings_colour_footer),
+        ) {
+            Anchor("accent", highlight) { AccentRow(style.accent, style.onAccent) }
             Divider()
-            Anchor("dynamic-color", highlight) {
-                ToggleRow(
-                    title = stringResource(R.string.settings_dynamic_color),
-                    subtitle = stringResource(if (available) R.string.settings_dynamic_color_subtitle else R.string.settings_dynamic_color_unavailable),
-                    checked = style.dynamicColor && available,
-                    onCheckedChange = { if (available) style.onDynamicColor(it) },
-                    icon = LumenIcons.Image,
+            Anchor("palette", highlight) {
+                PickerRow(
+                    title = stringResource(R.string.settings_palette),
+                    options = MaterialPalette.entries.map { stringResource(it.labelRes) },
+                    selected = style.palette.ordinal,
+                    onSelect = { style.onPalette(MaterialPalette.entries[it]) },
+                    icon = LumenIcons.Palette,
                     iconColor = Pink,
                 )
             }
+            Divider()
+            Anchor("pure-black", highlight) {
+                ToggleRow(
+                    title = stringResource(R.string.settings_pure_black),
+                    subtitle = stringResource(R.string.settings_pure_black_subtitle),
+                    checked = style.pureBlack,
+                    onCheckedChange = style.onPureBlack,
+                    icon = LumenIcons.DarkTheme,
+                    iconColor = Gray,
+                )
+            }
         }
+        return
     }
-    // Glass is part of Lumen's own style.
-    if (style.material) return
     val glass = com.subhashh.lumen.ui.theme.LocalGlass.current
     Group(
         stringResource(R.string.settings_group_glass),

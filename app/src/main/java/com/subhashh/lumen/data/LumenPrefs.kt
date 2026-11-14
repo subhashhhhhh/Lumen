@@ -7,6 +7,7 @@ import android.content.Context
 import androidx.core.content.edit
 import com.subhashh.lumen.ui.theme.Appearance
 import com.subhashh.lumen.ui.theme.DesignStyle
+import com.subhashh.lumen.ui.theme.MaterialPalette
 
 /**
  * Settings → Photos → Ultra HDR. Match Brightness lets highlights glow within what the screen
@@ -96,8 +97,12 @@ class LumenPrefs(context: Context) {
             ?: LibrarySort.Date
         set(value) = prefs.edit { putString(KeySort, value.name) }
 
+    /**
+     * Until it's chosen, the order follows the style: Lumen's own reads oldest first with the
+     * newest at the bottom, Material 3 Expressive newest first from the top, as Android galleries do.
+     */
     var sortDescending: Boolean
-        get() = prefs.getBoolean(KeySortDescending, false)
+        get() = if (prefs.contains(KeySortDescending)) prefs.getBoolean(KeySortDescending, false) else designStyle == DesignStyle.Material
         set(value) = prefs.edit { putBoolean(KeySortDescending, value) }
 
     /** Videos start playing as soon as they're on screen. */
@@ -151,10 +156,22 @@ class LumenPrefs(context: Context) {
             ?: DesignStyle.Lumen
         set(value) = prefs.edit { putString(KeyDesignStyle, value.name) }
 
-    /** Material 3 Expressive takes its colours from the wallpaper (Android 12+). */
-    var dynamicColor: Boolean
-        get() = prefs.getBoolean(KeyDynamicColor, true)
-        set(value) = prefs.edit { putBoolean(KeyDynamicColor, value) }
+    /** Material's accent colour as ARGB; null takes the wallpaper's (Android 12+) or Lumen's blue. */
+    var materialAccent: Int?
+        get() = if (prefs.contains(KeyMaterialAccent)) prefs.getInt(KeyMaterialAccent, 0) else null
+        set(value) = prefs.edit { if (value == null) remove(KeyMaterialAccent) else putInt(KeyMaterialAccent, value) }
+
+    /** How Material builds its scheme from that colour. */
+    var materialPalette: MaterialPalette
+        get() = prefs.getString(KeyMaterialPalette, null)
+            ?.let { name -> MaterialPalette.entries.firstOrNull { it.name == name } }
+            ?: MaterialPalette.Tonal
+        set(value) = prefs.edit { putString(KeyMaterialPalette, value.name) }
+
+    /** Material's dark theme on black, for OLED screens. */
+    var pureBlack: Boolean
+        get() = prefs.getBoolean(KeyPureBlack, false)
+        set(value) = prefs.edit { putBoolean(KeyPureBlack, value) }
 
     /** Settings → Appearance → Liquid Glass: glass that bends what's behind it. */
     var liquidGlass: Boolean
@@ -410,7 +427,9 @@ class LumenPrefs(context: Context) {
         const val KeyCreated = "created_albums"
         const val KeyAppearance = "appearance"
         const val KeyDesignStyle = "design_style"
-        const val KeyDynamicColor = "dynamic_color"
+        const val KeyMaterialAccent = "material_accent"
+        const val KeyMaterialPalette = "material_palette"
+        const val KeyPureBlack = "pure_black"
         const val KeyLiquidGlass = "liquid_glass"
         const val KeyReduceBlur = "reduce_blur"
         const val KeyExcluded = "excluded_folders"

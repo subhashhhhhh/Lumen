@@ -191,6 +191,8 @@ dependencies {
     implementation(libs.compose.ui)
     implementation(libs.compose.foundation)
     implementation(libs.compose.material3)
+    // Material colour schemes from a chosen colour (MaterialKolor, MIT).
+    implementation(libs.material.kolor)
     implementation(libs.compose.ui.tooling.preview)
     debugImplementation(libs.compose.ui.tooling)
 
