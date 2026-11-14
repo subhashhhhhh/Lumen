@@ -11,7 +11,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import com.subhashh.lumen.R
-import com.subhashh.lumen.ui.theme.LocalDarkTheme
+import com.subhashh.lumen.ui.theme.Lumen
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -70,14 +70,7 @@ fun RenameDialog(
 ) {
     val open = currentName != null
     BackHandler(enabled = open, onBack = onDismiss)
-    AnimatedVisibility(visible = open, enter = fadeIn(tween(160)), exit = fadeOut(tween(160))) {
-        Box(
-            Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.4f))
-                .clickable(remember { MutableInteractionSource() }, indication = null, onClick = onDismiss),
-        )
-    }
+    DialogScrim(open, onDismiss)
     AnimatedVisibility(
         visible = open,
         enter = scaleIn(spring(dampingRatio = 0.8f, stiffness = 600f), initialScale = 0.9f) + fadeIn(tween(140)),
@@ -89,32 +82,29 @@ fun RenameDialog(
         var field by remember(name) { mutableStateOf(TextFieldValue(base, TextRange(0, base.length))) }
         val focus = remember { FocusRequester() }
         LaunchedEffect(name) { focus.requestFocus() }
-        val dark = LocalDarkTheme.current
-        val card = if (dark) Color(0xFF2C2C2E) else Color.White
-        val text = if (dark) Color.White else Color.Black
-        val secondary = if (dark) Color(0x99EBEBF5) else Color(0x993C3C43)
+        val text = Lumen.colors.text
+        val secondary = Lumen.colors.secondary
+        val material = Lumen.material
         val valid = (acceptUnchanged || field.text != base) && (freeText || (field.text.isNotBlank() && '/' !in field.text))
         val submit = { if (valid) onRename(field.text.trim() + ext) }
 
         Box(Modifier.fillMaxSize().imePadding(), contentAlignment = Alignment.Center) {
             Column(
                 Modifier
-                    .width(300.dp)
-                    .clip(RoundedCornerShape(22.dp))
-                    .background(card)
-                    .clickable(remember { MutableInteractionSource() }, indication = null) {}
-                    .padding(top = 20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
+                    .width(if (material) 320.dp else 300.dp)
+                    .dialogCard()
+                    .padding(top = if (material) 24.dp else 20.dp),
+                horizontalAlignment = dialogAlignment,
             ) {
-                Text(title, color = text, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
-                Spacer(Modifier.height(14.dp))
+                DialogTitle(title)
+                Spacer(Modifier.height(if (material) 18.dp else 14.dp))
                 Row(
                     Modifier
-                        .padding(horizontal = 16.dp)
+                        .padding(horizontal = if (material) 24.dp else 16.dp)
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(secondary.copy(alpha = 0.12f))
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                        .clip(Lumen.shapes.field)
+                        .background(Lumen.colors.field)
+                        .padding(horizontal = if (material) 16.dp else 12.dp, vertical = if (material) 14.dp else 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     BasicTextField(
@@ -122,7 +112,7 @@ fun RenameDialog(
                         onValueChange = { field = it },
                         singleLine = true,
                         textStyle = TextStyle(color = text, fontSize = 16.sp),
-                        cursorBrush = SolidColor(Color(0xFF0A84FF)),
+                        cursorBrush = SolidColor(Lumen.colors.accent),
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                         keyboardActions = KeyboardActions(onDone = { submit() }),
                         modifier = Modifier
@@ -132,31 +122,13 @@ fun RenameDialog(
                     Text(ext, color = secondary, fontSize = 16.sp)
                 }
                 Spacer(Modifier.height(18.dp))
-                Box(Modifier.fillMaxWidth().height(0.5.dp).background(secondary.copy(alpha = 0.3f)))
-                Row(Modifier.fillMaxWidth().height(48.dp)) {
-                    Text(
-                        stringResource(R.string.common_cancel),
-                        color = Color(0xFF0A84FF),
-                        fontSize = 17.sp,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier
-                            .weight(1f)
-                            .clickable(onClick = onDismiss)
-                            .padding(vertical = 13.dp),
-                    )
-                    Box(Modifier.width(0.5.dp).height(48.dp).background(secondary.copy(alpha = 0.3f)))
-                    Text(
-                        confirm,
-                        color = if (valid) Color(0xFF0A84FF) else secondary,
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier
-                            .weight(1f)
-                            .clickable(enabled = valid) { submit() }
-                            .padding(vertical = 13.dp),
-                    )
-                }
+                DialogButtons(
+                    cancel = stringResource(R.string.common_cancel),
+                    onCancel = onDismiss,
+                    confirm = confirm,
+                    onConfirm = { submit() },
+                    enabled = valid,
+                )
             }
         }
     }

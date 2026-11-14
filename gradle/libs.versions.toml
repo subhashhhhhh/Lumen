@@ -10,6 +10,9 @@ robolectric = "4.17"
 agp = "9.4.1"
 kotlin = "2.4.21"
 composeBom = "2026.09.00"
+# Ahead of the BOM (1.4.0) for the Material 3 Expressive components and theme: Settings →
+# Appearance → Style. Built against the same Compose 1.12 the BOM brings.
+material3 = "1.5.0-rc01"
 activityCompose = "1.13.0"
 lifecycle = "2.11.0"
 coreKtx = "1.19.1"
@@ -60,7 +63,7 @@ androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-
 compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
 compose-ui = { module = "androidx.compose.ui:ui" }
 compose-foundation = { module = "androidx.compose.foundation:foundation" }
-compose-material3 = { module = "androidx.compose.material3:material3" }
+compose-material3 = { module = "androidx.compose.material3:material3", version.ref = "material3" }
 compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
 compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }

@@ -12,7 +12,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.subhashh.lumen.R
 import com.kyant.backdrop.Backdrop
+import com.subhashh.lumen.ui.components.BareIconButton
 import com.subhashh.lumen.ui.components.GlassIconButton
+import com.subhashh.lumen.ui.components.materialSurface
+import com.subhashh.lumen.ui.theme.Lumen
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.graphics.vector.ImageVector
 import com.subhashh.lumen.ui.components.GlassTextButton
 import com.subhashh.lumen.ui.icons.LumenIcons
 import com.subhashh.lumen.ui.theme.LocalGlassColors
@@ -61,13 +66,28 @@ fun SelectionActionBar(
 ) {
     val colors = LocalGlassColors.current
     val idle = colors.content.copy(alpha = 0.35f)
+    val destructive = Lumen.colors.destructive
     // Ignore taps with nothing selected rather than hiding the bar, so it doesn't jump around.
     val guard = { action: () -> Unit -> { if (hasSelection) action() } }
+    // Material 3 Expressive: one floating toolbar holding plain icon buttons, not a row of circles.
+    val material = Lumen.material
+    @Composable
+    fun GlassIconButton(backdrop: Backdrop, icon: ImageVector, contentDescription: String, onClick: () -> Unit, tint: Color) {
+        if (material) BareIconButton(icon, contentDescription, onClick, tint = tint)
+        else com.subhashh.lumen.ui.components.GlassIconButton(backdrop, icon, contentDescription, onClick, tint = tint)
+    }
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        modifier = if (material) {
+            modifier
+                .padding(horizontal = 16.dp)
+                .materialSurface(colors.tint, CircleShape)
+                .padding(horizontal = 12.dp, vertical = 8.dp)
+        } else {
+            modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+        },
+        horizontalArrangement = if (material) Arrangement.spacedBy(16.dp) else Arrangement.SpaceBetween,
     ) {
         if (inHidden) {
             GlassIconButton(
@@ -80,7 +100,7 @@ fun SelectionActionBar(
             )
             GlassIconButton(
                 backdrop, LumenIcons.DeleteForever, stringResource(R.string.main_delete_permanently), guard(onDeleteForever),
-                tint = if (hasSelection) Color(0xFFFF453A) else idle,
+                tint = if (hasSelection) destructive else idle,
             )
             GlassIconButton(
                 backdrop, LumenIcons.More, stringResource(R.string.main_more), guard(onMore),
@@ -93,7 +113,7 @@ fun SelectionActionBar(
             )
             GlassIconButton(
                 backdrop, LumenIcons.DeleteForever, stringResource(R.string.main_delete_forever), guard(onDeleteForever),
-                tint = if (hasSelection) Color(0xFFFF453A) else idle,
+                tint = if (hasSelection) destructive else idle,
             )
         } else {
             GlassIconButton(
@@ -107,7 +127,7 @@ fun SelectionActionBar(
                 guard(onFavorite),
                 tint = when {
                     !hasSelection -> idle
-                    allFavorite -> Color(0xFFFF375F)
+                    allFavorite -> Lumen.colors.favorite
                     else -> colors.content
                 },
             )

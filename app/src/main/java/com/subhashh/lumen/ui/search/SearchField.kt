@@ -61,6 +61,7 @@ fun SearchField(
         }
     }
     val shape = RoundedCornerShape(50)
+    val fontSize = if (com.subhashh.lumen.ui.theme.Lumen.material) 16.sp else 17.sp
     Row(
         modifier
             .fillMaxWidth()
@@ -73,13 +74,13 @@ fun SearchField(
         Spacer(Modifier.width(10.dp))
         Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
             if (query.isEmpty()) {
-                Text(stringResource(R.string.main_search_field_hint), color = colors.contentSecondary, fontSize = 17.sp, maxLines = 1)
+                Text(stringResource(R.string.main_search_field_hint), color = colors.contentSecondary, fontSize = fontSize, maxLines = 1)
             }
             BasicTextField(
                 value = query,
                 onValueChange = onQueryChange,
                 singleLine = true,
-                textStyle = TextStyle(color = colors.content, fontSize = 17.sp),
+                textStyle = TextStyle(color = colors.content, fontSize = fontSize),
                 cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(onSearch = {
@@ -95,7 +96,7 @@ fun SearchField(
             Box(
                 Modifier
                     .size(36.dp)
-                    .pressable({ onQueryChange("") }),
+                    .pressable({ onQueryChange("") }, shape = androidx.compose.foundation.shape.CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(LumenIcons.Close, contentDescription = stringResource(R.string.main_search_clear), tint = colors.contentSecondary, modifier = Modifier.size(18.dp))

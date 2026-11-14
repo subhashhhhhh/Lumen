@@ -11,7 +11,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import com.subhashh.lumen.R
-import com.subhashh.lumen.ui.theme.LocalDarkTheme
+import com.subhashh.lumen.ui.theme.Lumen
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -63,75 +63,45 @@ data class Confirmation(
 fun ConfirmDialog(confirmation: Confirmation?, onDismiss: () -> Unit) {
     val open = confirmation != null
     BackHandler(enabled = open, onBack = onDismiss)
-    AnimatedVisibility(visible = open, enter = fadeIn(tween(160)), exit = fadeOut(tween(160))) {
-        Box(
-            Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.4f))
-                .clickable(remember { MutableInteractionSource() }, indication = null, onClick = onDismiss),
-        )
-    }
+    DialogScrim(open, onDismiss)
     AnimatedVisibility(
         visible = open,
         enter = scaleIn(spring(dampingRatio = 0.8f, stiffness = 600f), initialScale = 0.9f) + fadeIn(tween(140)),
         exit = fadeOut(tween(120)),
     ) {
         val c = confirmation ?: return@AnimatedVisibility
-        val dark = LocalDarkTheme.current
-        val card = if (dark) Color(0xFF2C2C2E) else Color.White
-        val text = if (dark) Color.White else Color.Black
-        val secondary = if (dark) Color(0x99EBEBF5) else Color(0x993C3C43)
+        val text = Lumen.colors.text
+        val secondary = Lumen.colors.secondary
+        val material = Lumen.material
         Box(Modifier.fillMaxSize().safeDrawingPadding().padding(vertical = 24.dp), contentAlignment = Alignment.Center) {
             Column(
                 Modifier
-                    .width(if (c.details != null) 320.dp else 290.dp)
-                    .clip(RoundedCornerShape(22.dp))
-                    .background(card)
-                    .clickable(remember { MutableInteractionSource() }, indication = null) {}
-                    .padding(top = 20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
+                    .width(if (c.details != null || material) 320.dp else 290.dp)
+                    .dialogCard()
+                    .padding(top = if (material) 24.dp else 20.dp),
+                horizontalAlignment = dialogAlignment,
             ) {
-                Text(c.title, color = text, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(horizontal = 18.dp))
-                Spacer(Modifier.height(6.dp))
+                DialogTitle(c.title)
+                Spacer(Modifier.height(if (material) 16.dp else 6.dp))
                 // The middle takes what's left of the screen and scrolls; title and buttons stay put.
                 Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) {
-                    Text(c.message, color = secondary, fontSize = 14.sp, textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp))
+                    DialogMessage(c.message, Modifier.fillMaxWidth())
                     c.details?.let { details ->
                         Spacer(Modifier.height(14.dp))
-                        Markdown(details, color = secondary, headingColor = text, modifier = Modifier.padding(horizontal = 18.dp))
+                        Markdown(details, color = secondary, headingColor = text, modifier = Modifier.padding(horizontal = dialogInset))
                     }
                 }
                 Spacer(Modifier.height(18.dp))
-                Box(Modifier.fillMaxWidth().height(0.5.dp).background(secondary.copy(alpha = 0.3f)))
-                Row(Modifier.fillMaxWidth().height(48.dp)) {
-                    Text(
-                        c.cancel ?: stringResource(R.string.common_cancel),
-                        color = Color(0xFF0A84FF),
-                        fontSize = 17.sp,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier
-                            .weight(1f)
-                            .clickable { onDismiss(); c.onCancel?.invoke() }
-                            .padding(vertical = 13.dp),
-                    )
-                    Box(Modifier.width(0.5.dp).height(48.dp).background(secondary.copy(alpha = 0.3f)))
-                    Text(
-                        c.confirm,
-                        color = if (c.destructive) Color(0xFFFF453A) else Color(0xFF0A84FF),
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier
-                            .weight(1f)
-                            .clickable {
-                                onDismiss()
-                                c.onConfirm()
-                            }
-                            .padding(vertical = 13.dp),
-                    )
-                }
+                DialogButtons(
+                    cancel = c.cancel ?: stringResource(R.string.common_cancel),
+                    onCancel = { onDismiss(); c.onCancel?.invoke() },
+                    confirm = c.confirm,
+                    onConfirm = {
+                        onDismiss()
+                        c.onConfirm()
+                    },
+                    destructive = c.destructive,
+                )
             }
         }
     }

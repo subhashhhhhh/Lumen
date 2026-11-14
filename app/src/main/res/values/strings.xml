@@ -482,6 +482,8 @@
          Lowercase; any word typed must appear in the setting's name, page or these words. -->
     <string name="settings_kw_theme">dark mode light mode night appearance</string>
     <string name="settings_kw_reduce_motion">animations accessibility springs</string>
+    <string name="settings_kw_style">design material you expressive android ios look language</string>
+    <string name="settings_kw_dynamic_color">material you monet wallpaper accent color colour palette</string>
     <string name="settings_kw_liquid_glass">glass refraction lens effect gpu</string>
     <string name="settings_kw_reduce_blur">blur transparency solid frosted readability battery</string>
     <string name="settings_kw_date_headers">sections days months years grouping</string>
@@ -538,6 +540,12 @@
     <string name="settings_theme">Theme</string>
     <string name="settings_reduce_motion">Reduce Motion</string>
     <string name="settings_reduce_motion_subtitle">No flying photos, springs or bounces</string>
+    <string name="settings_group_style">Style</string>
+    <string name="settings_style">Style</string>
+    <string name="settings_style_footer">Lumen is the app\'s own look. Material 3 Expressive draws every screen in Android\'s design language: tonal colours, rounder shapes and springier motion. Liquid Glass belongs to Lumen\'s look.</string>
+    <string name="settings_dynamic_color">Wallpaper Colours</string>
+    <string name="settings_dynamic_color_subtitle">Colours taken from your wallpaper</string>
+    <string name="settings_dynamic_color_unavailable">Needs Android 12 or later</string>
     <string name="settings_group_glass">Glass</string>
     <string name="settings_glass_footer">Liquid Glass: buttons, bars, menus and switches made of glass that bends what\'s behind it. Off, they\'re solid. Reduce Blur keeps the glass with much less blur: clearer, and lighter on the GPU.</string>
     <string name="settings_liquid_glass">Liquid Glass</string>
@@ -1039,6 +1047,8 @@
     <string name="app_appearance_system">Match Phone</string>
     <string name="app_appearance_light">Light</string>
     <string name="app_appearance_dark">Dark</string>
+    <string name="app_style_lumen">Lumen</string>
+    <string name="app_style_material">Material 3 Expressive</string>
 
     <!-- Onboarding: welcome -->
     <string name="onboarding_tagline">Your photos, smarter.\nAnd they never leave your phone.</string>
@@ -1072,6 +1082,8 @@
     <string name="onboarding_look_subtitle">Pick how Lumen looks. You can change it any time in Settings.</string>
     <string name="onboarding_theme">Theme</string>
     <string name="onboarding_theme_detail">Follow your phone, or always light or dark</string>
+    <string name="onboarding_style_lumen_detail">Lumen\'s own look</string>
+    <string name="onboarding_style_material_detail">Android\'s design language, in your wallpaper\'s colours</string>
     <string name="onboarding_liquid_glass">Liquid Glass</string>
     <string name="onboarding_liquid_glass_detail">Buttons, bars and menus made of glass. Off, they\'re solid</string>
     <string name="onboarding_reduce_blur">Reduce Blur</string>

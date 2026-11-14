@@ -11,17 +11,30 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.unit.dp
+import com.subhashh.lumen.ui.theme.LocalStyle
 
 /**
  * Clickable with iOS-style feedback instead of a ripple: shrinks while the finger is down and
  * springs back with a little bounce on release. Use a smaller squish for big surfaces (cards)
- * than for icon buttons.
+ * than for icon buttons. In the Material style it's Android's own feedback: a ripple.
  */
 fun Modifier.pressable(
     onClick: () -> Unit,
     enabled: Boolean = true,
     pressedScale: Float = 0.88f,
+    /** Material's ripple is clipped to this; a softly rounded rectangle when null. */
+    shape: Shape? = null,
 ): Modifier = composed {
+    // Material 3 Expressive: a ripple where the finger is, and nothing shrinks.
+    if (LocalStyle.current.material) {
+        return@composed this
+            .clip(shape ?: RippleShape)
+            .clickable(enabled = enabled, onClick = onClick)
+    }
     // Reduce Motion: still a button, just no squish.
     val reduce = LocalMotion.current.reduce
     val interaction = remember { MutableInteractionSource() }
@@ -38,6 +51,8 @@ fun Modifier.pressable(
         }
         .clickable(interactionSource = interaction, indication = null, enabled = enabled, onClick = onClick)
 }
+
+private val RippleShape = RoundedCornerShape(12.dp)
 
 /** Quick and firm going down… */
 private val PressIn = spring<Float>(dampingRatio = 1f, stiffness = 1400f)

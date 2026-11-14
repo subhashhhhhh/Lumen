@@ -82,6 +82,10 @@ fun GlassTabBar(
     showZoom: Boolean = false,
     onShowTabs: () -> Unit = {},
 ) {
+    if (com.subhashh.lumen.ui.theme.Lumen.material) {
+        MaterialTabBar(selected, onSelect, searchSelected, onSearch, modifier, enabled, zoomLevel, onZoomLevel, showZoom, onShowTabs)
+        return
+    }
     val haptics = LocalHapticFeedback.current
 
     // One value drives the whole morph: 0 = tabs, 1 = circle + Years / Months / All.

@@ -30,6 +30,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import com.subhashh.lumen.ui.theme.LocalDarkTheme
 import com.subhashh.lumen.ui.theme.Appearance
+import com.subhashh.lumen.ui.theme.DesignStyle
 import com.subhashh.lumen.ui.theme.LocalAppearance
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.height
@@ -104,6 +105,8 @@ private data class SettingEntry(
 private val Entries = listOf(
     SettingEntry("theme", R.string.settings_theme, SettingsCategory.Appearance, R.string.settings_kw_theme),
     SettingEntry("reduce-motion", R.string.settings_reduce_motion, SettingsCategory.Appearance, R.string.settings_kw_reduce_motion),
+    SettingEntry("style", R.string.settings_style, SettingsCategory.Appearance, R.string.settings_kw_style),
+    SettingEntry("dynamic-color", R.string.settings_dynamic_color, SettingsCategory.Appearance, R.string.settings_kw_dynamic_color),
     SettingEntry("liquid-glass", R.string.settings_liquid_glass, SettingsCategory.Appearance, R.string.settings_kw_liquid_glass),
     SettingEntry("reduce-blur", R.string.settings_reduce_blur, SettingsCategory.Appearance, R.string.settings_kw_reduce_blur),
     SettingEntry("date-headers", R.string.settings_date_headers, SettingsCategory.Library, R.string.settings_kw_date_headers),
@@ -427,6 +430,39 @@ private fun ColumnScope.AppearancePage(highlight: String?) {
             )
         }
     }
+    val style = com.subhashh.lumen.ui.theme.LocalStyle.current
+    Group(
+        stringResource(R.string.settings_group_style),
+        footer = stringResource(R.string.settings_style_footer),
+    ) {
+        Anchor("style", highlight) {
+            PickerRow(
+                title = stringResource(R.string.settings_style),
+                options = DesignStyle.entries.map { stringResource(it.labelRes) },
+                selected = style.current.ordinal,
+                onSelect = { style.onChange(DesignStyle.entries[it]) },
+                icon = LumenIcons.Collections,
+                iconColor = Orange,
+            )
+        }
+        if (style.material) {
+            // The wallpaper's colours exist from Android 12; before it, Material uses Lumen's blue.
+            val available = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S
+            Divider()
+            Anchor("dynamic-color", highlight) {
+                ToggleRow(
+                    title = stringResource(R.string.settings_dynamic_color),
+                    subtitle = stringResource(if (available) R.string.settings_dynamic_color_subtitle else R.string.settings_dynamic_color_unavailable),
+                    checked = style.dynamicColor && available,
+                    onCheckedChange = { if (available) style.onDynamicColor(it) },
+                    icon = LumenIcons.Image,
+                    iconColor = Pink,
+                )
+            }
+        }
+    }
+    // Glass is part of Lumen's own style.
+    if (style.material) return
     val glass = com.subhashh.lumen.ui.theme.LocalGlass.current
     Group(
         stringResource(R.string.settings_group_glass),

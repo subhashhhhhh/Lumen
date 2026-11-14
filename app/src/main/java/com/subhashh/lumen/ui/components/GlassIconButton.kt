@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.kyant.backdrop.Backdrop
 import com.subhashh.lumen.ui.theme.LocalGlassColors
+import com.subhashh.lumen.ui.theme.Lumen
 
 @Composable
 fun GlassIconButton(
@@ -27,6 +28,21 @@ fun GlassIconButton(
     /** A red dot at the top right: something new behind this button (an update for Settings). */
     badge: Boolean = false,
 ) {
+    if (Lumen.material) {
+        MaterialMorphSurface(onClick, LocalGlassColors.current.tint, modifier) {
+            Icon(icon, contentDescription = contentDescription, tint = tint)
+            if (badge) {
+                Box(
+                    Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 9.dp, end = 9.dp)
+                        .size(10.dp)
+                        .background(Lumen.colors.destructive, CircleShape),
+                )
+            }
+        }
+        return
+    }
     Box(
         modifier = modifier
             .size(48.dp)
@@ -66,7 +82,7 @@ fun GlassMorphButton(
     Box(
         modifier = modifier
             .size(48.dp)
-            .pressable(onClick)
+            .pressable(onClick, shape = CircleShape)
             .glass(backdrop),
         contentAlignment = Alignment.Center,
     ) {
@@ -92,5 +108,27 @@ fun GlassMorphButton(
                 scaleY = 0.6f + 0.4f * f
             },
         )
+    }
+}
+
+/**
+ * An icon button with no surface of its own, for inside a bar that is one (Material's selection
+ * toolbar). The same 48 dp target as [GlassIconButton].
+ */
+@Composable
+fun BareIconButton(
+    icon: ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    tint: Color = LocalGlassColors.current.content,
+) {
+    Box(
+        modifier = modifier
+            .size(48.dp)
+            .pressable(onClick, shape = CircleShape),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(icon, contentDescription = contentDescription, tint = tint)
     }
 }

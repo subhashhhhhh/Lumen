@@ -30,7 +30,7 @@ import androidx.compose.material3.DatePickerDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
 import androidx.compose.material3.TimeInput
-import androidx.compose.material3.TimePickerDefaults
+import androidx.compose.material3.TimeInputDefaults
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
@@ -47,7 +47,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.subhashh.lumen.R
-import com.subhashh.lumen.ui.theme.LocalDarkTheme
+import com.subhashh.lumen.ui.theme.Lumen
 import java.text.DateFormat
 import java.time.Instant
 import java.time.LocalDate
@@ -71,14 +71,7 @@ fun DateTimeDialog(
 ) {
     val open = original != null
     BackHandler(enabled = open, onBack = onDismiss)
-    AnimatedVisibility(visible = open, enter = fadeIn(tween(160)), exit = fadeOut(tween(160))) {
-        Box(
-            Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.45f))
-                .clickable(remember { MutableInteractionSource() }, indication = null, onClick = onDismiss),
-        )
-    }
+    DialogScrim(open, onDismiss)
     AnimatedVisibility(
         visible = open,
         enter = scaleIn(spring(dampingRatio = 0.8f, stiffness = 600f), initialScale = 0.92f) + fadeIn(tween(140)),
@@ -97,11 +90,11 @@ fun DateTimeDialog(
             initialMinute = startLocal.minute,
             is24Hour = android.text.format.DateFormat.is24HourFormat(context),
         )
-        val dark = LocalDarkTheme.current
-        val card = if (dark) Color(0xFF1C1C1E) else Color.White
-        val text = if (dark) Color.White else Color.Black
-        val secondary = if (dark) Color(0x99EBEBF5) else Color(0x993C3C43)
-        val accent = Color(0xFF0A84FF)
+        val card = Lumen.colors.panel
+        val text = Lumen.colors.text
+        val secondary = Lumen.colors.secondary
+        val accent = Lumen.colors.accent
+        val material = Lumen.material
 
         val adjust = {
             val day = dateState.selectedDateMillis?.let {
@@ -124,19 +117,15 @@ fun DateTimeDialog(
                     .padding(horizontal = 12.dp)
                     .widthIn(max = 380.dp)
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(card)
-                    .clickable(remember { MutableInteractionSource() }, indication = null) {}
+                    .dialogCard(card, if (material) Lumen.shapes.dialog else RoundedCornerShape(24.dp))
                     .verticalScroll(rememberScrollState())
-                    .padding(top = 20.dp),
+                    .padding(top = if (material) 24.dp else 20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Text(stringResource(R.string.components_adjust_date_title), color = text, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                DialogTitle(stringResource(R.string.components_adjust_date_title))
                 Spacer(Modifier.height(4.dp))
-                Text(
+                DialogMessage(
                     stringResource(R.string.components_adjust_date_original, DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(start))),
-                    color = secondary,
-                    fontSize = 13.sp,
                 )
                 DatePicker(
                     state = dateState,
@@ -152,21 +141,17 @@ fun DateTimeDialog(
                         selectedYearContainerColor = accent,
                         dayContentColor = text,
                         selectedDayContainerColor = accent,
-                        selectedDayContentColor = Color.White,
+                        selectedDayContentColor = Lumen.colors.onAccent,
                         todayContentColor = accent,
                         todayDateBorderColor = accent,
                     ),
                 )
                 TimeInput(
                     state = timeState,
-                    colors = TimePickerDefaults.colors(
-                        timeSelectorSelectedContainerColor = accent.copy(alpha = 0.25f),
-                        timeSelectorUnselectedContainerColor = secondary.copy(alpha = 0.15f),
-                        timeSelectorSelectedContentColor = text,
-                        timeSelectorUnselectedContentColor = text,
+                    colors = TimeInputDefaults.colors(
                         periodSelectorSelectedContainerColor = accent.copy(alpha = 0.25f),
                         periodSelectorSelectedContentColor = text,
-                        periodSelectorUnselectedContentColor = secondary,
+                        periodSelectorContentColor = secondary,
                         periodSelectorBorderColor = secondary.copy(alpha = 0.4f),
                     ),
                 )
@@ -180,31 +165,13 @@ fun DateTimeDialog(
                     )
                     Spacer(Modifier.height(12.dp))
                 }
-                Box(Modifier.fillMaxWidth().height(0.5.dp).background(secondary.copy(alpha = 0.3f)))
-                Row(Modifier.fillMaxWidth().height(50.dp)) {
-                    Text(
-                        stringResource(R.string.common_cancel),
-                        color = accent,
-                        fontSize = 17.sp,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier
-                            .weight(1f)
-                            .clickable(onClick = onDismiss)
-                            .padding(vertical = 14.dp),
-                    )
-                    Box(Modifier.width(0.5.dp).height(50.dp).background(secondary.copy(alpha = 0.3f)))
-                    Text(
-                        stringResource(R.string.components_adjust),
-                        color = accent,
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier
-                            .weight(1f)
-                            .clickable(onClick = adjust)
-                            .padding(vertical = 14.dp),
-                    )
-                }
+                DialogButtons(
+                    cancel = stringResource(R.string.common_cancel),
+                    onCancel = onDismiss,
+                    confirm = stringResource(R.string.components_adjust),
+                    onConfirm = adjust,
+                    height = 50.dp,
+                )
             }
         }
     }

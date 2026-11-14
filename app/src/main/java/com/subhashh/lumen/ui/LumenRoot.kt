@@ -19,7 +19,10 @@ import com.subhashh.lumen.ui.theme.Appearance
 import com.subhashh.lumen.ui.theme.AppearanceSetting
 import com.subhashh.lumen.ui.theme.LocalAppearance
 import com.subhashh.lumen.ui.theme.LocalMotion
+import com.subhashh.lumen.ui.theme.DesignStyle
 import com.subhashh.lumen.ui.theme.GlassSetting
+import com.subhashh.lumen.ui.theme.LocalStyle
+import com.subhashh.lumen.ui.theme.StyleSetting
 import com.subhashh.lumen.ui.theme.LocalGlass
 import com.subhashh.lumen.ui.theme.MotionSetting
 import android.provider.Settings
@@ -46,6 +49,8 @@ fun ComponentActivity.setLumenContent(content: @Composable () -> Unit) {
             Settings.Global.getFloat(contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
         }
         var reduceMotion by remember { mutableStateOf(prefs.reduceMotion ?: systemReduce) }
+        var designStyle by remember { mutableStateOf(prefs.designStyle) }
+        var dynamicColor by remember { mutableStateOf(prefs.dynamicColor) }
         var liquidGlass by remember { mutableStateOf(prefs.liquidGlass) }
         var reduceBlur by remember { mutableStateOf(prefs.reduceBlur) }
         val dark = when (appearance) {
@@ -68,8 +73,21 @@ fun ComponentActivity.setLumenContent(content: @Composable () -> Unit) {
                 reduceMotion = it
                 prefs.reduceMotion = it
             },
+            LocalStyle provides StyleSetting(
+                current = designStyle,
+                dynamicColor = dynamicColor,
+                onChange = {
+                    designStyle = it
+                    prefs.designStyle = it
+                },
+                onDynamicColor = {
+                    dynamicColor = it
+                    prefs.dynamicColor = it
+                },
+            ),
             LocalGlass provides GlassSetting(
-                liquid = liquidGlass,
+                // Glass belongs to Lumen's own style; Material's surfaces are solid.
+                liquid = liquidGlass && designStyle == DesignStyle.Lumen,
                 reduceBlur = reduceBlur,
                 onLiquid = {
                     liquidGlass = it

@@ -40,7 +40,12 @@ import androidx.compose.ui.unit.sp
 import com.subhashh.lumen.R
 import com.subhashh.lumen.data.ImageExport
 import com.subhashh.lumen.ui.icons.LumenIcons
-import com.subhashh.lumen.ui.theme.LocalDarkTheme
+import com.subhashh.lumen.ui.theme.Lumen
+import com.subhashh.lumen.ui.components.DialogButtons
+import com.subhashh.lumen.ui.components.DialogTitle
+import com.subhashh.lumen.ui.components.dialogAlignment
+import com.subhashh.lumen.ui.components.dialogCard
+import com.subhashh.lumen.ui.components.dialogTextAlign
 
 /**
  * Resize / Convert: size, format and quality for new copies of [count] photos, each a glass
@@ -54,14 +59,7 @@ fun ResizeDialog(
 ) {
     val open = count != null
     BackHandler(enabled = open, onBack = onDismiss)
-    AnimatedVisibility(visible = open, enter = fadeIn(tween(160)), exit = fadeOut(tween(160))) {
-        Box(
-            Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.45f))
-                .clickable(remember { MutableInteractionSource() }, indication = null, onClick = onDismiss),
-        )
-    }
+    com.subhashh.lumen.ui.components.DialogScrim(open, onDismiss)
     AnimatedVisibility(
         visible = open,
         enter = scaleIn(spring(dampingRatio = 0.8f, stiffness = 600f), initialScale = 0.92f) + fadeIn(tween(140)),
@@ -71,9 +69,8 @@ fun ResizeDialog(
         var target by remember { mutableStateOf(ImageExport.Target.FullHD) }
         var format by remember { mutableStateOf(ImageExport.Format.Same) }
         var quality by remember { mutableStateOf(ImageExport.Quality.High) }
-        val dark = LocalDarkTheme.current
         val colors = groupColors()
-        val accent = Color(0xFF0A84FF)
+        val material = Lumen.material
         // The dropdowns' glass refracts the card under them, so the card lives in the picker area.
         PickerArea {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -82,14 +79,12 @@ fun ResizeDialog(
                         .padding(horizontal = 20.dp)
                         .widthIn(max = 380.dp)
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(24.dp))
-                        .background(if (dark) Color(0xFF1C1C1E) else Color.White)
-                        .clickable(remember { MutableInteractionSource() }, indication = null) {},
-                    horizontalAlignment = Alignment.CenterHorizontally,
+                        .dialogCard(Lumen.colors.panel, if (material) Lumen.shapes.dialog else RoundedCornerShape(24.dp)),
+                    horizontalAlignment = dialogAlignment,
                 ) {
-                    Spacer(Modifier.height(20.dp))
-                    Text(stringResource(R.string.settings_resize_title), color = colors.text, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
-                    Spacer(Modifier.height(4.dp))
+                    Spacer(Modifier.height(if (material) 24.dp else 20.dp))
+                    DialogTitle(stringResource(R.string.settings_resize_title))
+                    Spacer(Modifier.height(if (material) 12.dp else 4.dp))
                     Text(
                         if (n == 1) {
                             stringResource(R.string.settings_resize_message_one)
@@ -97,9 +92,9 @@ fun ResizeDialog(
                             pluralStringResource(R.plurals.settings_resize_message, n, n)
                         },
                         color = colors.secondary,
-                        fontSize = 13.sp,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(horizontal = 20.dp),
+                        fontSize = if (material) 14.sp else 13.sp,
+                        textAlign = dialogTextAlign,
+                        modifier = Modifier.padding(horizontal = if (material) 24.dp else 20.dp),
                     )
                     Spacer(Modifier.height(10.dp))
                     PickerRow(
@@ -108,7 +103,7 @@ fun ResizeDialog(
                         selected = target.ordinal,
                         onSelect = { target = ImageExport.Target.entries[it] },
                         icon = LumenIcons.Image,
-                        iconColor = Color(0xFF0A84FF),
+                        iconColor = Blue,
                     )
                     Divider()
                     PickerRow(
@@ -117,7 +112,7 @@ fun ResizeDialog(
                         selected = format.ordinal,
                         onSelect = { format = ImageExport.Format.entries[it] },
                         icon = LumenIcons.Document,
-                        iconColor = Color(0xFFFF9F0A),
+                        iconColor = Orange,
                     )
                     // PNG is lossless: quality doesn't apply.
                     if (format != ImageExport.Format.Png) {
@@ -128,35 +123,17 @@ fun ResizeDialog(
                             selected = quality.ordinal,
                             onSelect = { quality = ImageExport.Quality.entries[it] },
                             icon = LumenIcons.Hdr,
-                            iconColor = Color(0xFF30D158),
+                            iconColor = Green,
                         )
                     }
                     Spacer(Modifier.height(10.dp))
-                    Box(Modifier.fillMaxWidth().height(0.5.dp).background(colors.divider))
-                    Row(Modifier.fillMaxWidth().height(50.dp)) {
-                        Text(
-                            stringResource(R.string.common_cancel),
-                            color = accent,
-                            fontSize = 17.sp,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier
-                                .weight(1f)
-                                .clickable(onClick = onDismiss)
-                                .padding(vertical = 14.dp),
-                        )
-                        Box(Modifier.width(0.5.dp).height(50.dp).background(colors.divider))
-                        Text(
-                            stringResource(if (n == 1) R.string.settings_resize_save_copy else R.string.settings_resize_save_copies),
-                            color = accent,
-                            fontSize = 17.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier
-                                .weight(1f)
-                                .clickable { onSave(target, format, quality) }
-                                .padding(vertical = 14.dp),
-                        )
-                    }
+                    DialogButtons(
+                        cancel = stringResource(R.string.common_cancel),
+                        onCancel = onDismiss,
+                        confirm = stringResource(if (n == 1) R.string.settings_resize_save_copy else R.string.settings_resize_save_copies),
+                        onConfirm = { onSave(target, format, quality) },
+                        height = 50.dp,
+                    )
                 }
             }
         }

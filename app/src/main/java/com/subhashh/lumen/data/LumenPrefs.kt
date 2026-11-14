@@ -6,6 +6,7 @@ import com.subhashh.lumen.ui.library.SectionMode
 import android.content.Context
 import androidx.core.content.edit
 import com.subhashh.lumen.ui.theme.Appearance
+import com.subhashh.lumen.ui.theme.DesignStyle
 
 /**
  * Settings → Photos → Ultra HDR. Match Brightness lets highlights glow within what the screen
@@ -142,6 +143,18 @@ class LumenPrefs(context: Context) {
     var slideshowRepeat: Boolean
         get() = prefs.getBoolean(KeySlideRepeat, false)
         set(value) = prefs.edit { putBoolean(KeySlideRepeat, value) }
+
+    /** Settings → Appearance → Style: Lumen's own look, or Material 3 Expressive. */
+    var designStyle: DesignStyle
+        get() = prefs.getString(KeyDesignStyle, null)
+            ?.let { name -> DesignStyle.entries.firstOrNull { it.name == name } }
+            ?: DesignStyle.Lumen
+        set(value) = prefs.edit { putString(KeyDesignStyle, value.name) }
+
+    /** Material 3 Expressive takes its colours from the wallpaper (Android 12+). */
+    var dynamicColor: Boolean
+        get() = prefs.getBoolean(KeyDynamicColor, true)
+        set(value) = prefs.edit { putBoolean(KeyDynamicColor, value) }
 
     /** Settings → Appearance → Liquid Glass: glass that bends what's behind it. */
     var liquidGlass: Boolean
@@ -396,6 +409,8 @@ class LumenPrefs(context: Context) {
         const val KeyCovers = "album_covers"
         const val KeyCreated = "created_albums"
         const val KeyAppearance = "appearance"
+        const val KeyDesignStyle = "design_style"
+        const val KeyDynamicColor = "dynamic_color"
         const val KeyLiquidGlass = "liquid_glass"
         const val KeyReduceBlur = "reduce_blur"
         const val KeyExcluded = "excluded_folders"
