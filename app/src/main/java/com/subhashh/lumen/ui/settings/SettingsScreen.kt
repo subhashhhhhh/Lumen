@@ -910,7 +910,7 @@ private fun ColumnScope.AboutPage(
                             )
                         }
                     },
-                    icon = LumenIcons.LiveText,
+                    icon = LumenIcons.Globe,
                     iconColor = Blue,
                 )
             }
@@ -920,7 +920,7 @@ private fun ColumnScope.AboutPage(
             SettingsRow(
                 title = stringResource(R.string.settings_translate),
                 onClick = { open(TranslateUrl) },
-                icon = LumenIcons.Edit,
+                icon = LumenIcons.Translate,
                 iconColor = Green,
             )
         }
