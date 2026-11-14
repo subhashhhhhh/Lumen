@@ -23,7 +23,7 @@ object HiddenMedia {
 
     private val Types = mapOf(
         "jpg" to "image/jpeg", "jpeg" to "image/jpeg", "png" to "image/png", "webp" to "image/webp",
-        "gif" to "image/gif", "heic" to "image/heic", "heif" to "image/heif", "avif" to "image/avif",
+        "gif" to "image/gif", "heic" to "image/heic", "heif" to "image/heif", "avif" to "image/avif", "jxl" to "image/jxl",
         "mp4" to "video/mp4", "mkv" to "video/x-matroska", "webm" to "video/webm",
         "3gp" to "video/3gpp", "mov" to "video/quicktime",
         "dng" to "image/x-adobe-dng", "cr2" to "image/x-canon-cr2", "cr3" to "image/x-canon-cr3",

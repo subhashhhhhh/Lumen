@@ -196,6 +196,8 @@ dependencies {
     implementation(libs.coil.svg)
     implementation(libs.coil.gif)
     implementation(libs.avif.coder.coil)
+    // JPEG XL, which no Android version decodes itself (bundled libjxl).
+    implementation(libs.jxl.coder.coil)
 
     // Zoomable, subsampled photos — saket/telephoto, Apache 2.0.
     implementation(libs.telephoto.zoomable.image.coil3)

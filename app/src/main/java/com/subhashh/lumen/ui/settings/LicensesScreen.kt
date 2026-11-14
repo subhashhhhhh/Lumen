@@ -42,6 +42,13 @@ private val Credits = listOf(
         "https://github.com/awxkee/avif-coder",
     ),
     Credit(
+        "jxl-coder (with libjxl and Brotli)",
+        "Radzivon Bartoshyk",
+        "Apache 2.0 · BSD · MIT",
+        R.string.licenses_used_jxl,
+        "https://github.com/awxkee/jxl-coder",
+    ),
+    Credit(
         "Jetpack Compose, Media3, AndroidX",
         "The Android Open Source Project",
         "Apache 2.0",
