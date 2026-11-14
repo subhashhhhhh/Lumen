@@ -530,6 +530,8 @@
     <string name="settings_kw_software_update">update upgrade new version download install</string>
     <string name="settings_kw_auto_update">update automatic daily</string>
     <string name="settings_kw_github">source code repository open source project</string>
+    <string name="settings_kw_language">locale translation english french spanish</string>
+    <string name="settings_kw_translate">translation language weblate contribute</string>
     <string name="settings_kw_report_bug">issue problem feedback crash github</string>
     <string name="settings_kw_version">about app version</string>
 
@@ -632,6 +634,10 @@
     <string name="settings_open_source_footer">Lumen is free and open source. Bugs and ideas are welcome on GitHub.</string>
     <string name="settings_github" translatable="false">GitHub</string>
     <string name="settings_report_bug">Report a Bug</string>
+    <string name="settings_group_language">Language</string>
+    <string name="settings_language_footer">Lumen is translated by volunteers on Weblate. Anyone can add or fix a translation.</string>
+    <string name="settings_language">Language</string>
+    <string name="settings_translate">Help Translate Lumen</string>
     <string name="settings_licenses">Open-Source Licenses</string>
     <string name="settings_version">Version</string>
     <string name="settings_chip">Chip</string>
