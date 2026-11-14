@@ -3,7 +3,11 @@ package com.subhashh.lumen.data
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
 import android.media.MediaDataSource
+import com.awxkee.jxlcoder.JxlCoder
+import com.awxkee.jxlcoder.PreferredColorConfig
+import com.awxkee.jxlcoder.ScaleMode
 import com.subhashh.lumen.MainActivity
 import com.subhashh.lumen.R
 import com.subhashh.lumen.ai.AiNotifications
@@ -37,6 +41,23 @@ class AiHost(context: Context) : LumenAiHost {
         }
     }
 
+    /** JPEG XL photos, which Android can't decode: read with the bundled decoder, so they're searchable too. */
+    override fun photo(context: Context, item: MediaRef, maxSide: Int): Bitmap? {
+        if (item.mimeType != JxlType || item.uri.scheme != "content") return null
+        val bytes = context.contentResolver.openInputStream(item.uri)?.use { it.readBytes() } ?: return null
+        val size = JxlCoder.getSize(bytes) ?: return null
+        val long = maxOf(size.width, size.height)
+        if (long <= maxSide) return JxlCoder.decode(bytes, PreferredColorConfig.RGBA_8888)
+        val scale = maxSide.toFloat() / long
+        return JxlCoder.decodeSampled(
+            bytes,
+            maxOf(1, (size.width * scale).toInt()),
+            maxOf(1, (size.height * scale).toInt()),
+            PreferredColorConfig.RGBA_8888,
+            ScaleMode.FIT,
+        )
+    }
+
     override val settings = object : AiSettings {
         override val searchModelId get() = prefs.searchModel
         override val faceModelId get() = prefs.faceModel
@@ -54,6 +75,8 @@ class AiHost(context: Context) : LumenAiHost {
     }
 }
 
+private const val JxlType = "image/jxl"
+
 fun MediaItem.toRef() = MediaRef(
     id = id,
     uri = uri,
@@ -61,7 +84,9 @@ fun MediaItem.toRef() = MediaRef(
     isVideo = isVideo,
     takenAt = takenAt,
     durationMs = durationMs,
-    modified = modified,
+    // JPEG XL files indexed before Lumen could decode them were recorded as unreadable. A version
+    // of its own (the indexes are keyed by it) has them read once more.
+    modified = if (mimeType == JxlType) modified + 1 else modified,
     name = name,
 )
 
