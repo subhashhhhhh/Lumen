@@ -65,6 +65,20 @@ class TranslationsTest {
         assertTrue("translated but no longer in English: $stray", stray.isEmpty())
     }
 
+    /**
+     * Android's per-app language list (Settings → About → Language) is generated from every
+     * values-xx folder (generateLocaleConfig). A folder with nothing translated in it offers a
+     * language that, once picked, shows Lumen all in English.
+     */
+    @Test
+    fun everyLanguageOfferedHasSomethingTranslated() {
+        val folders = res.listFiles()!!
+            .filter { it.isDirectory && Regex("""values-[a-z]{2,3}(-r[A-Z]{2})?""").matches(it.name) }
+            .map { it.name.removePrefix("values-") }
+        val empty = folders.filter { translations[it].isNullOrEmpty() }
+        assertTrue("offered in the language list but nothing translated: $empty", empty.isEmpty())
+    }
+
     @Test
     fun namesAndBrandsStayUntranslated() {
         val fixed = Regex("""name="([^"]+)"[^>]*translatable="false"""")
