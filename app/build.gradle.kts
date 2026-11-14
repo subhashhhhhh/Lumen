@@ -203,6 +203,8 @@ dependencies {
     implementation(libs.telephoto.zoomable.image.coil3)
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.ui.compose)
+    // Exports from the video editor: trim, mute and turn, re-encoding only when it has to.
+    implementation(libs.media3.transformer)
 
     // Liquid glass — Kyant0/backdrop, Apache 2.0.
     implementation(libs.backdrop)

@@ -876,6 +876,10 @@
     <string name="editor_saved_copy">Saved as a new photo</string>
     <string name="editor_save_failed">Couldn\'t save</string>
     <string name="editor_open_failed">Couldn\'t open this photo for editing</string>
+    <string name="editor_saved_video">Saved as a new video</string>
+    <string name="editor_clip_range">%1$s – %2$s  ·  %3$s</string>
+    <string name="editor_sound_on">Sound On</string>
+    <string name="editor_sound_off">Sound Off</string>
     <string name="editor_discard">Discard Changes</string>
     <string name="editor_keep_editing">Keep Editing</string>
     <string name="licenses_used_jxl">JPEG XL photos</string>

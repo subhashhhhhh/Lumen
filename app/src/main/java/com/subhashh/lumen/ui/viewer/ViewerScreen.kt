@@ -120,6 +120,7 @@ import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.subhashh.lumen.data.MediaActions
 import com.subhashh.lumen.data.MediaItem
 import com.subhashh.lumen.data.edit.PhotoEditSaver
+import com.subhashh.lumen.data.edit.VideoEditSaver
 import com.subhashh.lumen.ui.components.GlassIconButton
 import com.subhashh.lumen.ui.components.glass
 import com.subhashh.lumen.ui.theme.LocalGlassColors
@@ -745,7 +746,7 @@ fun ViewerScreen(
                                     contentDescription = stringResource(R.string.common_details),
                                     onClick = motion::openInfo,
                                 )
-                                if (onEdit != null && PhotoEditSaver.canEdit(current)) {
+                                if (onEdit != null && (PhotoEditSaver.canEdit(current) || VideoEditSaver.canEdit(current))) {
                                     GlassIconButton(
                                         backdrop = backdrop,
                                         icon = LumenIcons.Adjust,
