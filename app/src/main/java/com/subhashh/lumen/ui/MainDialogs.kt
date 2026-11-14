@@ -33,6 +33,8 @@ import com.subhashh.lumen.ui.settings.SettingsCategory
 import com.subhashh.lumen.ui.settings.UpdateSession
 import com.subhashh.lumen.ui.transition.CoverTransition
 import com.subhashh.lumen.ui.transition.CoverTransitionOverlay
+import com.subhashh.lumen.ui.editor.PhotoEditorScreen
+import com.subhashh.lumen.ui.editor.VideoEditorScreen
 import com.subhashh.lumen.ui.viewer.WallpaperScreen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -313,6 +315,18 @@ internal fun BoxScope.MainDialogs(
                 },
                 onCancel = { wallpaperItem = null },
             )
+        }
+
+        editItem?.let { item ->
+            val done = { message: String ->
+                editItem = null
+                finish(message)
+            }
+            if (item.isVideo) {
+                VideoEditorScreen(item, onDone = done, onCancel = { editItem = null })
+            } else {
+                PhotoEditorScreen(item, withWriteAccess = withWriteAccess, onDone = done, onCancel = { editItem = null })
+            }
         }
 
         ResizeSheet(resizeRequest, onClose = { resizeRequest = null }, toast = toast, finish = { finish(it) })

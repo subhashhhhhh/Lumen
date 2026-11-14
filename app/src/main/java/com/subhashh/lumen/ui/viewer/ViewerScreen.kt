@@ -119,6 +119,8 @@ import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.subhashh.lumen.data.MediaActions
 import com.subhashh.lumen.data.MediaItem
+import com.subhashh.lumen.data.edit.PhotoEditSaver
+import com.subhashh.lumen.data.edit.VideoEditSaver
 import com.subhashh.lumen.ui.components.GlassIconButton
 import com.subhashh.lumen.ui.components.glass
 import com.subhashh.lumen.ui.theme.LocalGlassColors
@@ -177,6 +179,8 @@ fun ViewerScreen(
     notPerson: Pair<String, (MediaItem) -> Unit>? = null,
     onAdjustDate: (MediaItem) -> Unit = {},
     onSetWallpaper: (MediaItem) -> Unit = {},
+    /** Opens the editor. Null where there is none (photos opened from another app). */
+    onEdit: ((MediaItem) -> Unit)? = null,
     onResize: (MediaItem) -> Unit = {},
     /** Developer Options → Photo Reminders: ⋯ offers Remind Me of This…; null hides it. */
     onRemind: ((MediaItem) -> Unit)? = null,
@@ -742,6 +746,18 @@ fun ViewerScreen(
                                     contentDescription = stringResource(R.string.common_details),
                                     onClick = motion::openInfo,
                                 )
+                                if (onEdit != null && (PhotoEditSaver.canEdit(current) || VideoEditSaver.canEdit(current))) {
+                                    GlassIconButton(
+                                        backdrop = backdrop,
+                                        icon = LumenIcons.Adjust,
+                                        contentDescription = stringResource(R.string.editor_edit),
+                                        onClick = {
+                                            // The editor has its own player; two would talk over each other.
+                                            player?.pause()
+                                            onEdit(current)
+                                        },
+                                    )
+                                }
                                 GlassIconButton(
                                     backdrop = backdrop,
                                     icon = LumenIcons.Delete,

@@ -149,19 +149,30 @@ object ImageExport {
                 if (source != null) {
                     for (tag in CopiedTags) source.getAttribute(tag)?.let { exif.setAttribute(tag, it) }
                 }
-                if (exif.getAttribute(ExifInterface.TAG_DATETIME_ORIGINAL) == null) {
-                    exif.setAttribute(
-                        ExifInterface.TAG_DATETIME_ORIGINAL,
-                        SimpleDateFormat("yyyy:MM:dd HH:mm:ss", Locale.US).format(Date(item.takenAt)),
-                    )
-                }
+                stampDate(exif, item.takenAt)
                 exif.setAttribute(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL.toString())
                 exif.saveAttributes()
             }
         }
     }
 
-    private val CopiedTags = listOf(
+    /**
+     * Dates [exif] to [takenAt], unless it already says when and in which time zone. The zone
+     * matters: given a date without one, MediaStore guesses it from the file's modified time, and
+     * a copy made later than its photo lands minutes or hours away from it in the library.
+     */
+    internal fun stampDate(exif: ExifInterface, takenAt: Long) {
+        if (exif.getAttribute(ExifInterface.TAG_DATETIME_ORIGINAL) != null &&
+            exif.getAttribute(ExifInterface.TAG_OFFSET_TIME_ORIGINAL) != null
+        ) return
+        val date = Date(takenAt)
+        exif.setAttribute(ExifInterface.TAG_DATETIME_ORIGINAL, SimpleDateFormat("yyyy:MM:dd HH:mm:ss", Locale.US).format(date))
+        // "+05:30"; the pattern writes UTC as "Z", which EXIF doesn't have.
+        val offset = SimpleDateFormat("XXX", Locale.US).format(date)
+        exif.setAttribute(ExifInterface.TAG_OFFSET_TIME_ORIGINAL, if (offset == "Z") "+00:00" else offset)
+    }
+
+    internal val CopiedTags = listOf(
         ExifInterface.TAG_DATETIME_ORIGINAL, ExifInterface.TAG_DATETIME_DIGITIZED, ExifInterface.TAG_DATETIME,
         ExifInterface.TAG_OFFSET_TIME_ORIGINAL, ExifInterface.TAG_OFFSET_TIME,
         ExifInterface.TAG_MAKE, ExifInterface.TAG_MODEL, ExifInterface.TAG_LENS_MODEL,

@@ -132,6 +132,8 @@ internal class MainState(
     var resizeRequest by mutableStateOf<List<MediaItem>?>(null)
     /** The photo being framed in Set as Wallpaper. */
     var wallpaperItem by mutableStateOf<MediaItem?>(null)
+    /** The photo or video open in the editor, over the viewer. */
+    var editItem by mutableStateOf<MediaItem?>(null)
     /** Items waiting for a new date from Adjust Date & Time. */
     var dateRequest by mutableStateOf<List<MediaItem>?>(null)
     /** Items waiting for Remind Me of This… (Developer Options → Photo Reminders). */
