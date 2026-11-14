@@ -79,6 +79,8 @@ ICONS = [
     ("Filters", "photo_filter", False),
     ("Palette", "palette", False),
     ("Sort", "sort", False),
+    ("Globe", "language", False),
+    ("Translate", "translate", False),
 ]
 
 args = [a for a in sys.argv[1:] if a != "--fetch"]

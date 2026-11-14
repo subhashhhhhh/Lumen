@@ -163,6 +163,8 @@ private val Entries = listOf(
     SettingEntry("software-update", R.string.settings_software_update, SettingsCategory.About, R.string.settings_kw_software_update),
     SettingEntry("auto-update", R.string.settings_entry_auto_update, SettingsCategory.About, R.string.settings_kw_auto_update),
     SettingEntry("github", R.string.settings_github, SettingsCategory.About, R.string.settings_kw_github),
+    SettingEntry("language", R.string.settings_language, SettingsCategory.About, R.string.settings_kw_language),
+    SettingEntry("translate", R.string.settings_translate, SettingsCategory.About, R.string.settings_kw_translate),
     SettingEntry("report-bug", R.string.settings_report_bug, SettingsCategory.About, R.string.settings_kw_report_bug),
     SettingEntry("version", R.string.settings_version, SettingsCategory.About, R.string.settings_kw_version),
 )
@@ -949,6 +951,36 @@ private fun ColumnScope.AboutPage(
             )
         }
     }
+    Group(stringResource(R.string.settings_group_language), footer = stringResource(R.string.settings_language_footer)) {
+        // Android's own per-app language screen, from Android 13; before it Lumen follows the phone.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            Anchor("language", highlight) {
+                SettingsRow(
+                    title = stringResource(R.string.settings_language),
+                    value = java.util.Locale.getDefault().let { it.getDisplayLanguage(it).replaceFirstChar(Char::titlecase) },
+                    onClick = {
+                        runCatching {
+                            context.startActivity(
+                                Intent(Settings.ACTION_APP_LOCALE_SETTINGS, android.net.Uri.fromParts("package", context.packageName, null))
+                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                            )
+                        }
+                    },
+                    icon = LumenIcons.Globe,
+                    iconColor = Blue,
+                )
+            }
+            Divider()
+        }
+        Anchor("translate", highlight) {
+            SettingsRow(
+                title = stringResource(R.string.settings_translate),
+                onClick = { open(TranslateUrl) },
+                icon = LumenIcons.Translate,
+                iconColor = Green,
+            )
+        }
+    }
     Group("Lumen") {
         Anchor("licenses", highlight) {
             SettingsRow(
@@ -1028,6 +1060,7 @@ private fun AboutHeader(version: String, onDeveloper: () -> Unit) {
 
 private const val DeveloperUrl = "https://github.com/subhashhhhhh"
 private const val RepoUrl = "https://github.com/subhashhhhhh/Lumen"
+private const val TranslateUrl = "https://hosted.weblate.org/engage/lumen/"
 
 @Composable
 private fun ColumnScope.DeveloperPage(prefs: LumenPrefs, highlight: String?, onConfirm: (Confirmation) -> Unit) {
