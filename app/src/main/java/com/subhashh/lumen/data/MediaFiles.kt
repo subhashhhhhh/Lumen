@@ -338,6 +338,11 @@ object MediaFiles {
         return candidate
     }
 
+    /** Has MediaStore read [item]'s file again, after its contents changed (an edit saved over it). */
+    suspend fun rescan(context: Context, item: MediaItem) {
+        filePath(context, item)?.let { scan(context, File(it)) }
+    }
+
     /** Re-indexes [files]; scanning a path that no longer exists removes its stale entry. */
     private suspend fun scan(context: Context, vararg files: File) = suspendCancellableCoroutine { cont ->
         var remaining = files.size

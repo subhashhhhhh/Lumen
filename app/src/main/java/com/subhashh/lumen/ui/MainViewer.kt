@@ -174,6 +174,7 @@ internal fun BoxScope.MainViewer(
                 onExcludeFolder = { excludeFolders(listOf(it)) },
                 onAdjustDate = { dateRequest = listOf(it) },
                 onSetWallpaper = { wallpaperItem = it },
+                onEdit = { editItem = it },
                 onResize = { resizeRequest = listOf(it) },
                 onRemind = if (PhotoReminders.enabled(context)) { item -> remindRequest = listOf(item) } else null,
                 // Inside a folder album: make this photo its cover, like iOS's Make Key Photo.
