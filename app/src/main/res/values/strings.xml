@@ -843,6 +843,7 @@
     <string name="licenses_used_liquid_glass_easy">The motion of the glass selection pill in the tab bar</string>
     <string name="licenses_used_telephoto">Zooming and tiled loading of large photos</string>
     <string name="licenses_used_coil">Image loading</string>
+    <string name="licenses_used_jxl">JPEG XL photos</string>
     <string name="licenses_used_avif">AVIF photos, on phones whose own decoder can\'t show them</string>
     <string name="licenses_used_androidx">UI, video playback, EXIF and the rest of the platform pieces</string>
     <string name="licenses_used_kotlin">The language and its async library</string>

@@ -11,6 +11,7 @@ import coil3.gif.AnimatedImageDecoder
 import coil3.request.Options
 import com.github.awxkee.avifcoil.decoder.HeifDecoder
 import com.github.awxkee.avifcoil.decoder.animation.AnimatedAvifDecoder
+import com.awxkee.jxlcoder.coil.JxlDecoder
 import coil3.svg.SvgDecoder
 import coil3.video.VideoFrameDecoder
 import com.subhashh.lumen.data.GridThumbnailFetcher
@@ -62,6 +63,9 @@ class LumenApplication : Application(), SingletonImageLoader.Factory {
                 // every AVIF comes out blank. HEIC stays on the platform decoder, which works.
                 add(AvifOnly(AnimatedAvifDecoder.Factory()))
                 add(AvifOnly(HeifDecoder.Factory()))
+                // JPEG XL: Android has no decoder for it. Picks its files by their first bytes, so
+                // it works whatever type the phone gave them. Animated ones show their first frame.
+                add(JxlDecoder.Factory())
                 add(SvgDecoder.Factory())
                 // Animated GIF, WebP, AVIF and HEIF play in the viewer. Grid cells stay still:
                 // they come from GridThumbnail's cached stills, not through this decoder.

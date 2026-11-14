@@ -52,7 +52,7 @@ class GridThumbnailFetcher(
                 return@withContext ImageFetchResult(cached.asImage(), isSampled = true, dataSource = DataSource.DISK)
             }
         }
-        val bitmap = if (data.item.mimeType == "image/avif" || com.subhashh.lumen.data.vault.Vault.isVault(data.item)) {
+        val bitmap = if (data.item.mimeType in BundledDecoderTypes || com.subhashh.lumen.data.vault.Vault.isVault(data.item)) {
             decodeWithLoader(data.item, data.sizePx)
         } else {
             create(options.context, data.item, data.sizePx)
@@ -62,8 +62,9 @@ class GridThumbnailFetcher(
     }
 
     /**
-     * AVIF goes through Coil's own pipeline, where Lumen's bundled AVIF decoder lives; the
-     * phone's decoder (used by ImageDecoder and Android's thumbnails) fails on some devices.
+     * AVIF and JPEG XL go through Coil's own pipeline, where Lumen's bundled decoders live: the
+     * phone's AVIF decoder (used by ImageDecoder and Android's thumbnails) fails on some devices,
+     * and no phone has a JPEG XL one.
      */
     private suspend fun decodeWithLoader(item: MediaItem, sizePx: Int): Bitmap {
         val result = imageLoader.execute(
@@ -104,6 +105,7 @@ class GridThumbnailFetcher(
 
     private companion object {
         const val JpegQuality = 85
+        val BundledDecoderTypes = setOf("image/avif", "image/jxl")
         const val MaxCacheBytes = 384L * 1024 * 1024
 
         /** Makes the thumbnail: Android's thumbnail cache where it's sharp enough, else the original. */

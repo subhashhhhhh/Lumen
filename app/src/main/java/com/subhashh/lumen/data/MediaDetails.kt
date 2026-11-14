@@ -249,6 +249,14 @@ object MediaDetailsLoader {
                 }
             }
         }
+        if (item.mimeType == "image/jxl" && (width <= 0 || height <= 0)) {
+            // Android can't read a JPEG XL's size, so MediaStore has none: the bundled decoder can.
+            runCatching {
+                resolver.openInputStream(item.uri)?.use { it.readBytes() }
+                    ?.let(com.awxkee.jxlcoder.JxlCoder::getSize)
+                    ?.let { width = it.width; height = it.height }
+            }
+        }
         val hdr = if (item.isVideo) null else UltraHdr.fullHdrRatio(context, item)?.let { "Ultra HDR" }
 
         MediaDetails(
