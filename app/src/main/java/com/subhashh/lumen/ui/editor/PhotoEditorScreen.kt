@@ -476,6 +476,7 @@ private fun FilterPanel(bitmap: Bitmap, edit: PhotoEdit, onEdit: (PhotoEdit) -> 
             ) {
                 val look = remember(edit, filter) { edit.copy(filter = filter) }
                 val paint = remember(look.adjustments, filter) { PhotoEditRenderer.paint(look) }
+                val accent = EditorAccent
                 Canvas(
                     Modifier
                         .size(68.dp)
@@ -494,7 +495,7 @@ private fun FilterPanel(bitmap: Bitmap, edit: PhotoEdit, onEdit: (PhotoEdit) -> 
                         crop.bottom - crop.height * (1f - side / height) / 2f,
                     )
                     drawIntoCanvas { PhotoEditRenderer.draw(it.nativeCanvas, source, look, square, size.width, size.height, paint, finished = false) }
-                    if (selected) drawRoundRect(EditorAccent, style = Stroke(3.dp.toPx()), cornerRadius = androidx.compose.ui.geometry.CornerRadius(10.dp.toPx()))
+                    if (selected) drawRoundRect(accent, style = Stroke(3.dp.toPx()), cornerRadius = androidx.compose.ui.geometry.CornerRadius(10.dp.toPx()))
                 }
                 Text(
                     stringResource(filterLabel(filter)),

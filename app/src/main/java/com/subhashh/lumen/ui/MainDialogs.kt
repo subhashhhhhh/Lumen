@@ -307,14 +307,14 @@ internal fun BoxScope.MainDialogs(
         )
 
         wallpaperItem?.let { item ->
-            WallpaperScreen(
+            com.subhashh.lumen.ui.theme.AlwaysDark { WallpaperScreen(
                 item = item,
                 onDone = { message ->
                     wallpaperItem = null
                     toast(message)
                 },
                 onCancel = { wallpaperItem = null },
-            )
+            ) }
         }
 
         editItem?.let { item ->
@@ -323,9 +323,9 @@ internal fun BoxScope.MainDialogs(
                 finish(message)
             }
             if (item.isVideo) {
-                VideoEditorScreen(item, onDone = done, onCancel = { editItem = null })
+                com.subhashh.lumen.ui.theme.AlwaysDark { VideoEditorScreen(item, onDone = done, onCancel = { editItem = null }) }
             } else {
-                PhotoEditorScreen(item, withWriteAccess = withWriteAccess, onDone = done, onCancel = { editItem = null })
+                com.subhashh.lumen.ui.theme.AlwaysDark { PhotoEditorScreen(item, withWriteAccess = withWriteAccess, onDone = done, onCancel = { editItem = null }) }
             }
         }
 

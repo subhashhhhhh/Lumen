@@ -1,6 +1,7 @@
 package com.subhashh.lumen.ui.viewer
 
 import com.subhashh.lumen.R
+import androidx.compose.foundation.shape.CircleShape
 import com.subhashh.lumen.ui.theme.Lumen
 import com.subhashh.lumen.data.toRef
 import androidx.compose.ui.res.stringResource
@@ -664,9 +665,23 @@ fun ViewerScreen(
                             playingBeforeRequest = player?.isPlaying == true
                             requestLauncher.launch(IntentSenderRequest.Builder(sender).build())
                         }
+                        // Material 3 Expressive: one floating toolbar of plain icon buttons, not a row of circles.
+                        val material = Lumen.material
+                        @Composable
+                        fun GlassIconButton(
+                            backdrop: Backdrop,
+                            icon: androidx.compose.ui.graphics.vector.ImageVector,
+                            contentDescription: String,
+                            onClick: () -> Unit,
+                            tint: Color = LocalGlassColors.current.content,
+                        ) {
+                            if (material) com.subhashh.lumen.ui.components.BareIconButton(icon, contentDescription, onClick, tint = tint)
+                            else com.subhashh.lumen.ui.components.GlassIconButton(backdrop, icon, contentDescription, onClick, tint = tint)
+                        }
                         Row(
-                            Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
+                            if (material) Modifier.fillMaxWidth().glass(backdrop, CircleShape).padding(horizontal = 8.dp, vertical = 8.dp)
+                            else Modifier.fillMaxWidth(),
+                            horizontalArrangement = if (material) Arrangement.SpaceEvenly else Arrangement.SpaceBetween,
                         ) {
                             if (external) {
                                 GlassIconButton(
@@ -704,7 +719,7 @@ fun ViewerScreen(
                                     backdrop = backdrop,
                                     icon = LumenIcons.DeleteForever,
                                     contentDescription = stringResource(R.string.viewer_delete_permanently),
-                                    tint = Color(0xFFFF453A),
+                                    tint = Lumen.colors.destructive,
                                     onClick = { onDeleteHidden(current) },
                                 )
                             } else if (inTrash) {
@@ -718,7 +733,7 @@ fun ViewerScreen(
                                     backdrop = backdrop,
                                     icon = LumenIcons.DeleteForever,
                                     contentDescription = stringResource(R.string.viewer_delete_forever),
-                                    tint = Color(0xFFFF453A),
+                                    tint = Lumen.colors.destructive,
                                     onClick = { onConfirmDelete(current, true) { launch(MediaActions.deleteForeverRequest(context, current)) } },
                                 )
                             } else {
@@ -732,7 +747,7 @@ fun ViewerScreen(
                                     backdrop = backdrop,
                                     icon = if (current.isFavorite) LumenIcons.HeartFilled else LumenIcons.Heart,
                                     contentDescription = stringResource(R.string.common_favorite),
-                                    tint = if (current.isFavorite) Color(0xFFFF375F) else LocalGlassColors.current.content,
+                                    tint = if (current.isFavorite) Lumen.colors.favorite else LocalGlassColors.current.content,
                                     onClick = {
                                         haptics.performHapticFeedback(
                                             if (current.isFavorite) HapticFeedbackType.ToggleOff else HapticFeedbackType.ToggleOn,
@@ -1075,7 +1090,7 @@ private fun VideoControls(backdrop: Backdrop, player: Player) {
             tint = colors.content,
             modifier = Modifier
                 .size(44.dp)
-                .pressable(playPause::onClick, pressedScale = 0.8f)
+                .pressable(playPause::onClick, pressedScale = 0.8f, shape = CircleShape)
                 .padding(10.dp),
         )
         Text(formatClock(position), color = colors.content, fontSize = 12.sp)
@@ -1095,7 +1110,7 @@ private fun VideoControls(backdrop: Backdrop, player: Player) {
                 player.seekTo(position)
                 scrubbing = false
             },
-            color = colors.content,
+            color = if (Lumen.material) MaterialTheme.colorScheme.primary else colors.content,
             trackColor = colors.contentSecondary.copy(alpha = 0.3f),
             modifier = Modifier
                 .weight(1f)
@@ -1142,7 +1157,7 @@ private fun CaptionsButton(backdrop: Backdrop, on: Boolean, onClick: () -> Unit)
     Box(
         Modifier
             .size(44.dp)
-            .pressable(onClick, pressedScale = 0.85f)
+            .pressable(onClick, pressedScale = 0.85f, shape = CircleShape)
             .glass(backdrop, shape = RoundedCornerShape(50)),
         contentAlignment = Alignment.Center,
     ) {

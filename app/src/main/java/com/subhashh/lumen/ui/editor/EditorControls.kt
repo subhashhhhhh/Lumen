@@ -1,6 +1,12 @@
 package com.subhashh.lumen.ui.editor
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.material3.MaterialTheme
 import com.subhashh.lumen.ui.components.Spinner
 import com.subhashh.lumen.ui.theme.Lumen
 import androidx.compose.animation.core.tween
@@ -51,8 +57,18 @@ import com.subhashh.lumen.ui.components.pressable
 import kotlin.math.abs
 
 /** The editors' accent: the same blue as the rest of Lumen, in its dark-theme shade (they're always dark). */
-internal val EditorAccent = Color(0xFF0A84FF)
-internal val EditorPanel = Color(0xE61C1C1E)
+internal val EditorAccent: Color
+    @Composable @ReadOnlyComposable get() = if (Lumen.material) MaterialTheme.colorScheme.primary else Color(0xFF0A84FF)
+
+/** What the editors' round buttons and chips sit on. */
+internal val EditorPanel: Color
+    @Composable @ReadOnlyComposable get() = if (Lumen.material) MaterialTheme.colorScheme.surfaceContainerHigh else Color(0xE61C1C1E)
+
+/** A chosen chip's or lit button's fill, and what's drawn on it: white and black, or Material's primary pair. */
+private val EditorChosen: Color
+    @Composable @ReadOnlyComposable get() = if (Lumen.material) MaterialTheme.colorScheme.primary else Color.White
+private val EditorOnChosen: Color
+    @Composable @ReadOnlyComposable get() = if (Lumen.material) MaterialTheme.colorScheme.onPrimary else Color.Black
 
 /** Cancel on the left, Save on the right, and Reset between them once something has changed. */
 @Composable
@@ -108,13 +124,13 @@ internal fun EditorIconButton(
 ) {
     Box(
         modifier
-            .size(44.dp)
-            .pressable(onClick)
+            .size(if (Lumen.material) 48.dp else 44.dp)
+            .pressable(onClick, shape = CircleShape)
             .clip(CircleShape)
-            .background(if (active) Color.White else EditorPanel),
+            .background(if (active) EditorChosen else EditorPanel),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(icon, contentDescription, tint = if (active) Color.Black else Color.White, modifier = Modifier.size(22.dp))
+        Icon(icon, contentDescription, tint = if (active) EditorOnChosen else Color.White, modifier = Modifier.size(22.dp))
     }
 }
 
@@ -123,16 +139,16 @@ internal fun EditorIconButton(
 internal fun EditorChip(label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier, detail: String? = null) {
     Row(
         modifier
-            .pressable(onClick, pressedScale = 0.94f)
+            .pressable(onClick, pressedScale = 0.94f, shape = RoundedCornerShape(50))
             .clip(RoundedCornerShape(50))
-            .background(if (selected) Color.White else EditorPanel)
-            .padding(horizontal = 14.dp, vertical = 8.dp),
+            .background(if (selected) EditorChosen else EditorPanel)
+            .padding(horizontal = if (Lumen.material) 16.dp else 14.dp, vertical = if (Lumen.material) 10.dp else 8.dp),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(label, color = if (selected) Color.Black else Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+        Text(label, color = if (selected) EditorOnChosen else Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
         if (detail != null) {
-            Text(detail, color = if (selected) Color.Black.copy(alpha = 0.55f) else EditorAccent, fontSize = 14.sp)
+            Text(detail, color = if (selected) EditorOnChosen.copy(alpha = 0.55f) else EditorAccent, fontSize = 14.sp)
         }
     }
 }
@@ -148,8 +164,26 @@ internal fun <T> EditorTabs(
     modifier: Modifier = Modifier,
 ) {
     Row(modifier.fillMaxWidth().padding(top = 4.dp, bottom = 8.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
+        val material = Lumen.material
         for (tab in tabs) {
-            val tint = if (tab == selected) EditorAccent else Color.White.copy(alpha = 0.7f)
+            val chosen = tab == selected
+            if (material) {
+                // A navigation bar item: the chosen tab's icon sits on a tonal pill.
+                val scheme = MaterialTheme.colorScheme
+                val pill by animateColorAsState(if (chosen) scheme.secondaryContainer else scheme.secondaryContainer.copy(alpha = 0f), label = "editorTabPill")
+                Column(
+                    Modifier.pressable({ onSelect(tab) }).padding(horizontal = 8.dp, vertical = 6.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Box(Modifier.size(width = 64.dp, height = 32.dp).clip(CircleShape).background(pill), contentAlignment = Alignment.Center) {
+                        Icon(icon(tab), null, tint = if (chosen) scheme.onSecondaryContainer else scheme.onSurfaceVariant, modifier = Modifier.size(24.dp))
+                    }
+                    Text(label(tab), color = if (chosen) scheme.onSurface else scheme.onSurfaceVariant, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                }
+                continue
+            }
+            val tint = if (chosen) EditorAccent else Color.White.copy(alpha = 0.7f)
             Column(
                 Modifier.pressable({ onSelect(tab) }, pressedScale = 0.92f).padding(horizontal = 20.dp, vertical = 6.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -177,10 +211,14 @@ internal fun EditorSlider(
     zero: Float = 0f,
 ) {
     val current by rememberUpdatedState(onValueChange)
+    val material = Lumen.material
+    val scheme = MaterialTheme.colorScheme
     Canvas(
         modifier
             .fillMaxWidth()
-            .height(40.dp)
+            .height(if (material) 44.dp else 40.dp)
+            // Material's track has a gap cut out around the handle: that needs its own layer.
+            .then(if (material) Modifier.graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen } else Modifier)
             .pointerInput(min, max, zero) {
                 val inset = ThumbRadius.toPx()
                 fun set(x: Float) {
@@ -201,6 +239,23 @@ internal fun EditorSlider(
         val inset = ThumbRadius.toPx()
         val y = size.height / 2f
         fun x(v: Float) = inset + (v - min) / (max - min) * (size.width - 2 * inset)
+        if (material) {
+            // Material's slider: a thick track, lit between "unchanged" and the handle, and a
+            // tall bar for a handle with a little clear space either side of it.
+            val track = 16.dp.toPx()
+            val gap = 6.dp.toPx()
+            val handle = x(value)
+            val from = minOf(x(zero), handle)
+            val to = maxOf(x(zero), handle)
+            clipRect(left = inset, right = size.width - inset) {
+                drawLine(scheme.secondaryContainer, Offset(inset, y), Offset(size.width - inset, y), track, StrokeCap.Round)
+                if (to - from > 1f) drawLine(scheme.primary, Offset(from, y), Offset(to, y), track, StrokeCap.Butt)
+                // The clear space around the handle.
+                drawLine(Color.Black, Offset(handle - gap, y), Offset(handle + gap, y), track + 2f, StrokeCap.Butt, blendMode = androidx.compose.ui.graphics.BlendMode.Clear)
+            }
+            drawLine(scheme.primary, Offset(handle, y - 18.dp.toPx()), Offset(handle, y + 18.dp.toPx()), 4.dp.toPx(), StrokeCap.Round)
+            return@Canvas
+        }
         drawLine(Color.White.copy(alpha = 0.25f), Offset(inset, y), Offset(size.width - inset, y), 3.dp.toPx(), StrokeCap.Round)
         drawLine(Color.White, Offset(x(zero), y), Offset(x(value), y), 3.dp.toPx(), StrokeCap.Round)
         // A tick where "unchanged" is, when that isn't an end of the track.
@@ -248,9 +303,9 @@ internal fun EditorChoices(choices: List<EditorChoice>?, onDismiss: () -> Unit) 
                         Modifier
                             .fillMaxWidth()
                             .height(52.dp)
-                            .pressable(choice.onClick, pressedScale = 0.97f)
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(Color(0xFF2C2C2E)),
+                            .pressable(choice.onClick, pressedScale = 0.97f, shape = if (Lumen.material) CircleShape else RoundedCornerShape(14.dp))
+                            .clip(if (Lumen.material) CircleShape else RoundedCornerShape(14.dp))
+                            .background(if (Lumen.material) MaterialTheme.colorScheme.surfaceContainerHigh else Color(0xFF2C2C2E)),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(choice.label, color = choice.color, fontSize = 17.sp, fontWeight = FontWeight.Medium)

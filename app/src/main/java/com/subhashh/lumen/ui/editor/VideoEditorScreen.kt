@@ -309,6 +309,7 @@ private fun TrimStrip(
     val currentEdit by rememberUpdatedState(edit)
     val currentDuration by rememberUpdatedState(durationMs)
     val reach = with(LocalDensity.current) { 28.dp.toPx() }
+    val accent = EditorAccent
     Canvas(
         modifier
             .fillMaxWidth()
@@ -364,7 +365,7 @@ private fun TrimStrip(
         drawRect(dim, Offset(endX, 0f), Size(size.width - endX, size.height))
         val bar = 7.dp.toPx()
         val edge = 3.dp.toPx()
-        val color = if (edit.startMs > 0 || edit.endMs != null) EditorAccent else Color.White
+        val color = if (edit.startMs > 0 || edit.endMs != null) accent else Color.White
         drawRoundRect(color, Offset(startX + edge / 2, edge / 2), Size(endX - startX - edge, size.height - edge), CornerRadius(8.dp.toPx()), Stroke(edge))
         drawRoundRect(color, Offset(startX, 0f), Size(bar, size.height), CornerRadius(4.dp.toPx()))
         drawRoundRect(color, Offset(endX - bar, 0f), Size(bar, size.height), CornerRadius(4.dp.toPx()))

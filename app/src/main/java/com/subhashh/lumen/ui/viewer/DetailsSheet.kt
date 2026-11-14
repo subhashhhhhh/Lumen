@@ -104,7 +104,9 @@ private data class SheetColors(val text: Color, val secondary: Color, val group:
 @Composable
 private fun sheetColors(): SheetColors {
     val glass = LocalGlassColors.current
-    return SheetColors(glass.content, glass.contentSecondary, glass.selection, MaterialTheme.colorScheme.primary)
+    // Material: groups are a step up the tonal ladder from the sheet, not a tinted veil.
+    val group = if (Lumen.material) MaterialTheme.colorScheme.surfaceContainerHighest else glass.selection
+    return SheetColors(glass.content, glass.contentSecondary, group, MaterialTheme.colorScheme.primary)
 }
 
 /**

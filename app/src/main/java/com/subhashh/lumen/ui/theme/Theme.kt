@@ -231,3 +231,13 @@ private fun WithType(type: LumenType, content: @Composable () -> Unit) {
     }
     CompositionLocalProvider(LocalLumenType provides merged, content = content)
 }
+
+/**
+ * For screens that are dark whatever the theme (the editors, Set as Wallpaper): in the Material
+ * style their colours must come from the dark scheme, or a light theme's dark-on-light roles
+ * would land on black. Lumen's own style names those screens' colours outright, so nothing changes.
+ */
+@Composable
+fun AlwaysDark(content: @Composable () -> Unit) {
+    if (LocalStyle.current.material && !LocalDarkTheme.current) LumenTheme(darkTheme = true, content = content) else content()
+}

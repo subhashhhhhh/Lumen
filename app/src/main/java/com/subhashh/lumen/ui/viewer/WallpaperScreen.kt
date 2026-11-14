@@ -1,6 +1,7 @@
 package com.subhashh.lumen.ui.viewer
 
 import android.app.WallpaperManager
+import androidx.compose.foundation.shape.CircleShape
 import com.subhashh.lumen.ui.components.Spinner
 import com.subhashh.lumen.ui.theme.Lumen
 import android.graphics.Bitmap
@@ -182,9 +183,9 @@ private fun WallpaperButton(label: String, dim: Boolean = false, onClick: () -> 
         Modifier
             .fillMaxWidth()
             .height(50.dp)
-            .pressable(onClick, pressedScale = 0.97f)
-            .clip(RoundedCornerShape(14.dp))
-            .background(Color(0xE61C1C1E)),
+            .pressable(onClick, pressedScale = 0.97f, shape = if (Lumen.material) CircleShape else RoundedCornerShape(14.dp))
+            .clip(if (Lumen.material) CircleShape else RoundedCornerShape(14.dp))
+            .background(if (Lumen.material) androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainerHigh else Color(0xE61C1C1E)),
         contentAlignment = Alignment.Center,
     ) {
         Text(
