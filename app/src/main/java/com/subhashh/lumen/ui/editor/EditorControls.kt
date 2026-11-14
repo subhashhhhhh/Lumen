@@ -3,7 +3,11 @@ package com.subhashh.lumen.ui.editor
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.material3.MaterialTheme
@@ -247,8 +251,12 @@ internal fun EditorSlider(
             val handle = x(value)
             val from = minOf(x(zero), handle)
             val to = maxOf(x(zero), handle)
-            clipRect(left = inset, right = size.width - inset) {
-                drawLine(scheme.secondaryContainer, Offset(inset, y), Offset(size.width - inset, y), track, StrokeCap.Round)
+            // Clipped to the track's own rounded outline, so both colours end in its round caps.
+            val outline = Path().apply {
+                addRoundRect(RoundRect(Rect(inset, y - track / 2, size.width - inset, y + track / 2), CornerRadius(track / 2)))
+            }
+            clipPath(outline) {
+                drawLine(scheme.secondaryContainer, Offset(inset, y), Offset(size.width - inset, y), track, StrokeCap.Butt)
                 if (to - from > 1f) drawLine(scheme.primary, Offset(from, y), Offset(to, y), track, StrokeCap.Butt)
                 // The clear space around the handle.
                 drawLine(Color.Black, Offset(handle - gap, y), Offset(handle + gap, y), track + 2f, StrokeCap.Butt, blendMode = androidx.compose.ui.graphics.BlendMode.Clear)

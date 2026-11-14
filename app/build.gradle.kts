@@ -171,6 +171,9 @@ dependencies {
     // Android's org.json is a stub in local tests; the real one stands in.
     testImplementation(libs.org.json)
     testImplementation(libs.robolectric)
+    // Draws Lumen's components in each style off the phone (StyleRenderTest).
+    testImplementation(platform(libs.compose.bom))
+    testImplementation(libs.compose.ui.test.junit4)
     implementation(libs.androidx.profileinstaller)
     baselineProfile(project(":baselineprofile"))
     implementation(libs.androidx.core.ktx)

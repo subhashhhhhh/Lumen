@@ -96,7 +96,7 @@ fun RenameDialog(
                     .padding(top = if (material) 24.dp else 20.dp),
                 horizontalAlignment = dialogAlignment,
             ) {
-                DialogTitle(title)
+                DialogTitle(title, oneLine = true)
                 Spacer(Modifier.height(if (material) 18.dp else 14.dp))
                 Row(
                     Modifier

@@ -59,7 +59,7 @@ fun ResizeDialog(
 ) {
     val open = count != null
     BackHandler(enabled = open, onBack = onDismiss)
-    com.subhashh.lumen.ui.components.DialogScrim(open, onDismiss)
+    com.subhashh.lumen.ui.components.DialogScrim(open, onDismiss, strong = true)
     AnimatedVisibility(
         visible = open,
         enter = scaleIn(spring(dampingRatio = 0.8f, stiffness = 600f), initialScale = 0.92f) + fadeIn(tween(140)),
@@ -83,7 +83,7 @@ fun ResizeDialog(
                     horizontalAlignment = dialogAlignment,
                 ) {
                     Spacer(Modifier.height(if (material) 24.dp else 20.dp))
-                    DialogTitle(stringResource(R.string.settings_resize_title))
+                    DialogTitle(stringResource(R.string.settings_resize_title), oneLine = true)
                     Spacer(Modifier.height(if (material) 12.dp else 4.dp))
                     Text(
                         if (n == 1) {
@@ -133,6 +133,7 @@ fun ResizeDialog(
                         confirm = stringResource(if (n == 1) R.string.settings_resize_save_copy else R.string.settings_resize_save_copies),
                         onConfirm = { onSave(target, format, quality) },
                         height = 50.dp,
+                        line = colors.divider,
                     )
                 }
             }

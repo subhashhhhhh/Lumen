@@ -91,7 +91,7 @@ fun ReminderDialog(
 ) {
     val open = !items.isNullOrEmpty()
     BackHandler(enabled = open, onBack = onDismiss)
-    DialogScrim(open, onDismiss)
+    DialogScrim(open, onDismiss, strong = true)
     AnimatedVisibility(
         visible = open,
         enter = scaleIn(spring(dampingRatio = 0.8f, stiffness = 600f), initialScale = 0.92f) + fadeIn(tween(140)),
@@ -235,11 +235,22 @@ fun ReminderDialog(
                 )
                 TimeInput(
                     state = timeState,
-                    colors = TimeInputDefaults.colors(
+                    // Material: the scheme's own. Lumen: the focused field tinted with the accent.
+                    colors = if (material) TimeInputDefaults.colors() else TimeInputDefaults.colors(
                         periodSelectorSelectedContainerColor = accent.copy(alpha = 0.25f),
                         periodSelectorSelectedContentColor = text,
                         periodSelectorContentColor = secondary,
                         periodSelectorBorderColor = secondary.copy(alpha = 0.4f),
+                        periodSelectorContainerColor = Color.Transparent,
+                        timeTextFieldColors = androidx.compose.material3.TextFieldDefaults.colors(
+                            focusedContainerColor = accent.copy(alpha = 0.25f),
+                            unfocusedContainerColor = secondary.copy(alpha = 0.15f),
+                            focusedTextColor = text,
+                            unfocusedTextColor = text,
+                            focusedIndicatorColor = accent,
+                            unfocusedIndicatorColor = Color.Transparent,
+                            cursorColor = accent,
+                        ),
                     ),
                 )
                 if (!valid) {

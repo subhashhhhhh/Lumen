@@ -71,7 +71,7 @@ fun DateTimeDialog(
 ) {
     val open = original != null
     BackHandler(enabled = open, onBack = onDismiss)
-    DialogScrim(open, onDismiss)
+    DialogScrim(open, onDismiss, strong = true)
     AnimatedVisibility(
         visible = open,
         enter = scaleIn(spring(dampingRatio = 0.8f, stiffness = 600f), initialScale = 0.92f) + fadeIn(tween(140)),
@@ -122,10 +122,13 @@ fun DateTimeDialog(
                     .padding(top = if (material) 24.dp else 20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                DialogTitle(stringResource(R.string.components_adjust_date_title))
+                DialogTitle(stringResource(R.string.components_adjust_date_title), oneLine = true)
                 Spacer(Modifier.height(4.dp))
-                DialogMessage(
+                Text(
                     stringResource(R.string.components_adjust_date_original, DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(start))),
+                    color = secondary,
+                    fontSize = if (material) 14.sp else 13.sp,
+                    modifier = if (material) Modifier.fillMaxWidth().padding(horizontal = 24.dp) else Modifier,
                 )
                 DatePicker(
                     state = dateState,
@@ -148,11 +151,22 @@ fun DateTimeDialog(
                 )
                 TimeInput(
                     state = timeState,
-                    colors = TimeInputDefaults.colors(
+                    // Material: the scheme's own. Lumen: the focused field tinted with the accent.
+                    colors = if (material) TimeInputDefaults.colors() else TimeInputDefaults.colors(
                         periodSelectorSelectedContainerColor = accent.copy(alpha = 0.25f),
                         periodSelectorSelectedContentColor = text,
                         periodSelectorContentColor = secondary,
                         periodSelectorBorderColor = secondary.copy(alpha = 0.4f),
+                        periodSelectorContainerColor = Color.Transparent,
+                        timeTextFieldColors = androidx.compose.material3.TextFieldDefaults.colors(
+                            focusedContainerColor = accent.copy(alpha = 0.25f),
+                            unfocusedContainerColor = secondary.copy(alpha = 0.15f),
+                            focusedTextColor = text,
+                            unfocusedTextColor = text,
+                            focusedIndicatorColor = accent,
+                            unfocusedIndicatorColor = Color.Transparent,
+                            cursorColor = accent,
+                        ),
                     ),
                 )
                 if (count > 1) {
@@ -160,8 +174,8 @@ fun DateTimeDialog(
                         pluralStringResource(R.plurals.components_adjust_date_many, count, count),
                         color = secondary,
                         fontSize = 13.sp,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(horizontal = 20.dp),
+                        textAlign = dialogTextAlign,
+                        modifier = if (material) Modifier.fillMaxWidth().padding(horizontal = 24.dp) else Modifier.padding(horizontal = 20.dp),
                     )
                     Spacer(Modifier.height(12.dp))
                 }

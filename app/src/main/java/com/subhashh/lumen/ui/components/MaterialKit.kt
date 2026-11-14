@@ -16,6 +16,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ProgressIndicatorDefaults
 import com.subhashh.lumen.ui.theme.Lumen
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
@@ -104,7 +105,7 @@ fun ProgressRing(
     progress: () -> Float,
     modifier: Modifier = Modifier,
     color: Color = MaterialTheme.colorScheme.primary,
-    trackColor: Color = color.copy(alpha = 0.2f),
+    trackColor: Color = if (Lumen.material) color.copy(alpha = 0.2f) else ProgressIndicatorDefaults.circularDeterminateTrackColor,
 ) {
     if (Lumen.material) CircularWavyProgressIndicator(progress, modifier, color = color, trackColor = trackColor)
     else CircularProgressIndicator(progress = progress, modifier = modifier, color = color, trackColor = trackColor)

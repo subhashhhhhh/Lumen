@@ -42,14 +42,14 @@ import com.subhashh.lumen.ui.theme.Lumen
  * Material: start-aligned, a large headline, and buttons at the bottom right.
  */
 
-/** Dims the page behind a dialog; a tap on it dismisses. */
+/** Dims the page behind a dialog; a tap on it dismisses. [strong]: a touch darker, behind the big dialogs. */
 @Composable
-fun DialogScrim(open: Boolean, onDismiss: () -> Unit) {
+fun DialogScrim(open: Boolean, onDismiss: () -> Unit, strong: Boolean = false) {
     AnimatedVisibility(visible = open, enter = fadeIn(tween(160)), exit = fadeOut(tween(160))) {
         Box(
             Modifier
                 .fillMaxSize()
-                .background(Lumen.colors.scrim)
+                .background(if (strong && !Lumen.material) Color.Black.copy(alpha = 0.45f) else Lumen.colors.scrim)
                 .clickable(remember { MutableInteractionSource() }, indication = null, onClick = onDismiss),
         )
     }
@@ -73,14 +73,15 @@ val dialogTextAlign: TextAlign
 val dialogInset: Dp
     @Composable get() = if (Lumen.material) 24.dp else 18.dp
 
+/** [oneLine]: a short title that never wraps (Rename), which Lumen leaves to the column to centre. */
 @Composable
-fun DialogTitle(text: String, modifier: Modifier = Modifier) {
+fun DialogTitle(text: String, modifier: Modifier = Modifier, oneLine: Boolean = false) {
     val material = Lumen.material
     Text(
         text,
         color = Lumen.colors.text,
         style = Lumen.type.dialogTitle,
-        textAlign = dialogTextAlign,
+        textAlign = if (oneLine && !material) TextAlign.Unspecified else dialogTextAlign,
         modifier = modifier
             .then(if (material) Modifier.fillMaxWidth() else Modifier)
             .padding(horizontal = dialogInset),
@@ -117,6 +118,8 @@ fun DialogButtons(
     destructive: Boolean = false,
     /** Lumen's row height. */
     height: Dp = 48.dp,
+    /** Lumen's hairlines; a faded secondary by default. */
+    line: Color = Lumen.colors.secondary.copy(alpha = 0.3f),
 ) {
     val colors = Lumen.colors
     if (Lumen.material) {
@@ -139,7 +142,6 @@ fun DialogButtons(
         }
         return
     }
-    val line = colors.secondary.copy(alpha = 0.3f)
     val pad = (height - 22.dp) / 2
     Box(Modifier.fillMaxWidth().height(0.5.dp).background(line))
     Row(Modifier.fillMaxWidth().height(height)) {
