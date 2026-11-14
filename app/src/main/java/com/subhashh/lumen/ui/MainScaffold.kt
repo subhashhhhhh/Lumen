@@ -24,6 +24,11 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.MaterialTheme
+import com.subhashh.lumen.ui.components.MaterialBarHeight
+import com.subhashh.lumen.ui.components.MaterialNavBar
+import com.subhashh.lumen.ui.components.MaterialNavBarHeight
+import com.subhashh.lumen.ui.components.MaterialTopBar
+import com.subhashh.lumen.ui.components.MaterialZoomSwitch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
@@ -157,6 +162,12 @@ private fun MainState.Scaffold(
     }
     /** Oldest first by date: the order Years / Months and "newest at the bottom" are built on. */
     val chronological = sort == LibrarySort.Date && !sortDescending
+    val material = com.subhashh.lumen.ui.theme.Lumen.material
+    // Until an order is chosen it follows the style (newest first in Material): take it up on a change.
+    LaunchedEffect(material) { sortDescending = prefs.sortDescending }
+    /** Years and Months: oldest first by date; in the Material style, by date either way round. */
+    val zoomable = chronological || (material && sort == LibrarySort.Date)
+    val barState = remember { com.subhashh.lumen.ui.components.MaterialBarState() }
     val onGridColumns = { columns: Int ->
         gridColumns = columns
         prefs.gridColumns = columns
@@ -386,18 +397,18 @@ private fun MainState.Scaffold(
         if (libraryItems.isNotEmpty()) libraryGrid.scrollToItem(if (chronological) librarySections.entries.lastIndex else 0)
     }
     // Years / Months only make sense oldest-first by date; any other order goes back to All.
-    LaunchedEffect(chronological) {
-        if (!chronological) {
+    LaunchedEffect(zoomable) {
+        if (!zoomable) {
             zoomLevel = ZoomLevel.All
             zoomBar = false
         }
     }
     // Years and Months start at the newest card too: once when first loaded, and on a new filter.
-    LaunchedEffect(months.isNotEmpty(), filter) {
-        if (months.isNotEmpty()) monthsList.scrollToItem(months.lastIndex)
+    LaunchedEffect(months.isNotEmpty(), filter, chronological) {
+        if (months.isNotEmpty()) monthsList.scrollToItem(if (chronological) months.lastIndex else 0)
     }
-    LaunchedEffect(years.isNotEmpty(), filter) {
-        if (years.isNotEmpty()) yearsList.scrollToItem(years.lastIndex)
+    LaunchedEffect(years.isNotEmpty(), filter, chronological) {
+        if (years.isNotEmpty()) yearsList.scrollToItem(if (chronological) years.lastIndex else 0)
     }
 
     val viewerOpen = viewerSource != null && viewerReturn == null
@@ -521,7 +532,13 @@ private fun MainState.Scaffold(
     val rotate = fileActions.rotate
     val statusTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    val gridPadding = PaddingValues(top = statusTop + 96.dp, bottom = navBottom + 96.dp)
+    // Material: under the top bar (and the Years / Months / All row when it's there), above the navigation bar.
+    val zoomRow = material && zoomable && tab == LumenTab.Library && !searching && settingsPage == null && selection == null && pick == null
+    val gridPadding = if (material) {
+        PaddingValues(top = statusTop + MaterialBarHeight + (if (zoomRow) ZoomRowHeight else 0.dp) + 4.dp, bottom = navBottom + 96.dp)
+    } else {
+        PaddingValues(top = statusTop + 96.dp, bottom = navBottom + 96.dp)
+    }
 
     // Grow the tapped photo out of its cell, then build the viewer behind it before revealing,
     // so the viewer's setup cost never stutters the animation.
@@ -575,12 +592,72 @@ private fun MainState.Scaffold(
                 .layerBackdrop(backdrop)
                 .background(MaterialTheme.colorScheme.background),
         ) {
+            // In the Material style pages hand their titles to the top bar (see reportBarTitle).
+            // Material: a page that's newly on screen springs up into place. Albums and people
+            // arrive on their covers instead, so they (and the page under them) are left alone.
+            val coverKey = openCollection?.takeIf { CollectionKeys.isFolder(it) || CollectionKeys.personId(it) != null }
+            val pageKey = when {
+                searching -> "search"
+                settingsPage != null -> settingsPage
+                tab == LumenTab.Library -> "library"
+                coverKey != null -> null
+                else -> openCollection ?: "collections"
+            }
+            val arrival = remember { androidx.compose.animation.core.Animatable(1f) }
+            val lastPage = remember { arrayOfNulls<String>(1) }
+            LaunchedEffect(pageKey) {
+                if (pageKey == null) return@LaunchedEffect
+                val first = lastPage[0] == null
+                val changed = lastPage[0] != pageKey
+                lastPage[0] = pageKey
+                if (material && changed && !first && !reduceMotion) {
+                    arrival.snapTo(0f)
+                    arrival.animateTo(1f, androidx.compose.animation.core.spring(dampingRatio = 0.62f, stiffness = 260f))
+                }
+            }
+            androidx.compose.runtime.CompositionLocalProvider(com.subhashh.lumen.ui.components.LocalMaterialBar provides barState.takeIf { material }) {
+            Box(
+                Modifier.fillMaxSize().graphicsLayer {
+                    val a = arrival.value
+                    if (a != 1f) {
+                        alpha = a.coerceIn(0f, 1f)
+                        translationY = 36.dp.toPx() * (1f - a)
+                        scaleX = 0.96f + 0.04f * a
+                        scaleY = 0.96f + 0.04f * a
+                    }
+                },
+            ) {
             MainPages(this@Scaffold, pick, library, allItems, excluded, hidden, hiddenAll, hiddenFolderList, utilities, folders, libraryItems, librarySections, openItems, collectionSections, months, years, selectedItems, searchSections, searchAlbums, personMatches, unnamedSubject, smartPending, smartSuggestions, searchSuggestions, chronological, scrollLabel, statusTop, navBottom, gridPadding, heroHeight, libraryGrid, collectionGrid, hiddenGrid, searchGrid, monthsList, yearsList, zoomBarScroll, transition, coverTransition, activity, exportLauncher, favoritesLauncher, importLauncher, itemsOf, personOf, heroWithLabel, setPicked, onGridColumns, onAlbumColumns, rememberSearch, toast, needsAllFiles, openHidden, openViewer, collectionsPage, peoplePage)
+            }
+            }
             if (!coverTransition.overViewer) CoverTransitionOverlay(coverTransition)
         }
 
 
+        // Material's top app bar, under the same controls: on the bar they lose their own surfaces.
+        val onBar = material && !viewerOpen && (searching || barState.current?.overCover == false)
+        if (material && !viewerOpen) {
+            MaterialTopBar(
+                state = barState,
+                statusTop = statusTop,
+                pushed = inCollection || inSettings,
+                untitled = searching,
+                below = if (zoomRow) {
+                    {
+                        MaterialZoomSwitch(
+                            level = zoomLevel,
+                            onLevel = { zoomLevel = it },
+                            modifier = Modifier.padding(start = 16.dp).height(ZoomRowHeight),
+                        )
+                    }
+                } else {
+                    null
+                },
+            )
+        }
+        androidx.compose.runtime.CompositionLocalProvider(com.subhashh.lumen.ui.components.LocalOnBar provides onBar) {
         MainTopControls(this@Scaffold, pick, onPicked, onCancelPick, backdrop, navBottom, trash, allPeople, people, albumKeys, selectableItems, selectedItems, selecting, viewerOpen, inCollection, inSettings, updateWaiting, coverTransition, selectionLauncher, personOf, rememberSearch, endSelection, updateAlbums, popSettings, closeCollection)
+        }
 
         // Always composed, even under the viewer: recreating it means recompiling its glass
         // shaders right as a photo flies home.
@@ -593,7 +670,32 @@ private fun MainState.Scaffold(
             animationSpec = if (tabBarHidden) snap() else tween(durationMillis = 220),
             label = "tabBarAlpha",
         )
-        run {
+        if (material) {
+            // Docked across the bottom; slides away with whatever hides the tab bar.
+            val navHeight = MaterialNavBarHeight + navBottom
+            MaterialNavBar(
+                selected = tab,
+                onSelect = { selected ->
+                    if (selected == tab && !searching) openCollection = null
+                    settingsPage = null
+                    tab = selected
+                    searching = false
+                },
+                searchSelected = searching,
+                onSearch = {
+                    if (!searching) focusSearch = true
+                    searching = true
+                },
+                navBottom = navBottom,
+                enabled = !tabBarHidden,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .graphicsLayer {
+                        alpha = tabBarAlpha
+                        translationY = navHeight.toPx() * (1f - tabBarAlpha)
+                    },
+            )
+        } else {
             GlassTabBar(
                 backdrop = backdrop,
                 enabled = !tabBarHidden,
@@ -613,7 +715,7 @@ private fun MainState.Scaffold(
                 },
                 zoomLevel = zoomLevel.takeIf { tab == LumenTab.Library && !searching },
                 onZoomLevel = { zoomLevel = it },
-                showZoom = chronological && (zoomBar || zoomLevel != ZoomLevel.All),
+                showZoom = zoomable && (zoomBar || zoomLevel != ZoomLevel.All),
                 onShowTabs = {
                     zoomBar = false
                     zoomLevel = ZoomLevel.All
@@ -670,3 +772,6 @@ private fun MainState.Scaffold(
         }
     }
 }
+
+/** The Years / Months / All row under Material's top bar. */
+private val ZoomRowHeight = 52.dp

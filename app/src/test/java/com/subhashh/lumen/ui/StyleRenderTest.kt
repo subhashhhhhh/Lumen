@@ -41,6 +41,14 @@ import androidx.compose.ui.platform.LocalContext
 import com.subhashh.lumen.data.HiddenLockStore
 import com.subhashh.lumen.ui.albums.AlbumPicker
 import com.subhashh.lumen.ui.components.ConfirmDialog
+import com.subhashh.lumen.ui.components.LocalMaterialBar
+import com.subhashh.lumen.ui.components.LocalOnBar
+import com.subhashh.lumen.ui.components.MaterialBarState
+import com.subhashh.lumen.ui.components.MaterialNavBar
+import com.subhashh.lumen.ui.components.MaterialTopBar
+import com.subhashh.lumen.ui.components.MaterialZoomSwitch
+import com.subhashh.lumen.ui.settings.AccentRow
+import com.subhashh.lumen.ui.theme.AccentPresets
 import com.subhashh.lumen.ui.components.DateTimeDialog
 import com.subhashh.lumen.ui.components.ProgressRing
 import com.subhashh.lumen.ui.components.Spinner
@@ -222,6 +230,37 @@ class StyleRenderTest {
                         onShare = {}, onFavorite = {}, onDelete = {}, onRestore = {}, onDeleteForever = {}, onUnhide = {}, onMore = {},
                     )
                 }
+            }
+        }
+    }
+
+    /** Material's own frame: the top app bar with its Years / Months / All row, and the navigation bar. */
+    @Test
+    fun chrome() = render("chrome") {
+        val bar = remember { MaterialBarState() }
+        Box(Modifier.fillMaxSize()) {
+            CompositionLocalProvider(LocalMaterialBar provides bar.takeIf { Lumen.material }) {
+                Column(Modifier.padding(top = 150.dp, start = 16.dp, end = 16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    LibraryHeader("Library", "October 2026", topPadding = 8.dp)
+                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        SelectionMark(selected = true)
+                        SelectionMark(selected = false)
+                    }
+                    AccentRow(accent = AccentPresets[2], onAccent = {})
+                }
+            }
+            if (Lumen.material) {
+                MaterialTopBar(bar, statusTop = 24.dp, pushed = false, untitled = false, below = {
+                    MaterialZoomSwitch(ZoomLevel.All, {}, Modifier.padding(start = 16.dp, bottom = 12.dp))
+                })
+                CompositionLocalProvider(LocalOnBar provides true) {
+                    val backdrop = rememberLayerBackdrop()
+                    Row(Modifier.align(Alignment.TopEnd).padding(top = 32.dp, end = 16.dp)) {
+                        GlassIconButton(backdrop, LumenIcons.Filter, "View", {})
+                        GlassIconButton(backdrop, LumenIcons.Settings, "Settings", {}, badge = true)
+                    }
+                }
+                MaterialNavBar(LumenTab.Library, {}, searchSelected = false, onSearch = {}, navBottom = 24.dp, modifier = Modifier.align(Alignment.BottomCenter))
             }
         }
     }

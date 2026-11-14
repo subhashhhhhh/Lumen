@@ -87,7 +87,8 @@ fun GlassTabBar(
     onShowTabs: () -> Unit = {},
 ) {
     if (com.subhashh.lumen.ui.theme.Lumen.material) {
-        MaterialTabBar(selected, onSelect, searchSelected, onSearch, modifier, enabled, zoomLevel, onZoomLevel, showZoom, onShowTabs)
+        // Material docks its own bar (MainScaffold calls it directly, edge to edge); this is the same one.
+        MaterialNavBar(selected, onSelect, searchSelected, onSearch, navBottom = 0.dp, modifier = modifier, enabled = enabled)
         return
     }
     val haptics = LocalHapticFeedback.current

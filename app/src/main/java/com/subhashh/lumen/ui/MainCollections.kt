@@ -108,7 +108,7 @@ internal fun MainState.collectionPages(
             folders = folders,
             people = people,
             gridState = collectionsGrid,
-            contentPadding = PaddingValues(top = statusTop + 16.dp, bottom = navBottom + 96.dp),
+            contentPadding = PaddingValues(top = statusTop + (if (com.subhashh.lumen.ui.theme.Lumen.material) 68.dp else 16.dp), bottom = navBottom + 96.dp),
             coverTransition = coverTransition,
             modifier = pageModifier,
             onOpen = { key ->

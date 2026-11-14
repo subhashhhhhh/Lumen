@@ -33,6 +33,8 @@ private val Credits = listOf(
         R.string.licenses_used_liquid_glass_easy,
         "https://pub.dev/packages/liquid_glass_easy",
     ),
+    Credit("Material Symbols", "Google", "Apache 2.0", R.string.licenses_used_material_symbols, "https://github.com/google/material-design-icons"),
+    Credit("MaterialKolor", "Jordon de Hoog", "MIT", R.string.licenses_used_material_kolor, "https://github.com/jordond/materialkolor"),
     Credit("Telephoto", "Saket Narayan", "Apache 2.0", R.string.licenses_used_telephoto, "https://github.com/saket/telephoto"),
     Credit("Coil", "Coil Contributors", "Apache 2.0", R.string.licenses_used_coil, "https://github.com/coil-kt/coil"),
     Credit(

@@ -249,21 +249,24 @@ fun LibraryScreen(
 
         val collapseFrom = with(density) { (heroHeight - 240.dp).toPx() }
         val collapseOver = with(density) { 80.dp.toPx() }
+        // Under a cover, the title (with its scrim) arrives as the cover leaves; while
+        // selecting it's needed for the count.
+        val headerShown = {
+            when {
+                hero == null || currentSelection != null -> 1f
+                gridState.firstVisibleItemIndex > 0 -> 1f
+                else -> ((gridState.firstVisibleItemScrollOffset - collapseFrom) / collapseOver).coerceIn(0f, 1f)
+            }
+        }
         LibraryHeader(
             title = title,
             subtitle = if (showMonth) visibleMonth else "",
             topPadding = titleTopPadding,
             modifier = Modifier
                 .align(Alignment.TopStart)
-                .graphicsLayer {
-                    // Under a cover, the title (with its scrim) arrives as the cover leaves; while
-                    // selecting it's needed for the count.
-                    alpha = when {
-                        hero == null || currentSelection != null -> 1f
-                        gridState.firstVisibleItemIndex > 0 -> 1f
-                        else -> ((gridState.firstVisibleItemScrollOffset - collapseFrom) / collapseOver).coerceIn(0f, 1f)
-                    }
-                },
+                .graphicsLayer { alpha = headerShown() },
+            overCover = hero != null,
+            visibility = headerShown,
         )
     }
 }
@@ -391,9 +394,32 @@ internal fun Thumbnail(
 /** iOS-style marker: an empty ring when selectable, a filled check when selected. */
 @Composable
 internal fun SelectionMark(selected: Boolean, modifier: Modifier = Modifier) {
-    if (selected) {
-        // Material: a little larger, the tick in the scheme's "on primary" rather than white.
-        val material = Lumen.material
+    if (selected && Lumen.material) {
+        // Material: a scalloped badge in the primary colour that pops in with a bounce.
+        val still = com.subhashh.lumen.ui.theme.LocalMotion.current.reduce
+        val pop = remember { androidx.compose.animation.core.Animatable(if (still) 1f else 0.3f) }
+        androidx.compose.runtime.LaunchedEffect(Unit) { pop.animateTo(1f, spring(dampingRatio = 0.35f, stiffness = 500f)) }
+        Box(
+            modifier
+                .size(26.dp)
+                .graphicsLayer {
+                    scaleX = pop.value
+                    scaleY = pop.value
+                    rotationZ = 90f * (1f - pop.value)
+                }
+                .clip(com.subhashh.lumen.ui.components.cookieShape())
+                .background(MaterialTheme.colorScheme.primary),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                LumenIcons.Check,
+                contentDescription = stringResource(R.string.main_selected),
+                tint = MaterialTheme.colorScheme.onPrimary,
+                modifier = Modifier.size(16.dp),
+            )
+        }
+    } else if (selected) {
+        val material = false
         Box(
             modifier
                 .size(if (material) 24.dp else 22.dp)
@@ -423,7 +449,17 @@ internal fun SelectionMark(selected: Boolean, modifier: Modifier = Modifier) {
 private val SelectedCorner = 16.dp
 
 @Composable
-internal fun LibraryHeader(title: String, subtitle: String, topPadding: Dp, modifier: Modifier = Modifier) {
+internal fun LibraryHeader(
+    title: String,
+    subtitle: String,
+    topPadding: Dp,
+    modifier: Modifier = Modifier,
+    /** The page opens with a cover across the top, and [visibility] says how far it has given way. */
+    overCover: Boolean = false,
+    visibility: () -> Float = { 1f },
+) {
+    // Material: the top bar carries the title and the month; no scrim over the photos.
+    if (com.subhashh.lumen.ui.components.reportBarTitle(title, subtitle, overCover, visibility)) return
     Column(
         modifier
             .fillMaxWidth()

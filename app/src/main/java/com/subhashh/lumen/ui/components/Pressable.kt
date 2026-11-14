@@ -1,6 +1,7 @@
 package com.subhashh.lumen.ui.components
 
 import com.subhashh.lumen.ui.theme.LocalMotion
+import androidx.compose.material3.ripple
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.clickable
@@ -29,11 +30,23 @@ fun Modifier.pressable(
     /** Material's ripple is clipped to this; a softly rounded rectangle when null. */
     shape: Shape? = null,
 ): Modifier = composed {
-    // Material 3 Expressive: a ripple where the finger is, and nothing shrinks.
+    // Material 3 Expressive: a ripple where the finger is, a small squeeze, and a wobbly release.
     if (LocalStyle.current.material) {
+        val still = LocalMotion.current.reduce
+        val source = remember { MutableInteractionSource() }
+        val down by source.collectIsPressedAsState()
+        val squeeze by animateFloatAsState(
+            targetValue = if (down && enabled && !still) 1f - (1f - pressedScale) * 0.6f else 1f,
+            animationSpec = if (down) PressIn else Wobble,
+            label = "pressSqueeze",
+        )
         return@composed this
+            .graphicsLayer {
+                scaleX = squeeze
+                scaleY = squeeze
+            }
             .clip(shape ?: RippleShape)
-            .clickable(enabled = enabled, onClick = onClick)
+            .clickable(interactionSource = source, indication = ripple(), enabled = enabled, onClick = onClick)
     }
     // Reduce Motion: still a button, just no squish.
     val reduce = LocalMotion.current.reduce
@@ -53,6 +66,9 @@ fun Modifier.pressable(
 }
 
 private val RippleShape = RoundedCornerShape(12.dp)
+
+/** Material's release: well past where it started, then back, more than once. */
+private val Wobble = spring<Float>(dampingRatio = 0.32f, stiffness = 420f)
 
 /** Quick and firm going down… */
 private val PressIn = spring<Float>(dampingRatio = 1f, stiffness = 1400f)

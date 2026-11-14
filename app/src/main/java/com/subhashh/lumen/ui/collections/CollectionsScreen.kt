@@ -209,6 +209,8 @@ internal fun rememberAlbumGridGestures(
 
 @Composable
 internal fun ScreenTitle(title: String) {
+    // Material: the top bar carries it.
+    if (com.subhashh.lumen.ui.components.reportBarTitle(title)) return
     Text(
         title,
         style = Lumen.type.screenTitle,

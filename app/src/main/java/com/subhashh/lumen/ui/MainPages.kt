@@ -400,7 +400,7 @@ internal fun BoxScope.MainPages(
                             showMonth = sort == LibrarySort.Date || key == CollectionKeys.RecentlyDeleted,
                             scrollLabel = if (key == CollectionKeys.RecentlyDeleted) { item -> ScrollMonth.format(java.util.Date(item.takenAt)) } else scrollLabel,
                             gridState = collectionGrid,
-                            contentPadding = PaddingValues(top = if (cover != null) heroHeight + 2.dp else statusTop + 152.dp, bottom = navBottom + 96.dp),
+                            contentPadding = PaddingValues(top = if (cover != null) heroHeight + 2.dp else statusTop + (if (com.subhashh.lumen.ui.theme.Lumen.material) 68.dp else 152.dp), bottom = navBottom + 96.dp),
                             titleTopPadding = 64.dp,
                             hero = cover?.let { c -> { heroModifier -> CoverHeader(c, coverTransition, heroModifier) } },
                             heroHeight = heroHeight,

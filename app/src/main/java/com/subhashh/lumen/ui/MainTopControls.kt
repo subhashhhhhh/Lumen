@@ -161,7 +161,8 @@ internal fun BoxScope.MainTopControls(
                     .padding(horizontal = 16.dp, vertical = 8.dp),
             )
         }
-        if (pick?.multiple == true && picked.isNotEmpty()) {
+        // Floats above the tab bar, not on the top bar: keeps its own surface in the Material style.
+        if (pick?.multiple == true && picked.isNotEmpty()) androidx.compose.runtime.CompositionLocalProvider(com.subhashh.lumen.ui.components.LocalOnBar provides false) {
             GlassTextButton(
                 backdrop = backdrop,
                 text = stringResource(R.string.main_pick_add_count, picked.size),

@@ -15,7 +15,9 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.LoadingIndicator
+import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.toShape
 import androidx.compose.material3.ProgressIndicatorDefaults
 import com.subhashh.lumen.ui.theme.Lumen
 import androidx.compose.material3.ripple
@@ -110,3 +112,24 @@ fun ProgressRing(
     if (Lumen.material) CircularWavyProgressIndicator(progress, modifier, color = color, trackColor = trackColor)
     else CircularProgressIndicator(progress = progress, modifier = modifier, color = color, trackColor = trackColor)
 }
+
+/**
+ * One of Material's playful shapes, picked by [seed] (a colour, a name): the same seed always
+ * gets the same shape, so a row keeps its badge while neighbouring rows differ.
+ */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+fun funShape(seed: Int): Shape {
+    val polygons = remember {
+        listOf(
+            MaterialShapes.Cookie9Sided, MaterialShapes.Clover4Leaf, MaterialShapes.Cookie6Sided, MaterialShapes.Sunny,
+            MaterialShapes.Flower, MaterialShapes.Cookie4Sided, MaterialShapes.Pentagon, MaterialShapes.Clover8Leaf,
+        )
+    }
+    return polygons[Math.floorMod(seed, polygons.size)].toShape()
+}
+
+/** The scalloped circle Material puts faces and ticks in. */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+fun cookieShape(): Shape = MaterialShapes.Cookie12Sided.toShape()

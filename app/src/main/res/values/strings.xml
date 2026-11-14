@@ -860,6 +860,8 @@
     <string name="licenses_used_liquid_glass_easy">The motion of the glass selection pill in the tab bar</string>
     <string name="licenses_used_telephoto">Zooming and tiled loading of large photos</string>
     <string name="licenses_used_coil">Image loading</string>
+    <string name="licenses_used_material_symbols">The icons of the Material 3 Expressive style</string>
+    <string name="licenses_used_material_kolor">Material colour schemes from the colour you choose</string>
     <string name="editor_edit">Edit</string>
     <string name="editor_crop">Crop</string>
     <string name="editor_adjust">Adjust</string>
