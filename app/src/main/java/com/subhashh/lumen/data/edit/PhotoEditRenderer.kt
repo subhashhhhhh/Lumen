@@ -27,9 +27,6 @@ import com.subhashh.lumen.data.vault.Vault
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import kotlin.math.hypot
 import kotlin.math.max
 
@@ -222,13 +219,8 @@ object PhotoEditSaver {
             if (source != null) {
                 for (tag in ImageExport.CopiedTags) source.getAttribute(tag)?.let { exif.setAttribute(tag, it) }
             }
-            if (exif.getAttribute(ExifInterface.TAG_DATETIME_ORIGINAL) == null) {
-                // Without it a rescan would date the photo to the moment it was edited.
-                exif.setAttribute(
-                    ExifInterface.TAG_DATETIME_ORIGINAL,
-                    SimpleDateFormat("yyyy:MM:dd HH:mm:ss", Locale.US).format(Date(item.takenAt)),
-                )
-            }
+            // Without a date of its own, a rescan would date the photo to the moment it was edited.
+            ImageExport.stampDate(exif, item.takenAt)
             exif.setAttribute(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL.toString())
             exif.setAttribute(ExifInterface.TAG_PIXEL_X_DIMENSION, width.toString())
             exif.setAttribute(ExifInterface.TAG_PIXEL_Y_DIMENSION, height.toString())
