@@ -1,6 +1,7 @@
 package com.subhashh.lumen.ui.viewer
 
 import com.subhashh.lumen.R
+import com.subhashh.lumen.ui.theme.Lumen
 import com.subhashh.lumen.data.toRef
 import androidx.compose.ui.res.stringResource
 import androidx.compose.animation.core.tween
@@ -479,11 +480,11 @@ private fun AllMetadataGroup(item: MediaItem, canReadLocation: Boolean, colors: 
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxWidth().pressable({ open = !open }, pressedScale = 0.98f),
     ) {
-        Text(stringResource(R.string.viewer_all_metadata), color = colors.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+        Text(stringResource(R.string.viewer_all_metadata), color = colors.text, fontSize = 15.sp, fontWeight = Lumen.type.emphasis, modifier = Modifier.weight(1f))
         if (open && tags.isNotEmpty()) {
             Action(stringResource(R.string.common_copy), colors) { copyText(context, tags.joinToString("\n") { (k, v) -> "$k: $v" }) }
         } else {
-            Text(if (open) "" else stringResource(R.string.viewer_show), color = colors.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            Text(if (open) "" else stringResource(R.string.viewer_show), color = colors.accent, fontSize = 15.sp, fontWeight = Lumen.type.emphasis)
         }
     }
     if (open) {
@@ -514,7 +515,7 @@ private fun WhenHeader(item: MediaItem, d: MediaDetails?, colors: SheetColors, o
                 DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL).format(there ?: here),
                 color = colors.text,
                 fontSize = 20.sp,
-                fontWeight = FontWeight.SemiBold,
+                fontWeight = Lumen.type.emphasis,
             )
             val line = buildString {
                 append(time.format(there ?: here))
@@ -549,7 +550,7 @@ private fun Title(icon: ImageVector?, text: String, colors: SheetColors, trailin
             Icon(icon, null, tint = colors.secondary, modifier = Modifier.size(20.dp))
             Spacer(Modifier.width(10.dp))
         }
-        Text(text, color = colors.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+        Text(text, color = colors.text, fontSize = 15.sp, fontWeight = Lumen.type.emphasis, modifier = Modifier.weight(1f))
         trailing?.invoke()
     }
 }
@@ -560,7 +561,7 @@ private fun Action(text: String, colors: SheetColors, onClick: () -> Unit) {
         text,
         color = colors.accent,
         fontSize = 15.sp,
-        fontWeight = FontWeight.SemiBold,
+        fontWeight = Lumen.type.emphasis,
         modifier = Modifier.pressable(onClick, pressedScale = 0.94f).padding(4.dp),
     )
 }

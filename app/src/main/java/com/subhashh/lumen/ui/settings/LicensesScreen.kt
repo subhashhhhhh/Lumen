@@ -1,6 +1,7 @@
 package com.subhashh.lumen.ui.settings
 
 import android.content.Intent
+import com.subhashh.lumen.ui.theme.Lumen
 import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -144,7 +145,7 @@ fun LicensesScreen(contentPadding: PaddingValues, modifier: Modifier = Modifier)
                         }
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                 ) {
-                    Text(credit.name, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = colors.text)
+                    Text(credit.name, fontSize = 16.sp, fontWeight = Lumen.type.emphasis, color = colors.text)
                     Text("${credit.by} · ${credit.license}", fontSize = 13.sp, color = colors.secondary)
                     Text(stringResource(credit.usedFor), fontSize = 13.sp, color = colors.secondary)
                 }

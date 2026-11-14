@@ -50,12 +50,16 @@ data class LumenColors(
     val groupedPage: Color,
     /** A grouped list's card, one step up from [groupedPage]. */
     val card: Color,
+    /** A grouped list drawn straight on a plain page (Collections' utilities), not on [groupedPage]. */
+    val groupOnPage: Color,
     /** A row inside a sheet or dialog that already sits on [card]. */
     val cardRaised: Color,
     /** Alerts and dialogs. */
     val dialog: Color,
     /** Larger dialogs and sheets that hold rows and pickers. */
     val panel: Color,
+    /** A bottom sheet (the album picker, a photo's details). */
+    val sheet: Color,
     val text: Color,
     val secondary: Color,
     val divider: Color,
@@ -97,6 +101,8 @@ data class LumenType(
     val dialogTitle: TextStyle,
     /** The weight for names and labels that iOS sets in semibold. */
     val emphasis: FontWeight,
+    /** The weight for headings that iOS sets in bold. */
+    val strong: FontWeight,
 )
 
 val LocalLumenColors = staticCompositionLocalOf { lumenColors(dark = true) }
@@ -121,9 +127,11 @@ internal fun lumenColors(dark: Boolean) = if (dark) {
     LumenColors(
         groupedPage = Color.Black,
         card = Color(0xFF1C1C1E),
+        groupOnPage = Color(0xFF1C1C1E),
         cardRaised = Color(0xFF2C2C2E),
         dialog = Color(0xFF2C2C2E),
         panel = Color(0xFF1C1C1E),
+        sheet = Color(0xFF1C1C1E),
         text = Color.White,
         secondary = Color(0x99EBEBF5),
         divider = Color(0x33EBEBF5),
@@ -139,9 +147,11 @@ internal fun lumenColors(dark: Boolean) = if (dark) {
     LumenColors(
         groupedPage = Color(0xFFF2F2F7),
         card = Color.White,
+        groupOnPage = Color(0xFFF2F2F7),
         cardRaised = Color.White,
         dialog = Color.White,
         panel = Color.White,
+        sheet = Color(0xFFF2F2F7),
         text = Color.Black,
         secondary = Color(0x993C3C43),
         divider = Color(0x333C3C43),
@@ -159,9 +169,11 @@ internal fun lumenColors(dark: Boolean) = if (dark) {
 internal fun materialColors(scheme: ColorScheme) = LumenColors(
     groupedPage = scheme.surfaceContainer,
     card = scheme.surfaceBright,
+    groupOnPage = scheme.surfaceContainer,
     cardRaised = scheme.surfaceContainerHighest,
     dialog = scheme.surfaceContainerHigh,
     panel = scheme.surfaceContainerHigh,
+    sheet = scheme.surfaceContainerLow,
     text = scheme.onSurface,
     secondary = scheme.onSurfaceVariant,
     divider = scheme.outlineVariant,
@@ -199,6 +211,7 @@ internal val LumenStyleType = LumenType(
     sectionTitle = TextStyle(fontSize = 22.sp, fontWeight = FontWeight.Bold),
     dialogTitle = TextStyle(fontSize = 17.sp, fontWeight = FontWeight.SemiBold),
     emphasis = FontWeight.SemiBold,
+    strong = FontWeight.Bold,
 )
 
 /** Expressive type: large, in medium weight, tighter than the body. */
@@ -207,4 +220,5 @@ internal val MaterialStyleType = LumenType(
     sectionTitle = TextStyle(fontSize = 22.sp, lineHeight = 28.sp, fontWeight = FontWeight.Medium),
     dialogTitle = TextStyle(fontSize = 24.sp, lineHeight = 32.sp, fontWeight = FontWeight.Normal),
     emphasis = FontWeight.Medium,
+    strong = FontWeight.Medium,
 )

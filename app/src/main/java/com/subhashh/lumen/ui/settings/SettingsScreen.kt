@@ -29,6 +29,8 @@ import android.provider.Settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import com.subhashh.lumen.ui.theme.LocalDarkTheme
+import com.subhashh.lumen.ui.theme.Lumen
+import androidx.compose.foundation.shape.CircleShape
 import com.subhashh.lumen.ui.theme.Appearance
 import com.subhashh.lumen.ui.theme.DesignStyle
 import com.subhashh.lumen.ui.theme.LocalAppearance
@@ -351,9 +353,9 @@ private fun SearchBox(query: String, onQueryChange: (String) -> Unit) {
         Modifier
             .fillMaxWidth()
             .padding(bottom = 6.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(colors.card)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+            .clip(if (Lumen.material) CircleShape else RoundedCornerShape(12.dp))
+            .background(if (Lumen.material) Lumen.colors.card else colors.card)
+            .padding(horizontal = if (Lumen.material) 20.dp else 12.dp, vertical = if (Lumen.material) 16.dp else 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(LumenIcons.Search, contentDescription = null, tint = colors.secondary, modifier = Modifier.size(18.dp))
@@ -365,7 +367,7 @@ private fun SearchBox(query: String, onQueryChange: (String) -> Unit) {
                 onValueChange = onQueryChange,
                 singleLine = true,
                 textStyle = TextStyle(color = colors.text, fontSize = 17.sp),
-                cursorBrush = SolidColor(Blue),
+                cursorBrush = SolidColor(Lumen.colors.accent),
                 modifier = Modifier.fillMaxWidth(),
             )
         }
@@ -388,6 +390,7 @@ private fun SearchBox(query: String, onQueryChange: (String) -> Unit) {
 internal fun Anchor(id: String, highlight: String?, content: @Composable () -> Unit) {
     val requester = remember { BringIntoViewRequester() }
     val flash = remember { Animatable(0f) }
+    val accent = com.subhashh.lumen.ui.theme.Lumen.colors.accent
     LaunchedEffect(highlight) {
         if (highlight == id) {
             delay(250) // let the page lay out first
@@ -399,7 +402,7 @@ internal fun Anchor(id: String, highlight: String?, content: @Composable () -> U
     Box(
         Modifier
             .bringIntoViewRequester(requester)
-            .drawBehind { drawRect(Blue.copy(alpha = 0.28f * flash.value)) },
+            .drawBehind { drawRect(accent.copy(alpha = 0.28f * flash.value)) },
     ) { content() }
 }
 
@@ -980,13 +983,14 @@ private fun ColumnScope.AboutPage(
 @Composable
 private fun AboutHeader(version: String, onDeveloper: () -> Unit) {
     val colors = groupColors()
+    val accent = Lumen.colors.accent
     Column(
         Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 20.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         com.subhashh.lumen.ui.components.AppIcon(96.dp)
         Spacer(Modifier.height(14.dp))
-        Text("Lumen", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = colors.text)
+        Text("Lumen", fontSize = 28.sp, fontWeight = if (Lumen.material) FontWeight.Medium else FontWeight.Bold, color = colors.text)
         Text(stringResource(R.string.settings_version_value, version), fontSize = 15.sp, color = colors.secondary)
         Spacer(Modifier.height(10.dp))
         val developerName = "Subhash Gottumukkala"
@@ -995,7 +999,7 @@ private fun AboutHeader(version: String, onDeveloper: () -> Unit) {
         Text(
             androidx.compose.ui.text.buildAnnotatedString {
                 append(madeBy.substring(0, nameStart))
-                withStyle(androidx.compose.ui.text.SpanStyle(color = Blue, fontWeight = FontWeight.Medium)) { append(developerName) }
+                withStyle(androidx.compose.ui.text.SpanStyle(color = accent, fontWeight = FontWeight.Medium)) { append(developerName) }
                 append(madeBy.substring((nameStart + developerName.length).coerceAtMost(madeBy.length)))
             },
             fontSize = 15.sp,

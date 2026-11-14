@@ -1,6 +1,7 @@
 package com.subhashh.lumen.ui.viewer
 
 import androidx.compose.animation.AnimatedVisibility
+import com.subhashh.lumen.ui.theme.Lumen
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -213,7 +214,7 @@ fun VideoPage(
                         stringResource(if (shown == FlashKind.Back) R.string.viewer_seek_back else R.string.viewer_seek_ahead),
                         color = Color.White,
                         fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold,
+                        fontWeight = Lumen.type.emphasis,
                     )
                     else -> Icon(
                         if (shown == FlashKind.Pause) LumenIcons.Pause else LumenIcons.Play,

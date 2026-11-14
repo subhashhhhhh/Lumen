@@ -88,23 +88,21 @@ import com.subhashh.lumen.data.MediaItem
 import com.subhashh.lumen.ui.components.glass
 import com.subhashh.lumen.ui.icons.LumenIcons
 import com.subhashh.lumen.ui.theme.LocalDarkTheme
+import com.subhashh.lumen.ui.theme.Lumen
 import kotlin.math.roundToInt
 
 internal data class GroupColors(val card: Color, val text: Color, val secondary: Color, val divider: Color)
 
+/** The current style's colours for a grouped list (see [Lumen.colors]). */
 @Composable
-internal fun groupColors(): GroupColors = if (LocalDarkTheme.current) {
-    GroupColors(Color(0xFF1C1C1E), Color.White, Color(0x99EBEBF5), Color(0x33EBEBF5))
-} else {
-    GroupColors(Color(0xFFF2F2F7), Color.Black, Color(0x993C3C43), Color(0x333C3C43))
-}
+internal fun groupColors(): GroupColors = Lumen.colors.let { GroupColors(it.groupOnPage, it.text, it.secondary, it.divider) }
 
 /** What the dropdown pickers' glass refracts: the whole page, cards and all. */
 private val LocalPickerHost = staticCompositionLocalOf<PickerHost?> { null }
 
 /** Settings' card colour: one step up from the page, like iOS grouped lists. */
 @Composable
-private fun cardColor(): Color = if (LocalDarkTheme.current) Color(0xFF1C1C1E) else Color.White
+private fun cardColor(): Color = Lumen.colors.card
 
 /**
  * A Settings page: plain black (iOS light grey in light mode) with solid cards, like iOS
@@ -117,8 +115,7 @@ internal fun SettingsPage(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    val dark = LocalDarkTheme.current
-    PickerArea(modifier.background(if (dark) Color.Black else Color(0xFFF2F2F7))) {
+    PickerArea(modifier.background(Lumen.colors.groupedPage)) {
         Column(
             Modifier
                 .fillMaxSize()
@@ -150,8 +147,7 @@ internal fun PickerArea(modifier: Modifier = Modifier, content: @Composable () -
 internal fun LargeTitle(text: String) {
     Text(
         text,
-        fontSize = 34.sp,
-        fontWeight = FontWeight.Bold,
+        style = Lumen.type.screenTitle,
         color = groupColors().text,
         modifier = Modifier.padding(start = 4.dp, bottom = 8.dp),
     )
@@ -165,6 +161,7 @@ internal fun LargeTitle(text: String) {
 @Composable
 internal fun Group(title: String, footer: String? = null, note: String? = null, content: @Composable ColumnScope.() -> Unit) {
     val colors = groupColors()
+    val material = Lumen.material
     var info by rememberSaveable(title) { mutableStateOf(false) }
     if (title.isBlank()) {
         // Untitled groups (Settings' main list) are just separated, like iOS: no header line.
@@ -174,11 +171,12 @@ internal fun Group(title: String, footer: String? = null, note: String? = null, 
             Modifier.fillMaxWidth().padding(start = 16.dp, top = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            // Material: the section's name as a label in the accent colour, in its own case.
             Text(
-                title.uppercase(),
-                fontSize = 13.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = colors.secondary,
+                if (material) title else title.uppercase(),
+                fontSize = if (material) 14.sp else 13.sp,
+                fontWeight = if (material) FontWeight.Medium else FontWeight.SemiBold,
+                color = if (material) Lumen.colors.accent else colors.secondary,
                 modifier = Modifier.weight(1f).padding(top = 12.dp, bottom = 8.dp),
             )
             if (footer != null) {
@@ -212,7 +210,7 @@ internal fun Group(title: String, footer: String? = null, note: String? = null, 
     Column(
         Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(Lumen.shapes.card)
             .background(cardColor()),
         content = content,
     )
@@ -230,6 +228,20 @@ internal fun Group(title: String, footer: String? = null, note: String? = null, 
 /** A coloured rounded square with a white glyph, as in iOS Settings and Collections' utilities. */
 @Composable
 internal fun IconBadge(icon: ImageVector, color: Color) {
+    if (Lumen.material) {
+        // A tonal circle: the badge's colour picks which of the scheme's containers it takes.
+        val (container, content) = badgeTones(color)
+        Box(
+            Modifier
+                .size(40.dp)
+                .clip(Lumen.shapes.badge)
+                .background(container),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(icon, contentDescription = null, tint = content, modifier = Modifier.size(20.dp))
+        }
+        return
+    }
     Box(
         Modifier
             .size(30.dp)
@@ -238,6 +250,25 @@ internal fun IconBadge(icon: ImageVector, color: Color) {
         contentAlignment = Alignment.Center,
     ) {
         Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+    }
+}
+
+/**
+ * Material's stand-in for an iOS badge colour: cool colours take the primary container, warm
+ * ones the tertiary, red the error container and grey the neutral one, so rows still differ
+ * while every colour comes from the scheme (the wallpaper's, with Wallpaper Colours on).
+ */
+@Composable
+internal fun badgeTones(color: Color): Pair<Color, Color> {
+    val scheme = androidx.compose.material3.MaterialTheme.colorScheme
+    val max = maxOf(color.red, color.green, color.blue)
+    val min = minOf(color.red, color.green, color.blue)
+    return when {
+        max - min < 0.12f -> scheme.surfaceContainerHighest to scheme.onSurfaceVariant
+        color.red == max && color.green < 0.35f && color.blue < 0.35f -> scheme.errorContainer to scheme.onErrorContainer
+        color.blue == max -> scheme.primaryContainer to scheme.onPrimaryContainer
+        color.green == max -> scheme.secondaryContainer to scheme.onSecondaryContainer
+        else -> scheme.tertiaryContainer to scheme.onTertiaryContainer
     }
 }
 
@@ -254,10 +285,11 @@ private fun RowShell(
     trailing: @Composable () -> Unit,
 ) {
     val colors = groupColors()
+    val material = Lumen.material
     Row(
         modifier
             .fillMaxWidth()
-            .heightIn(min = 54.dp)
+            .heightIn(min = if (material) 64.dp else 54.dp)
             .then(
                 if (onClick != null) {
                     Modifier.clickable(
@@ -269,16 +301,16 @@ private fun RowShell(
                     Modifier
                 },
             )
-            .padding(horizontal = 14.dp, vertical = 9.dp),
+            .padding(horizontal = if (material) 16.dp else 14.dp, vertical = if (material) 12.dp else 9.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (icon != null) {
             IconBadge(icon, iconColor)
-            Spacer(Modifier.width(14.dp))
+            Spacer(Modifier.width(if (material) 16.dp else 14.dp))
         }
         Column(Modifier.weight(1f)) {
             Text(title, fontSize = 16.sp, color = colors.text)
-            if (subtitle != null) Text(subtitle, fontSize = 13.sp, color = colors.secondary)
+            if (subtitle != null) Text(subtitle, fontSize = if (material) 14.sp else 13.sp, lineHeight = if (material) 20.sp else androidx.compose.ui.unit.TextUnit.Unspecified, color = colors.secondary)
         }
         trailing()
     }
@@ -315,12 +347,12 @@ internal fun NumberRow(
             singleLine = true,
             keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
             textStyle = androidx.compose.ui.text.TextStyle(color = colors.text, fontSize = 16.sp, textAlign = androidx.compose.ui.text.style.TextAlign.End),
-            cursorBrush = androidx.compose.ui.graphics.SolidColor(Blue),
+            cursorBrush = androidx.compose.ui.graphics.SolidColor(Lumen.colors.accent),
             modifier = Modifier
                 // Room for the largest number allowed (up to 60,000).
                 .width((24 + 10 * max.toString().length).dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(colors.secondary.copy(alpha = 0.12f))
+                .clip(if (Lumen.material) RoundedCornerShape(12.dp) else RoundedCornerShape(8.dp))
+                .background(Lumen.colors.field)
                 .padding(horizontal = 8.dp, vertical = 6.dp)
                 .onFocusChanged { if (!it.isFocused && (text.toIntOrNull() ?: 0) < min) text = value.toString() },
         )
@@ -345,7 +377,8 @@ internal fun SettingsRow(
             Spacer(Modifier.width(8.dp))
             Text(value, fontSize = 16.sp, color = colors.secondary, maxLines = 1)
         }
-        if (onClick != null) {
+        // Android's lists don't point onward: no chevron in the Material style.
+        if (onClick != null && !Lumen.material) {
             Spacer(Modifier.width(6.dp))
             Icon(
                 LumenIcons.Back,
@@ -378,8 +411,24 @@ internal fun ToggleRow(
     }
     RowShell(title, subtitle, icon, iconColor, onClick = toggle, interactionSource = press) {
         Spacer(Modifier.width(10.dp))
-        LiquidSwitch(checked, pressed = press.collectIsPressedAsState().value)
+        if (Lumen.material) MaterialSwitch(checked, press)
+        else LiquidSwitch(checked, pressed = press.collectIsPressedAsState().value)
     }
+}
+
+/** Material's switch, with a tick in the thumb while it's on. Display only: its row handles the touch. */
+@Composable
+private fun MaterialSwitch(checked: Boolean, interaction: MutableInteractionSource) {
+    androidx.compose.material3.Switch(
+        checked = checked,
+        onCheckedChange = null,
+        interactionSource = interaction,
+        thumbContent = if (checked) {
+            { Icon(LumenIcons.Check, contentDescription = null, modifier = Modifier.size(androidx.compose.material3.SwitchDefaults.IconSize)) }
+        } else {
+            null
+        },
+    )
 }
 
 /**
@@ -510,8 +559,16 @@ internal fun PickerRow(
     }
 }
 
+/**
+ * Between two rows of a [Group]. Lumen: a hairline starting after the icon. Material: a gap
+ * showing the page through, so the group reads as separate segments stacked together.
+ */
 @Composable
 internal fun Divider() {
+    if (Lumen.material) {
+        Box(Modifier.fillMaxWidth().height(2.dp).background(Lumen.colors.groupedPage))
+        return
+    }
     HorizontalDivider(color = groupColors().divider, modifier = Modifier.padding(start = 58.dp))
 }
 
@@ -559,7 +616,7 @@ private fun PickerOverlay(host: PickerHost, backdrop: Backdrop) {
         val shown = request ?: return@Box
         val width = with(density) { PickerWidth.toPx() }
         val itemHeight = with(density) { PickerItemHeight.toPx() }
-        val height = itemHeight * shown.options.size + with(density) { 12.dp.toPx() }
+        val height = (if (Lumen.material) with(density) { 48.dp.toPx() } else itemHeight) * shown.options.size + with(density) { (if (Lumen.material) 16.dp else 12.dp).toPx() }
         val below = shown.anchor.bottom + height < origin.bottom - with(density) { 24.dp.toPx() }
         val x = (shown.anchor.right - with(density) { 14.dp.toPx() } - width - origin.left)
         val y = if (below) shown.anchor.bottom - origin.top - with(density) { 6.dp.toPx() } else shown.anchor.top - origin.top - height
@@ -575,34 +632,48 @@ private fun PickerOverlay(host: PickerHost, backdrop: Backdrop) {
                     .width(PickerWidth)
                     .glass(
                         backdrop,
-                        shape = RoundedCornerShape(18.dp),
+                        shape = if (Lumen.material) Lumen.shapes.menu else RoundedCornerShape(18.dp),
                         blurRadius = 10.dp,
                         refractionHeight = 18.dp,
                         refractionAmount = 36.dp,
                         tint = if (dark) Color(0x8C2C2C30) else Color(0xB3FFFFFF),
                     )
-                    .padding(vertical = 6.dp),
+                    .padding(vertical = if (Lumen.material) 8.dp else 6.dp),
             ) {
+                val material = Lumen.material
+                val scheme = androidx.compose.material3.MaterialTheme.colorScheme
                 shown.options.forEachIndexed { index, option ->
+                    val chosen = material && index == shown.selected
                     Row(
                         Modifier
+                            .then(
+                                if (material) {
+                                    Modifier
+                                        .padding(horizontal = 8.dp)
+                                        .clip(RoundedCornerShape(14.dp))
+                                        .then(if (chosen) Modifier.background(scheme.secondaryContainer) else Modifier)
+                                } else {
+                                    Modifier
+                                },
+                            )
                             .fillMaxWidth()
-                            .height(PickerItemHeight)
+                            .height(if (material) 48.dp else PickerItemHeight)
                             .clickable {
                                 host.close()
                                 if (index in shown.unavailable) shown.onUnavailable(index) else shown.onSelect(index)
                             }
-                            .padding(horizontal = 14.dp),
+                            .padding(horizontal = if (material) 10.dp else 14.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
+                        val text = if (chosen) scheme.onSecondaryContainer else colors.text
                         Box(Modifier.width(26.dp)) {
                             if (index == shown.selected) {
-                                Icon(LumenIcons.Check, null, tint = colors.text, modifier = Modifier.size(17.dp))
+                                Icon(LumenIcons.Check, null, tint = text, modifier = Modifier.size(17.dp))
                             }
                         }
                         Text(
                             option, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                            color = if (index in shown.unavailable) colors.text.copy(alpha = 0.38f) else colors.text,
+                            color = if (index in shown.unavailable) text.copy(alpha = 0.38f) else text,
                         )
                     }
                 }

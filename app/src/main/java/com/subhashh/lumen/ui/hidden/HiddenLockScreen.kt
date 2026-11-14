@@ -1,6 +1,7 @@
 package com.subhashh.lumen.ui.hidden
 
 import androidx.activity.compose.BackHandler
+import com.subhashh.lumen.ui.theme.Lumen
 import androidx.activity.compose.LocalActivity
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.keyframes
@@ -237,7 +238,7 @@ fun HiddenLockScreen(
             Icon(LumenIcons.Lock, null, tint = Accent, modifier = Modifier.size(40.dp))
             Spacer(Modifier.height(14.dp))
             val (title, subtitle) = titles(step, store, flow, lockedName)
-            Text(title, color = colors.onBackground, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
+            Text(title, color = colors.onBackground, fontSize = 22.sp, fontWeight = Lumen.type.emphasis, textAlign = TextAlign.Center)
             Spacer(Modifier.height(6.dp))
             Text(
                 error ?: subtitle,
@@ -360,7 +361,7 @@ private fun ChooseType(onChoose: (LockType) -> Unit) {
                     .background(colors.onBackground.copy(alpha = 0.07f))
                     .padding(horizontal = 18.dp, vertical = 14.dp),
             ) {
-                Text(type.localName(context), color = colors.onBackground, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                Text(type.localName(context), color = colors.onBackground, fontSize = 17.sp, fontWeight = Lumen.type.emphasis)
                 Text(hint, color = colors.onBackground.copy(alpha = 0.6f), fontSize = 14.sp)
             }
         }
@@ -379,7 +380,7 @@ private fun BiometricsOffer(onEnable: () -> Unit, onSkip: () -> Unit) {
                 .background(Accent),
             contentAlignment = Alignment.Center,
         ) {
-            Text(stringResource(R.string.hidden_use_biometrics), color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+            Text(stringResource(R.string.hidden_use_biometrics), color = Color.White, fontSize = 17.sp, fontWeight = Lumen.type.emphasis)
         }
         Text(
             stringResource(R.string.common_not_now),
@@ -453,7 +454,7 @@ private fun PinEntry(autoLength: Int, onSubmit: (String) -> Unit) {
                 stringResource(R.string.common_next),
                 color = if (pin.length in 4..8) Accent else colors.onBackground.copy(alpha = 0.3f),
                 fontSize = 17.sp,
-                fontWeight = FontWeight.SemiBold,
+                fontWeight = Lumen.type.emphasis,
                 modifier = Modifier
                     .clickable(enabled = pin.length in 4..8) { onSubmit(pin) }
                     .padding(12.dp),
@@ -553,7 +554,7 @@ private fun PasswordEntry(action: String, onSubmit: (String) -> Unit) {
             action,
             color = if (text.isNotEmpty()) Accent else colors.onBackground.copy(alpha = 0.3f),
             fontSize = 17.sp,
-            fontWeight = FontWeight.SemiBold,
+            fontWeight = Lumen.type.emphasis,
             modifier = Modifier
                 .clickable(enabled = text.isNotEmpty()) { onSubmit(text) }
                 .padding(12.dp)

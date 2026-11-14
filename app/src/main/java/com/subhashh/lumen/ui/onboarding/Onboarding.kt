@@ -1,6 +1,7 @@
 package com.subhashh.lumen.ui.onboarding
 
 import androidx.core.graphics.drawable.toBitmap
+import com.subhashh.lumen.ui.theme.Lumen
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalDensity
 import android.Manifest
@@ -184,7 +185,7 @@ fun Onboarding(
 @Composable
 private fun ColumnScope.Title(title: String, subtitle: String) {
     Spacer(Modifier.height(24.dp))
-    Text(title, color = ink, fontSize = 34.sp, fontWeight = FontWeight.Bold)
+    Text(title, color = ink, fontSize = 34.sp, fontWeight = Lumen.type.strong)
     Spacer(Modifier.height(8.dp))
     Text(subtitle, color = ink.copy(alpha = 0.75f), fontSize = 17.sp)
     Spacer(Modifier.height(24.dp))
@@ -201,7 +202,7 @@ private fun PrimaryButton(backdrop: Backdrop, text: String, enabled: Boolean = t
             .pressable(onClick, enabled = enabled, pressedScale = 0.96f),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text, color = ink.copy(alpha = if (enabled) 1f else 0.4f), fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+        Text(text, color = ink.copy(alpha = if (enabled) 1f else 0.4f), fontSize = 17.sp, fontWeight = Lumen.type.emphasis)
     }
 }
 
@@ -234,7 +235,7 @@ private fun Item(icon: ImageVector, title: String, subtitle: String, trailing: @
         Icon(icon, null, tint = ink, modifier = Modifier.size(24.dp))
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
-            Text(title, color = ink, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            Text(title, color = ink, fontSize = 16.sp, fontWeight = Lumen.type.emphasis)
             Text(subtitle, color = ink.copy(alpha = 0.65f), fontSize = 13.sp)
         }
         trailing()
@@ -255,7 +256,7 @@ private fun ColumnScope.Welcome(backdrop: Backdrop, onNext: () -> Unit) {
                     stringResource(R.string.app_name),
                     color = ink,
                     fontSize = 44.sp,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = Lumen.type.strong,
                     modifier = Modifier.align(Alignment.CenterHorizontally),
                 )
                 Spacer(Modifier.height(8.dp))
@@ -368,7 +369,7 @@ private fun ColumnScope.Look(backdrop: Backdrop, onNext: () -> Unit) {
                         stringResource(a.labelRes),
                         color = ink,
                         fontSize = 13.sp,
-                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                        fontWeight = if (selected) Lumen.type.emphasis else FontWeight.Normal,
                         modifier = Modifier
                             .clip(CircleShape)
                             .background(ink.copy(alpha = if (selected) 0.25f else 0.08f))
@@ -469,7 +470,7 @@ private fun ColumnScope.Smart(backdrop: Backdrop, onNext: (downloading: Boolean)
                             if (m == recommended) stringResource(R.string.onboarding_tier_recommended, tierLabel(m)) else tierLabel(m),
                             color = ink,
                             fontSize = 13.sp,
-                            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                            fontWeight = if (selected) Lumen.type.emphasis else FontWeight.Normal,
                             modifier = Modifier
                                 .clip(CircleShape)
                                 .background(ink.copy(alpha = if (selected) 0.25f else 0.08f))
@@ -528,7 +529,7 @@ private fun ColumnScope.Schedule(backdrop: Backdrop, onNext: () -> Unit) {
                     .padding(18.dp),
             ) {
                 Column {
-                    Text(title, color = ink, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                    Text(title, color = ink, fontSize = 18.sp, fontWeight = Lumen.type.emphasis)
                     Spacer(Modifier.height(4.dp))
                     Text(subtitle, color = ink.copy(alpha = 0.7f), fontSize = 14.sp)
                 }
@@ -631,7 +632,7 @@ private fun ColumnScope.Finish(backdrop: Backdrop, photos: List<MediaItem>, down
     Mosaic(tiles, Modifier.fillMaxWidth().weight(1f))
     Column(Modifier.graphicsLayer { alpha = fade.value }) {
         Spacer(Modifier.height(16.dp))
-        Text(stringResource(R.string.onboarding_done_title), color = ink, fontSize = 40.sp, fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+        Text(stringResource(R.string.onboarding_done_title), color = ink, fontSize = 40.sp, fontWeight = Lumen.type.strong, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
         Spacer(Modifier.height(10.dp))
         Text(
             if (downloading) stringResource(R.string.onboarding_done_downloading)

@@ -1,6 +1,7 @@
 package com.subhashh.lumen.ui.search
 
 import androidx.compose.foundation.background
+import com.subhashh.lumen.ui.theme.Lumen
 import com.subhashh.lumen.data.MediaThumbnail
 import coil3.compose.AsyncImage
 import androidx.compose.ui.text.style.TextOverflow
@@ -373,7 +374,7 @@ private fun SectionTitle(text: String, detail: String? = null, action: String? =
         Modifier.padding(start = 16.dp, end = 10.dp, top = 12.dp, bottom = 8.dp),
         verticalAlignment = Alignment.Bottom,
     ) {
-        Text(text, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
+        Text(text, fontSize = 20.sp, fontWeight = Lumen.type.strong, color = MaterialTheme.colorScheme.onBackground)
         if (detail != null) {
             Spacer(Modifier.width(8.dp))
             Text(detail, fontSize = 15.sp, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
@@ -415,14 +416,13 @@ private fun Suggestions(
     ) {
         Text(
             stringResource(R.string.common_search),
-            fontSize = 34.sp,
-            fontWeight = FontWeight.Bold,
+            style = Lumen.type.screenTitle,
             color = onBackground,
             modifier = Modifier.padding(start = 4.dp, bottom = 12.dp),
         )
         if (recent.isNotEmpty()) {
             Row(Modifier.fillMaxWidth().padding(start = 4.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(stringResource(R.string.main_search_recent), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = onBackground, modifier = Modifier.weight(1f))
+                Text(stringResource(R.string.main_search_recent), fontSize = 20.sp, fontWeight = Lumen.type.strong, color = onBackground, modifier = Modifier.weight(1f))
                 Text(
                     stringResource(R.string.main_search_clear),
                     fontSize = 15.sp,
@@ -437,7 +437,7 @@ private fun Suggestions(
             Text(
                 stringResource(R.string.main_search_from_your_photos),
                 fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
+                fontWeight = Lumen.type.strong,
                 color = onBackground,
                 modifier = Modifier.padding(start = 4.dp, bottom = 10.dp),
             )
@@ -455,7 +455,7 @@ private fun Suggestions(
                             model = MediaThumbnail(cover.uri),
                             contentDescription = null,
                             contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(14.dp)),
+                            modifier = Modifier.fillMaxWidth().aspectRatio(1f).clip(if (Lumen.material) Lumen.shapes.cover else RoundedCornerShape(14.dp)),
                         )
                         Text(
                             term.replaceFirstChar { it.uppercase() },
@@ -491,9 +491,9 @@ private fun Chips(items: List<String>, onClick: (String) -> Unit) {
         items.forEach { item ->
             Row(
                 Modifier
-                    .pressable({ onClick(item) }, pressedScale = 0.94f)
+                    .pressable({ onClick(item) }, pressedScale = 0.94f, shape = CircleShape)
                     .clip(CircleShape)
-                    .background(onBackground.copy(alpha = 0.08f))
+                    .background(if (Lumen.material) MaterialTheme.colorScheme.surfaceContainerHigh else onBackground.copy(alpha = 0.08f))
                     .padding(horizontal = 14.dp, vertical = 9.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {

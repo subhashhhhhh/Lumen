@@ -1,6 +1,8 @@
 package com.subhashh.lumen.ui.albums
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.shape.CircleShape
+import com.subhashh.lumen.ui.theme.Lumen
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -69,11 +71,7 @@ data class AlbumTarget(val relativePath: String, val title: String)
 private data class PickerColors(val sheet: Color, val row: Color, val text: Color, val secondary: Color)
 
 @Composable
-private fun pickerColors() = if (LocalDarkTheme.current) {
-    PickerColors(Color(0xFF1C1C1E), Color(0xFF2C2C2E), Color.White, Color(0x99EBEBF5))
-} else {
-    PickerColors(Color(0xFFF2F2F7), Color.White, Color.Black, Color(0x993C3C43))
-}
+private fun pickerColors() = Lumen.colors.let { PickerColors(it.sheet, it.cardRaised, it.text, it.secondary) }
 
 /**
  * Bottom sheet to choose an album for Copy / Move: "New Album…" first (named inline), then every
@@ -95,7 +93,7 @@ fun AlbumPicker(
         Box(
             Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.4f))
+                .background(Lumen.colors.scrim)
                 .clickable(remember { MutableInteractionSource() }, indication = null, onClick = onDismiss),
         )
     }
@@ -138,6 +136,18 @@ private fun Sheet(
             .clickable(remember { MutableInteractionSource() }, indication = null) {}
             .navigationBarsPadding(),
     ) {
+        val accent = Lumen.colors.accent
+        // Material's sheets carry a drag handle at the top.
+        if (Lumen.material) {
+            Box(
+                Modifier
+                    .padding(top = 12.dp)
+                    .align(Alignment.CenterHorizontally)
+                    .size(width = 32.dp, height = 4.dp)
+                    .clip(CircleShape)
+                    .background(colors.secondary.copy(alpha = 0.4f)),
+            )
+        }
         Box(
             Modifier
                 .fillMaxWidth()
@@ -145,7 +155,7 @@ private fun Sheet(
         ) {
             Text(
                 stringResource(R.string.common_cancel),
-                color = Color(0xFF0A84FF),
+                color = accent,
                 fontSize = 16.sp,
                 modifier = Modifier
                     .align(Alignment.CenterStart)
@@ -155,7 +165,7 @@ private fun Sheet(
                 title,
                 color = colors.text,
                 fontSize = 17.sp,
-                fontWeight = FontWeight.SemiBold,
+                fontWeight = Lumen.type.emphasis,
                 modifier = Modifier.align(Alignment.Center),
             )
         }
@@ -166,7 +176,7 @@ private fun Sheet(
                     Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 6.dp)
-                        .clip(RoundedCornerShape(14.dp))
+                        .clip(if (Lumen.material) Lumen.shapes.card else RoundedCornerShape(14.dp))
                         .background(colors.row)
                         .clickable { naming = true }
                         .padding(12.dp),
@@ -179,7 +189,7 @@ private fun Sheet(
                             .background(colors.secondary.copy(alpha = 0.15f)),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Icon(LumenIcons.NewAlbum, null, tint = Color(0xFF0A84FF))
+                        Icon(LumenIcons.NewAlbum, null, tint = accent)
                     }
                     Spacer(Modifier.width(14.dp))
                     if (!naming) {
@@ -190,7 +200,7 @@ private fun Sheet(
                             onValueChange = { name = it },
                             singleLine = true,
                             textStyle = TextStyle(color = colors.text, fontSize = 16.sp),
-                            cursorBrush = SolidColor(Color(0xFF0A84FF)),
+                            cursorBrush = SolidColor(accent),
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                             keyboardActions = KeyboardActions(onDone = { create() }),
                             decorationBox = { field ->
@@ -203,9 +213,9 @@ private fun Sheet(
                         )
                         Text(
                             stringResource(R.string.main_create),
-                            color = if (name.isBlank()) colors.secondary else Color(0xFF0A84FF),
+                            color = if (name.isBlank()) colors.secondary else accent,
                             fontSize = 16.sp,
-                            fontWeight = FontWeight.SemiBold,
+                            fontWeight = Lumen.type.emphasis,
                             modifier = Modifier
                                 .padding(start = 12.dp)
                                 .clickable(enabled = name.isNotBlank()) { create() },

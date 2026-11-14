@@ -1,6 +1,8 @@
 package com.subhashh.lumen.ui.library
 
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.foundation.shape.RoundedCornerShape
+import com.subhashh.lumen.ui.theme.Lumen
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -273,7 +275,7 @@ private fun SectionHeader(label: String) {
         label,
         color = MaterialTheme.colorScheme.onBackground,
         fontSize = 17.sp,
-        fontWeight = FontWeight.SemiBold,
+        fontWeight = Lumen.type.emphasis,
         modifier = Modifier.padding(start = 14.dp, end = 14.dp, top = 18.dp, bottom = 8.dp),
     )
 }
@@ -296,6 +298,13 @@ internal fun Thumbnail(
         spring(dampingRatio = 0.7f, stiffness = 700f),
         label = "selectScale",
     )
+    // Material: a selected photo also rounds its corners, as Android's own galleries do.
+    val material = Lumen.material
+    val corner by animateFloatAsState(
+        if (material && selected == true) 1f else 0f,
+        spring(dampingRatio = 0.7f, stiffness = 700f),
+        label = "selectCorner",
+    )
     Box(
         modifier
             .aspectRatio(1f)
@@ -307,6 +316,10 @@ internal fun Thumbnail(
                 .graphicsLayer {
                     scaleX = scale
                     scaleY = scale
+                    if (corner > 0.01f) {
+                        shape = RoundedCornerShape(SelectedCorner.toPx() * corner)
+                        clip = true
+                    }
                 }
                 // Letterboxed cells stay clear around the photo; square crops get a loading tint.
                 .then(if (fit) Modifier else Modifier.background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))),
@@ -379,11 +392,13 @@ internal fun Thumbnail(
 @Composable
 internal fun SelectionMark(selected: Boolean, modifier: Modifier = Modifier) {
     if (selected) {
+        // Material: a little larger, the tick in the scheme's "on primary" rather than white.
+        val material = Lumen.material
         Box(
             modifier
-                .size(22.dp)
+                .size(if (material) 24.dp else 22.dp)
                 .clip(CircleShape)
-                .background(Color.White),
+                .background(if (material) MaterialTheme.colorScheme.onPrimary else Color.White),
         ) {
             Icon(
                 LumenIcons.Selected,
@@ -404,6 +419,9 @@ internal fun SelectionMark(selected: Boolean, modifier: Modifier = Modifier) {
     }
 }
 
+/** A selected photo's corners in the Material style. */
+private val SelectedCorner = 16.dp
+
 @Composable
 internal fun LibraryHeader(title: String, subtitle: String, topPadding: Dp, modifier: Modifier = Modifier) {
     Column(
@@ -416,7 +434,11 @@ internal fun LibraryHeader(title: String, subtitle: String, topPadding: Dp, modi
             .statusBarsPadding()
             .padding(top = topPadding, start = 20.dp, end = 20.dp, bottom = 72.dp),
     ) {
-        Text(title, style = OverlayText.copy(fontSize = 34.sp, fontWeight = FontWeight.Bold))
+        Text(
+            title,
+            style = if (Lumen.material) OverlayText.copy(fontSize = 36.sp, lineHeight = 44.sp, fontWeight = FontWeight.Medium)
+            else OverlayText.copy(fontSize = 34.sp, fontWeight = FontWeight.Bold),
+        )
         if (subtitle.isNotEmpty()) {
             Text(subtitle, style = OverlayText.copy(fontSize = 15.sp, color = Color(0xCCFFFFFF)))
         }

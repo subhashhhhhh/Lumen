@@ -1,6 +1,8 @@
 package com.subhashh.lumen.ui.viewer
 
 import android.app.WallpaperManager
+import com.subhashh.lumen.ui.components.Spinner
+import com.subhashh.lumen.ui.theme.Lumen
 import android.graphics.Bitmap
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
@@ -17,7 +19,6 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -87,7 +88,7 @@ fun WallpaperScreen(
         }
         val image = bitmap
         if (image == null) {
-            CircularProgressIndicator(Modifier.align(Alignment.Center), color = Color.White)
+            Spinner(Modifier.align(Alignment.Center), color = Color.White)
             return@BoxWithConstraints
         }
         val imageBitmap = remember(image) { image.asImageBitmap() }
@@ -169,7 +170,7 @@ fun WallpaperScreen(
         }
         if (applying) {
             Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = Color.White)
+                Spinner(color = Color.White)
             }
         }
     }
@@ -190,7 +191,7 @@ private fun WallpaperButton(label: String, dim: Boolean = false, onClick: () -> 
             label,
             color = if (dim) Color.White.copy(alpha = 0.7f) else Color.White,
             fontSize = 17.sp,
-            fontWeight = if (dim) FontWeight.Normal else FontWeight.SemiBold,
+            fontWeight = if (dim) FontWeight.Normal else Lumen.type.emphasis,
         )
     }
 }

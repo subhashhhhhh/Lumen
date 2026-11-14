@@ -1,6 +1,7 @@
 package com.subhashh.lumen.ui.hidden
 
 import android.os.SystemClock
+import com.subhashh.lumen.ui.theme.Lumen
 import android.text.format.Formatter
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.LinearEasing
@@ -144,7 +145,7 @@ fun VaultProgressScreen(encrypting: Boolean, progress: VaultMigration.Progress?)
                         stringResource(R.string.hidden_vault_percent, (shown * 100).toInt()),
                         color = Color.White,
                         fontSize = 28.sp,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = Lumen.type.strong,
                     )
                 }
             }
@@ -163,7 +164,7 @@ fun VaultProgressScreen(encrypting: Boolean, progress: VaultMigration.Progress?)
                 },
                 color = Color.White,
                 fontSize = 18.sp,
-                fontWeight = FontWeight.SemiBold,
+                fontWeight = Lumen.type.emphasis,
             )
             Spacer(Modifier.height(6.dp))
             if (progress != null && progress.bytesTotal > 0) {

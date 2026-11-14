@@ -1,6 +1,8 @@
 package com.subhashh.lumen.ui.editor
 
 import androidx.compose.animation.AnimatedVisibility
+import com.subhashh.lumen.ui.components.Spinner
+import com.subhashh.lumen.ui.theme.Lumen
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -26,7 +28,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -91,7 +92,7 @@ internal fun EditorTextButton(
         label,
         color = color,
         fontSize = 17.sp,
-        fontWeight = if (bold) FontWeight.SemiBold else FontWeight.Normal,
+        fontWeight = if (bold) Lumen.type.emphasis else FontWeight.Normal,
         modifier = modifier.pressable(onClick, enabled = enabled, pressedScale = 0.94f).padding(horizontal = 12.dp, vertical = 10.dp),
     )
 }
@@ -273,9 +274,9 @@ internal fun EditorBusy(label: String, progress: Float? = null, onCancel: (() ->
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
             if (progress != null) {
-                CircularProgressIndicator(progress = { progress }, color = Color.White, trackColor = Color.White.copy(alpha = 0.2f))
+                com.subhashh.lumen.ui.components.ProgressRing(progress = { progress }, color = Color.White, trackColor = Color.White.copy(alpha = 0.2f))
             } else {
-                CircularProgressIndicator(color = Color.White)
+                Spinner(color = Color.White)
             }
             Text(label, color = Color.White, fontSize = 15.sp)
             if (onCancel != null) EditorTextButton(stringResource(R.string.common_cancel), EditorAccent, onCancel)

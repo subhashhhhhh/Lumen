@@ -12,7 +12,11 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.CircularWavyProgressIndicator
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
+import com.subhashh.lumen.ui.theme.Lumen
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -79,4 +83,29 @@ fun MaterialMorphSurface(
         contentAlignment = Alignment.Center,
         content = content,
     )
+}
+
+/** "Working on it", with no known end. Material: the shape-shifting loading indicator. */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+fun Spinner(
+    modifier: Modifier = Modifier,
+    color: Color = MaterialTheme.colorScheme.primary,
+    strokeWidth: Dp = 4.dp,
+) {
+    if (Lumen.material) LoadingIndicator(modifier, color = color)
+    else CircularProgressIndicator(modifier, color = color, strokeWidth = strokeWidth)
+}
+
+/** Progress around a ring, 0 to 1. Material: the wavy ring. */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+fun ProgressRing(
+    progress: () -> Float,
+    modifier: Modifier = Modifier,
+    color: Color = MaterialTheme.colorScheme.primary,
+    trackColor: Color = color.copy(alpha = 0.2f),
+) {
+    if (Lumen.material) CircularWavyProgressIndicator(progress, modifier, color = color, trackColor = trackColor)
+    else CircularProgressIndicator(progress = progress, modifier = modifier, color = color, trackColor = trackColor)
 }

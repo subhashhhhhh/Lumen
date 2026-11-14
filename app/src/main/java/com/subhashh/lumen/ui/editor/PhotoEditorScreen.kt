@@ -1,6 +1,7 @@
 package com.subhashh.lumen.ui.editor
 
 import android.graphics.Bitmap
+import com.subhashh.lumen.ui.components.Spinner
 import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
 import androidx.compose.foundation.Canvas
@@ -21,7 +22,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -155,7 +155,7 @@ fun PhotoEditorScreen(
     Box(Modifier.fillMaxSize().background(Color.Black)) {
         val bitmap = preview
         if (bitmap == null) {
-            CircularProgressIndicator(Modifier.align(Alignment.Center), color = Color.White)
+            Spinner(Modifier.align(Alignment.Center), color = Color.White)
             return@Box
         }
         val frame = edit.frameSize(bitmap.width.toFloat(), bitmap.height.toFloat())

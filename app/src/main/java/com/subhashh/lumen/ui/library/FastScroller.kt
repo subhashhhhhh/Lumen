@@ -1,6 +1,7 @@
 package com.subhashh.lumen.ui.library
 
 import androidx.compose.animation.AnimatedVisibility
+import com.subhashh.lumen.ui.theme.Lumen
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -127,16 +128,19 @@ fun FastScroller(
                 .align(Alignment.TopEnd)
                 .offset { IntOffset(0, (fraction * trackPx).roundToInt()) },
         ) {
+            val material = Lumen.material
+            val scheme = androidx.compose.material3.MaterialTheme.colorScheme
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (dragging && text.isNotEmpty()) {
+                    // Material: the label and the handle take the scheme's primary pair.
                     Text(
                         text,
-                        color = Color.White,
+                        color = if (material) scheme.onPrimaryContainer else Color.White,
                         fontSize = 15.sp,
-                        fontWeight = FontWeight.SemiBold,
+                        fontWeight = Lumen.type.emphasis,
                         modifier = Modifier
                             .shadow(8.dp, RoundedCornerShape(50))
-                            .background(Color(0xE6262628), RoundedCornerShape(50))
+                            .background(if (material) scheme.primaryContainer else Color(0xE6262628), RoundedCornerShape(50))
                             .padding(horizontal = 14.dp, vertical = 8.dp),
                     )
                     Spacer(Modifier.width(10.dp))
@@ -174,7 +178,7 @@ fun FastScroller(
                             .padding(end = edgeClearance)
                             .size(width = handleWidth, height = HandleHeight - 8.dp)
                             .shadow(4.dp, CircleShape)
-                            .background(Color.White.copy(alpha = 0.92f), CircleShape),
+                            .background(if (material) scheme.primary else Color.White.copy(alpha = 0.92f), CircleShape),
                     )
                 }
             }

@@ -1,6 +1,7 @@
 package com.subhashh.lumen.ui.viewer
 
 import com.subhashh.lumen.R
+import com.subhashh.lumen.ui.theme.Lumen
 import com.subhashh.lumen.data.toRef
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
@@ -1035,7 +1036,7 @@ private fun TopBar(
             Text(
                 day,
                 color = colors.content,
-                style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.SemiBold, shadow = glow),
+                style = TextStyle(fontSize = 15.sp, fontWeight = Lumen.type.emphasis, shadow = glow),
             )
             Text(time, color = colors.contentSecondary, style = TextStyle(fontSize = 12.sp, shadow = glow))
         }
@@ -1106,7 +1107,7 @@ private fun VideoControls(backdrop: Backdrop, player: Player) {
             formatSpeed(speed),
             color = colors.content,
             fontSize = 13.sp,
-            fontWeight = FontWeight.SemiBold,
+            fontWeight = Lumen.type.emphasis,
             textAlign = TextAlign.Center,
             modifier = Modifier
                 .padding(start = 10.dp)
@@ -1149,7 +1150,7 @@ private fun CaptionsButton(backdrop: Backdrop, on: Boolean, onClick: () -> Unit)
             stringResource(R.string.viewer_captions_cc),
             color = if (on) MaterialTheme.colorScheme.primary else colors.content,
             fontSize = 14.sp,
-            fontWeight = FontWeight.Bold,
+            fontWeight = Lumen.type.strong,
         )
     }
 }

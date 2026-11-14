@@ -1,6 +1,7 @@
 package com.subhashh.lumen.ui.people
 
 import android.graphics.Bitmap
+import com.subhashh.lumen.ui.theme.Lumen
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
@@ -38,7 +39,7 @@ fun FaceAvatar(person: Person, cover: MediaItem, modifier: Modifier = Modifier, 
     if (person.coverInVideo) {
         // A video's thumbnail is its first frame, maybe without them: the crop saved while indexing.
         val context = LocalContext.current
-        Box(modifier.aspectRatio(1f).clip(if (square) RoundedCornerShape(12.dp) else CircleShape)) {
+        Box(modifier.aspectRatio(1f).clip(if (square) Lumen.shapes.cover else CircleShape)) {
             AsyncImage(
                 model = remember(person.coverFaceId) { FaceStore.cropFile(context, person.coverFaceId) },
                 contentDescription = null,
@@ -58,7 +59,7 @@ fun FaceAvatar(item: MediaItem, box: List<Float>, modifier: Modifier = Modifier,
     Box(
         modifier
             .aspectRatio(1f)
-            .clip(if (square) RoundedCornerShape(12.dp) else CircleShape)
+            .clip(if (square) Lumen.shapes.cover else CircleShape)
             .background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.08f)),
     ) {
         AsyncImage(
