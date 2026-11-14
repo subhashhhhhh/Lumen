@@ -6,6 +6,9 @@ import android.os.Build
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialExpressiveTheme
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.movableContentOf
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.remember
@@ -176,6 +179,11 @@ private fun materialGlass(scheme: ColorScheme) = GlassColors(
     selection = scheme.secondaryContainer,
 )
 
+/**
+ * Lumen's theme in the chosen style (Settings → Appearance → Style). Switching style must not
+ * rebuild [content], or every screen would lose its place (the open Settings page, onboarding's
+ * step).
+ */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun LumenTheme(
@@ -183,35 +191,35 @@ fun LumenTheme(
     content: @Composable () -> Unit,
 ) {
     val style = LocalStyle.current
-    if (style.material) {
-        val context = LocalContext.current
-        val scheme = when {
-            // The wallpaper's colours (Material You), from Android 12.
-            style.dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
-                if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-            darkTheme -> MaterialDarkScheme
-            else -> MaterialLightScheme
-        }
-        CompositionLocalProvider(
-            LocalGlassColors provides materialGlass(scheme),
-            LocalDarkTheme provides darkTheme,
-            LocalLumenColors provides materialColors(scheme),
-            LocalLumenShapes provides MaterialStyleShapes,
-        ) {
-            MaterialExpressiveTheme(
-                colorScheme = scheme,
-                motionScheme = MotionScheme.expressive(),
-            ) { WithType(MaterialStyleType, content) }
-        }
-        return
+    val material = style.material
+    val context = LocalContext.current
+    // The two styles are two different theme calls. Movable, so the screens are carried from one
+    // to the other with everything they remember, instead of being thrown away and rebuilt.
+    val currentContent by rememberUpdatedState(content)
+    val screens = remember { movableContentOf { currentContent() } }
+    val scheme = when {
+        !material -> if (darkTheme) DarkScheme else LightScheme
+        // The wallpaper's colours (Material You), from Android 12.
+        style.dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
+            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+        darkTheme -> MaterialDarkScheme
+        else -> MaterialLightScheme
     }
     CompositionLocalProvider(
-        LocalGlassColors provides if (darkTheme) DarkGlass else LightGlass,
+        LocalGlassColors provides when {
+            material -> materialGlass(scheme)
+            darkTheme -> DarkGlass
+            else -> LightGlass
+        },
         LocalDarkTheme provides darkTheme,
-        LocalLumenColors provides lumenColors(darkTheme),
-        LocalLumenShapes provides LumenStyleShapes,
+        LocalLumenColors provides if (material) materialColors(scheme) else lumenColors(darkTheme),
+        LocalLumenShapes provides if (material) MaterialStyleShapes else LumenStyleShapes,
     ) {
-        MaterialTheme(colorScheme = if (darkTheme) DarkScheme else LightScheme) { WithType(LumenStyleType, content) }
+        if (material) {
+            MaterialExpressiveTheme(colorScheme = scheme, motionScheme = MotionScheme.expressive()) { WithType(MaterialStyleType, screens) }
+        } else {
+            MaterialTheme(colorScheme = scheme) { WithType(LumenStyleType, screens) }
+        }
     }
 }
 
@@ -239,5 +247,6 @@ private fun WithType(type: LumenType, content: @Composable () -> Unit) {
  */
 @Composable
 fun AlwaysDark(content: @Composable () -> Unit) {
-    if (LocalStyle.current.material && !LocalDarkTheme.current) LumenTheme(darkTheme = true, content = content) else content()
+    // Always through the theme, so the screen keeps its state if the phone's theme flips while it's open.
+    LumenTheme(darkTheme = LocalStyle.current.material || LocalDarkTheme.current, content = content)
 }

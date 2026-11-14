@@ -242,7 +242,7 @@ fun PhotoMapScreen(point: GeoPoint, title: String?, onBack: () -> Unit, onOpenIn
                 .navigationBarsPadding()
                 .padding(bottom = 24.dp)
                 .glass(backdrop, CircleShape)
-                .pressable(onOpenInMaps, pressedScale = 0.94f)
+                .pressable(onOpenInMaps, pressedScale = 0.94f, shape = CircleShape)
                 .padding(horizontal = 20.dp, vertical = 14.dp),
         )
     }

@@ -93,7 +93,14 @@ fun VaultProgressScreen(encrypting: Boolean, progress: VaultMigration.Progress?)
         else (elapsed * (it.bytesTotal - it.bytesDone) / it.bytesDone)
     }
 
-    val accent = if (encrypting) Color(0xFF30D158) else Color(0xFF0A84FF)
+    // Material: the scheme's primary, in the shade that reads on this always-dark screen.
+    val scheme = androidx.compose.material3.MaterialTheme.colorScheme
+    val accent = when {
+        Lumen.material -> if (com.subhashh.lumen.ui.theme.LocalDarkTheme.current) scheme.primary else scheme.inversePrimary
+        encrypting -> Color(0xFF30D158)
+        else -> Color(0xFF0A84FF)
+    }
+    val material = Lumen.material
     Box(
         Modifier
             .fillMaxSize()
@@ -117,7 +124,7 @@ fun VaultProgressScreen(encrypting: Boolean, progress: VaultMigration.Progress?)
                     val topLeft = Offset(inset, inset)
                     drawArc(Color.White.copy(alpha = 0.08f), 0f, 360f, false, topLeft, arcSize, style = Stroke(stroke))
                     drawArc(
-                        Brush.sweepGradient(listOf(accent.copy(alpha = 0.6f), accent, Color(0xFF64D2FF), accent.copy(alpha = 0.6f))),
+                        Brush.sweepGradient(listOf(accent.copy(alpha = 0.6f), accent, if (material) accent else Color(0xFF64D2FF), accent.copy(alpha = 0.6f))),
                         -90f, 360f * shown, false, topLeft, arcSize, style = Stroke(stroke, cap = StrokeCap.Round),
                     )
                 }

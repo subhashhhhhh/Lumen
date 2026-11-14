@@ -397,7 +397,8 @@ internal fun AlbumCard(
         spring(dampingRatio = 0.7f, stiffness = 700f),
         label = "selectScale",
     )
-    Column(Modifier.pressable(onClick, pressedScale = 0.96f, shape = Lumen.shapes.cover)) {
+    // The ripple follows the cover's corners at the top; square-ish below, where the name sits.
+    Column(Modifier.pressable(onClick, pressedScale = 0.96f, shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomStart = 4.dp, bottomEnd = 4.dp))) {
         Box(Modifier.fillMaxWidth().aspectRatio(1f)) {
             Box(
                 coverModifier

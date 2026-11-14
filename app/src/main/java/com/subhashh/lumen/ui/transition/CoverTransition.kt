@@ -400,7 +400,13 @@ private val BottomScrim = listOf(
 @Composable
 fun HeroLabel(title: String, subtitle: String, modifier: Modifier = Modifier) {
     Column(modifier.padding(start = 20.dp, end = 20.dp, bottom = 18.dp)) {
-        Text(title, style = HeroTitle, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Text(
+            title,
+            // Material sets its large titles in medium weight.
+            style = if (com.subhashh.lumen.ui.theme.Lumen.material) HeroTitle.copy(fontSize = 36.sp, lineHeight = 44.sp, fontWeight = FontWeight.Medium) else HeroTitle,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
         if (subtitle.isNotEmpty()) Text(subtitle, style = HeroSubtitle)
     }
 }

@@ -93,8 +93,10 @@ private sealed interface Step {
     data object Biometrics : Step
 }
 
-private val Accent = Color(0xFF0A84FF)
-private val Danger = Color(0xFFFF453A)
+private val Accent: Color
+    @Composable @androidx.compose.runtime.ReadOnlyComposable get() = Lumen.colors.accent
+private val Danger: Color
+    @Composable @androidx.compose.runtime.ReadOnlyComposable get() = Lumen.colors.destructive
 
 /**
  * Hidden's own lock: set up a PIN, pattern or password (entered twice), optionally add
@@ -376,11 +378,11 @@ private fun BiometricsOffer(onEnable: () -> Unit, onSkip: () -> Unit) {
                 .fillMaxWidth()
                 .height(52.dp)
                 .pressable(onEnable, pressedScale = 0.97f)
-                .clip(RoundedCornerShape(14.dp))
+                .clip(if (Lumen.material) CircleShape else RoundedCornerShape(14.dp))
                 .background(Accent),
             contentAlignment = Alignment.Center,
         ) {
-            Text(stringResource(R.string.hidden_use_biometrics), color = Color.White, fontSize = 17.sp, fontWeight = Lumen.type.emphasis)
+            Text(stringResource(R.string.hidden_use_biometrics), color = Lumen.colors.onAccent, fontSize = 17.sp, fontWeight = Lumen.type.emphasis)
         }
         Text(
             stringResource(R.string.common_not_now),
@@ -471,6 +473,7 @@ private fun PatternEntry(onSubmit: (String) -> Unit) {
     val nodes = remember { mutableStateListOf<Int>() }
     var finger by remember { mutableStateOf<Offset?>(null) }
 
+    val accent = Accent
     Canvas(
         Modifier
             .size(300.dp)
@@ -510,15 +513,15 @@ private fun PatternEntry(onSubmit: (String) -> Unit) {
         val cell = size.width / 3f
         fun center(i: Int) = Offset(cell * (i % 3) + cell / 2, cell * (i / 3) + cell / 2)
         val stroke = 6.dp.toPx()
-        nodes.zipWithNext().forEach { (a, b) -> drawLine(Accent, center(a), center(b), stroke, StrokeCap.Round) }
+        nodes.zipWithNext().forEach { (a, b) -> drawLine(accent, center(a), center(b), stroke, StrokeCap.Round) }
         val last = nodes.lastOrNull()
         val f = finger
-        if (last != null && f != null) drawLine(Accent.copy(alpha = 0.5f), center(last), f, stroke, StrokeCap.Round)
+        if (last != null && f != null) drawLine(accent.copy(alpha = 0.5f), center(last), f, stroke, StrokeCap.Round)
         for (i in 0 until 9) {
             val selected = i in nodes
-            if (selected) drawCircle(Accent.copy(alpha = 0.2f), radius = 26.dp.toPx(), center = center(i))
+            if (selected) drawCircle(accent.copy(alpha = 0.2f), radius = 26.dp.toPx(), center = center(i))
             drawCircle(
-                if (selected) Accent else colors.onBackground.copy(alpha = 0.35f),
+                if (selected) accent else colors.onBackground.copy(alpha = 0.35f),
                 radius = 8.dp.toPx(),
                 center = center(i),
             )
