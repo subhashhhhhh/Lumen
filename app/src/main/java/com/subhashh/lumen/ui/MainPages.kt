@@ -472,6 +472,10 @@ internal fun BoxScope.MainPages(
                 known.filter { it !in live }.forEach { holder.removeState(it); known.remove(it) }
                 known += live
             }
+            // Whichever edge the thumb came from, the page leaves the way Android's own back
+            // animation does: out to the right, the page beneath coming from the left (mirrored
+            // in right-to-left languages).
+            val side = if (androidx.compose.ui.platform.LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl) -1f else 1f
             val scrim = MaterialTheme.colorScheme.scrim
             val backdropColor = MaterialTheme.colorScheme.background
             for (nav in listOfNotNull(beneath, current)) {
@@ -484,12 +488,11 @@ internal fun BoxScope.MainPages(
                                 val pull = back.eased
                                 val out = back.commit
                                 if (top) {
-                                    // Pulls away: smaller, rounder, leaning from the thumb's edge; then off to that side.
+                                    // Pulls away: smaller, rounder and aside; then off that way.
                                     if (pull > 0f || out > 0f) {
                                         val scale = 1f - 0.1f * pull
                                         scaleX = scale
                                         scaleY = scale
-                                        val side = if (back.fromRight) -1f else 1f
                                         // Far enough aside that the page beneath is plainly there to see.
                                         translationX = side * size.width * (0.16f * pull + 0.84f * out)
                                         alpha = 1f - out * out
@@ -501,9 +504,8 @@ internal fun BoxScope.MainPages(
                                     val near = 0.94f + 0.06f * maxOf(out, pull * 0.35f)
                                     scaleX = near
                                     scaleY = near
-                                    // And drifts in from the side the top page is leaving by.
-                                    val side = if (back.fromRight) 1f else -1f
-                                    translationX = side * size.width * 0.05f * (1f - maxOf(out, pull * 0.5f))
+                                    // And drifts in from the other side.
+                                    translationX = -side * size.width * 0.05f * (1f - maxOf(out, pull * 0.5f))
                                 } else {
                                     // Under an album or person: seen only while its cover flies.
                                     alpha = coverTransition.parentAlpha()

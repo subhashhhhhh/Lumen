@@ -22,7 +22,8 @@ import kotlinx.coroutines.launch
  * Going back from one page to the one under it, as it happens. While Android's back gesture is
  * under the thumb, [progress] is how far it has come (0 to 1) and [fromRight] the edge it came
  * from; once it's let go, [commit] runs 0 to 1 as the top page leaves. The two pages read these
- * to draw the preview: the top one pulling away, the one beneath coming forward.
+ * to draw the preview: the top one pulling away, the one beneath coming forward. (The direction
+ * doesn't follow [fromRight]: like Android's own animation, a page always leaves the same way.)
  */
 @Stable
 class BackGesture {
