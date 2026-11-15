@@ -98,6 +98,9 @@ internal data class GroupColors(val card: Color, val text: Color, val secondary:
 @Composable
 internal fun groupColors(): GroupColors = Lumen.colors.let { GroupColors(it.groupOnPage, it.text, it.secondary, it.divider) }
 
+/** This Settings page's scroll position, held outside the page so it outlives it; null to keep its own. */
+val LocalSettingsScroll = staticCompositionLocalOf<androidx.compose.foundation.ScrollState?> { null }
+
 /** What the dropdown pickers' glass refracts: the whole page, cards and all. */
 private val LocalPickerHost = staticCompositionLocalOf<PickerHost?> { null }
 
@@ -120,7 +123,8 @@ internal fun SettingsPage(
         Column(
             Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
+                // Kept by the main screen when it's there to keep it: a page comes back where it was left.
+                .verticalScroll(LocalSettingsScroll.current ?: rememberScrollState())
                 .padding(contentPadding)
                 .padding(horizontal = 16.dp),
             content = content,

@@ -420,31 +420,56 @@ private fun MainState.Scaffold(
     // Settings opens from either tab and covers it; Back returns to where it was opened.
     val inSettings = settingsPage != null && !searching
     // Back goes up one level: a sub-page to its category, a category to Settings, Settings out.
-    val popSettings = {
-        settingsHighlight = null
-        settingsPage = when {
-            settingsPage == SettingsLicenses -> settingsCategoryPage(SettingsCategory.About)
-            settingsPage == SettingsExcluded -> settingsCategoryPage(SettingsCategory.Library)
-            settingsPage?.startsWith(SettingsCategoryPrefix) == true -> SettingsMain
+    /** The Settings page one level up from [page]; null out of Settings. */
+    val settingsParent = { page: String? ->
+        when {
+            page == SettingsLicenses -> settingsCategoryPage(SettingsCategory.About)
+            page == SettingsExcluded -> settingsCategoryPage(SettingsCategory.Library)
+            page?.startsWith(SettingsCategoryPrefix) == true -> SettingsMain
             else -> null
         }
     }
-    // Material: back is Android's gesture, with a preview of leaving the page (no Back button).
+    val popSettings = {
+        settingsHighlight = null
+        settingsPage = settingsParent(settingsPage)
+    }
+    LaunchedEffect(settingsPage == null) { if (settingsPage == null) forgetSettingsScroll() }
+    // Material: back is Android's gesture, with the page it leads to drawn under the one on top
+    // (no Back button). What that page is follows the same rules Back itself does.
     val backGesture = remember { com.subhashh.lumen.ui.components.BackGesture() }
     val pageBack = backGesture.takeIf { material }
-    // Derived: this screen is redrawn when a gesture starts and ends, not for every step of it.
-    val backUnderway by remember { androidx.compose.runtime.derivedStateOf { backGesture.progress > 0f } }
-    // An album or person leaves on its cover's flight back to its card, not on the page pulling away.
     val coverOpen = CollectionKeys.isFolder(openCollection) || CollectionKeys.personId(openCollection) != null
-    PageBack(enabled = searching && !viewerOpen, gesture = pageBack) { searching = false }
-    PageBack(enabled = inCollection && !viewerOpen, gesture = pageBack.takeIf { !coverOpen }) {
-        // A folder inside Hidden steps back to Hidden's list, not out of Hidden.
-        closeCollection(when {
-            openCollection == CollectionKeys.People && mergeFrom != null -> CollectionKeys.person(mergeFrom!!).also { mergeFrom = null }
-            CollectionKeys.hiddenFolderId(openCollection.orEmpty()) != null -> CollectionKeys.Hidden
-            CollectionKeys.personId(openCollection) != null && personFromPeople -> CollectionKeys.People
+    /** Where Back leads from an open collection: a folder inside Hidden steps back to Hidden's list, not out of it. */
+    val collectionParent = { key: String? ->
+        when {
+            CollectionKeys.hiddenFolderId(key.orEmpty()) != null -> CollectionKeys.Hidden
+            CollectionKeys.personId(key) != null && personFromPeople -> CollectionKeys.People
             else -> null
-        })
+        }
+    }
+    val merging = openCollection == CollectionKeys.People && mergeFrom != null
+    val parentOf = { nav: PageNav ->
+        when {
+            nav.searching -> nav.copy(searching = false)
+            nav.settingsPage != null -> nav.copy(settingsPage = settingsParent(nav.settingsPage))
+            nav.tab == LumenTab.Collections && nav.openCollection != null -> nav.copy(openCollection = collectionParent(nav.openCollection))
+            else -> null
+        }
+    }
+    val currentNav = PageNav(searching, settingsPage, tab, openCollection)
+    // Choosing who to merge with goes back to the person it started from: no page preview for that.
+    val previousNav = if (material && !viewerOpen && !merging) parentOf(currentNav) else null
+    val navTrail = remember(previousNav) { generateSequence(previousNav) { parentOf(it) }.drop(1).toList() }
+    PageBack(enabled = searching && !viewerOpen, gesture = pageBack) { searching = false }
+    PageBack(
+        enabled = inCollection && !viewerOpen,
+        gesture = pageBack.takeIf { !merging },
+        // A plain back press sends an album's or person's cover flying home, as tapping Back did.
+        animatePress = !coverOpen,
+    ) { animated ->
+        val target = if (merging) CollectionKeys.person(mergeFrom!!).also { mergeFrom = null } else collectionParent(openCollection)
+        // Already animated away under the thumb: just be on the page beneath.
+        if (animated) openCollection = target else closeCollection(target)
     }
     PageBack(enabled = inSettings && !viewerOpen, gesture = pageBack) { popSettings() }
 
@@ -588,8 +613,7 @@ private fun MainState.Scaffold(
             Modifier
                 .fillMaxSize()
                 .layerBackdrop(backdrop)
-                // What shows around the page while the back gesture shrinks it.
-                .background(if (material && backUnderway) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.background),
+                .background(MaterialTheme.colorScheme.background),
         ) {
             // Material: a page that's newly on screen springs up into place. Albums and people
             // arrive on their covers instead, so they (and the page under them) are left alone.
@@ -608,7 +632,10 @@ private fun MainState.Scaffold(
                 val first = lastPage[0] == null
                 val changed = lastPage[0] != pageKey
                 lastPage[0] = pageKey
-                if (material && changed && !first && !reduceMotion) {
+                // Not after a back: that page was already there, under the one that left.
+                val cameBack = backGesture.arrived
+                backGesture.arrived = false
+                if (material && changed && !first && !reduceMotion && !cameBack) {
                     arrival.snapTo(0f)
                     arrival.animateTo(1f, androidx.compose.animation.core.spring(dampingRatio = 0.9f, stiffness = 380f))
                 }
@@ -620,26 +647,18 @@ private fun MainState.Scaffold(
                         alpha = a.coerceIn(0f, 1f)
                         translationY = 20.dp.toPx() * (1f - a)
                     }
-                    // The back gesture's preview: the page shrinks into a rounded card and
-                    // leans away from the edge the thumb came from.
-                    val back = backGesture.eased
-                    if (back > 0f) {
-                        val scale = 1f - 0.1f * back
-                        scaleX = scale
-                        scaleY = scale
-                        translationX = (if (backGesture.fromRight) -1f else 1f) * 20.dp.toPx() * back
-                        shape = androidx.compose.foundation.shape.RoundedCornerShape(32.dp.toPx() * back)
-                        clip = true
-                    }
-                }.background(MaterialTheme.colorScheme.background),
+                },
             ) {
-            MainPages(this@Scaffold, pick, library, allItems, excluded, hidden, hiddenAll, hiddenFolderList, utilities, folders, libraryItems, librarySections, openItems, collectionSections, months, years, selectedItems, searchSections, searchAlbums, personMatches, unnamedSubject, smartPending, smartSuggestions, searchSuggestions, chronological, scrollLabel, statusTop, navBottom, gridPadding, heroHeight, libraryGrid, collectionGrid, hiddenGrid, searchGrid, monthsList, yearsList, zoomBarScroll, transition, coverTransition, activity, exportLauncher, favoritesLauncher, importLauncher, itemsOf, personOf, heroWithLabel, setPicked, onGridColumns, onAlbumColumns, rememberSearch, toast, needsAllFiles, openHidden, openViewer, collectionsPage, peoplePage, people)
+            MainPages(this@Scaffold, pick, library, allItems, excluded, hidden, hiddenAll, hiddenFolderList, utilities, folders, libraryItems, librarySections, openItems, collectionSections, months, years, selectedItems, searchSections, searchAlbums, personMatches, unnamedSubject, smartPending, smartSuggestions, searchSuggestions, chronological, scrollLabel, statusTop, navBottom, gridPadding, heroHeight, libraryGrid, collectionGrid, hiddenGrid, searchGrid, monthsList, yearsList, zoomBarScroll, transition, coverTransition, activity, exportLauncher, favoritesLauncher, importLauncher, itemsOf, personOf, heroWithLabel, setPicked, onGridColumns, onAlbumColumns, rememberSearch, toast, needsAllFiles, openHidden, openViewer, collectionsPage, peoplePage, people, previousNav, navTrail, coverOpen && !searching && settingsPage == null, backGesture)
             }
             if (!coverTransition.overViewer) CoverTransitionOverlay(coverTransition)
         }
 
 
+        // The buttons over a page go with it: they fade as a back gesture pulls it away.
+        Box(Modifier.fillMaxSize().graphicsLayer { alpha = (1f - maxOf(backGesture.eased * 1.5f, backGesture.commit)).coerceIn(0f, 1f) }) {
         MainTopControls(this@Scaffold, pick, onPicked, onCancelPick, backdrop, navBottom, trash, allPeople, people, albumKeys, selectableItems, selectedItems, selecting, viewerOpen, inCollection, inSettings, updateWaiting, coverTransition, selectionLauncher, personOf, rememberSearch, endSelection, updateAlbums, popSettings, closeCollection)
+        }
 
         // Always composed, even under the viewer: recreating it means recompiling its glass
         // shaders right as a photo flies home.

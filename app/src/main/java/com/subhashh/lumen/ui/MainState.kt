@@ -100,6 +100,14 @@ internal class MainState(
     var sort by mutableStateOf(prefs.librarySort)
     var sortDescending by mutableStateOf(prefs.sortDescending)
 
+    private val settingsScrolls = HashMap<String, androidx.compose.foundation.ScrollState>()
+
+    /** Where each open Settings page is scrolled to, so going back to one finds it as it was. */
+    fun settingsScroll(page: String) = settingsScrolls.getOrPut(page) { androidx.compose.foundation.ScrollState(0) }
+
+    /** Settings was left: next time its pages open at the top. */
+    fun forgetSettingsScroll() = settingsScrolls.clear()
+
     /** Material's Documents: what Smart Search found for each kind (by its query), newest first. */
     var documentItems by mutableStateOf<Map<String, List<MediaItem>>>(emptyMap())
     // A person's Show filter is for this visit: opening another person starts at All again.
