@@ -104,9 +104,10 @@ private data class SheetColors(val text: Color, val secondary: Color, val group:
 @Composable
 private fun sheetColors(): SheetColors {
     val glass = LocalGlassColors.current
-    // Material: groups are a step up the tonal ladder from the sheet, not a tinted veil.
-    val group = if (Lumen.material) MaterialTheme.colorScheme.surfaceContainerHighest else glass.selection
-    return SheetColors(glass.content, glass.contentSecondary, group, MaterialTheme.colorScheme.primary)
+    // Material: the scheme's own roles, the groups a step up the tonal ladder from the sheet.
+    val scheme = MaterialTheme.colorScheme
+    if (Lumen.material) return SheetColors(scheme.onSurface, scheme.onSurfaceVariant, scheme.surfaceContainerHigh, scheme.primary)
+    return SheetColors(glass.content, glass.contentSecondary, glass.selection, scheme.primary)
 }
 
 /**
@@ -171,30 +172,45 @@ fun DetailsSheet(
         }
     }
 
+    val material = Lumen.material
     Column(
-        modifier
-            .padding(horizontal = 8.dp)
-            .navigationBarsPadding()
-            .padding(bottom = 8.dp)
-            .fillMaxWidth()
-            .glass(
-                backdrop,
-                RoundedCornerShape(32.dp),
-                blurRadius = 24.dp,
-                refractionHeight = 20.dp,
-                refractionAmount = 40.dp,
-                tint = glass.fallbackTint.copy(alpha = 0.55f),
-            )
-            .clip(RoundedCornerShape(32.dp))
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp)
-            .padding(bottom = 20.dp),
+        // Material: a bottom sheet proper, edge to edge and down to the bottom of the screen,
+        // only its top corners rounded. Lumen's floats, inset, as a panel of glass.
+        if (material) {
+            val sheet = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+            modifier
+                .fillMaxWidth()
+                .clip(sheet)
+                .background(MaterialTheme.colorScheme.surfaceContainerLow)
+                .verticalScroll(rememberScrollState())
+                .navigationBarsPadding()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 24.dp)
+        } else {
+            modifier
+                .padding(horizontal = 8.dp)
+                .navigationBarsPadding()
+                .padding(bottom = 8.dp)
+                .fillMaxWidth()
+                .glass(
+                    backdrop,
+                    RoundedCornerShape(32.dp),
+                    blurRadius = 24.dp,
+                    refractionHeight = 20.dp,
+                    refractionAmount = 40.dp,
+                    tint = glass.fallbackTint.copy(alpha = 0.55f),
+                )
+                .clip(RoundedCornerShape(32.dp))
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 20.dp)
+        },
     ) {
         Box(
             Modifier
-                .padding(vertical = 10.dp)
+                .padding(vertical = if (material) 14.dp else 10.dp)
                 .align(Alignment.CenterHorizontally)
-                .size(width = 36.dp, height = 5.dp)
+                .size(width = if (material) 32.dp else 36.dp, height = if (material) 4.dp else 5.dp)
                 .clip(CircleShape)
                 .background(colors.secondary.copy(alpha = 0.4f)),
         )
@@ -208,6 +224,7 @@ fun DetailsSheet(
         Spacer(Modifier.height(14.dp))
 
         if (shown.isNotEmpty() || waiting.isNotEmpty()) {
+            if (material) SectionLabel(stringResource(R.string.main_people), colors)
             Row(
                 horizontalArrangement = Arrangement.spacedBy(14.dp),
                 modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 4.dp),
@@ -270,6 +287,7 @@ fun DetailsSheet(
         }
 
         if (d == null) return@Column
+        if (material) SectionLabel(stringResource(R.string.common_details), colors)
         d.camera?.let { camera ->
             Group(colors) { CameraGroup(item, camera, colors) }
             Spacer(Modifier.height(10.dp))
@@ -320,10 +338,11 @@ private fun CaptionRow(caption: String?, colors: SheetColors, onEdit: () -> Unit
         Text(
             caption ?: stringResource(R.string.viewer_add_caption),
             color = if (caption == null) colors.secondary else colors.text,
-            fontSize = 15.sp,
-            modifier = Modifier.weight(1f),
+            fontSize = if (Lumen.material) 16.sp else 15.sp,
+            modifier = Modifier.weight(1f).padding(vertical = if (Lumen.material) 8.dp else 0.dp),
         )
-        Icon(LumenIcons.Edit, contentDescription = stringResource(R.string.viewer_edit_caption), tint = colors.accent, modifier = Modifier.size(18.dp))
+        // Material: the line itself is the way in, as a text field would be.
+        if (!Lumen.material) Icon(LumenIcons.Edit, contentDescription = stringResource(R.string.viewer_edit_caption), tint = colors.accent, modifier = Modifier.size(18.dp))
     }
 }
 
@@ -511,6 +530,29 @@ private fun WhenHeader(item: MediaItem, d: MediaDetails?, colors: SheetColors, o
     val time = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
     val zone = DateTimeFormatter.ofPattern("OOOO", Locale.getDefault())
     val yourTime = stringResource(R.string.viewer_your_time)
+    if (Lumen.material) {
+        // Material: the day and the time on one line, and a pencil to change them.
+        val day = DateTimeFormatter.ofPattern(android.text.format.DateFormat.getBestDateTimePattern(Locale.getDefault(), "EEEdMMMy"), Locale.getDefault())
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 4.dp)) {
+            Column(Modifier.weight(1f)) {
+                Text(
+                    day.format(there ?: here) + "  •  " + time.format(there ?: here),
+                    color = colors.text,
+                    fontSize = 18.sp,
+                    lineHeight = 24.sp,
+                )
+                if (there != null) {
+                    val line = buildString {
+                        append(zone.format(there))
+                        if (there.offset != here.offset) append("  ·  ").append(yourTime.format(here.format(time)))
+                    }
+                    Text(line, color = colors.secondary, fontSize = 14.sp)
+                }
+            }
+            com.subhashh.lumen.ui.components.BareIconButton(LumenIcons.Edit, stringResource(R.string.viewer_adjust), { onAdjustDate(item) }, tint = colors.secondary)
+        }
+        return
+    }
     Row(verticalAlignment = Alignment.Top, modifier = Modifier.padding(horizontal = 4.dp)) {
         Column(Modifier.weight(1f)) {
             Text(
@@ -538,11 +580,17 @@ private fun Group(colors: SheetColors, content: @Composable ColumnScope.() -> Un
     Column(
         Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(if (Lumen.material) 24.dp else 20.dp))
             .background(colors.group)
-            .padding(14.dp),
+            .padding(if (Lumen.material) 16.dp else 14.dp),
         content = content,
     )
+}
+
+/** Material: a name over a part of the sheet ("People", "Details"). */
+@Composable
+private fun SectionLabel(text: String, colors: SheetColors) {
+    Text(text, color = colors.text, fontSize = 16.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(start = 4.dp, top = 12.dp, bottom = 12.dp))
 }
 
 @Composable
@@ -581,8 +629,8 @@ private fun Chips(facts: List<String>, colors: SheetColors) {
                 fontWeight = FontWeight.Medium,
                 modifier = Modifier
                     .clip(RoundedCornerShape(8.dp))
-                    .background(colors.secondary.copy(alpha = 0.15f))
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                    .background(if (Lumen.material) MaterialTheme.colorScheme.surfaceContainerHighest else colors.secondary.copy(alpha = 0.15f))
+                    .padding(horizontal = if (Lumen.material) 10.dp else 8.dp, vertical = if (Lumen.material) 5.dp else 4.dp),
             )
         }
     }

@@ -72,6 +72,7 @@ import com.subhashh.lumen.ui.icons.LumenIcons
 import com.subhashh.lumen.ui.library.ZoomLevel
 import com.subhashh.lumen.ui.search.SearchField
 import com.subhashh.lumen.ui.selection.SelectionActionBar
+import com.subhashh.lumen.ui.viewer.DetailsSheet
 import com.subhashh.lumen.ui.selection.SelectionTopControls
 import com.subhashh.lumen.ui.settings.Blue
 import com.subhashh.lumen.ui.settings.Divider
@@ -264,6 +265,22 @@ class StyleRenderTest {
             SelectionActionBar(
                 backdrop, hasSelection = true, inTrash = false, inHidden = false, allFavorite = false, showFavorite = true,
                 onShare = {}, onFavorite = {}, onDelete = {}, onRestore = {}, onDeleteForever = {}, onUnhide = {}, onMore = {},
+                modifier = Modifier.align(Alignment.BottomCenter),
+            )
+        }
+    }
+
+    /** The viewer's details sheet, as far as it goes without a real file behind it. */
+    @Test
+    fun details() = render("details") {
+        val backdrop = rememberLayerBackdrop()
+        Box(Modifier.fillMaxSize()) {
+            Box(Modifier.fillMaxSize().layerBackdrop(backdrop).background(Color(0xFF7A8F6B)))
+            DetailsSheet(
+                item = com.subhashh.lumen.data.media(7, takenAt = 1_760_000_000_000L, name = "IMG_2041.jpg", size = 2_400_000),
+                backdrop = backdrop, locationRefresh = 0, people = emptyList(), onOpenPerson = {}, onNameFace = { _, _ -> },
+                showMaps = false, onOpenMap = {}, onAllowLocation = {}, onRename = {}, onAdjustDate = {},
+                onEditCaption = { _, _ -> }, captionVersion = 0, onSearch = {},
                 modifier = Modifier.align(Alignment.BottomCenter),
             )
         }
