@@ -99,6 +99,9 @@ internal class MainState(
     var aspectRatioGrid by mutableStateOf(prefs.aspectRatioGrid)
     var sort by mutableStateOf(prefs.librarySort)
     var sortDescending by mutableStateOf(prefs.sortDescending)
+
+    /** Material's Documents: what Smart Search found for each kind (by its query), newest first. */
+    var documentItems by mutableStateOf<Map<String, List<MediaItem>>>(emptyMap())
     // A person's Show filter is for this visit: opening another person starts at All again.
     var personFilter by mutableStateOf(LibraryFilter.All)
     var personSort by mutableStateOf(prefs.personSort)

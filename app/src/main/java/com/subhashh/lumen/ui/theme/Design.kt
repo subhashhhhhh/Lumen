@@ -193,9 +193,12 @@ internal fun lumenColors(dark: Boolean) = if (dark) {
 }
 
 /** Material's roles for the same jobs: tonal surfaces instead of greys, primary instead of blue. */
-internal fun materialColors(scheme: ColorScheme) = LumenColors(
-    groupedPage = scheme.surfaceContainer,
-    card = scheme.surfaceBright,
+internal fun materialColors(scheme: ColorScheme): LumenColors = materialColors(scheme, black = scheme.background == Color.Black)
+
+/** [black]: Pure Black. Pages that are normally a tonal grey go black too, their cards one step up. */
+private fun materialColors(scheme: ColorScheme, black: Boolean) = LumenColors(
+    groupedPage = if (black) Color.Black else scheme.surfaceContainer,
+    card = if (black) scheme.surfaceContainer else scheme.surfaceBright,
     groupOnPage = scheme.surfaceContainer,
     cardRaised = scheme.surfaceContainerHighest,
     dialog = scheme.surfaceContainerHigh,

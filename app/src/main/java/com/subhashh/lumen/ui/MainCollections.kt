@@ -99,24 +99,28 @@ internal fun MainState.collectionPages(
                 },
             )
     }
-    // Material's Documents row: kinds of paper Smart Search can tell apart, each with a photo of
-    // one when the library's suggestions have it. Nothing without a Smart Search model.
+    // Material's Documents row: kinds of paper Smart Search can tell apart. Each is searched for
+    // once the page is up; a kind with matches gets a card (and a page of its own), showing the
+    // newest of its strongest matches. Nothing without a Smart Search model.
     val material = com.subhashh.lumen.ui.theme.Lumen.material
     val libraryItems by viewModel.items.collectAsState()
     val documents by produceState(emptyList<com.subhashh.lumen.ui.collections.DocumentKind>(), material, libraryItems) {
         if (!material) return@produceState
-        value = withContext(Dispatchers.IO) {
-            val model = com.subhashh.lumen.ai.ModelDownloads.installed(context) ?: return@withContext emptyList()
-            val byId = libraryItems.orEmpty().associateBy { it.id }
-            val covers = com.subhashh.lumen.ai.SearchSuggestions.load(context, model).associate { it.term to byId[it.coverId] }
-            listOf(
-                R.string.collections_doc_documents to "document",
-                R.string.collections_doc_receipts to "receipt",
-                R.string.collections_doc_tickets to "ticket",
-                R.string.collections_doc_identity to "id card",
-                R.string.collections_doc_books to "book",
-                R.string.collections_doc_notes to "whiteboard",
-            ).map { (label, query) -> com.subhashh.lumen.ui.collections.DocumentKind(label, query, covers[query]) }
+        val byId = libraryItems.orEmpty().associateBy { it.id }
+        if (byId.isEmpty() || com.subhashh.lumen.ai.ModelDownloads.installed(context) == null) return@produceState
+        val found = LinkedHashMap<String, List<MediaItem>>()
+        val kinds = ArrayList<com.subhashh.lumen.ui.collections.DocumentKind>()
+        for ((label, query) in com.subhashh.lumen.ui.collections.DocumentKinds) {
+            val hits = com.subhashh.lumen.ai.SmartSearch.search(context, query)?.hits.orEmpty().filter { it.mediaId in byId }
+            if (hits.isEmpty()) continue
+            // The cover: among the strongest matches (within a tenth of the best), the newest.
+            val best = hits.first().score
+            val cover = hits.filter { it.score >= best * 0.9f }.mapNotNull { byId[it.mediaId] }.maxByOrNull { it.takenAt }
+            found[query] = hits.mapNotNull { byId[it.mediaId] }.distinctBy { it.id }.sortedByDescending { it.takenAt }
+            kinds += com.subhashh.lumen.ui.collections.DocumentKind(label, query, cover)
+            // Each kind appears as it's found, rather than all at the end.
+            documentItems = found.toMap()
+            value = kinds.toList()
         }
     }
     val collectionsPage: @Composable (Modifier) -> Unit = { pageModifier ->
@@ -137,10 +141,6 @@ internal fun MainState.collectionPages(
             onOpen = { key ->
                 personFromPeople = false
                 if (key == CollectionKeys.Hidden) openHidden() else openCollectionFromCard(key)
-            },
-            onSearch = { query ->
-                searchQuery = query
-                searching = true
             },
         ) else CollectionsScreen(
             title = albumSelection?.let { albumSelectionTitle(it.size, folders = false) } ?: stringResource(R.string.main_collections),

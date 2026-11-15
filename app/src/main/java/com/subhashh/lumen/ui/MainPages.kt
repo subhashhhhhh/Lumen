@@ -386,6 +386,9 @@ internal fun BoxScope.MainPages(
                         LibraryScreen(
                             title = pickTitle(pick, picked.size) ?: selection?.let { selectionTitle(selectedItems) }
                                 ?: personOf(key)?.let { it.name ?: stringResource(R.string.main_add_name) }
+                                ?: CollectionKeys.documentQuery(key)?.let { query ->
+                                    com.subhashh.lumen.ui.collections.DocumentKinds.firstOrNull { it.second == query }?.let { stringResource(it.first) }
+                                }
                                 ?: (utilities + folders).firstOrNull { it.key == key }?.title
                                 ?: hiddenFolderList?.firstOrNull { it.collection.key == key }?.collection?.title.orEmpty(),
                             selection = if (pick?.multiple == true) picked.keys else selection,

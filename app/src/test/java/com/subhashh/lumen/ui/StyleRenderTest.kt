@@ -129,6 +129,7 @@ class StyleRenderTest {
         Look("material-dark", DesignStyle.Material, dark = true),
         Look("material-light", DesignStyle.Material, dark = false),
         Look("material-pink-black", DesignStyle.Material, dark = true, accent = Color(0xFFFF4F9A), palette = MaterialPalette.Expressive, pureBlack = true),
+        Look("material-wallpaper-black", DesignStyle.Material, dark = true, pureBlack = true),
         Look("material-fruit-light", DesignStyle.Material, dark = false, accent = Color(0xFF2FB344), palette = MaterialPalette.FruitSalad),
     )
 
@@ -242,12 +243,12 @@ class StyleRenderTest {
             MediaCollection(CollectionKeys.Hidden, "Hidden", null, -1),
         )
         val folders = listOf("Camera", "WhatsApp Images", "Downloads", "Pictures").mapIndexed { i, name ->
-            MediaCollection(CollectionKeys.folder(i.toLong()), name, null, 10 * (i + 1), relativePath = "DCIM/$name/", pinned = i == 0)
+            MediaCollection(CollectionKeys.folder(i.toLong()), name, null, 10 * (i + 1), relativePath = "DCIM/$name/", )
         }
         MaterialCollectionsScreen(
             utilities = utilities, hiddenLockSet = true, folders = folders, people = emptyList(),
             documents = listOf(DocumentKind(R.string.collections_doc_receipts, "receipt", null), DocumentKind(R.string.collections_doc_tickets, "ticket", null)),
-            gridState = rememberLazyGridState(), contentPadding = PaddingValues(top = 24.dp, bottom = 24.dp), onOpen = {}, onSearch = {},
+            gridState = rememberLazyGridState(), contentPadding = PaddingValues(top = 24.dp, bottom = 24.dp), onOpen = {},
             columns = 2, onColumnsChange = {}, selection = null, onSelectionChange = {},
             coverTransition = remember { CoverTransition() },
         )

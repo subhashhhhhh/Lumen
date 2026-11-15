@@ -288,7 +288,8 @@ private fun MainState.Scaffold(
                 )
             } ?: CollectionKeys.hiddenFolderId(key)?.let { id ->
                 if (hiddenUnlocked) hidden.orEmpty().filter { it.bucketId == id } else emptyList()
-            } ?: CollectionKeys.items(key, library.orEmpty(), trash).let {
+            } ?: CollectionKeys.documentQuery(key)?.let { documentItems[it].orEmpty() }
+            ?: CollectionKeys.items(key, library.orEmpty(), trash).let {
                 // Recently Deleted stays in deletion order; albums follow the Library's sort,
                 // except that by date they read newest first, under their cover.
                 when {
@@ -306,7 +307,7 @@ private fun MainState.Scaffold(
     val gridSectionMode = if (sort == LibrarySort.Date) sectionMode else SectionMode.None
     val librarySections = remember(libraryItems, gridSectionMode) { GridSections.of(context, libraryItems, gridSectionMode) }
     /** The open album's photos and their headers, shared by its grid and the viewer's close flight. */
-    val openItems = remember(openCollection, library, trash, hidden, hiddenUnlocked, sort, sortDescending, allPeople, personFilter, personSort, personSortDescending) {
+    val openItems = remember(documentItems, openCollection, library, trash, hidden, hiddenUnlocked, sort, sortDescending, allPeople, personFilter, personSort, personSortDescending) {
         openCollection?.takeIf { it != CollectionKeys.Hidden }?.let(itemsOf)
     }
     val collectionSections = remember(openItems, gridSectionMode, openCollection) {

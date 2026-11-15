@@ -60,13 +60,23 @@ import com.subhashh.lumen.ui.people.FaceAvatar
 import com.subhashh.lumen.ui.transition.CoverTransition
 import com.subhashh.lumen.ui.transition.coverCell
 
-/** One card of the Documents row: a kind of paper Smart Search can find, with a photo of one if it has. */
+/** One card of the Documents row: a kind of paper Smart Search found, and the photo that stands for it. */
 @Immutable
 class DocumentKind(@StringRes val label: Int, val query: String, val cover: MediaItem?)
 
+/** The kinds of document looked for: what each is called, and the words Smart Search is asked for. */
+internal val DocumentKinds = listOf(
+    R.string.collections_doc_documents to "document",
+    R.string.collections_doc_receipts to "receipt",
+    R.string.collections_doc_tickets to "ticket",
+    R.string.collections_doc_identity to "id card",
+    R.string.collections_doc_books to "book",
+    R.string.collections_doc_notes to "whiteboard",
+)
+
 /**
- * Collections in the Material 3 Expressive style: a page of rows to browse sideways (pinned
- * albums, people, places, documents), the utilities as a block of tiles, then every album as a
+ * Collections in the Material 3 Expressive style: a page of rows to browse sideways (people,
+ * places, documents), the utilities as a block of tiles, then every album as a
  * tall card with its name on the cover. The same things as [CollectionsScreen], laid out the way
  * Android galleries do.
  */
@@ -76,12 +86,11 @@ fun MaterialCollectionsScreen(
     hiddenLockSet: Boolean,
     folders: List<MediaCollection>,
     people: List<Pair<Person, MediaItem>>,
-    /** Empty without Smart Search. */
+    /** The kinds Smart Search found something for; empty without it. Each opens its own page. */
     documents: List<DocumentKind>,
     gridState: LazyGridState,
     contentPadding: PaddingValues,
     onOpen: (key: String) -> Unit,
-    onSearch: (query: String) -> Unit,
     columns: Int,
     onColumnsChange: (Int) -> Unit,
     selection: Set<String>?,
@@ -89,9 +98,8 @@ fun MaterialCollectionsScreen(
     coverTransition: CoverTransition,
     modifier: Modifier = Modifier,
 ) {
-    val pinned = folders.filter { it.pinned }
     // Everything above the albums, as grid cells in order: what the album gestures skip over.
-    val heads = (if (pinned.isEmpty()) 0 else 2) + (if (people.isEmpty()) 0 else 2) + 2 + (if (documents.isEmpty()) 0 else 2) + 2 + 1
+    val heads = (if (people.isEmpty()) 0 else 2) + 2 + (if (documents.isEmpty()) 0 else 2) + 2 + 1
     val gestures = rememberAlbumGridGestures(
         gridState = gridState,
         keys = { List<String?>(heads) { null } + folders.map { it.key } },
@@ -115,24 +123,28 @@ fun MaterialCollectionsScreen(
             .padding(horizontal = 16.dp)
             .then(gestures.modifier),
     ) {
-        if (pinned.isNotEmpty()) {
-            wide { RowHeader(stringResource(R.string.main_pinned)) }
-            wide {
-                Carousel(dim) {
-                    items(pinned, key = { it.key }) { album ->
-                        CoverCard(album.title, album.cover, Modifier.width(132.dp).height(176.dp)) { open(album.key) }
-                    }
-                }
-            }
-        }
         if (people.isNotEmpty()) {
             wide { RowHeader(stringResource(R.string.main_people), stringResource(R.string.collections_view_all)) { open(CollectionKeys.People) } }
             wide {
                 Carousel(dim) {
                     items(people.take(PeopleInRow), key = { it.first.id }) { (person, cover) ->
                         val key = CollectionKeys.person(person.id)
-                        TonalCard(person.name.orEmpty(), onClick = { open(key) }) {
-                            FaceAvatar(person, cover, Modifier.fillMaxSize().coverCell(coverTransition, key, circle = true))
+                        // Just the face and the name, no card around them.
+                        Column(
+                            Modifier.width(104.dp).pressable({ open(key) }, pressedScale = 0.96f, shape = RoundedCornerShape(20.dp)),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            FaceAvatar(person, cover, Modifier.fillMaxWidth().coverCell(coverTransition, key, circle = true))
+                            Text(
+                                person.name.orEmpty(),
+                                fontSize = 14.sp,
+                                lineHeight = 18.sp,
+                                color = MaterialTheme.colorScheme.onBackground,
+                                textAlign = TextAlign.Center,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
+                            )
                         }
                     }
                 }
@@ -145,7 +157,7 @@ fun MaterialCollectionsScreen(
             wide {
                 Carousel(dim) {
                     items(documents, key = { it.query }) { kind ->
-                        TonalCard(stringResource(kind.label), onClick = { if (selection == null) onSearch(kind.query) }) {
+                        TonalCard(stringResource(kind.label), onClick = { open(CollectionKeys.documents(kind.query)) }) {
                             Box(
                                 Modifier.fillMaxSize().clip(RoundedCornerShape(20.dp)).background(MaterialTheme.colorScheme.surfaceContainerHighest),
                                 contentAlignment = Alignment.Center,
