@@ -86,6 +86,7 @@ import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.subhashh.lumen.data.GridThumbnail
 import com.subhashh.lumen.data.MediaItem
+import com.subhashh.lumen.ui.components.dialogCard
 import com.subhashh.lumen.ui.components.glass
 import com.subhashh.lumen.ui.icons.LumenIcons
 import com.subhashh.lumen.ui.theme.LocalDarkTheme
@@ -97,6 +98,9 @@ internal data class GroupColors(val card: Color, val text: Color, val secondary:
 /** The current style's colours for a grouped list (see [Lumen.colors]). */
 @Composable
 internal fun groupColors(): GroupColors = Lumen.colors.let { GroupColors(it.groupOnPage, it.text, it.secondary, it.divider) }
+
+/** Whether rows on this page show their icon on a coloured badge (Material: the main page only). */
+val LocalSettingsBadges = staticCompositionLocalOf { true }
 
 /** This Settings page's scroll position, held outside the page so it outlives it; null to keep its own. */
 val LocalSettingsScroll = staticCompositionLocalOf<androidx.compose.foundation.ScrollState?> { null }
@@ -309,7 +313,11 @@ private fun RowShell(
             .padding(horizontal = if (material) 16.dp else 14.dp, vertical = if (material) 12.dp else 9.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (icon != null) {
+        if (icon != null && material && !LocalSettingsBadges.current) {
+            // Inside a category: the icon alone, as Android's settings lists have it.
+            Icon(icon, contentDescription = null, tint = colors.secondary, modifier = Modifier.padding(horizontal = 4.dp).size(24.dp))
+            Spacer(Modifier.width(20.dp))
+        } else if (icon != null) {
             IconBadge(icon, iconColor)
             Spacer(Modifier.width(if (material) 16.dp else 14.dp))
         }
@@ -377,6 +385,11 @@ internal fun SettingsRow(
     iconColor: Color = Gray,
 ) {
     val colors = groupColors()
+    if (Lumen.material) {
+        // Material: what it's set to reads as the row's second line, not at its far end.
+        RowShell(title, listOfNotNull(subtitle, value).joinToString("\n").ifEmpty { null }, icon, iconColor, onClick) {}
+        return
+    }
     RowShell(title, subtitle, icon, iconColor, onClick) {
         if (value != null) {
             Spacer(Modifier.width(8.dp))
@@ -542,6 +555,14 @@ internal fun PickerRow(
     val colors = groupColors()
     val host = LocalPickerHost.current
     var bounds by remember { mutableStateOf(Rect.Zero) }
+    if (Lumen.material) {
+        // Material: the choice is the row's second line, and tapping opens a list to choose from.
+        RowShell(
+            title, listOfNotNull(options.getOrNull(selected), subtitle).joinToString("\n").ifEmpty { null }, icon, iconColor,
+            onClick = { host?.open(PickerRequest(bounds, options, selected, onSelect, unavailable, onUnavailable, title)) },
+        ) {}
+        return
+    }
     RowShell(
         title, subtitle, icon, iconColor,
         onClick = { host?.open(PickerRequest(bounds, options, selected, onSelect, unavailable, onUnavailable)) },
@@ -585,6 +606,8 @@ private data class PickerRequest(
     val onSelect: (Int) -> Unit,
     val unavailable: Set<Int>,
     val onUnavailable: (Int) -> Unit,
+    /** What's being chosen, for Material's dialog. */
+    val title: String = "",
 )
 
 @Stable
@@ -606,12 +629,16 @@ private class PickerHost {
 private fun PickerOverlay(host: PickerHost, backdrop: Backdrop) {
     val request = host.request
     BackHandler(enabled = request != null) { host.close() }
-    if (request != null) {
+    if (request != null && !Lumen.material) {
         Box(
             Modifier
                 .fillMaxSize()
                 .clickable(remember { MutableInteractionSource() }, indication = null) { host.close() },
         )
+    }
+    if (Lumen.material) {
+        MaterialPickerDialog(host, request)
+        return
     }
     var origin by remember { mutableStateOf(Rect.Zero) }
     val density = LocalDensity.current
@@ -695,3 +722,56 @@ private val KnobStretch = 12.dp
 private val KnobGrow = 6.dp
 private val PickerWidth = 230.dp
 private val PickerItemHeight = 44.dp
+
+
+/**
+ * Material's way of choosing one of a few: a dialog naming what's being chosen, the options as
+ * radio buttons, and Cancel. Choosing one closes it.
+ */
+@Composable
+private fun MaterialPickerDialog(host: PickerHost, request: PickerRequest?) {
+    com.subhashh.lumen.ui.components.DialogScrim(request != null, onDismiss = { host.close() })
+    AnimatedVisibility(
+        visible = request != null,
+        enter = scaleIn(spring(dampingRatio = 0.8f, stiffness = 600f), initialScale = 0.9f) + fadeIn(tween(140)),
+        exit = fadeOut(tween(120)),
+    ) {
+        // Kept while it fades out, after the request has gone.
+        val shown = remember { arrayOfNulls<PickerRequest>(1) }
+        if (request != null) shown[0] = request
+        val r = shown[0] ?: return@AnimatedVisibility
+        val scheme = androidx.compose.material3.MaterialTheme.colorScheme
+        Box(Modifier.fillMaxSize().padding(horizontal = 32.dp, vertical = 48.dp), contentAlignment = Alignment.Center) {
+            Column(
+                Modifier.fillMaxWidth().dialogCard().padding(top = 24.dp, bottom = 12.dp),
+            ) {
+                com.subhashh.lumen.ui.components.DialogTitle(r.title)
+                Spacer(Modifier.height(12.dp))
+                Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) {
+                    r.options.forEachIndexed { index, option ->
+                        val off = index in r.unavailable
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 56.dp)
+                                .clickable {
+                                    host.close()
+                                    if (off) r.onUnavailable(index) else r.onSelect(index)
+                                }
+                                .padding(horizontal = 24.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            androidx.compose.material3.RadioButton(selected = index == r.selected, onClick = null, enabled = !off)
+                            Spacer(Modifier.width(16.dp))
+                            Text(option, fontSize = 16.sp, color = if (off) scheme.onSurface.copy(alpha = 0.38f) else scheme.onSurface)
+                        }
+                    }
+                }
+                androidx.compose.material3.TextButton(
+                    onClick = { host.close() },
+                    modifier = Modifier.align(Alignment.End).padding(end = 16.dp, top = 4.dp),
+                ) { Text(stringResource(R.string.common_cancel)) }
+            }
+        }
+    }
+}

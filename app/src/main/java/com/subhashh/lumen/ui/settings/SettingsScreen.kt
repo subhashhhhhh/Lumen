@@ -55,6 +55,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -222,6 +223,8 @@ fun SettingsScreen(
     val status = remember(refresh) { PermissionStatus.read(context) }
     val prefs = remember { LumenPrefs(context) }
 
+    // The main page's rows wear coloured badges; inside a category Material's are plain icons.
+    CompositionLocalProvider(LocalSettingsBadges provides (category == null)) {
     SettingsPage(contentPadding, modifier) {
         when (category) {
             null -> {
@@ -319,11 +322,33 @@ fun SettingsScreen(
         }
         Spacer(Modifier.height(24.dp))
     }
+    }
 }
 
 @Composable
 private fun CategoryRow(category: SettingsCategory, value: String?, onOpen: (SettingsCategory) -> Unit) {
-    SettingsRow(title = stringResource(category.titleRes), value = value, onClick = { onOpen(category) }, icon = category.icon(), iconColor = category.color())
+    // Material: what's inside goes under the name, as Android's own Settings does, after what it's set to.
+    val summary = if (Lumen.material) listOfNotNull(value, stringResource(category.summary())).joinToString("  ·  ") else null
+    SettingsRow(
+        title = stringResource(category.titleRes),
+        subtitle = summary,
+        value = value.takeIf { summary == null },
+        onClick = { onOpen(category) },
+        icon = category.icon(),
+        iconColor = category.color(),
+    )
+}
+
+private fun SettingsCategory.summary() = when (this) {
+    SettingsCategory.Appearance -> R.string.settings_summary_appearance
+    SettingsCategory.Library -> R.string.settings_summary_library
+    SettingsCategory.PhotosVideos -> R.string.settings_summary_photos_videos
+    SettingsCategory.Privacy -> R.string.settings_summary_privacy
+    SettingsCategory.SmartSearch -> R.string.settings_summary_smart_features
+    SettingsCategory.Permissions -> R.string.settings_summary_permissions
+    SettingsCategory.Backup -> R.string.settings_summary_backup
+    SettingsCategory.About -> R.string.settings_summary_about
+    SettingsCategory.Developer -> R.string.settings_summary_developer
 }
 
 private fun SettingsCategory.icon() = when (this) {
