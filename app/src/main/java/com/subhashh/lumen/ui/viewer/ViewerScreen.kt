@@ -524,7 +524,20 @@ fun ViewerScreen(
 
         // Everything was deleted out from under us.
         LaunchedEffect(items.isEmpty()) { if (items.isEmpty()) close(Velocity.Zero) }
-        BackHandler(enabled = !parked) { close(Velocity.Zero) }
+        if (Lumen.material) {
+            // Material: the back gesture previews leaving, the photo already on its way down.
+            androidx.activity.compose.PredictiveBackHandler(enabled = !parked) { events ->
+                try {
+                    events.collect { motion.onBackProgress(1f - (1f - it.progress) * (1f - it.progress), height.toFloat()) }
+                    close(Velocity.Zero)
+                } catch (cancelled: kotlin.coroutines.cancellation.CancellationException) {
+                    motion.onBackCancelled()
+                    throw cancelled
+                }
+            }
+        } else {
+            BackHandler(enabled = !parked) { close(Velocity.Zero) }
+        }
         BackHandler(enabled = !parked && motion.infoOpen) { motion.closeInfo() }
         BackHandler(enabled = !parked && moreOpen) { moreOpen = false }
         BackHandler(enabled = !parked && cutout.open) { cutout.clear() }
@@ -1035,7 +1048,8 @@ private fun TopBar(
             modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 8.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            com.subhashh.lumen.ui.components.BareIconButton(LumenIcons.Back, stringResource(R.string.common_back), onBack)
+            // No Back button: Android's back gesture, or a swipe down, leaves the viewer.
+            Spacer(Modifier.width(48.dp))
             val context = LocalContext.current
             val (day, time) = remember(item.takenAt) { formatTakenAt(context, item.takenAt) }
             val glow = Shadow(color = MaterialTheme.colorScheme.background.copy(alpha = 0.95f), blurRadius = 14f)

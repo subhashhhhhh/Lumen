@@ -132,19 +132,6 @@ internal fun BoxScope.MainTopControls(
                         .padding(horizontal = 16.dp, vertical = 8.dp)
                 },
             )
-            // The bar with the tabs is away while searching there: Back is how to leave.
-            if (material) {
-                GlassIconButton(
-                    backdrop = backdrop,
-                    icon = LumenIcons.Back,
-                    contentDescription = stringResource(R.string.common_back),
-                    onClick = { searching = false },
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .statusBarsPadding()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                )
-            }
         }
 
         if (openCollection == CollectionKeys.RecentlyDeleted && tab == LumenTab.Collections && trash.isNotEmpty() &&
@@ -421,7 +408,8 @@ internal fun BoxScope.MainTopControls(
                 .padding(top = 64.dp, end = 16.dp),
         )
 
-        if ((inCollection || inSettings) && !viewerOpen) {
+        // Material has no Back button: Android's back gesture (or button) is how to go back.
+        if ((inCollection || inSettings) && !viewerOpen && !material) {
             GlassIconButton(
                 backdrop = backdrop,
                 icon = LumenIcons.Back,

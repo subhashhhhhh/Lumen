@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.MaterialTheme
+import com.subhashh.lumen.ui.components.PageBack
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
@@ -428,8 +429,15 @@ private fun MainState.Scaffold(
             else -> null
         }
     }
-    BackHandler(enabled = searching && !viewerOpen) { searching = false }
-    BackHandler(enabled = inCollection && !viewerOpen) {
+    // Material: back is Android's gesture, with a preview of leaving the page (no Back button).
+    val backGesture = remember { com.subhashh.lumen.ui.components.BackGesture() }
+    val pageBack = backGesture.takeIf { material }
+    // Derived: this screen is redrawn when a gesture starts and ends, not for every step of it.
+    val backUnderway by remember { androidx.compose.runtime.derivedStateOf { backGesture.progress > 0f } }
+    // An album or person leaves on its cover's flight back to its card, not on the page pulling away.
+    val coverOpen = CollectionKeys.isFolder(openCollection) || CollectionKeys.personId(openCollection) != null
+    PageBack(enabled = searching && !viewerOpen, gesture = pageBack) { searching = false }
+    PageBack(enabled = inCollection && !viewerOpen, gesture = pageBack.takeIf { !coverOpen }) {
         // A folder inside Hidden steps back to Hidden's list, not out of Hidden.
         closeCollection(when {
             openCollection == CollectionKeys.People && mergeFrom != null -> CollectionKeys.person(mergeFrom!!).also { mergeFrom = null }
@@ -438,7 +446,7 @@ private fun MainState.Scaffold(
             else -> null
         })
     }
-    BackHandler(enabled = inSettings && !viewerOpen) { popSettings() }
+    PageBack(enabled = inSettings && !viewerOpen, gesture = pageBack) { popSettings() }
 
     val endSelection = {
         selection = null
@@ -580,7 +588,8 @@ private fun MainState.Scaffold(
             Modifier
                 .fillMaxSize()
                 .layerBackdrop(backdrop)
-                .background(MaterialTheme.colorScheme.background),
+                // What shows around the page while the back gesture shrinks it.
+                .background(if (material && backUnderway) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.background),
         ) {
             // Material: a page that's newly on screen springs up into place. Albums and people
             // arrive on their covers instead, so they (and the page under them) are left alone.
@@ -611,7 +620,18 @@ private fun MainState.Scaffold(
                         alpha = a.coerceIn(0f, 1f)
                         translationY = 20.dp.toPx() * (1f - a)
                     }
-                },
+                    // The back gesture's preview: the page shrinks into a rounded card and
+                    // leans away from the edge the thumb came from.
+                    val back = backGesture.eased
+                    if (back > 0f) {
+                        val scale = 1f - 0.1f * back
+                        scaleX = scale
+                        scaleY = scale
+                        translationX = (if (backGesture.fromRight) -1f else 1f) * 20.dp.toPx() * back
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(32.dp.toPx() * back)
+                        clip = true
+                    }
+                }.background(MaterialTheme.colorScheme.background),
             ) {
             MainPages(this@Scaffold, pick, library, allItems, excluded, hidden, hiddenAll, hiddenFolderList, utilities, folders, libraryItems, librarySections, openItems, collectionSections, months, years, selectedItems, searchSections, searchAlbums, personMatches, unnamedSubject, smartPending, smartSuggestions, searchSuggestions, chronological, scrollLabel, statusTop, navBottom, gridPadding, heroHeight, libraryGrid, collectionGrid, hiddenGrid, searchGrid, monthsList, yearsList, zoomBarScroll, transition, coverTransition, activity, exportLauncher, favoritesLauncher, importLauncher, itemsOf, personOf, heroWithLabel, setPicked, onGridColumns, onAlbumColumns, rememberSearch, toast, needsAllFiles, openHidden, openViewer, collectionsPage, peoplePage, people)
             }

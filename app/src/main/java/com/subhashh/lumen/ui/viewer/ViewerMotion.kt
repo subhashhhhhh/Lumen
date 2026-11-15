@@ -128,6 +128,19 @@ class ViewerMotion(
         return false
     }
 
+    /**
+     * Android's back gesture, [fraction] of the way (0 to 1): the photo pulls down and shrinks a
+     * little, the start of a dismiss, so letting go carries on into the flight home.
+     */
+    fun onBackProgress(fraction: Float, height: Float) {
+        settle?.cancel()
+        pivot = TransformOrigin.Center
+        dismissY = height * 0.16f * fraction
+    }
+
+    /** The back gesture was given up: the photo goes back to rest. */
+    fun onBackCancelled() = springBack(Velocity.Zero)
+
     fun openInfo() = animateReveal(open = true, velocityY = 0f)
 
     fun closeInfo() = animateReveal(open = false, velocityY = 0f)
