@@ -30,6 +30,7 @@ import android.content.ClipboardManager
 import android.content.ClipData
 import android.text.format.Formatter
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -287,7 +288,12 @@ fun DetailsSheet(
         }
 
         if (d == null) return@Column
-        if (material) SectionLabel(stringResource(R.string.common_details), colors)
+        if (material) {
+            // Material lays the rest out its own way: what Lumen sees first, then one list of details.
+            WhatLumenSees(item, colors, onSearch, player)
+            MaterialDetails(item, d, colors, showMaps, onOpenMap, onAllowLocation, onRename)
+            return@Column
+        }
         d.camera?.let { camera ->
             Group(colors) { CameraGroup(item, camera, colors) }
             Spacer(Modifier.height(10.dp))
@@ -364,6 +370,23 @@ private fun WhatLumenSees(item: MediaItem, colors: SheetColors, onSearch: (Strin
     val cues by produceState(emptyList<Cue>(), item.id) {
         if (item.isVideo) value = withContext(Dispatchers.IO) { Subtitles.saved(context, item.toRef())?.first.orEmpty() }
     }
+    val material = Lumen.material
+    if (material && looks.isNotEmpty()) {
+        // Material: the words as outlined chips straight on the sheet, under their own heading.
+        SectionLabel(stringResource(R.string.viewer_looks_like), colors)
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(horizontal = 4.dp),
+        ) {
+            for (word in looks) OutlinedChip(word.replaceFirstChar { it.uppercase() }, colors, LumenIcons.Search) { onSearch(word) }
+        }
+    }
+    if (material && cues.isNotEmpty()) {
+        SectionLabel(stringResource(R.string.viewer_subtitles), colors)
+        Group(colors) { SubtitlesPart(item, cues, colors, player) }
+    }
+    if (material) return
     if (looks.isNotEmpty()) {
         Spacer(Modifier.height(10.dp))
         Group(colors) {
@@ -415,8 +438,13 @@ private fun SubtitlesPart(item: MediaItem, cues: List<Cue>, colors: SheetColors,
     LaunchedEffect(active) {
         if (active != null && !list.isScrollInProgress) list.animateScrollToItem((active - 1).coerceAtLeast(0))
     }
-    Title(LumenIcons.Video, stringResource(R.string.viewer_subtitles), colors)
-    Spacer(Modifier.height(8.dp))
+    val material = Lumen.material
+    val scheme = MaterialTheme.colorScheme
+    // Material names the section above the card instead.
+    if (!material) {
+        Title(LumenIcons.Video, stringResource(R.string.viewer_subtitles), colors)
+        Spacer(Modifier.height(8.dp))
+    }
     LazyColumn(state = list, modifier = Modifier.fillMaxWidth().heightIn(max = 220.dp)) {
         itemsIndexed(cues) { i, cue ->
             val on = i == active
@@ -425,13 +453,14 @@ private fun SubtitlesPart(item: MediaItem, cues: List<Cue>, colors: SheetColors,
             Row(
                 Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(colors.secondary.copy(alpha = 0.15f * lit))
+                    .clip(RoundedCornerShape(if (material) 12.dp else 8.dp))
+                    // Material lights the line being spoken with a tonal fill.
+                    .background(if (material) scheme.secondaryContainer.copy(alpha = lit) else colors.secondary.copy(alpha = 0.15f * lit))
                     .pressable({
                         player?.seekTo(cue.startMs)
                         player?.play()
                     }, pressedScale = 0.98f)
-                    .padding(horizontal = 6.dp, vertical = 4.dp),
+                    .padding(horizontal = if (material) 10.dp else 6.dp, vertical = if (material) 8.dp else 4.dp),
             ) {
                 val s = cue.startMs / 1000
                 Text(
@@ -456,7 +485,8 @@ private fun SubtitlesPart(item: MediaItem, cues: List<Cue>, colors: SheetColors,
             stringResource(R.string.viewer_export_srt) to { exportSubtitles(context, item, Subtitles.srt(cues), "srt", "application/x-subrip") },
             stringResource(R.string.viewer_export_vtt) to { exportSubtitles(context, item, Subtitles.vtt(cues), "vtt", "text/vtt") },
         )) {
-            Text(
+            if (material) OutlinedChip(label, colors, onClick = action)
+            else Text(
                 label,
                 color = colors.text,
                 fontSize = 13.sp,
@@ -501,7 +531,18 @@ private fun AllMetadataGroup(item: MediaItem, canReadLocation: Boolean, colors: 
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxWidth().pressable({ open = !open }, pressedScale = 0.98f),
     ) {
-        Text(stringResource(R.string.viewer_all_metadata), color = colors.text, fontSize = 15.sp, fontWeight = Lumen.type.emphasis, modifier = Modifier.weight(1f))
+        // Material: a row like the others in its list, an icon and a plain headline.
+        if (Lumen.material) {
+            Icon(LumenIcons.Info, null, tint = colors.secondary, modifier = Modifier.size(24.dp))
+            Spacer(Modifier.width(16.dp))
+        }
+        Text(
+            stringResource(R.string.viewer_all_metadata),
+            color = colors.text,
+            fontSize = if (Lumen.material) 16.sp else 15.sp,
+            fontWeight = if (Lumen.material) FontWeight.Normal else Lumen.type.emphasis,
+            modifier = Modifier.weight(1f),
+        )
         if (open && tags.isNotEmpty()) {
             Action(stringResource(R.string.common_copy), colors) { copyText(context, tags.joinToString("\n") { (k, v) -> "$k: $v" }) }
         } else {
@@ -512,9 +553,10 @@ private fun AllMetadataGroup(item: MediaItem, canReadLocation: Boolean, colors: 
         Spacer(Modifier.height(8.dp))
         if (tags.isEmpty()) Line(stringResource(R.string.viewer_nothing_readable), colors, secondary = true)
         for ((key, value) in tags) {
-            Row(Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
-                Text(key, color = colors.secondary, fontSize = 12.sp, modifier = Modifier.weight(0.42f))
-                Text(value, color = colors.text, fontSize = 12.sp, modifier = Modifier.weight(0.58f))
+            val size = if (Lumen.material) 13.sp else 12.sp
+            Row(Modifier.fillMaxWidth().padding(vertical = if (Lumen.material) 5.dp else 3.dp)) {
+                Text(key, color = colors.secondary, fontSize = size, modifier = Modifier.weight(0.42f))
+                Text(value, color = colors.text, fontSize = size, modifier = Modifier.weight(0.58f))
             }
         }
     }
@@ -841,4 +883,196 @@ private fun formatDuration(ms: Long): String {
     val m = (total % 3600) / 60
     val s = total % 60
     return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s)
+}
+
+
+/*
+ * The Material 3 Expressive sheet's details: one list, each kind of fact a row with an icon, a
+ * headline, lines of supporting text and chips, the rows a tonal block with hairline gaps.
+ */
+
+/** An outlined chip that does something: searches a word, copies or exports subtitles. */
+@Composable
+private fun OutlinedChip(text: String, colors: SheetColors, icon: ImageVector? = null, onClick: () -> Unit) {
+    Row(
+        Modifier
+            .height(36.dp)
+            .pressable(onClick, pressedScale = 0.96f, shape = RoundedCornerShape(10.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(10.dp))
+            .padding(start = if (icon != null) 10.dp else 14.dp, end = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (icon != null) {
+            Icon(icon, null, tint = colors.accent, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+        }
+        Text(text, color = colors.text, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+    }
+}
+
+/**
+ * One row of the list: [icon], [headline], [supporting] lines and [chips] under it, [trailing] at
+ * its end, and anything more ([below]) across its full width.
+ */
+@Composable
+private fun DetailRow(
+    icon: ImageVector,
+    headline: String,
+    colors: SheetColors,
+    supporting: List<String> = emptyList(),
+    chips: List<String> = emptyList(),
+    trailing: (@Composable () -> Unit)? = null,
+    below: (@Composable ColumnScope.() -> Unit)? = null,
+) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(6.dp))
+            .background(colors.group)
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, null, tint = colors.secondary, modifier = Modifier.size(24.dp))
+            Spacer(Modifier.width(16.dp))
+            Column(Modifier.weight(1f)) {
+                Text(headline, color = colors.text, fontSize = 16.sp, lineHeight = 22.sp)
+                for (line in supporting) Text(line, color = colors.secondary, fontSize = 14.sp, lineHeight = 20.sp)
+            }
+            trailing?.invoke()
+        }
+        if (chips.isNotEmpty()) {
+            Spacer(Modifier.height(10.dp))
+            // In line with the text, past the icon.
+            Box(Modifier.padding(start = 40.dp)) { Chips(chips, colors) }
+        }
+        below?.invoke(this)
+    }
+}
+
+@Composable
+private fun MaterialDetails(
+    item: MediaItem,
+    d: MediaDetails,
+    colors: SheetColors,
+    showMaps: Boolean,
+    onOpenMap: (GeoPoint) -> Unit,
+    onAllowLocation: () -> Unit,
+    onRename: (MediaItem) -> Unit,
+) {
+    val context = LocalContext.current
+    SectionLabel(stringResource(R.string.common_details), colors)
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        // The file: its name (rename with the pencil), where it is, where it came from and when.
+        val where = listOfNotNull(d.volume, d.folder.trimEnd('/').ifEmpty { null }).joinToString("  ·  ").ifEmpty { stringResource(R.string.viewer_internal_storage) }
+        val dates = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
+        val added = stringResource(R.string.viewer_added)
+        val modified = stringResource(R.string.viewer_modified)
+        val from = stringResource(R.string.viewer_from)
+        DetailRow(
+            LumenIcons.Document,
+            d.fileName,
+            colors,
+            supporting = listOfNotNull(
+                where,
+                d.dateAdded?.let { added.format(Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).format(dates)) },
+                d.dateModified?.let { modified.format(Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).format(dates)) },
+            ),
+            chips = listOfNotNull(MediaSource.describe(context, item.relativePath, d.fileName)?.let { from.format(it) }),
+            trailing = { com.subhashh.lumen.ui.components.BareIconButton(LumenIcons.Edit, stringResource(R.string.common_rename), { onRename(item) }, tint = colors.secondary) },
+        )
+
+        // What kind of picture or video it is, how big, and what's special about it.
+        if (item.isVideo) {
+            val v = d.video
+            val main = buildList {
+                if (item.durationMs > 0) add(formatDuration(item.durationMs))
+                if (d.width > 0) add("${d.width} × ${d.height}")
+                d.frameRate?.let { add("${it.roundToInt()} fps") }
+                if (d.sizeBytes > 0) add(Formatter.formatShortFileSize(context, d.sizeBytes))
+            }
+            DetailRow(
+                LumenIcons.Video,
+                listOfNotNull(v?.codec, formatName(context, d.mimeType, true)).joinToString(" · "),
+                colors,
+                supporting = listOfNotNull(main.joinToString("  ·  ").ifEmpty { null }, v?.let { audioLine(context, it) }),
+                chips = listOfNotNull(
+                    v?.hdr,
+                    v?.bitrate?.let { "%.1f Mbps".format(Locale.US, it / 1_000_000.0) },
+                    v?.captureFps?.let { context.getString(R.string.viewer_slow_motion, it.roundToInt()) },
+                ),
+            )
+        } else {
+            val size = buildList {
+                if (d.width > 0) {
+                    val mp = d.width.toLong() * d.height / 1_000_000.0
+                    if (mp >= 1) add(context.getString(R.string.viewer_megapixels, mp.roundToInt()))
+                    add("${d.width} × ${d.height}")
+                }
+                if (d.sizeBytes > 0) add(Formatter.formatShortFileSize(context, d.sizeBytes))
+            }
+            DetailRow(
+                LumenIcons.Image,
+                formatName(context, d.mimeType, false),
+                colors,
+                supporting = listOfNotNull(size.joinToString("  ·  ").ifEmpty { null }),
+                chips = listOfNotNull(
+                    d.hdr,
+                    d.colorSpace,
+                    d.bitDepth?.let { stringResource(R.string.viewer_bit_depth, it) },
+                    stringResource(R.string.viewer_motion_photo).takeIf { d.motionPhoto },
+                    "RAW".takeIf { item.isRaw },
+                ),
+            )
+        }
+
+        // The camera, which of the phone's lenses, and how the shot was exposed.
+        d.camera?.let { camera ->
+            val kind = cameraKind(camera)?.let { stringResource(it) }
+            DetailRow(
+                LumenIcons.Camera,
+                camera.device?.let { if (item.isRaw) "$it · RAW" else it } ?: stringResource(R.string.viewer_camera),
+                colors,
+                supporting = listOfNotNull(listOfNotNull(kind, camera.lens).joinToString("  ·  ").ifEmpty { null }),
+                chips = exposureFacts(context, camera),
+            )
+        }
+
+        // Where: the place's name, the spot, and a map of it when maps are on.
+        val location = d.location
+        if (location != null) {
+            val place by produceState<String?>(null, location) { value = PlaceLookup.describe(context, location) }
+            val extra = listOfNotNull(
+                formatCoordinates(context, location),
+                d.altitude?.let { "${it.roundToInt()} m" },
+                d.direction?.let { context.getString(R.string.viewer_facing, compass(context, it)) },
+            )
+            DetailRow(
+                LumenIcons.Location,
+                place ?: stringResource(R.string.viewer_location),
+                colors,
+                supporting = listOf(extra.joinToString("  ·  ")),
+                trailing = if (showMaps) null else ({ Action(stringResource(R.string.viewer_open_in_maps), colors) { onOpenMap(location) } }),
+                below = if (showMaps) {
+                    {
+                        Spacer(Modifier.height(12.dp))
+                        MapPreview(location, onOpen = { onOpenMap(location) }, modifier = Modifier.fillMaxWidth().height(168.dp).clip(RoundedCornerShape(18.dp)))
+                    }
+                } else {
+                    null
+                },
+            )
+        } else if (!d.locationReadable) {
+            DetailRow(
+                LumenIcons.Location,
+                stringResource(R.string.viewer_allow_location),
+                colors,
+                trailing = { Action(stringResource(R.string.common_allow), colors, onAllowLocation) },
+            )
+        }
+
+        // Every tag in the file, folded away until asked for.
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).background(colors.group).padding(horizontal = 16.dp, vertical = 16.dp)) {
+            AllMetadataGroup(item, d.locationReadable, colors)
+        }
+    }
 }
