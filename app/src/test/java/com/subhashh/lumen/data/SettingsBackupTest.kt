@@ -86,7 +86,9 @@ class SettingsBackupTest {
         val text = file.readText()
         // The salt and hash: long enough that a match can't be a coincidence.
         for (value in lockBefore.values) if (value is String && value.length >= 16) assertFalse("lock data in backup", text.contains(value))
-        assertFalse(text.contains("4821"))
+        // The export time (milliseconds) can contain any four digits, so it's left out of the PIN check.
+        val withoutTime = JSONObject(text).apply { remove("exportedAt") }.toString()
+        assertFalse(withoutTime.contains("4821"))
 
         // Importing a backup made elsewhere (even one claiming lock keys) can't change the lock.
         val json = JSONObject(text)
