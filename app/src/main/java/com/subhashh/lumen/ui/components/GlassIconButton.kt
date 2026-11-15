@@ -28,22 +28,6 @@ fun GlassIconButton(
     /** A red dot at the top right: something new behind this button (an update for Settings). */
     badge: Boolean = false,
 ) {
-    if (Lumen.material && LocalOnBar.current) {
-        // On the top app bar: just the icon, on the bar's own surface.
-        Box(modifier.size(48.dp).pressable(onClick, shape = CircleShape), contentAlignment = Alignment.Center) {
-            Icon(icon, contentDescription = contentDescription, tint = tint)
-            if (badge) {
-                Box(
-                    Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(top = 9.dp, end = 9.dp)
-                        .size(10.dp)
-                        .background(Lumen.colors.destructive, CircleShape),
-                )
-            }
-        }
-        return
-    }
     if (Lumen.material) {
         MaterialMorphSurface(onClick, LocalGlassColors.current.tint, modifier) {
             Icon(icon, contentDescription = contentDescription, tint = tint)

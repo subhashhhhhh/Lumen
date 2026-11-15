@@ -79,6 +79,7 @@ object LumenIcons {
     val Filters: ImageVector get() = if (material) MaterialIcons.Filters else FluentIcons.Filters
     val Globe: ImageVector get() = if (material) MaterialIcons.Globe else FluentIcons.Globe
     val Translate: ImageVector get() = if (material) MaterialIcons.Translate else FluentIcons.Translate
+    val History: ImageVector get() = if (material) MaterialIcons.History else FluentIcons.Restore
 
     /** A plain chevron pointing left; turned to point anywhere. (Lumen's Back is one; Material's is an arrow.) */
     val Chevron: ImageVector get() = if (material) MaterialIcons.Chevron else FluentIcons.Back

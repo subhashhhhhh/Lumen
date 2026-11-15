@@ -65,7 +65,7 @@ fun SearchField(
     Row(
         modifier
             .fillMaxWidth()
-            .height(48.dp)
+            .height(if (com.subhashh.lumen.ui.theme.Lumen.material) 60.dp else 48.dp)
             .glass(backdrop, shape = shape)
             .padding(start = 16.dp, end = 6.dp),
         verticalAlignment = Alignment.CenterVertically,

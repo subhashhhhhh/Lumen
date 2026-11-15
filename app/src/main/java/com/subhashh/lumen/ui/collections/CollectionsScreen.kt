@@ -209,8 +209,6 @@ internal fun rememberAlbumGridGestures(
 
 @Composable
 internal fun ScreenTitle(title: String) {
-    // Material: the top bar carries it.
-    if (com.subhashh.lumen.ui.components.reportBarTitle(title)) return
     Text(
         title,
         style = Lumen.type.screenTitle,
@@ -373,7 +371,7 @@ private fun utilityColor(key: String): Color = when (key) {
     else -> Color(0xFF8E8E93)
 }
 
-private fun utilityIcon(key: String): ImageVector = when (key) {
+internal fun utilityIcon(key: String): ImageVector = when (key) {
     CollectionKeys.Favorites -> LumenIcons.HeartFilled
     CollectionKeys.Videos -> LumenIcons.Video
     CollectionKeys.Screenshots -> LumenIcons.Screenshot
@@ -452,7 +450,7 @@ internal fun AlbumCard(
 }
 
 @Composable
-private fun Cover(item: MediaItem) {
+internal fun Cover(item: MediaItem) {
     val context = LocalContext.current
     AsyncImage(
         // Own cache key: covers are larger than grid thumbnails, so they must not reuse those bitmaps.

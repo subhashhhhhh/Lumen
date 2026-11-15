@@ -36,17 +36,14 @@ import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.subhashh.lumen.data.CollectionKeys
 import com.subhashh.lumen.data.MediaCollection
+import com.subhashh.lumen.R
 import com.subhashh.lumen.ui.collections.CollectionsScreen
+import com.subhashh.lumen.ui.collections.DocumentKind
+import com.subhashh.lumen.ui.collections.MaterialCollectionsScreen
 import androidx.compose.ui.platform.LocalContext
 import com.subhashh.lumen.data.HiddenLockStore
 import com.subhashh.lumen.ui.albums.AlbumPicker
 import com.subhashh.lumen.ui.components.ConfirmDialog
-import com.subhashh.lumen.ui.components.LocalMaterialBar
-import com.subhashh.lumen.ui.components.LocalOnBar
-import com.subhashh.lumen.ui.components.MaterialBarState
-import com.subhashh.lumen.ui.components.MaterialNavBar
-import com.subhashh.lumen.ui.components.MaterialTopBar
-import com.subhashh.lumen.ui.components.MaterialZoomSwitch
 import com.subhashh.lumen.ui.settings.AccentRow
 import com.subhashh.lumen.ui.theme.AccentPresets
 import com.subhashh.lumen.ui.components.DateTimeDialog
@@ -234,35 +231,31 @@ class StyleRenderTest {
         }
     }
 
-    /** Material's own frame: the top app bar with its Years / Months / All row, and the navigation bar. */
+    /** Material's Collections page: rows, the utility tiles, a Places placeholder, Documents and album cards. */
     @Test
-    fun chrome() = render("chrome") {
-        val bar = remember { MaterialBarState() }
-        Box(Modifier.fillMaxSize()) {
-            CompositionLocalProvider(LocalMaterialBar provides bar.takeIf { Lumen.material }) {
-                Column(Modifier.padding(top = 150.dp, start = 16.dp, end = 16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    LibraryHeader("Library", "October 2026", topPadding = 8.dp)
-                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        SelectionMark(selected = true)
-                        SelectionMark(selected = false)
-                    }
-                    AccentRow(accent = AccentPresets[2], onAccent = {})
-                }
-            }
-            if (Lumen.material) {
-                MaterialTopBar(bar, statusTop = 24.dp, pushed = false, untitled = false, below = {
-                    MaterialZoomSwitch(ZoomLevel.All, {}, Modifier.padding(start = 16.dp, bottom = 12.dp))
-                })
-                CompositionLocalProvider(LocalOnBar provides true) {
-                    val backdrop = rememberLayerBackdrop()
-                    Row(Modifier.align(Alignment.TopEnd).padding(top = 32.dp, end = 16.dp)) {
-                        GlassIconButton(backdrop, LumenIcons.Filter, "View", {})
-                        GlassIconButton(backdrop, LumenIcons.Settings, "Settings", {}, badge = true)
-                    }
-                }
-                MaterialNavBar(LumenTab.Library, {}, searchSelected = false, onSearch = {}, navBottom = 24.dp, modifier = Modifier.align(Alignment.BottomCenter))
-            }
+    fun materialCollections() = render("material-collections") {
+        val utilities = listOf(
+            MediaCollection(CollectionKeys.Favorites, "Favourites", null, 128),
+            MediaCollection(CollectionKeys.Videos, "Videos", null, 41),
+            MediaCollection(CollectionKeys.Screenshots, "Screenshots", null, 902),
+            MediaCollection(CollectionKeys.RecentlyDeleted, "Recently Deleted", null, 4),
+            MediaCollection(CollectionKeys.Hidden, "Hidden", null, -1),
+        )
+        val folders = listOf("Camera", "WhatsApp Images", "Downloads", "Pictures").mapIndexed { i, name ->
+            MediaCollection(CollectionKeys.folder(i.toLong()), name, null, 10 * (i + 1), relativePath = "DCIM/$name/", pinned = i == 0)
         }
+        MaterialCollectionsScreen(
+            utilities = utilities, hiddenLockSet = true, folders = folders, people = emptyList(),
+            documents = listOf(DocumentKind(R.string.collections_doc_receipts, "receipt", null), DocumentKind(R.string.collections_doc_tickets, "ticket", null)),
+            gridState = rememberLazyGridState(), contentPadding = PaddingValues(top = 24.dp, bottom = 24.dp), onOpen = {}, onSearch = {},
+            columns = 2, onColumnsChange = {}, selection = null, onSelectionChange = {},
+            coverTransition = remember { CoverTransition() },
+        )
+    }
+
+    @Test
+    fun accent() = render("accent") {
+        Column(Modifier.padding(top = 24.dp)) { AccentRow(accent = AccentPresets[2], onAccent = {}) }
     }
 
     @Test

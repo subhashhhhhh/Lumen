@@ -23,16 +23,6 @@ fun GlassTextButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    if (Lumen.material && LocalOnBar.current) {
-        // On the top app bar: a text button in the accent colour.
-        Box(
-            modifier.height(48.dp).pressable(onClick, shape = RoundedCornerShape(50)).padding(horizontal = 14.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(text, color = Lumen.colors.accent, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-        }
-        return
-    }
     if (Lumen.material) {
         MaterialMorphSurface(onClick, LocalGlassColors.current.tint, modifier.height(48.dp), square = false) {
             Text(

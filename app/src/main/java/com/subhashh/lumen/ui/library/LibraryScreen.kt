@@ -8,6 +8,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.aspectRatio
@@ -94,6 +95,8 @@ fun LibraryScreen(
     modifier: Modifier = Modifier,
     /** Extra space above the title, e.g. for an album's back button. */
     titleTopPadding: Dp = 16.dp,
+    /** The title and month over the top of the grid. Material's Photos page goes without. */
+    showHeader: Boolean = true,
     /** Whole photos letterboxed in their cells instead of square crops. */
     aspectRatioGrid: Boolean = false,
     emptyText: String = stringResource(R.string.main_no_photos_or_videos),
@@ -258,15 +261,13 @@ fun LibraryScreen(
                 else -> ((gridState.firstVisibleItemScrollOffset - collapseFrom) / collapseOver).coerceIn(0f, 1f)
             }
         }
-        LibraryHeader(
+        if (showHeader) LibraryHeader(
             title = title,
             subtitle = if (showMonth) visibleMonth else "",
             topPadding = titleTopPadding,
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .graphicsLayer { alpha = headerShown() },
-            overCover = hero != null,
-            visibility = headerShown,
         )
     }
 }
@@ -364,7 +365,18 @@ internal fun Thumbnail(
                     modifier = Modifier.fillMaxSize(),
                 )
             }
-            if (showDuration && (item.isVideo || item.mimeType == "image/gif" || item.isRaw)) {
+            if (material && showDuration && item.isVideo) {
+                // Material: the length and a play mark at the top right, as Android galleries show videos.
+                Row(Modifier.align(Alignment.TopEnd).padding(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(formatDuration(item.durationMs), style = OverlayText)
+                    Icon(
+                        LumenIcons.Play,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.padding(start = 3.dp).size(16.dp).shadow(3.dp, CircleShape, clip = false),
+                    )
+                }
+            } else if (showDuration && (item.isVideo || item.mimeType == "image/gif" || item.isRaw)) {
                 Text(
                     // GIFs move and RAW files are special; say so, as iOS does.
                     text = when {
@@ -400,19 +412,18 @@ internal fun Thumbnail(
 @Composable
 internal fun SelectionMark(selected: Boolean, modifier: Modifier = Modifier) {
     if (selected && Lumen.material) {
-        // Material: a scalloped badge in the primary colour that pops in with a bounce.
+        // Material: a tick on the primary colour that grows into place.
         val still = com.subhashh.lumen.ui.theme.LocalMotion.current.reduce
-        val pop = remember { androidx.compose.animation.core.Animatable(if (still) 1f else 0.3f) }
-        androidx.compose.runtime.LaunchedEffect(Unit) { pop.animateTo(1f, spring(dampingRatio = 0.35f, stiffness = 500f)) }
+        val pop = remember { androidx.compose.animation.core.Animatable(if (still) 1f else 0.6f) }
+        androidx.compose.runtime.LaunchedEffect(Unit) { pop.animateTo(1f, spring(dampingRatio = 0.7f, stiffness = 600f)) }
         Box(
             modifier
-                .size(26.dp)
+                .size(24.dp)
                 .graphicsLayer {
                     scaleX = pop.value
                     scaleY = pop.value
-                    rotationZ = 90f * (1f - pop.value)
                 }
-                .clip(com.subhashh.lumen.ui.components.cookieShape())
+                .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.primary),
             contentAlignment = Alignment.Center,
         ) {
@@ -459,12 +470,7 @@ internal fun LibraryHeader(
     subtitle: String,
     topPadding: Dp,
     modifier: Modifier = Modifier,
-    /** The page opens with a cover across the top, and [visibility] says how far it has given way. */
-    overCover: Boolean = false,
-    visibility: () -> Float = { 1f },
 ) {
-    // Material: the top bar carries the title and the month; no scrim over the photos.
-    if (com.subhashh.lumen.ui.components.reportBarTitle(title, subtitle, overCover, visibility)) return
     Column(
         modifier
             .fillMaxWidth()

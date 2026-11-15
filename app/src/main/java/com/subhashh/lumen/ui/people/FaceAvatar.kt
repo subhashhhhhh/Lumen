@@ -39,7 +39,7 @@ fun FaceAvatar(person: Person, cover: MediaItem, modifier: Modifier = Modifier, 
     if (person.coverInVideo) {
         // A video's thumbnail is its first frame, maybe without them: the crop saved while indexing.
         val context = LocalContext.current
-        Box(modifier.aspectRatio(1f).clip(if (square) Lumen.shapes.cover else faceShape())) {
+        Box(modifier.aspectRatio(1f).clip(if (square) Lumen.shapes.cover else CircleShape)) {
             AsyncImage(
                 model = remember(person.coverFaceId) { FaceStore.cropFile(context, person.coverFaceId) },
                 contentDescription = null,
@@ -59,7 +59,7 @@ fun FaceAvatar(item: MediaItem, box: List<Float>, modifier: Modifier = Modifier,
     Box(
         modifier
             .aspectRatio(1f)
-            .clip(if (square) Lumen.shapes.cover else faceShape())
+            .clip(if (square) Lumen.shapes.cover else CircleShape)
             .background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.08f)),
     ) {
         AsyncImage(
@@ -104,8 +104,3 @@ private class FaceCrop(private val box: List<Float>) : Transformation() {
         return Bitmap.createBitmap(input, left, top, s, s)
     }
 }
-
-/** A face's frame: a circle, or in the Material style a scalloped one. */
-@Composable
-private fun faceShape(): androidx.compose.ui.graphics.Shape =
-    if (Lumen.material) com.subhashh.lumen.ui.components.cookieShape() else CircleShape

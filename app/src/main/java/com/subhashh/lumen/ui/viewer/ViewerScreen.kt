@@ -625,10 +625,22 @@ fun ViewerScreen(
             if (current == null) return@AnimatedVisibility
             CompositionLocalProvider(LocalGlassColors provides com.subhashh.lumen.ui.theme.overMediaGlass()) {
                 Box(Modifier.fillMaxSize()) {
+                    val launch = { sender: android.content.IntentSender ->
+                        playingBeforeRequest = player?.isPlaying == true
+                        requestLauncher.launch(IntentSenderRequest.Builder(sender).build())
+                    }
+                    val toggleFavorite = { item: MediaItem ->
+                        haptics.performHapticFeedback(if (item.isFavorite) HapticFeedbackType.ToggleOff else HapticFeedbackType.ToggleOn)
+                        if (MediaActions.setFavoriteDirectly(context, listOf(item), !item.isFavorite)) onMediaChanged()
+                        else launch(MediaActions.favoriteRequest(context, item))
+                    }
                     TopBar(
                         backdrop = backdrop,
                         item = current,
                         onBack = { close(Velocity.Zero) },
+                        // Material's top row: Favourite (not for Hidden, the trash or another app's file), and the date opens Details.
+                        onFavorite = if (Lumen.material && !inTrash && !inHidden && !external) ({ toggleFavorite(current) }) else null,
+                        onDetails = motion::openInfo,
                         // Recently Deleted items only get restore / delete forever.
                         onMore = if (inTrash || inHidden) null else ({ moreOpen = !moreOpen }),
                         // Live Text's button: only when the photo has text.
@@ -661,10 +673,6 @@ fun ViewerScreen(
                             FilmStrip(items, pager, filmStrip.heightDp.dp)
                             Spacer(Modifier.height(12.dp))
                         }
-                        val launch = { sender: android.content.IntentSender ->
-                            playingBeforeRequest = player?.isPlaying == true
-                            requestLauncher.launch(IntentSenderRequest.Builder(sender).build())
-                        }
                         // Material 3 Expressive: one floating toolbar of plain icon buttons, not a row of circles.
                         val material = Lumen.material
                         @Composable
@@ -675,12 +683,22 @@ fun ViewerScreen(
                             onClick: () -> Unit,
                             tint: Color = LocalGlassColors.current.content,
                         ) {
-                            if (material) com.subhashh.lumen.ui.components.BareIconButton(icon, contentDescription, onClick, tint = tint)
-                            else com.subhashh.lumen.ui.components.GlassIconButton(backdrop, icon, contentDescription, onClick, tint = tint)
+                            // Material: the icon with its name under it, straight on the page.
+                            if (material) {
+                                Column(
+                                    Modifier.width(84.dp).pressable(onClick, shape = RoundedCornerShape(16.dp)).padding(vertical = 8.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                ) {
+                                    Icon(icon, contentDescription = null, tint = tint)
+                                    Spacer(Modifier.height(6.dp))
+                                    Text(contentDescription, color = tint, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                                }
+                            } else {
+                                com.subhashh.lumen.ui.components.GlassIconButton(backdrop, icon, contentDescription, onClick, tint = tint)
+                            }
                         }
                         Row(
-                            if (material) Modifier.fillMaxWidth().glass(backdrop, CircleShape).padding(horizontal = 8.dp, vertical = 8.dp)
-                            else Modifier.fillMaxWidth(),
+                            Modifier.fillMaxWidth(),
                             horizontalArrangement = if (material) Arrangement.SpaceEvenly else Arrangement.SpaceBetween,
                         ) {
                             if (external) {
@@ -743,20 +761,15 @@ fun ViewerScreen(
                                     contentDescription = stringResource(R.string.common_share),
                                     onClick = { MediaActions.share(context, current) },
                                 )
-                                GlassIconButton(
+                                // Material keeps Favourite at the top and opens Details from the date (or a swipe up).
+                                if (!material) GlassIconButton(
                                     backdrop = backdrop,
                                     icon = if (current.isFavorite) LumenIcons.HeartFilled else LumenIcons.Heart,
                                     contentDescription = stringResource(R.string.common_favorite),
                                     tint = if (current.isFavorite) Lumen.colors.favorite else LocalGlassColors.current.content,
-                                    onClick = {
-                                        haptics.performHapticFeedback(
-                                            if (current.isFavorite) HapticFeedbackType.ToggleOff else HapticFeedbackType.ToggleOn,
-                                        )
-                                        if (MediaActions.setFavoriteDirectly(context, listOf(current), !current.isFavorite)) onMediaChanged()
-                                        else launch(MediaActions.favoriteRequest(context, current))
-                                    },
+                                    onClick = { toggleFavorite(current) },
                                 )
-                                GlassIconButton(
+                                if (!material) GlassIconButton(
                                     backdrop = backdrop,
                                     icon = LumenIcons.Info,
                                     contentDescription = stringResource(R.string.common_details),
@@ -774,6 +787,12 @@ fun ViewerScreen(
                                         },
                                     )
                                 }
+                                if (material) GlassIconButton(
+                                    backdrop = backdrop,
+                                    icon = LumenIcons.Add,
+                                    contentDescription = stringResource(R.string.viewer_add_to),
+                                    onClick = { onCopyToAlbum(current) },
+                                )
                                 GlassIconButton(
                                     backdrop = backdrop,
                                     icon = LumenIcons.Delete,
@@ -1005,8 +1024,53 @@ private fun TopBar(
     liveTextOn: Boolean? = null,
     onLiveText: () -> Unit = {},
     modifier: Modifier = Modifier,
+    /** Material only: Favourite sits here rather than under the photo. */
+    onFavorite: (() -> Unit)? = null,
+    onDetails: () -> Unit = {},
 ) {
     val colors = LocalGlassColors.current
+    if (Lumen.material) {
+        // Material: plain icons on the page, the date between them (tap it for Details).
+        Row(
+            modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 8.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            com.subhashh.lumen.ui.components.BareIconButton(LumenIcons.Back, stringResource(R.string.common_back), onBack)
+            val context = LocalContext.current
+            val (day, time) = remember(item.takenAt) { formatTakenAt(context, item.takenAt) }
+            val glow = Shadow(color = MaterialTheme.colorScheme.background.copy(alpha = 0.95f), blurRadius = 14f)
+            Column(
+                Modifier.weight(1f).pressable(onDetails, shape = RoundedCornerShape(16.dp)).padding(vertical = 4.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(day, color = colors.content, style = TextStyle(fontSize = 17.sp, fontWeight = FontWeight.Medium, shadow = glow))
+                    Icon(LumenIcons.Chevron, null, tint = colors.content, modifier = Modifier.padding(start = 2.dp).size(18.dp).graphicsLayer { rotationZ = 180f })
+                }
+                Text(time, color = colors.contentSecondary, style = TextStyle(fontSize = 13.sp, shadow = glow))
+            }
+            if (liveTextOn != null) {
+                com.subhashh.lumen.ui.components.BareIconButton(
+                    if (liveTextOn) LumenIcons.LiveTextFilled else LumenIcons.LiveText,
+                    stringResource(R.string.viewer_live_text),
+                    onLiveText,
+                    tint = if (liveTextOn) MaterialTheme.colorScheme.primary else colors.content,
+                )
+            }
+            if (onFavorite != null) {
+                com.subhashh.lumen.ui.components.BareIconButton(
+                    if (item.isFavorite) LumenIcons.HeartFilled else LumenIcons.Heart,
+                    stringResource(R.string.common_favorite),
+                    onFavorite,
+                    tint = if (item.isFavorite) Lumen.colors.favorite else colors.content,
+                )
+            }
+            if (onMore != null) com.subhashh.lumen.ui.components.BareIconButton(LumenIcons.More, stringResource(R.string.viewer_more), onMore)
+            // Keeps the date centred when there's nothing on the right.
+            if (onMore == null && onFavorite == null && liveTextOn == null) Spacer(Modifier.width(48.dp))
+        }
+        return
+    }
     Box(
         modifier
             .fillMaxWidth()

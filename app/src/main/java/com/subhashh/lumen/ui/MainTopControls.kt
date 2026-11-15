@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.NonRestartableComposable
@@ -77,6 +79,7 @@ internal fun BoxScope.MainTopControls(
     popSettings: () -> Unit,
     closeCollection: (String?) -> Unit,
 ) {
+    val material = com.subhashh.lumen.ui.theme.Lumen.material
     with(s) {
         if (selecting && !viewerOpen) {
             val albums = albumSelection
@@ -115,11 +118,33 @@ internal fun BoxScope.MainTopControls(
                 autoFocus = focusSearch,
                 onAutoFocused = { focusSearch = false },
                 onSubmit = { rememberSearch(searchQuery) },
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .statusBarsPadding()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                // Material: at the bottom, under the thumb, riding up with the keyboard.
+                modifier = if (material) {
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .imePadding()
+                        .navigationBarsPadding()
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                } else {
+                    Modifier
+                        .align(Alignment.TopCenter)
+                        .statusBarsPadding()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                },
             )
+            // The bar with the tabs is away while searching there: Back is how to leave.
+            if (material) {
+                GlassIconButton(
+                    backdrop = backdrop,
+                    icon = LumenIcons.Back,
+                    contentDescription = stringResource(R.string.common_back),
+                    onClick = { searching = false },
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .statusBarsPadding()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+            }
         }
 
         if (openCollection == CollectionKeys.RecentlyDeleted && tab == LumenTab.Collections && trash.isNotEmpty() &&
@@ -161,8 +186,7 @@ internal fun BoxScope.MainTopControls(
                     .padding(horizontal = 16.dp, vertical = 8.dp),
             )
         }
-        // Floats above the tab bar, not on the top bar: keeps its own surface in the Material style.
-        if (pick?.multiple == true && picked.isNotEmpty()) androidx.compose.runtime.CompositionLocalProvider(com.subhashh.lumen.ui.components.LocalOnBar provides false) {
+        if (pick?.multiple == true && picked.isNotEmpty()) {
             GlassTextButton(
                 backdrop = backdrop,
                 text = stringResource(R.string.main_pick_add_count, picked.size),

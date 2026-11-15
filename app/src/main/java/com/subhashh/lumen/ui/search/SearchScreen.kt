@@ -1,6 +1,7 @@
 package com.subhashh.lumen.ui.search
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import com.subhashh.lumen.ui.theme.Lumen
 import com.subhashh.lumen.data.MediaThumbnail
 import coil3.compose.AsyncImage
@@ -193,6 +194,8 @@ fun SearchScreen(
     columns: Int,
     onColumnsChange: (Int) -> Unit,
     modifier: Modifier = Modifier,
+    /** People to offer before anything is typed (the Material style's row of faces). */
+    topPeople: List<Pair<Person, MediaItem>> = emptyList(),
 ) {
     val colors = MaterialTheme.colorScheme
     val keyboard = LocalSoftwareKeyboardController.current
@@ -209,7 +212,7 @@ fun SearchScreen(
     val bucket = ImageKeys.thumbBucket(cellPx)
 
     if (query.isBlank()) {
-        Suggestions(recent, suggested, suggestions, contentPadding, onSuggestion, onClearRecent, modifier)
+        Suggestions(recent, suggested, suggestions, contentPadding, onSuggestion, onClearRecent, modifier, topPeople) { onOpenPerson(CollectionKeys.person(it.id)) }
         return
     }
     // Where each cell was last placed, so a tap outside the active section can still fly from it.
@@ -405,8 +408,11 @@ private fun Suggestions(
     onSuggestion: (String) -> Unit,
     onClearRecent: () -> Unit,
     modifier: Modifier = Modifier,
+    topPeople: List<Pair<Person, MediaItem>> = emptyList(),
+    onOpenPerson: (Person) -> Unit = {},
 ) {
     val onBackground = MaterialTheme.colorScheme.onBackground
+    val material = Lumen.material
     Column(
         modifier
             .fillMaxSize()
@@ -414,13 +420,46 @@ private fun Suggestions(
             .padding(contentPadding)
             .padding(horizontal = 16.dp),
     ) {
-        Text(
+        if (!material) Text(
             stringResource(R.string.common_search),
             style = Lumen.type.screenTitle,
             color = onBackground,
             modifier = Modifier.padding(start = 4.dp, bottom = 12.dp),
         )
-        if (recent.isNotEmpty()) {
+        // Material: faces across the top, then what was searched before as a plain list.
+        if (material && topPeople.isNotEmpty()) {
+            Row(
+                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(top = 8.dp, bottom = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                for ((person, cover) in topPeople.take(12)) {
+                    FaceAvatar(person, cover, Modifier.size(64.dp).pressable({ onOpenPerson(person) }, shape = CircleShape))
+                }
+            }
+        }
+        if (material && recent.isNotEmpty()) {
+            val scheme = MaterialTheme.colorScheme
+            recent.forEach { term ->
+                Row(
+                    Modifier.fillMaxWidth().pressable({ onSuggestion(term) }, pressedScale = 0.99f).padding(horizontal = 8.dp, vertical = 18.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(LumenIcons.History, null, tint = scheme.onSurfaceVariant, modifier = Modifier.size(24.dp))
+                    Spacer(Modifier.width(20.dp))
+                    Text(term, fontSize = 17.sp, color = scheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+                androidx.compose.material3.HorizontalDivider(color = scheme.outlineVariant)
+            }
+            Text(
+                stringResource(R.string.main_search_clear),
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Medium,
+                color = scheme.primary,
+                modifier = Modifier.align(Alignment.End).pressable(onClearRecent, shape = CircleShape).padding(horizontal = 12.dp, vertical = 10.dp),
+            )
+            Spacer(Modifier.size(12.dp))
+        }
+        if (!material && recent.isNotEmpty()) {
             Row(Modifier.fillMaxWidth().padding(start = 4.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(stringResource(R.string.main_search_recent), fontSize = 20.sp, fontWeight = Lumen.type.strong, color = onBackground, modifier = Modifier.weight(1f))
                 Text(

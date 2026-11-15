@@ -146,8 +146,6 @@ internal fun PickerArea(modifier: Modifier = Modifier, content: @Composable () -
 
 @Composable
 internal fun LargeTitle(text: String) {
-    // Material: the top bar carries it.
-    if (com.subhashh.lumen.ui.components.reportBarTitle(text)) return
     Text(
         text,
         style = Lumen.type.screenTitle,
@@ -232,13 +230,12 @@ internal fun Group(title: String, footer: String? = null, note: String? = null, 
 @Composable
 internal fun IconBadge(icon: ImageVector, color: Color) {
     if (Lumen.material) {
-        // A tonal badge: its colour picks which of the scheme's containers it takes, and which
-        // of Material's shapes (a cookie, a clover, a sun) it is.
+        // A tonal circle: the badge's colour picks which of the scheme's containers it takes.
         val (container, content) = badgeTones(color)
         Box(
             Modifier
                 .size(40.dp)
-                .clip(com.subhashh.lumen.ui.components.funShape(color.toArgb()))
+                .clip(Lumen.shapes.badge)
                 .background(container),
             contentAlignment = Alignment.Center,
         ) {

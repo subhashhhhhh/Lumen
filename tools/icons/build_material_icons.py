@@ -80,6 +80,7 @@ ICONS = [
     ("Palette", "palette", False),
     ("Sort", "sort", False),
     ("Globe", "language", False),
+    ("History", "history", False),
     ("Translate", "translate", False),
 ]
 

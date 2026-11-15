@@ -123,6 +123,7 @@ internal fun BoxScope.MainPages(
     openViewer: (String, Int) -> Unit,
     collectionsPage: @Composable (Modifier) -> Unit,
     peoplePage: @Composable (Modifier) -> Unit,
+    people: List<Pair<com.subhashh.lumen.ai.Person, MediaItem>>,
 ) {
     with(s) {
         // Its own lambda, as it was inside MainScaffold: a page's own changes rebuild only the page.
@@ -158,6 +159,7 @@ internal fun BoxScope.MainPages(
                     },
                     gridState = searchGrid,
                     contentPadding = PaddingValues(top = statusTop + 72.dp, bottom = navBottom + 96.dp),
+                    topPeople = people,
                     transition = transition,
                     onOpen = { section, index ->
                         rememberSearch(searchQuery)
@@ -307,6 +309,8 @@ internal fun BoxScope.MainPages(
                         onColumnsChange = onGridColumns,
                         emptyText = stringResource(filter.emptyText),
                         startAtEnd = chronological,
+                        // Material's Photos page has no title; while selecting or picking it says how many.
+                        showHeader = !com.subhashh.lumen.ui.theme.Lumen.material || selection != null || pick != null,
                         showMonth = sort == LibrarySort.Date,
                         scrollLabel = scrollLabel,
                         sections = librarySections,
@@ -335,6 +339,7 @@ internal fun BoxScope.MainPages(
                                 listState = if (level == ZoomLevel.Years) yearsList else monthsList,
                                 contentPadding = gridPadding,
                                 emptyText = stringResource(filter.emptyText),
+                                showHeader = !com.subhashh.lumen.ui.theme.Lumen.material,
                                 onOpen = { period ->
                                     if (level == ZoomLevel.Years) {
                                         zoomLevel = ZoomLevel.Months
@@ -400,7 +405,7 @@ internal fun BoxScope.MainPages(
                             showMonth = sort == LibrarySort.Date || key == CollectionKeys.RecentlyDeleted,
                             scrollLabel = if (key == CollectionKeys.RecentlyDeleted) { item -> ScrollMonth.format(java.util.Date(item.takenAt)) } else scrollLabel,
                             gridState = collectionGrid,
-                            contentPadding = PaddingValues(top = if (cover != null) heroHeight + 2.dp else statusTop + (if (com.subhashh.lumen.ui.theme.Lumen.material) 68.dp else 152.dp), bottom = navBottom + 96.dp),
+                            contentPadding = PaddingValues(top = if (cover != null) heroHeight + 2.dp else statusTop + 152.dp, bottom = navBottom + 96.dp),
                             titleTopPadding = 64.dp,
                             hero = cover?.let { c -> { heroModifier -> CoverHeader(c, coverTransition, heroModifier) } },
                             heroHeight = heroHeight,

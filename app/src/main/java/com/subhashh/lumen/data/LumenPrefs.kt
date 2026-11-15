@@ -98,12 +98,13 @@ class LumenPrefs(context: Context) {
         set(value) = prefs.edit { putString(KeySort, value.name) }
 
     /**
-     * Until it's chosen, the order follows the style: Lumen's own reads oldest first with the
-     * newest at the bottom, Material 3 Expressive newest first from the top, as Android galleries do.
+     * Each style keeps its own order: Lumen's reads oldest first with the newest at the bottom
+     * until changed, Material 3 Expressive newest first from the top, as Android galleries do.
+     * Switching style switches to that style's order.
      */
     var sortDescending: Boolean
-        get() = if (prefs.contains(KeySortDescending)) prefs.getBoolean(KeySortDescending, false) else designStyle == DesignStyle.Material
-        set(value) = prefs.edit { putBoolean(KeySortDescending, value) }
+        get() = if (designStyle == DesignStyle.Material) prefs.getBoolean(KeySortDescendingMaterial, true) else prefs.getBoolean(KeySortDescending, false)
+        set(value) = prefs.edit { putBoolean(if (designStyle == DesignStyle.Material) KeySortDescendingMaterial else KeySortDescending, value) }
 
     /** Videos start playing as soon as they're on screen. */
     var videoAutoplay: Boolean
@@ -420,6 +421,7 @@ class LumenPrefs(context: Context) {
         const val KeyMuted = "video_muted"
         const val KeySort = "library_sort"
         const val KeySortDescending = "library_sort_descending"
+        const val KeySortDescendingMaterial = "library_sort_descending_material"
         const val KeyAlbumSort = "album_sort"
         const val KeyAlbumSortReversed = "album_sort_reversed"
         const val KeyPinned = "pinned_albums"

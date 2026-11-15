@@ -1,19 +1,22 @@
 package com.subhashh.lumen.ui.components
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -26,13 +29,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -47,151 +48,171 @@ import androidx.compose.ui.unit.sp
 import com.subhashh.lumen.R
 import com.subhashh.lumen.ui.icons.LumenIcons
 import com.subhashh.lumen.ui.library.ZoomLevel
-import com.subhashh.lumen.ui.theme.LocalMotion
 
 /**
- * Material 3 Expressive's navigation bar, docked across the bottom: Library, Collections and
- * Search as three destinations (search is no separate button here). The current one's icon sits
- * on a tonal pill that stretches out from nothing, and the icon gives a little jump as it's chosen.
+ * The bar in Material 3 Expressive: a floating toolbar of tabs (the current one a tonal pill with
+ * its name, the others just icons) and search as a floating action button. As the Library scrolls
+ * back in time the tabs fold into one button and Years / Months / All appears beside it as a
+ * connected button group. Same behaviour as [GlassTabBar], which hands over to it.
  */
 @Composable
-internal fun MaterialNavBar(
+internal fun MaterialTabBar(
     selected: LumenTab?,
     onSelect: (LumenTab) -> Unit,
     searchSelected: Boolean,
     onSearch: () -> Unit,
-    /** The gesture or button bar's height: the bar's surface runs under it. */
-    navBottom: Dp,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
+    modifier: Modifier,
+    enabled: Boolean,
+    zoomLevel: ZoomLevel?,
+    onZoomLevel: (ZoomLevel) -> Unit,
+    showZoom: Boolean,
+    onShowTabs: () -> Unit,
 ) {
+    val scheme = MaterialTheme.colorScheme
     val haptics = LocalHapticFeedback.current
-    Row(
-        modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surfaceContainer)
-            // Swallows taps between the items: there are photos under the bar.
-            .clickable(remember { MutableInteractionSource() }, indication = null) {}
-            .padding(bottom = navBottom)
-            .height(MaterialNavBarHeight),
-    ) {
-        LumenTab.entries.forEach { tab ->
-            val current = tab == selected && !searchSelected
-            NavItem(
-                icon = if (current) tab.selectedIcon else tab.icon,
-                label = stringResource(tab.label),
-                selected = current,
-                enabled = enabled,
+    val zoom = showZoom && zoomLevel != null
+    BoxWithConstraints(modifier.fillMaxWidth()) {
+        // Narrow phones: the folded tabs, the three segments and search must all fit.
+        val segmentWidth = minOf(76.dp, (maxWidth - BarHeight - Gap - BarHeight - Gap - SegmentGap * 2) / 3)
+        Row(
+            Modifier.fillMaxWidth(),
+            // The tabs and search sit together in the middle, as one group.
+            horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    Modifier
+                        .height(BarHeight)
+                        .materialSurface(scheme.surfaceContainerHigh, CircleShape)
+                        .clip(CircleShape)
+                        .animateContentSize(expressiveSpatialDefault())
+                        .padding(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    if (zoom) {
+                        // Folded: one button that brings the tabs (and the whole library) back.
+                        TabPill(
+                            icon = LumenIcons.LibraryFilled,
+                            label = null,
+                            description = stringResource(R.string.main_tabs),
+                            selected = true,
+                            enabled = enabled,
+                            onClick = onShowTabs,
+                        )
+                    } else {
+                        LumenTab.entries.forEach { tab ->
+                            val current = tab == selected
+                            TabPill(
+                                icon = if (current) tab.selectedIcon else tab.icon,
+                                // Material calls the first tab what Android galleries do.
+                                label = stringResource(if (tab == LumenTab.Library) R.string.main_photos else tab.label),
+                                description = null,
+                                selected = current,
+                                enabled = enabled,
+                                onClick = {
+                                    if (!current) haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                                    onSelect(tab)
+                                },
+                            )
+                        }
+                    }
+                }
+                AnimatedVisibility(
+                    visible = zoom,
+                    enter = fadeIn(expressiveSpatialDefault()) + expandHorizontally(expressiveSpatialDefault(), expandFrom = Alignment.Start),
+                    exit = fadeOut() + shrinkHorizontally(shrinkTowards = Alignment.Start),
+                ) {
+                    Row(
+                        Modifier.padding(start = Gap),
+                        horizontalArrangement = Arrangement.spacedBy(SegmentGap),
+                    ) {
+                        ZoomLevel.entries.forEachIndexed { index, level ->
+                            ZoomSegment(
+                                label = stringResource(level.label),
+                                width = segmentWidth,
+                                selected = level == zoomLevel,
+                                first = index == 0,
+                                last = index == ZoomLevel.entries.lastIndex,
+                                enabled = enabled && zoom,
+                                onClick = {
+                                    if (level != zoomLevel) haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                                    onZoomLevel(level)
+                                },
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Search: the screen's one floating action button, filled while search is open.
+            val searchContainer by animateColorAsState(if (searchSelected) scheme.primary else scheme.primaryContainer, label = "searchContainer")
+            val searchContent by animateColorAsState(if (searchSelected) scheme.onPrimary else scheme.onPrimaryContainer, label = "searchContent")
+            MaterialMorphSurface(
                 onClick = {
-                    if (!current) haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
-                    onSelect(tab)
+                    if (!searchSelected) haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                    onSearch()
                 },
-                modifier = Modifier.weight(1f),
-            )
+                color = searchContainer,
+                size = BarHeight,
+                pressedCorner = 20.dp,
+                enabled = enabled,
+            ) {
+                Icon(
+                    if (searchSelected) LumenIcons.SearchFilled else LumenIcons.Search,
+                    contentDescription = stringResource(R.string.common_search),
+                    tint = searchContent,
+                )
+            }
         }
-        NavItem(
-            icon = if (searchSelected) LumenIcons.SearchFilled else LumenIcons.Search,
-            label = stringResource(R.string.common_search),
-            selected = searchSelected,
-            enabled = enabled,
-            onClick = {
-                if (!searchSelected) haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
-                onSearch()
-            },
-            modifier = Modifier.weight(1f),
-        )
     }
 }
 
+/** One tab: its name, on a tonal pill with its icon while it's the current one. */
 @Composable
-private fun NavItem(
+private fun TabPill(
     icon: ImageVector,
-    label: String,
+    label: String?,
+    description: String?,
     selected: Boolean,
     enabled: Boolean,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier,
 ) {
     val scheme = MaterialTheme.colorScheme
-    val reduce = LocalMotion.current.reduce
-    val pillWidth by animateDpAsState(if (selected) 64.dp else 24.dp, expressiveSpatialDefault(), label = "navPill")
-    val pill by animateColorAsState(if (selected) scheme.secondaryContainer else scheme.secondaryContainer.copy(alpha = 0f), label = "navPillColor")
-    val content by animateColorAsState(if (selected) scheme.onSecondaryContainer else scheme.onSurfaceVariant, label = "navContent")
-    val label_ by animateColorAsState(if (selected) scheme.onSurface else scheme.onSurfaceVariant, label = "navLabel")
-    // The jump: up and a touch bigger, then settling with a wobble.
-    val jump = remember { Animatable(0f) }
-    LaunchedEffect(selected) {
-        if (selected && !reduce) {
-            jump.snapTo(1f)
-            jump.animateTo(0f, spring(dampingRatio = 0.3f, stiffness = 380f))
-        }
-    }
-    Column(
-        modifier
-            .fillMaxHeight()
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                enabled = enabled,
-                role = Role.Tab,
-                onClick = onClick,
-            )
-            .semantics { this.selected = selected },
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+    val container by animateColorAsState(if (selected) scheme.secondaryContainer else scheme.secondaryContainer.copy(alpha = 0f), label = "tabContainer")
+    val content by animateColorAsState(if (selected) scheme.onSecondaryContainer else scheme.onSurfaceVariant, label = "tabContent")
+    Row(
+        Modifier
+            .height(48.dp)
+            .clip(CircleShape)
+            .background(container)
+            .clickable(enabled = enabled, role = Role.Tab, onClick = onClick)
+            .semantics { this.selected = selected }
+            .padding(horizontal = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.width(64.dp).height(32.dp), contentAlignment = Alignment.Center) {
-            Box(Modifier.width(pillWidth).height(32.dp).clip(CircleShape).background(pill))
-            Icon(
-                icon,
-                contentDescription = null,
-                tint = content,
-                modifier = Modifier.size(24.dp).graphicsLayer {
-                    val j = jump.value
-                    translationY = -5.dp.toPx() * j
-                    scaleX = 1f + 0.22f * j
-                    scaleY = 1f + 0.22f * j
-                    rotationZ = -10f * j
-                },
-            )
+        if (label == null) {
+            Icon(icon, contentDescription = description, tint = content, modifier = Modifier.size(24.dp))
+        } else {
+            AnimatedVisibility(
+                visible = selected,
+                enter = fadeIn() + expandHorizontally(expressiveSpatialDefault(), expandFrom = Alignment.Start),
+                exit = fadeOut() + shrinkHorizontally(shrinkTowards = Alignment.Start),
+            ) {
+                Row {
+                    Icon(icon, contentDescription = null, tint = content, modifier = Modifier.size(24.dp))
+                    Spacer(Modifier.width(8.dp))
+                }
+            }
+            Text(label, color = content, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1)
         }
-        Spacer(Modifier.height(4.dp))
-        Text(label, color = label_, fontSize = 12.sp, lineHeight = 16.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium, maxLines = 1)
     }
 }
 
 /**
- * Years / Months / All as a connected button group: square where the buttons meet, round at the
+ * One of Years / Months / All. Connected: square where it meets its neighbours, round at the
  * group's ends; the chosen one turns fully round and takes the primary colour.
  */
-@Composable
-internal fun MaterialZoomSwitch(
-    level: ZoomLevel,
-    onLevel: (ZoomLevel) -> Unit,
-    modifier: Modifier = Modifier,
-    /** On a bar (flat) or floating over photos (with a shadow). */
-    floating: Boolean = false,
-    segmentWidth: Dp = 88.dp,
-) {
-    val haptics = LocalHapticFeedback.current
-    Row(modifier, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-        ZoomLevel.entries.forEachIndexed { index, each ->
-            ZoomSegment(
-                label = stringResource(each.label),
-                width = segmentWidth,
-                selected = each == level,
-                first = index == 0,
-                last = index == ZoomLevel.entries.lastIndex,
-                floating = floating,
-                onClick = {
-                    if (each != level) haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
-                    onLevel(each)
-                },
-            )
-        }
-    }
-}
-
 @Composable
 private fun ZoomSegment(
     label: String,
@@ -199,7 +220,7 @@ private fun ZoomSegment(
     selected: Boolean,
     first: Boolean,
     last: Boolean,
-    floating: Boolean,
+    enabled: Boolean,
     onClick: () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
@@ -216,9 +237,9 @@ private fun ZoomSegment(
         Modifier
             .width(width)
             .height(SegmentHeight)
-            .then(if (floating) Modifier.materialSurface(container, shape) else Modifier.background(container, shape))
+            .materialSurface(container, shape)
             .clip(shape)
-            .clickable(interactionSource = interaction, indication = ripple(), role = Role.RadioButton, onClick = onClick)
+            .clickable(interactionSource = interaction, indication = ripple(), enabled = enabled, role = Role.RadioButton, onClick = onClick)
             .semantics { this.selected = selected },
         contentAlignment = Alignment.Center,
     ) {
@@ -226,5 +247,7 @@ private fun ZoomSegment(
     }
 }
 
-val MaterialNavBarHeight = 76.dp
-private val SegmentHeight = 40.dp
+private val BarHeight = 64.dp
+private val SegmentHeight = 56.dp
+private val Gap = 8.dp
+private val SegmentGap = 2.dp

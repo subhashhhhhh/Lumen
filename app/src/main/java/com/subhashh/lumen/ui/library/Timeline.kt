@@ -116,6 +116,7 @@ fun TimelineScreen(
     onOpen: (Period) -> Unit,
     emptyText: String,
     modifier: Modifier = Modifier,
+    showHeader: Boolean = true,
 ) {
     val cardHeight = if (level == ZoomLevel.Years) 320.dp else 220.dp
 
@@ -145,7 +146,7 @@ fun TimelineScreen(
                 modifier = Modifier.align(Alignment.Center),
             )
         }
-        LibraryHeader(title = stringResource(R.string.main_library), subtitle = "", topPadding = 16.dp, modifier = Modifier.align(Alignment.TopStart))
+        if (showHeader) LibraryHeader(title = stringResource(R.string.main_library), subtitle = "", topPadding = 16.dp, modifier = Modifier.align(Alignment.TopStart))
     }
 }
 

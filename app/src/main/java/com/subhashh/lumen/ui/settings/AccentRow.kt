@@ -28,10 +28,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -69,7 +67,7 @@ import com.subhashh.lumen.ui.theme.LocalMotion
 /**
  * Material's accent colour: the wallpaper's (or Lumen's blue before Android 12), a few ready-made
  * ones, or one mixed with the hue slider that Custom opens. [accent] null is the first of those.
- * The chosen swatch turns into a scalloped cookie with a tick.
+ * The chosen swatch grows and takes a tick.
  */
 @Composable
 internal fun AccentRow(accent: Color?, onAccent: (Color?) -> Unit) {
@@ -134,13 +132,13 @@ internal fun AccentRow(accent: Color?, onAccent: (Color?) -> Unit) {
 @Composable
 private fun Swatch(color: Color, selected: Boolean, label: String?, icon: ImageVector?, onClick: () -> Unit) {
     val reduce = LocalMotion.current.reduce
-    // Grows and gives a quarter turn as it's chosen, with a good bounce.
+    // Grows a little as it's chosen.
     val chosen by animateFloatAsState(
         if (selected) 1f else 0f,
-        if (reduce) spring(stiffness = 10_000f) else spring(dampingRatio = 0.42f, stiffness = 320f),
+        if (reduce) spring(stiffness = 10_000f) else spring(dampingRatio = 0.7f, stiffness = 500f),
         label = "swatchChosen",
     )
-    val shape = if (selected) MaterialShapes.Cookie9Sided.toShape() else CircleShape
+    val shape = CircleShape
     val on = if (color.luminance() > 0.45f) Color.Black else Color.White
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
@@ -150,7 +148,6 @@ private fun Swatch(color: Color, selected: Boolean, label: String?, icon: ImageV
                     val scale = 0.86f + 0.14f * chosen
                     scaleX = scale
                     scaleY = scale
-                    rotationZ = 40f * chosen
                 }
                 .clip(shape)
                 .background(color)
@@ -161,9 +158,8 @@ private fun Swatch(color: Color, selected: Boolean, label: String?, icon: ImageV
                 },
             contentAlignment = Alignment.Center,
         ) {
-            // Stays upright while the cookie turns under it.
             val mark = if (selected) LumenIcons.Check else icon
-            if (mark != null) Icon(mark, null, tint = on, modifier = Modifier.size(22.dp).graphicsLayer { rotationZ = -40f * chosen })
+            if (mark != null) Icon(mark, null, tint = on, modifier = Modifier.size(22.dp))
         }
         if (label != null) {
             Text(label, fontSize = 11.sp, color = groupColors().secondary, modifier = Modifier.padding(top = 4.dp))

@@ -19,7 +19,10 @@ import com.subhashh.lumen.ui.collections.CollectionsScreen
 import com.subhashh.lumen.ui.components.Confirmation
 import com.subhashh.lumen.ui.people.PeopleScreen
 import com.subhashh.lumen.ui.transition.CoverTransition
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.produceState
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 
 /** What [MainState.collectionPages] hands back to [MainScaffold]. */
@@ -96,8 +99,50 @@ internal fun MainState.collectionPages(
                 },
             )
     }
+    // Material's Documents row: kinds of paper Smart Search can tell apart, each with a photo of
+    // one when the library's suggestions have it. Nothing without a Smart Search model.
+    val material = com.subhashh.lumen.ui.theme.Lumen.material
+    val libraryItems by viewModel.items.collectAsState()
+    val documents by produceState(emptyList<com.subhashh.lumen.ui.collections.DocumentKind>(), material, libraryItems) {
+        if (!material) return@produceState
+        value = withContext(Dispatchers.IO) {
+            val model = com.subhashh.lumen.ai.ModelDownloads.installed(context) ?: return@withContext emptyList()
+            val byId = libraryItems.orEmpty().associateBy { it.id }
+            val covers = com.subhashh.lumen.ai.SearchSuggestions.load(context, model).associate { it.term to byId[it.coverId] }
+            listOf(
+                R.string.collections_doc_documents to "document",
+                R.string.collections_doc_receipts to "receipt",
+                R.string.collections_doc_tickets to "ticket",
+                R.string.collections_doc_identity to "id card",
+                R.string.collections_doc_books to "book",
+                R.string.collections_doc_notes to "whiteboard",
+            ).map { (label, query) -> com.subhashh.lumen.ui.collections.DocumentKind(label, query, covers[query]) }
+        }
+    }
     val collectionsPage: @Composable (Modifier) -> Unit = { pageModifier ->
-        CollectionsScreen(
+        if (material) com.subhashh.lumen.ui.collections.MaterialCollectionsScreen(
+            columns = albumColumns,
+            onColumnsChange = onAlbumColumns,
+            selection = albumSelection,
+            onSelectionChange = { if (pick == null) albumSelection = it },
+            utilities = utilities,
+            hiddenLockSet = lockSet,
+            folders = folders,
+            people = people,
+            documents = documents,
+            gridState = collectionsGrid,
+            contentPadding = PaddingValues(top = statusTop + 64.dp, bottom = navBottom + 96.dp),
+            coverTransition = coverTransition,
+            modifier = pageModifier,
+            onOpen = { key ->
+                personFromPeople = false
+                if (key == CollectionKeys.Hidden) openHidden() else openCollectionFromCard(key)
+            },
+            onSearch = { query ->
+                searchQuery = query
+                searching = true
+            },
+        ) else CollectionsScreen(
             title = albumSelection?.let { albumSelectionTitle(it.size, folders = false) } ?: stringResource(R.string.main_collections),
             columns = albumColumns,
             onColumnsChange = onAlbumColumns,
@@ -108,7 +153,7 @@ internal fun MainState.collectionPages(
             folders = folders,
             people = people,
             gridState = collectionsGrid,
-            contentPadding = PaddingValues(top = statusTop + (if (com.subhashh.lumen.ui.theme.Lumen.material) 68.dp else 16.dp), bottom = navBottom + 96.dp),
+            contentPadding = PaddingValues(top = statusTop + 16.dp, bottom = navBottom + 96.dp),
             coverTransition = coverTransition,
             modifier = pageModifier,
             onOpen = { key ->
