@@ -404,7 +404,8 @@ internal fun Thumbnail(
                 )
             }
         }
-        if (selected != null) SelectionMark(selected, Modifier.align(Alignment.BottomEnd).padding(6.dp))
+        // Material marks the top corner, as Android galleries do.
+        if (selected != null) SelectionMark(selected, if (material) Modifier.align(Alignment.TopStart).padding(8.dp) else Modifier.align(Alignment.BottomEnd).padding(6.dp))
     }
 }
 

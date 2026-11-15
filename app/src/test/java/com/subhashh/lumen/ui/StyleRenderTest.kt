@@ -72,6 +72,7 @@ import com.subhashh.lumen.ui.icons.LumenIcons
 import com.subhashh.lumen.ui.library.ZoomLevel
 import com.subhashh.lumen.ui.search.SearchField
 import com.subhashh.lumen.ui.selection.SelectionActionBar
+import com.subhashh.lumen.ui.selection.SelectionTopControls
 import com.subhashh.lumen.ui.settings.Blue
 import com.subhashh.lumen.ui.settings.Divider
 import com.subhashh.lumen.ui.settings.Green
@@ -252,6 +253,20 @@ class StyleRenderTest {
             columns = 2, onColumnsChange = {}, selection = null, onSelectionChange = {},
             coverTransition = remember { CoverTransition() },
         )
+    }
+
+    @Test
+    fun selection() = render("selection") {
+        val backdrop = rememberLayerBackdrop()
+        Box(Modifier.fillMaxSize()) {
+            Box(Modifier.fillMaxSize().layerBackdrop(backdrop).background(Color(0xFF7A8F6B)))
+            SelectionTopControls(backdrop, allSelected = false, onToggleAll = {}, onCancel = {}, title = "2 Selected", modifier = Modifier.align(Alignment.TopEnd))
+            SelectionActionBar(
+                backdrop, hasSelection = true, inTrash = false, inHidden = false, allFavorite = false, showFavorite = true,
+                onShare = {}, onFavorite = {}, onDelete = {}, onRestore = {}, onDeleteForever = {}, onUnhide = {}, onMore = {},
+                modifier = Modifier.align(Alignment.BottomCenter),
+            )
+        }
     }
 
     @Test

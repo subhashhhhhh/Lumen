@@ -103,7 +103,11 @@ internal fun BoxScope.MainTopControls(
                     }
                 },
                 onCancel = { endSelection() },
-                modifier = Modifier
+                title = (chosenPeople?.size ?: albums?.size ?: selectedItems.size).let { n ->
+                    androidx.compose.ui.res.pluralStringResource(R.plurals.main_n_selected, n, n)
+                },
+                // Material's is a bar across the top, under the status bar by its own padding.
+                modifier = if (material) Modifier.align(Alignment.TopCenter) else Modifier
                     .align(Alignment.TopEnd)
                     .statusBarsPadding()
                     .padding(horizontal = 16.dp, vertical = 8.dp),

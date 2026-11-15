@@ -335,8 +335,8 @@ internal fun BoxScope.MainPages(
                         onColumnsChange = onGridColumns,
                         emptyText = stringResource(filter.emptyText),
                         startAtEnd = chronological,
-                        // Material's Photos page has no title; while selecting or picking it says how many.
-                        showHeader = !com.subhashh.lumen.ui.theme.Lumen.material || selection != null || pick != null,
+                        // Material's Photos page has no title (its selection bar says how many); picking still names what's wanted.
+                        showHeader = !material || pick != null,
                         showMonth = sort == LibrarySort.Date,
                         scrollLabel = scrollLabel,
                         sections = librarySections,

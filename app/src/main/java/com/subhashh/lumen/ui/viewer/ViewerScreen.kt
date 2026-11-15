@@ -1043,45 +1043,45 @@ private fun TopBar(
 ) {
     val colors = LocalGlassColors.current
     if (Lumen.material) {
-        // Material: plain icons on the page, the date between them (tap it for Details).
-        Row(
-            modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 8.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            // No Back button: Android's back gesture, or a swipe down, leaves the viewer.
-            Spacer(Modifier.width(48.dp))
+        // Material: plain icons on the page, and the date in the middle of the screen whatever
+        // is either side of it (tap it for Details). Live Text sits on the left so the two
+        // sides stay even and the date has room.
+        Box(modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 8.dp, vertical = 8.dp)) {
             val context = LocalContext.current
             val (day, time) = remember(item.takenAt) { formatTakenAt(context, item.takenAt) }
             val glow = Shadow(color = MaterialTheme.colorScheme.background.copy(alpha = 0.95f), blurRadius = 14f)
-            Column(
-                Modifier.weight(1f).pressable(onDetails, shape = RoundedCornerShape(16.dp)).padding(vertical = 4.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(day, color = colors.content, style = TextStyle(fontSize = 17.sp, fontWeight = FontWeight.Medium, shadow = glow))
-                    Icon(LumenIcons.Chevron, null, tint = colors.content, modifier = Modifier.padding(start = 2.dp).size(18.dp).graphicsLayer { rotationZ = 180f })
-                }
-                Text(time, color = colors.contentSecondary, style = TextStyle(fontSize = 13.sp, shadow = glow))
-            }
             if (liveTextOn != null) {
                 com.subhashh.lumen.ui.components.BareIconButton(
                     if (liveTextOn) LumenIcons.LiveTextFilled else LumenIcons.LiveText,
                     stringResource(R.string.viewer_live_text),
                     onLiveText,
+                    modifier = Modifier.align(Alignment.CenterStart),
                     tint = if (liveTextOn) MaterialTheme.colorScheme.primary else colors.content,
                 )
             }
-            if (onFavorite != null) {
-                com.subhashh.lumen.ui.components.BareIconButton(
-                    if (item.isFavorite) LumenIcons.HeartFilled else LumenIcons.Heart,
-                    stringResource(R.string.common_favorite),
-                    onFavorite,
-                    tint = if (item.isFavorite) Lumen.colors.favorite else colors.content,
-                )
+            Column(
+                Modifier
+                    .align(Alignment.Center)
+                    // Clear of two buttons' width on each side, so it can't run under them.
+                    .padding(horizontal = 100.dp)
+                    .pressable(onDetails, shape = RoundedCornerShape(16.dp))
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(day, color = colors.content, maxLines = 1, style = TextStyle(fontSize = 17.sp, fontWeight = FontWeight.Medium, shadow = glow))
+                Text(time, color = colors.contentSecondary, maxLines = 1, style = TextStyle(fontSize = 13.sp, shadow = glow))
             }
-            if (onMore != null) com.subhashh.lumen.ui.components.BareIconButton(LumenIcons.More, stringResource(R.string.viewer_more), onMore)
-            // Keeps the date centred when there's nothing on the right.
-            if (onMore == null && onFavorite == null && liveTextOn == null) Spacer(Modifier.width(48.dp))
+            Row(Modifier.align(Alignment.CenterEnd)) {
+                if (onFavorite != null) {
+                    com.subhashh.lumen.ui.components.BareIconButton(
+                        if (item.isFavorite) LumenIcons.HeartFilled else LumenIcons.Heart,
+                        stringResource(R.string.common_favorite),
+                        onFavorite,
+                        tint = if (item.isFavorite) Lumen.colors.favorite else colors.content,
+                    )
+                }
+                if (onMore != null) com.subhashh.lumen.ui.components.BareIconButton(LumenIcons.More, stringResource(R.string.viewer_more), onMore)
+            }
         }
         return
     }
