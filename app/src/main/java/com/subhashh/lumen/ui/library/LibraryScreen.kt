@@ -303,11 +303,16 @@ internal fun Thumbnail(
     )
     // Material: a selected photo also rounds its corners, as Android's own galleries do.
     val material = Lumen.material
-    val corner by animateFloatAsState(
-        if (material && selected == true) 1f else 0f,
-        spring(dampingRatio = 0.7f, stiffness = 700f),
-        label = "selectCorner",
-    )
+    // Only while selecting: an animation per cell isn't free, and the grid makes cells as it scrolls.
+    val corner = if (material && selected != null) {
+        animateFloatAsState(
+            if (selected) 1f else 0f,
+            spring(dampingRatio = 0.7f, stiffness = 700f),
+            label = "selectCorner",
+        ).value
+    } else {
+        0f
+    }
     Box(
         modifier
             .aspectRatio(1f)

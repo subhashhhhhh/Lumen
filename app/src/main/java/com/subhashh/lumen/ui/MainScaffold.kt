@@ -635,7 +635,10 @@ private fun MainState.Scaffold(
 
 
         // Material's top app bar, under the same controls: on the bar they lose their own surfaces.
-        val onBar = material && !viewerOpen && (searching || barState.current?.overCover == false)
+        // Derived: the bar's title and month change as the grid scrolls, and only the bar should
+        // be redrawn for that, not this whole screen.
+        val barOverCover by remember { androidx.compose.runtime.derivedStateOf { barState.current?.overCover } }
+        val onBar = material && !viewerOpen && (searching || barOverCover == false)
         if (material && !viewerOpen) {
             MaterialTopBar(
                 state = barState,
