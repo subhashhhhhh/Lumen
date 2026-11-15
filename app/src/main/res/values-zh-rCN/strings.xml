@@ -117,7 +117,7 @@
     <plurals name="main_favorites_import_already">
         <item quantity="other">全部 %1$d 项都已收藏</item>
     </plurals>
-    <string name="main_favorites_import_found">找到 %1$d 项，共 %2$d 项；正在将 %3$d 项标记为收藏</string>
+    <string name="main_favorites_import_found">共 %2$d 项，找到 %1$d 项；正在收藏 %3$d 项</string>
     <string name="main_settings_exported">设置已导出</string>
     <string name="main_backup_save_failed">无法保存备份</string>
     <string name="main_backup_bad_file">这不是 Lumen 备份</string>
@@ -131,7 +131,7 @@
     <string name="main_unhidden">已取消隐藏</string>
     <string name="main_unhide_failed_count">有 %1$d 项无法取消隐藏</string>
     <string name="main_unhide_failed">无法取消隐藏</string>
-    <string name="main_unhide_dot_folder">“%1$s”因文件夹名称以点开头而被隐藏；请在文件管理器中重命名该文件夹后即可取消隐藏</string>
+    <string name="main_unhide_dot_folder">“%1$s”因文件夹名称以点开头而被隐藏；在文件管理器中重命名该文件夹即可取消隐藏</string>
     <string name="main_unhide_folder_title">取消隐藏“%1$s”？</string>
     <plurals name="main_unhide_folders_title">
         <item quantity="other">取消隐藏 %1$d 个文件夹？</item>
@@ -194,7 +194,7 @@
     <string name="main_merge_people_message_named">%1$s 和 %2$s 的照片将归为同一人物，姓名设为 %3$s。</string>
     <string name="main_merge_people_message">%1$s 和 %2$s 的照片将归为同一人物。</string>
     <string name="main_biometrics_missing">请先在手机设置中录入指纹或面部</string>
-    <string name="main_lock_needed_for_encrypt">请先设置 Lumen 锁定方式（隐私与安全 → 设置 Lumen 锁定方式）</string>
+    <string name="main_lock_needed_for_encrypt">请先设置 Lumen 锁（隐私与安全 → 设置 Lumen 锁）</string>
     <string name="main_encrypt_hidden_title">加密隐藏内容？</string>
     <plurals name="main_encrypt_hidden_message_count">
         <item quantity="other">%1$d 项隐藏内容将移入加密保险箱，其他应用和文件管理器均无法读取（已排除的文件夹保持原样）。保险箱会保留在存储空间中，卸载 Lumen 后也不会消失；使用原来的 Lumen 解锁凭据即可再次打开。\n\n如果卸载 Lumen 后忘记解锁凭据，任何人都无法恢复这些文件。密码比简短的 PIN 码更安全。</item>
@@ -329,7 +329,7 @@
     <string name="main_permission_message">Lumen 需要访问你的照片和视频。所有内容均保留在此设备上。</string>
     <string name="main_allow_access">允许访问</string>
     <string name="main_search_section_names">名称、文件夹和日期</string>
-    <string name="main_search_section_captions">照片说明</string>
+    <string name="main_search_section_captions">说明</string>
     <string name="main_search_section_text">照片中的文字</string>
     <string name="main_search_section_smart">智能搜索</string>
     <string name="settings_category_appearance">外观</string>
@@ -372,7 +372,7 @@
     <string name="settings_entry_face_models">人脸模型</string>
     <string name="settings_entry_faces">人脸</string>
     <string name="settings_entry_text_reader">文字识别引擎</string>
-    <string name="settings_entry_text_read">已识别文字</string>
+    <string name="settings_entry_text_read">文字识别进度</string>
     <string name="settings_entry_wifi_only">仅通过 Wi-Fi 下载</string>
     <string name="settings_entry_hf_token">Hugging Face 令牌</string>
     <string name="settings_entry_export">导出设置</string>
@@ -436,7 +436,7 @@
     <string name="settings_group_display">显示</string>
     <string name="settings_theme">主题</string>
     <string name="settings_reduce_motion">减少动态效果</string>
-    <string name="settings_reduce_motion_subtitle">关闭照片飞入、弹簧和回弹动画</string>
+    <string name="settings_reduce_motion_subtitle">关闭照片飞入及弹性、回弹动画</string>
     <string name="settings_group_glass">玻璃效果</string>
     <string name="settings_glass_footer">Liquid Glass：按钮、栏、菜单和开关呈现玻璃质感，并折射后方内容。关闭后改为不透明样式。「减少模糊」会保留玻璃效果，同时大幅减弱模糊，让内容更清晰、GPU 负担更小。</string>
     <string name="settings_liquid_glass">Liquid Glass</string>
@@ -482,7 +482,7 @@
     <string name="settings_biometrics">指纹或面部识别</string>
     <string name="settings_biometrics_subtitle">更快解锁</string>
     <string name="settings_app_lock">应用锁</string>
-    <string name="settings_app_lock_subtitle">打开 Lumen 时验证 Lumen 锁</string>
+    <string name="settings_app_lock_subtitle">打开 Lumen 时需要解锁</string>
     <string name="settings_lock_after">自动锁定时间</string>
     <string name="settings_lock_immediately">立即</string>
     <plurals name="settings_lock_minutes">
@@ -589,7 +589,7 @@
     <string name="smart_video_low">低</string>
     <string name="smart_option_size">%1$s · %2$s</string>
     <string name="smart_option_px">%1$s · %2$d px</string>
-    <string name="smart_continues_schedule">在 %1$s 至 %2$s 继续</string>
+    <string name="smart_continues_schedule">在 %1$s 至 %2$s 期间继续处理</string>
     <string name="smart_continues_background">在后台继续</string>
     <string name="smart_continues_charging">在手机充电时继续</string>
     <string name="smart_all_count">全部 %1$,d 项</string>
@@ -617,7 +617,7 @@
     <string name="smart_text_model">文字识别引擎</string>
     <string name="smart_text_remove_title">移除文字识别？</string>
     <string name="smart_text_remove_message">移除后将无法搜索照片中的文字，已识别的文字也会删除</string>
-    <string name="smart_text_read">已识别文字</string>
+    <string name="smart_text_read">文字识别进度</string>
     <string name="smart_text_read_complete">照片和视频中的文字已可搜索</string>
     <string name="smart_faces_title">人脸</string>
     <string name="smart_faces_footer">在「精选集 → 人物」中按人物归类照片和视频。为人物命名后，即可通过搜索找到他们。</string>
@@ -625,10 +625,10 @@
     <string name="smart_faces_remove_title">移除人脸识别？</string>
     <string name="smart_faces_remove_message">人物、姓名及合并记录都会删除；重新下载后将从头识别所有人物</string>
     <plurals name="smart_faces_people_found">
-        <item quantity="other">已发现 %1$,d 位人物</item>
+        <item quantity="other">已识别出 %1$,d 人</item>
     </plurals>
     <plurals name="smart_faces_people_so_far">
-        <item quantity="other">%1$s · 目前已发现 %2$,d 位人物</item>
+        <item quantity="other">%1$s · 已识别出 %2$,d 人</item>
     </plurals>
     <string name="smart_subtitles_title">字幕</string>
     <string name="smart_subtitles_footer">点击视频中的 CC，即可在本机生成字幕。支持英语、德语、法语、西班牙语、意大利语、荷兰语和波兰语语音；没有人声的音乐不会生成字幕。</string>
@@ -659,7 +659,7 @@
     <string name="smart_index_on_battery">使用电池时建立索引</string>
     <string name="smart_index_on_battery_subtitle">未充电时继续扫描，电量不足时停止</string>
     <string name="smart_unrestricted_battery">不限制电池使用</string>
-    <string name="smart_unrestricted_battery_subtitle">允许退出 Lumen 后继续建立索引，否则 Android 会限制后台处理</string>
+    <string name="smart_unrestricted_battery_subtitle">允许 Lumen 在后台继续建立索引，否则 Android 会限制后台处理</string>
     <string name="smart_video_text_title">视频中的文字</string>
     <string name="smart_video_text_short">短视频</string>
     <string name="smart_video_text_short_subtitle">不超过 1 分钟</string>
@@ -751,7 +751,7 @@
     <string name="licenses_used_openmaptiles">地图瓦片的数据结构与样式设计</string>
     <string name="licenses_used_osm">地图数据</string>
     <string name="viewer_delete_permanently">永久删除</string>
-    <string name="viewer_delete_forever">彻底删除</string>
+    <string name="viewer_delete_forever">永久删除</string>
     <string name="viewer_more">更多</string>
     <string name="viewer_live_text">Live Text</string>
     <string name="viewer_play">播放</string>
@@ -763,12 +763,12 @@
     <string name="viewer_seek_ahead">+10 秒</string>
     <string name="viewer_today">今天</string>
     <string name="viewer_yesterday">昨天</string>
-    <string name="viewer_caption">照片说明</string>
+    <string name="viewer_caption">说明</string>
     <string name="viewer_subtitles_unavailable">字幕不可用</string>
     <string name="viewer_no_speech">未检测到语音</string>
     <string name="viewer_making_subtitles">正在生成字幕…</string>
     <string name="viewer_make_album_cover">设为相册封面</string>
-    <string name="viewer_move_to_album">移至相册…</string>
+    <string name="viewer_move_to_album">移动到相册…</string>
     <string name="viewer_copy_to_album">复制到相册…</string>
     <string name="viewer_rename_ellipsis">重命名…</string>
     <string name="viewer_adjust_date">调整日期与时间…</string>
@@ -788,8 +788,8 @@
     <string name="viewer_email">发送邮件</string>
     <string name="viewer_unnamed">未命名</string>
     <string name="viewer_allow_location">允许访问位置信息，以查看照片的拍摄地点</string>
-    <string name="viewer_add_caption">添加照片说明</string>
-    <string name="viewer_edit_caption">编辑照片说明</string>
+    <string name="viewer_add_caption">添加说明</string>
+    <string name="viewer_edit_caption">编辑说明</string>
     <string name="viewer_looks_like">可能包含</string>
     <string name="viewer_subtitles">字幕</string>
     <string name="viewer_copy_with_times">连同时间戳复制</string>
@@ -847,7 +847,7 @@
     <string name="components_adjust_date_title">调整日期与时间</string>
     <string name="components_adjust_date_original">原始时间：%1$s</string>
     <plurals name="components_adjust_date_many">
-        <item quantity="other">这将设置所选 %d 项中最早一项的时间；其余项目的时间将同步平移，保持原有顺序。</item>
+        <item quantity="other">设置所选 %d 项中最早一项的时间，其余内容的时间将相应提前或延后，同时保持原有顺序。</item>
     </plurals>
     <string name="components_adjust">调整</string>
     <string name="components_selected">已选择</string>
@@ -979,10 +979,10 @@
     <string name="hidden_enter_pin">输入 PIN 码</string>
     <string name="hidden_enter_pattern">绘制图案</string>
     <string name="hidden_enter_password">输入密码</string>
-    <string name="hidden_biometrics_subtitle_pin">更快解锁隐藏内容，也仍可使用 PIN 码。</string>
-    <string name="hidden_biometrics_subtitle_pattern">更快解锁隐藏内容，也仍可使用图案。</string>
-    <string name="hidden_biometrics_subtitle_password">更快解锁隐藏内容，也仍可使用密码。</string>
-    <string name="hidden_biometrics_subtitle_lock">更快解锁隐藏内容，也仍可使用原有解锁方式。</string>
+    <string name="hidden_biometrics_subtitle_pin">更快解锁隐藏内容，也可继续使用 PIN 码。</string>
+    <string name="hidden_biometrics_subtitle_pattern">更快解锁隐藏内容，也可继续使用图案。</string>
+    <string name="hidden_biometrics_subtitle_password">更快解锁隐藏内容，也可继续使用密码。</string>
+    <string name="hidden_biometrics_subtitle_lock">更快解锁隐藏内容，也可继续使用原有解锁方式。</string>
     <string name="data_internal_storage">内部存储</string>
     <string name="data_photo">照片</string>
     <string name="data_metadata_track">轨道 %1$d</string>
