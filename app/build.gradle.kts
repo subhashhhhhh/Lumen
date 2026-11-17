@@ -6,7 +6,8 @@ plugins {
 
 /** Lumen Lab's repository, when it's checked out next to this one (see sourceSets below). */
 val lab: File = rootProject.file("../lumen-lab")
-val hasLab = lab.resolve("src/java").isDirectory
+// -PnoLab leaves it out, to try a debug or profile build with only what a release has.
+val hasLab = lab.resolve("src/java").isDirectory && !providers.gradleProperty("noLab").isPresent
 
 /**
  * The release key stays outside the repository. Release builds are signed only when its password
