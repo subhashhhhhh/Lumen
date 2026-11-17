@@ -7,7 +7,7 @@ avifCoder = "3.0.0"
 jxlCoder = "2.6.1"
 junit = "4.13.2"
 robolectric = "4.17"
-agp = "9.4.1"
+agp = "9.5.1"
 kotlin = "2.4.21"
 composeBom = "2026.09.00"
 # Ahead of the BOM (1.4.0) for the Material 3 Expressive components and theme: Settings →
