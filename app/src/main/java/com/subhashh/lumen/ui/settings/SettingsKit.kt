@@ -104,7 +104,7 @@ private val LocalPickerHost = staticCompositionLocalOf<PickerHost?> { null }
 
 /** Settings' card colour: one step up from the page, like iOS grouped lists. */
 @Composable
-private fun cardColor(): Color = if (LocalDarkTheme.current) Color(0xFF1C1C1E) else Color.White
+internal fun cardColor(): Color = if (LocalDarkTheme.current) Color(0xFF1C1C1E) else Color.White
 
 /**
  * A Settings page: plain black (iOS light grey in light mode) with solid cards, like iOS
