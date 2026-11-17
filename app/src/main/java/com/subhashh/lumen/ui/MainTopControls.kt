@@ -188,6 +188,12 @@ internal fun BoxScope.MainTopControls(
             )
         }
 
+        // Material: how indexing is going, at the top left of Photos; opens a panel with the counts.
+        if (material && tab == LumenTab.Library && !searching && selection == null && !viewerOpen && settingsPage == null && pick == null) {
+            com.subhashh.lumen.ui.library.IndexStatus(
+                onOpenSettings = { settingsPage = settingsCategoryPage(com.subhashh.lumen.ui.settings.SettingsCategory.SmartSearch) },
+            )
+        }
         if (tab == LumenTab.Library && !searching && selection == null && !viewerOpen && settingsPage == null && pick == null) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(10.dp),

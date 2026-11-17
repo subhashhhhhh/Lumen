@@ -87,7 +87,7 @@ fun GlassTabBar(
     onShowTabs: () -> Unit = {},
 ) {
     if (com.subhashh.lumen.ui.theme.Lumen.material) {
-        MaterialTabBar(selected, onSelect, searchSelected, onSearch, modifier, enabled, zoomLevel, onZoomLevel, showZoom, onShowTabs)
+        MaterialTabBar(selected, onSelect, searchSelected, onSearch, modifier, enabled)
         return
     }
     val haptics = LocalHapticFeedback.current

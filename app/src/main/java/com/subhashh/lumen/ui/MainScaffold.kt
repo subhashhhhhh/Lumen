@@ -161,8 +161,8 @@ private fun MainState.Scaffold(
     val material = com.subhashh.lumen.ui.theme.Lumen.material
     // Until an order is chosen it follows the style (newest first in Material): take it up on a change.
     LaunchedEffect(material) { sortDescending = prefs.sortDescending }
-    /** Years and Months: oldest first by date; in the Material style, by date either way round. */
-    val zoomable = chronological || (material && sort == LibrarySort.Date)
+    /** Years and Months: for Lumen's own style, oldest first by date. The Material style has neither. */
+    val zoomable = chronological && !material
     val onGridColumns = { columns: Int ->
         gridColumns = columns
         prefs.gridColumns = columns

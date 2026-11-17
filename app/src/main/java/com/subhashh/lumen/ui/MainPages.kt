@@ -386,7 +386,8 @@ internal fun BoxScope.MainPages(
                     encrypted = encryptHidden,
                     folders = hiddenFolderList,
                     gridState = hiddenGrid,
-                    title = albumSelection?.let { albumSelectionTitle(it.size, folders = true) } ?: stringResource(R.string.main_hidden),
+                    // Material's selection bar says how many; the page keeps its name.
+                    title = albumSelection?.takeIf { !material }?.let { albumSelectionTitle(it.size, folders = true) } ?: stringResource(R.string.main_hidden),
                     columns = albumColumns,
                     onColumnsChange = onAlbumColumns,
                     selection = albumSelection,
@@ -414,7 +415,7 @@ internal fun BoxScope.MainPages(
                         val isOpen = key == openCollection
                         val items = if (isOpen) openItems ?: itemsOf(key) else itemsOf(key)
                         LibraryScreen(
-                            title = pickTitle(pick, picked.size) ?: selection?.let { selectionTitle(selectedItems) }
+                            title = pickTitle(pick, picked.size) ?: selection?.takeIf { !material }?.let { selectionTitle(selectedItems) }
                                 ?: personOf(key)?.let { it.name ?: stringResource(R.string.main_add_name) }
                                 ?: CollectionKeys.documentQuery(key)?.let { query ->
                                     com.subhashh.lumen.ui.collections.DocumentKinds.firstOrNull { it.second == query }?.let { stringResource(it.first) }

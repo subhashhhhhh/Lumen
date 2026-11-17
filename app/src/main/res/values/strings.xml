@@ -1089,6 +1089,22 @@
     <string name="app_appearance_light">Light</string>
     <string name="app_appearance_dark">Dark</string>
     <string name="main_photos">Photos</string>
+    <!-- Indexing status on the Photos page (Material style): a chip, and the panel it opens. -->
+    <string name="index_chip_done">Up to date</string>
+    <plurals name="index_chip_left">
+        <item quantity="one">%1$,d to index</item>
+        <item quantity="other">%1$,d to index</item>
+    </plurals>
+    <string name="index_title_done">Everything is indexed</string>
+    <plurals name="index_title_left">
+        <item quantity="one">Indexing %1$,d item</item>
+        <item quantity="other">Indexing %1$,d items</item>
+    </plurals>
+    <string name="index_search">Search</string>
+    <string name="index_text">Text in photos</string>
+    <string name="index_faces">Faces</string>
+    <string name="index_note_done">New photos and videos are added as they arrive.</string>
+    <string name="index_note_left">Lumen works through the rest while the phone charges, or in the hours you\'ve set.</string>
     <string name="viewer_add_to">Add to</string>
     <string name="collections_view_all">View all</string>
     <string name="collections_places">Places</string>

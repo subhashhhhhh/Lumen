@@ -63,6 +63,8 @@ internal fun MainState.collectionPages(
                 },
                 title = when {
                     from != null -> stringResource(R.string.main_merge_with_ellipsis)
+                    // Material's selection bar says how many; the page keeps its name.
+                    com.subhashh.lumen.ui.theme.Lumen.material && peopleSelection != null -> stringResource(R.string.main_people)
                     peopleSelection.isNullOrEmpty() -> stringResource(if (peopleSelection != null) R.string.main_select_people else R.string.main_people)
                     else -> pluralStringResource(R.plurals.main_n_selected, peopleSelection!!.size, peopleSelection!!.size)
                 },
