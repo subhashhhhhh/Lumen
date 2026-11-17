@@ -184,8 +184,17 @@ internal fun BoxScope.MainPages(
                         recentSearches = emptyList()
                     },
                     gridState = searchGrid,
-                    contentPadding = PaddingValues(top = statusTop + 72.dp, bottom = navBottom + 96.dp),
+                    // Material's field is at the bottom: the page starts right under the status bar.
+                    contentPadding = PaddingValues(top = statusTop + (if (material) 8.dp else 72.dp), bottom = navBottom + 96.dp),
                     topPeople = people,
+                    selection = selection.takeIf { pick == null },
+                    onSelectionChange = { section, chosen ->
+                        if (pick == null) {
+                            // The selection bar acts on this section's list.
+                            searchSection = section
+                            selection = chosen
+                        }
+                    },
                     transition = transition,
                     onOpen = { section, index ->
                         rememberSearch(searchQuery)
@@ -416,6 +425,10 @@ internal fun BoxScope.MainPages(
                     }
                     if (key != null && key != CollectionKeys.People) {
                         val cover = heroWithLabel(key)
+                        // Material: a kind of document has a page of its own design (a plain
+                        // title, how many, and the other kinds a tap away), not an album's.
+                        val docQuery = if (material && pick == null) CollectionKeys.documentQuery(key) else null
+                        val docTop = statusTop + 152.dp
                         // What's worked out for the open collection is this page's when it's the one open.
                         val isOpen = key == openCollection
                         val items = if (isOpen) openItems ?: itemsOf(key) else itemsOf(key)
@@ -446,6 +459,16 @@ internal fun BoxScope.MainPages(
                             gridState = collectionGrid,
                             contentPadding = PaddingValues(top = if (cover != null) heroHeight + 2.dp else statusTop + 152.dp, bottom = navBottom + 96.dp),
                             titleTopPadding = 64.dp,
+                            showHeader = docQuery == null,
+                            topContent = if (docQuery == null) null else { headerModifier ->
+                                com.subhashh.lumen.ui.collections.DocumentsHeader(
+                                    kinds = com.subhashh.lumen.ui.collections.DocumentKinds.filter { it.second == docQuery || !documentItems[it.second].isNullOrEmpty() },
+                                    selected = docQuery,
+                                    count = items.size,
+                                    onKind = { openCollection = CollectionKeys.documents(it) },
+                                    modifier = headerModifier,
+                                )
+                            },
                             hero = cover?.let { c -> { heroModifier -> CoverHeader(c, coverTransition, heroModifier) } },
                             heroHeight = heroHeight,
                             modifier = Modifier.coverPage(coverTransition),

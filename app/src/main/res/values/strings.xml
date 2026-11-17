@@ -1119,6 +1119,10 @@
     <string name="collections_doc_identity">Identity</string>
     <string name="collections_doc_books">Books</string>
     <string name="collections_doc_notes">Notes</string>
+    <plurals name="collections_doc_count">
+        <item quantity="one">%1$,d item</item>
+        <item quantity="other">%1$,d items</item>
+    </plurals>
     <string name="app_style_lumen">Lumen</string>
     <string name="app_style_material">Material 3 Expressive</string>
     <string name="app_palette_tonal">Tonal</string>

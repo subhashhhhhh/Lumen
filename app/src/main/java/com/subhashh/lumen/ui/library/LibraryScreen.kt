@@ -119,6 +119,11 @@ fun LibraryScreen(
      */
     hero: (@Composable (Modifier) -> Unit)? = null,
     heroHeight: Dp = 0.dp,
+    /**
+     * A header of the page's own over the top of the grid, scrolling away with it (it can be
+     * tapped, unlike [hero]); [contentPadding]'s top should leave room for it.
+     */
+    topContent: (@Composable (Modifier) -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val grid = sections ?: remember(items) { GridSections.of(context, items, SectionMode.None) }
@@ -216,7 +221,7 @@ fun LibraryScreen(
                     item = item,
                     bucket = thumbBucket,
                     fit = aspectRatioGrid,
-                    showDuration = columns <= 5 && selection == null,
+                    showDuration = columns <= 5,
                     selected = selection?.let { item.id in it },
                     onClick = click@{
                         if (longPressActive[0]) return@click
@@ -230,6 +235,15 @@ fun LibraryScreen(
                     modifier = Modifier.transitionCell(transition, item.id),
                 )
             }
+        }
+
+        if (topContent != null) {
+            topContent(
+                Modifier.offset {
+                    // Rides the grid's first row; gone once that row is.
+                    IntOffset(0, if (gridState.firstVisibleItemIndex == 0) -gridState.firstVisibleItemScrollOffset else -edgeTop.toInt() * 2)
+                },
+            )
         }
 
         if (items.isEmpty()) {
@@ -304,6 +318,9 @@ internal fun Thumbnail(
     )
     // Material: a selected photo also rounds its corners, as Android's own galleries do.
     val material = Lumen.material
+    // Lumen's tick takes the bottom right corner while selecting: the length (or RAW, GIF) moves
+    // to the left one, so a video can still be told from a photo, and the heart waits.
+    val badgeAside = !material && selected != null
     // Only while selecting: an animation per cell isn't free, and the grid makes cells as it scrolls.
     val corner = if (material && selected != null) {
         animateFloatAsState(
@@ -386,11 +403,11 @@ internal fun Thumbnail(
                     },
                     style = OverlayText,
                     modifier = Modifier
-                        .align(Alignment.BottomEnd)
+                        .align(if (badgeAside) Alignment.BottomStart else Alignment.BottomEnd)
                         .padding(4.dp),
                 )
             }
-            if (item.isFavorite && showDuration) {
+            if (item.isFavorite && showDuration && !badgeAside) {
                 // A small white heart, bottom-left, like iOS Photos.
                 Icon(
                     LumenIcons.HeartFilled,

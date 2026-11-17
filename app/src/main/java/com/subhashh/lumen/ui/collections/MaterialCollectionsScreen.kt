@@ -1,5 +1,6 @@
 package com.subhashh.lumen.ui.collections
 
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.annotation.StringRes
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -373,3 +374,56 @@ private fun UtilityTiles(utilities: List<MediaCollection>, hiddenLockSet: Boolea
 
 private val CardShape = RoundedCornerShape(28.dp)
 private const val PeopleInRow = 12
+
+/**
+ * The top of a kind of document's page in the Material style: its name, how many there are, and
+ * every kind found as a row of chips, to go from one to the next without going back.
+ */
+@Composable
+fun DocumentsHeader(
+    kinds: List<Pair<Int, String>>,
+    selected: String,
+    count: Int,
+    onKind: (query: String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val scheme = androidx.compose.material3.MaterialTheme.colorScheme
+    val at = kinds.indexOfFirst { it.second == selected }
+    androidx.compose.foundation.layout.Column(modifier.fillMaxWidth().statusBarsPadding()) {
+        androidx.compose.material3.Text(
+            kinds.getOrNull(at)?.let { androidx.compose.ui.res.stringResource(it.first) }.orEmpty(),
+            color = scheme.onBackground,
+            fontSize = 32.sp,
+            lineHeight = 40.sp,
+            maxLines = 1,
+            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 20.dp),
+        )
+        androidx.compose.material3.Text(
+            androidx.compose.ui.res.pluralStringResource(R.plurals.collections_doc_count, count, count),
+            color = scheme.onSurfaceVariant,
+            fontSize = 14.sp,
+            lineHeight = 20.sp,
+            modifier = Modifier.padding(start = 20.dp, top = 2.dp),
+        )
+        androidx.compose.foundation.lazy.LazyRow(
+            // Opens with the chosen kind in view.
+            state = androidx.compose.foundation.lazy.rememberLazyListState(if (at >= 3) at - 2 else 0),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp),
+            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(top = 10.dp),
+        ) {
+            items(kinds.size, key = { kinds[it].second }) { i ->
+                val (label, query) = kinds[i]
+                val on = query == selected
+                androidx.compose.material3.FilterChip(
+                    selected = on,
+                    onClick = { if (!on) onKind(query) },
+                    label = { androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(label), fontSize = 14.sp) },
+                    leadingIcon = if (on) {
+                        { androidx.compose.material3.Icon(com.subhashh.lumen.ui.icons.LumenIcons.Check, null, modifier = Modifier.size(18.dp)) }
+                    } else null,
+                )
+            }
+        }
+    }
+}

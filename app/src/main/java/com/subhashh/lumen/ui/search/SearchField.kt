@@ -1,6 +1,9 @@
 package com.subhashh.lumen.ui.search
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -72,7 +75,18 @@ fun SearchField(
     ) {
         Icon(LumenIcons.Search, contentDescription = null, tint = colors.contentSecondary, modifier = Modifier.size(20.dp))
         Spacer(Modifier.width(10.dp))
-        Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+        Box(
+            Modifier
+                .weight(1f)
+                .fillMaxHeight()
+                // A tap anywhere on the field, not just on its line of text, brings the keyboard
+                // (back, too, after it was put away).
+                .clickable(remember { MutableInteractionSource() }, indication = null) {
+                    focus.requestFocus()
+                    keyboard?.show()
+                },
+            contentAlignment = Alignment.CenterStart,
+        ) {
             if (query.isEmpty()) {
                 Text(stringResource(R.string.main_search_field_hint), color = colors.contentSecondary, fontSize = fontSize, maxLines = 1)
             }

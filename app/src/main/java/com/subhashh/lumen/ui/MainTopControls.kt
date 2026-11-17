@@ -114,7 +114,7 @@ internal fun BoxScope.MainTopControls(
             )
         }
 
-        if (searching && !viewerOpen) {
+        if (searching && !viewerOpen && !selecting) {
             SearchField(
                 backdrop = backdrop,
                 query = searchQuery,

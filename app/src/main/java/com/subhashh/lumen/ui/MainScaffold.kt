@@ -479,7 +479,8 @@ private fun MainState.Scaffold(
         peopleSelection = null
     }
     val selectableKey = when {
-        searching -> null
+        // Search's results, once something is typed (not while picking for another app).
+        searching -> if (searchQuery.isNotBlank() && pick == null) CollectionKeys.Search else null
         tab == LumenTab.Library && zoomLevel == ZoomLevel.All -> CollectionKeys.Library
         tab == LumenTab.Library -> null
         // Hidden's top level is a list of folders, not photos.
