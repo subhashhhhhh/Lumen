@@ -490,6 +490,7 @@
 
     <!-- Settings search: extra words people might search for each setting by, separated by spaces.
          Lowercase; any word typed must appear in the setting's name, page or these words. -->
+    <string name="settings_kw_app_icon">launcher home screen logo colour color customize</string>
     <string name="settings_kw_theme">dark mode light mode night appearance</string>
     <string name="settings_kw_reduce_motion">animations accessibility springs</string>
     <string name="settings_kw_style">design material you expressive android ios look language</string>
@@ -567,6 +568,19 @@
     <string name="settings_palette">Palette</string>
     <string name="settings_pure_black">Pure Black</string>
     <string name="settings_pure_black_subtitle">Black backgrounds in the dark theme</string>
+    <string name="settings_app_icon">App Icon</string>
+    <string name="settings_app_icon_footer">The icon changes when you leave Lumen, and the Home screen can take a few seconds to show it. Some launchers drop Lumen\'s Home screen shortcut when its icon changes; add it again from the app list.</string>
+    <!-- Names of the app icons. First Light and Bloom are the two designs; the rest are their colours. -->
+    <string name="app_icon_first_light">First Light</string>
+    <string name="app_icon_dusk">Dusk</string>
+    <string name="app_icon_ocean">Ocean</string>
+    <string name="app_icon_forest">Forest</string>
+    <string name="app_icon_rose">Rose</string>
+    <string name="app_icon_graphite">Graphite</string>
+    <string name="app_icon_bloom">Bloom</string>
+    <string name="app_icon_bloom_dark">Bloom Dark</string>
+    <string name="app_icon_bloom_ocean">Bloom Ocean</string>
+    <string name="app_icon_bloom_sunset">Bloom Sunset</string>
     <string name="settings_group_glass">Glass</string>
     <string name="settings_glass_footer">Liquid Glass: buttons, bars, menus and switches made of glass that bends what\'s behind it. Off, they\'re solid. Reduce Blur keeps the glass with much less blur: clearer, and lighter on the GPU.</string>
     <string name="settings_liquid_glass">Liquid Glass</string>

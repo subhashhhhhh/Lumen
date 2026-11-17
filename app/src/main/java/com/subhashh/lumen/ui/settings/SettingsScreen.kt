@@ -114,6 +114,7 @@ private val Entries = listOf(
     SettingEntry("palette", R.string.settings_palette, SettingsCategory.Appearance, R.string.settings_kw_palette),
     SettingEntry("pure-black", R.string.settings_pure_black, SettingsCategory.Appearance, R.string.settings_kw_pure_black),
     SettingEntry("liquid-glass", R.string.settings_liquid_glass, SettingsCategory.Appearance, R.string.settings_kw_liquid_glass),
+    SettingEntry("app-icon", R.string.settings_app_icon, SettingsCategory.Appearance, R.string.settings_kw_app_icon),
     SettingEntry("reduce-blur", R.string.settings_reduce_blur, SettingsCategory.Appearance, R.string.settings_kw_reduce_blur),
     SettingEntry("date-headers", R.string.settings_date_headers, SettingsCategory.Library, R.string.settings_kw_date_headers),
     SettingEntry("excluded", R.string.settings_excluded_folders, SettingsCategory.Library, R.string.settings_kw_excluded),
@@ -478,6 +479,9 @@ private fun ColumnScope.AppearancePage(highlight: String?) {
                 iconColor = Orange,
             )
         }
+    }
+    Group(stringResource(R.string.settings_app_icon), footer = stringResource(R.string.settings_app_icon_footer)) {
+        Anchor("app-icon", highlight) { AppIconPicker() }
     }
     if (style.material) {
         Group(

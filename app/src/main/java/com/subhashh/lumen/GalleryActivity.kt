@@ -1,18 +1,26 @@
 package com.subhashh.lumen
 
 import android.app.Activity
+import android.app.ActivityManager
 import android.content.ClipData
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import com.subhashh.lumen.data.LauncherIcon
 import com.subhashh.lumen.data.MediaItem
 import com.subhashh.lumen.ui.LumenApp
 import com.subhashh.lumen.ui.PickRequest
 import com.subhashh.lumen.ui.setLumenContent
 
-class MainActivity : ComponentActivity() {
+/**
+ * Lumen's main screen. The Home screen doesn't open it by this name but through one of the
+ * aliases in the manifest, one per app icon ([LauncherIcon]).
+ */
+class GalleryActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        showChosenIconInRecents()
         val pick = PickRequest.from(intent)
         // A photo reminder's notification: open its photo (not again when recreated).
         if (savedInstanceState == null) com.subhashh.lumen.data.PhotoReminders.handle(intent)
@@ -30,11 +38,27 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    // A new app icon goes on once Lumen is out of sight (see LauncherIcon.applyPending).
+    override fun onStop() {
+        super.onStop()
+        if (!isChangingConfigurations) LauncherIcon.applyPending(this)
+    }
+
     // Already open (the notification brings it to the front): same request, through the new intent.
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
         com.subhashh.lumen.data.PhotoReminders.handle(intent)
+    }
+
+    /** Recents draws the activity's own icon, not the alias's, unless told which one is in use. */
+    private fun showChosenIconInRecents() {
+        val icon = LauncherIcon.chosen(this).icon
+        @Suppress("DEPRECATION")
+        setTaskDescription(
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) ActivityManager.TaskDescription.Builder().setIcon(icon).build()
+            else ActivityManager.TaskDescription(null, icon),
+        )
     }
 
     /** Hands the chosen items back to the app that asked, with permission to read them. */
