@@ -699,7 +699,8 @@ fun ViewerScreen(
                             // Material: the icon with its name under it, straight on the page.
                             if (material) {
                                 Column(
-                                    Modifier.width(84.dp).pressable(onClick, shape = RoundedCornerShape(16.dp)).padding(vertical = 8.dp),
+                                    // Four across, on a narrow phone too.
+                                    Modifier.width(minOf(84.dp, (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp.dp - 32.dp) / 4)).pressable(onClick, shape = RoundedCornerShape(16.dp)).padding(vertical = 8.dp),
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                 ) {
                                     Icon(icon, contentDescription = null, tint = tint)
@@ -1068,8 +1069,8 @@ private fun TopBar(
                     .padding(horizontal = 8.dp, vertical = 4.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Text(day, color = colors.content, maxLines = 1, style = TextStyle(fontSize = 17.sp, fontWeight = FontWeight.Medium, shadow = glow))
-                Text(time, color = colors.contentSecondary, maxLines = 1, style = TextStyle(fontSize = 13.sp, shadow = glow))
+                Text(day, color = colors.content, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, style = TextStyle(fontSize = 17.sp, fontWeight = FontWeight.Medium, shadow = glow))
+                Text(time, color = colors.contentSecondary, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, style = TextStyle(fontSize = 13.sp, shadow = glow))
             }
             Row(Modifier.align(Alignment.CenterEnd)) {
                 if (onFavorite != null) {

@@ -1063,6 +1063,9 @@
     <string name="viewer_wallpaper_set_home">Wallpaper set on the home screen</string>
     <string name="viewer_wallpaper_set_lock">Wallpaper set on the lock screen</string>
     <string name="viewer_wallpaper_set_both">Wallpaper set on both screens</string>
+    <string name="settings_accent_preset">Colour %1$d</string>
+    <string name="search_person_unnamed">Unnamed person</string>
+    <string name="viewer_caption_edit">Caption: %1$s. Edit</string>
     <string name="wallpaper_preview">Preview</string>
     <string name="wallpaper_set">Set wallpaper</string>
     <string name="wallpaper_lock">Lock screen</string>

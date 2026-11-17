@@ -458,12 +458,16 @@ private fun MainState.Scaffold(
     }
     val currentNav = PageNav(searching, settingsPage, tab, openCollection)
     // Choosing who to merge with goes back to the person it started from: no page preview for that.
-    val previousNav = if (material && !viewerOpen && !merging) parentOf(currentNav) else null
+    // A person opened from a photo's details goes back into that photo (the viewer, as it was):
+    // its own flight, not a page preview.
+    val fromViewer = viewerReturn?.let { it.person == openCollection } == true
+    val previousNav = if (material && !viewerOpen && !merging && !fromViewer) parentOf(currentNav) else null
     val navTrail = remember(previousNav) { generateSequence(previousNav) { parentOf(it) }.drop(1).toList() }
     PageBack(enabled = searching && !viewerOpen, gesture = pageBack) { searching = false }
     PageBack(
         enabled = inCollection && !viewerOpen,
-        gesture = pageBack.takeIf { !merging },
+        // Nor while a cover is still flying: Back then waits for it, as it always did.
+        gesture = pageBack.takeIf { !merging && !fromViewer && !coverOpening && !coverTransition.flying },
         // A plain back press sends an album's or person's cover flying home, as tapping Back did.
         animatePress = !coverOpen,
     ) { animated ->
@@ -605,7 +609,7 @@ private fun MainState.Scaffold(
         index >= 0
     }
 
-    val collectionPages = collectionPages(pick, utilities, folders, people, allPeople, statusTop, navBottom, collectionsGrid, peopleGrid, coverTransition, personOf, onAlbumColumns, openHidden, openCollectionFromCard)
+    val collectionPages = collectionPages(pick, library, utilities, folders, people, allPeople, statusTop, navBottom, collectionsGrid, peopleGrid, coverTransition, personOf, onAlbumColumns, openHidden, openCollectionFromCard)
     val peoplePage = collectionPages.peoplePage
     val collectionsPage = collectionPages.collectionsPage
     Box(Modifier.fillMaxSize().onSizeChanged { screenSize = it }) {

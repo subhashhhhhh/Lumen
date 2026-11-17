@@ -104,13 +104,13 @@ internal fun AccentRow(accent: Color?, onAccent: (Color?) -> Unit) {
             }
             // Before Android 12 the first swatch already is Lumen's blue.
             for (color in if (wallpaper) AccentPresets else AccentPresets.drop(1)) {
-                Swatch(color, selected = accent?.toArgb() == color.toArgb(), label = null, icon = null) {
+                Swatch(color, selected = accent?.toArgb() == color.toArgb(), label = null, icon = null, describe = stringResource(R.string.settings_accent_preset, AccentPresets.indexOf(color) + 1)) {
                     mixing = false
                     onAccent(color)
                 }
             }
             Swatch(
-                if (accent != null && !preset) accent else Color.hsv(hue, 0.72f, 1f),
+                Color.hsv(hue, 0.72f, 1f),
                 selected = accent != null && !preset,
                 label = stringResource(R.string.settings_accent_custom),
                 icon = LumenIcons.Palette,
@@ -120,17 +120,15 @@ internal fun AccentRow(accent: Color?, onAccent: (Color?) -> Unit) {
             }
         }
         AnimatedVisibility(mixing, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
-            HueSlider(hue) {
-                hue = it
-                onAccent(Color.hsv(it, 0.72f, 1f))
-            }
+            // The swatch follows the finger; the colour is saved, and the app re-themed, on letting go.
+            HueSlider(hue, onHue = { hue = it }, onDone = { onAccent(Color.hsv(hue, 0.72f, 1f)) })
         }
     }
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun Swatch(color: Color, selected: Boolean, label: String?, icon: ImageVector?, onClick: () -> Unit) {
+private fun Swatch(color: Color, selected: Boolean, label: String?, icon: ImageVector?, describe: String? = label, onClick: () -> Unit) {
     val reduce = LocalMotion.current.reduce
     // Grows a little as it's chosen.
     val chosen by animateFloatAsState(
@@ -154,7 +152,7 @@ private fun Swatch(color: Color, selected: Boolean, label: String?, icon: ImageV
                 .clickable(remember { MutableInteractionSource() }, indication = null, role = Role.RadioButton, onClick = onClick)
                 .semantics {
                     this.selected = selected
-                    if (label != null) contentDescription = label
+                    if (describe != null) contentDescription = describe
                 },
             contentAlignment = Alignment.Center,
         ) {
@@ -169,8 +167,9 @@ private fun Swatch(color: Color, selected: Boolean, label: String?, icon: ImageV
 
 /** Every hue along a rounded bar, with a tall handle to drag. */
 @Composable
-private fun HueSlider(hue: Float, onHue: (Float) -> Unit) {
+private fun HueSlider(hue: Float, onHue: (Float) -> Unit, onDone: () -> Unit) {
     val current by rememberUpdatedState(onHue)
+    val done by rememberUpdatedState(onDone)
     val handle = MaterialTheme.colorScheme.onSurface
     val gap = groupColors().card
     val label = stringResource(R.string.settings_accent_hue)
@@ -189,6 +188,7 @@ private fun HueSlider(hue: Float, onHue: (Float) -> Unit) {
                         set(change.position.x)
                         change.consume()
                     }
+                    done()
                 }
             },
     ) {

@@ -61,6 +61,8 @@ import androidx.annotation.StringRes
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.subhashh.lumen.R
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -509,7 +511,8 @@ private fun Suggestions(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 for ((person, cover) in topPeople.take(12)) {
-                    FaceAvatar(person, cover, Modifier.size(64.dp).pressable({ onOpenPerson(person) }, shape = CircleShape))
+                    val who = person.name ?: stringResource(R.string.search_person_unnamed)
+                    FaceAvatar(person, cover, Modifier.size(64.dp).pressable({ onOpenPerson(person) }, shape = CircleShape).semantics { contentDescription = who })
                 }
             }
         }

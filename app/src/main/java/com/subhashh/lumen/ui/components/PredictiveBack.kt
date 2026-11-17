@@ -1,7 +1,6 @@
 package com.subhashh.lumen.ui.components
 
 import androidx.activity.BackEventCompat
-import androidx.activity.compose.BackHandler
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animate
@@ -12,10 +11,12 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import kotlin.coroutines.cancellation.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 /**
@@ -50,7 +51,7 @@ class BackGesture {
  * the top page then leaves (animated), and [onBack] runs; if the gesture is given up everything
  * springs back to rest. [onBack] is told whether the page was animated away here, or whether it
  * should do its own leaving (a plain back press when [animatePress] is off). Without a
- * [gesture] it's a plain back handler.
+ * [gesture] it's a plain back: nothing is drawn, [onBack] does it all.
  */
 @Composable
 fun PageBack(
@@ -60,42 +61,58 @@ fun PageBack(
     animatePress: Boolean = true,
     onBack: (animated: Boolean) -> Unit,
 ) {
-    if (gesture == null) {
-        BackHandler(enabled) { onBack(false) }
-        return
-    }
     val scope = rememberCoroutineScope()
     val back by rememberUpdatedState(onBack)
     val press by rememberUpdatedState(animatePress)
+    val latest by rememberUpdatedState(gesture)
+    // A given-up gesture springing back to rest: stopped if the next one starts before it's done.
+    val settling = remember { arrayOfNulls<Job>(1) }
+    // One handler whether or not it's predictive, so it keeps its place among the others (a menu
+    // opened later still gets Back first) when [gesture] comes or goes.
     PredictiveBackHandler(enabled) { events ->
+        val gesture = latest
+        if (gesture == null) {
+            events.collect { }
+            back(false)
+            return@PredictiveBackHandler
+        }
         var moved = false
         try {
             events.collect { event ->
+                if (!moved) settling[0]?.cancel()
                 moved = true
                 gesture.active = true
                 gesture.progress = event.progress
                 gesture.fromRight = event.swipeEdge == BackEventCompat.EDGE_RIGHT
             }
         } catch (cancelled: CancellationException) {
-            scope.launch {
+            settling[0] = scope.launch {
                 animate(gesture.progress, 0f, animationSpec = spring(dampingRatio = 0.85f, stiffness = 400f)) { value, _ -> gesture.progress = value }
                 gesture.active = false
             }
             throw cancelled
         }
+        settling[0]?.cancel()
         val animated = moved || press
-        if (animated) {
-            gesture.active = true
-            animate(0f, 1f, animationSpec = tween(260, easing = FastOutSlowInEasing)) { value, _ -> gesture.commit = value }
-            gesture.arrived = true
+        try {
+            if (animated) {
+                gesture.active = true
+                animate(0f, 1f, animationSpec = tween(260, easing = FastOutSlowInEasing)) { value, _ -> gesture.commit = value }
+                gesture.arrived = true
+            }
+            // The page beneath becomes the page, at rest, in the same frame the top one goes.
+            back(animated)
+        } finally {
+            // Also when the leaving was cut short: never left half way, the page beneath showing.
+            gesture.progress = 0f
+            gesture.commit = 0f
+            gesture.active = false
         }
-        // The page beneath becomes the page, at rest, in the same frame the top one goes.
-        back(animated)
-        gesture.progress = 0f
-        gesture.commit = 0f
-        gesture.active = false
         // Long enough for the page beneath to have been seen arriving, then it no longer applies.
-        kotlinx.coroutines.delay(120)
-        gesture.arrived = false
+        try {
+            kotlinx.coroutines.delay(120)
+        } finally {
+            gesture.arrived = false
+        }
     }
 }

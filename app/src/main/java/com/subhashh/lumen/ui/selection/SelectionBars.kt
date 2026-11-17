@@ -127,7 +127,8 @@ fun SelectionActionBar(
         // Material: each action is its icon with its name under it.
         if (material) {
             Column(
-                Modifier.width(84.dp).pressable(onClick, shape = RoundedCornerShape(16.dp)).padding(vertical = 8.dp),
+                // Up to five across, on a narrow phone too.
+                Modifier.width(minOf(84.dp, (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp.dp - 16.dp) / 5)).pressable(onClick, shape = RoundedCornerShape(16.dp)).padding(vertical = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Icon(icon, contentDescription = null, tint = tint)

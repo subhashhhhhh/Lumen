@@ -97,7 +97,12 @@ for kotlin_name, symbol, filled in ICONS:
         variant = "fill1" if filled else "default"
         url = f"https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/{symbol}/{variant}/24px.svg"
         with urllib.request.urlopen(url, timeout=30) as response:
-            open(path, "wb").write(response.read())
+            data = response.read()
+        if not data:
+            sys.exit(f"nothing downloaded for {stem}")
+        # Written only once it has all arrived: a failed download leaves no empty file behind.
+        with open(path, "wb") as f:
+            f.write(data)
     svg = open(path, encoding="utf-8").read()
     paths = re.findall(r'<path[^>]*\sd="([^"]+)"', svg)
     if not paths:

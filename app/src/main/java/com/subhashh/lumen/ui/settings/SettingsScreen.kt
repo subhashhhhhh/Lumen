@@ -171,12 +171,18 @@ private val Entries = listOf(
     SettingEntry("version", R.string.settings_version, SettingsCategory.About, R.string.settings_kw_version),
 )
 
+private val MaterialOnly = setOf("accent", "palette", "pure-black")
+private val LumenOnly = setOf("liquid-glass")
+
 /** Every query word must appear in the setting's name, page or keywords. */
-private fun search(context: Context, query: String, developer: Boolean): List<SettingEntry> {
+private fun search(context: Context, query: String, developer: Boolean, material: Boolean): List<SettingEntry> {
     val words = query.lowercase().split(' ').filter { it.isNotBlank() }
     if (words.isEmpty()) return emptyList()
     return Entries.filter { e ->
         if (e.category == SettingsCategory.Developer && !developer) return@filter false
+        // Rows only one style has: not found from the other, where there'd be nothing to show.
+        if (e.id in MaterialOnly && !material) return@filter false
+        if (e.id in LumenOnly && material) return@filter false
         val text = "${context.getString(e.title)} ${context.getString(e.category.titleRes)} ${context.getString(e.keywords)}".lowercase()
         words.all { it in text }
     }
@@ -233,7 +239,7 @@ fun SettingsScreen(
                 var query by rememberSaveable { mutableStateOf("") }
                 SearchBox(query, onQueryChange = { query = it })
                 if (query.isNotBlank()) {
-                    val results = search(context, query, prefs.developerOptions)
+                    val results = search(context, query, prefs.developerOptions, Lumen.material)
                     if (results.isEmpty()) {
                         Text(
                             stringResource(R.string.settings_no_match, query.trim()),

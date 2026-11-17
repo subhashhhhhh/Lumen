@@ -1,5 +1,8 @@
 package com.subhashh.lumen.ui.viewer
 
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import com.subhashh.lumen.R
 import com.subhashh.lumen.ui.theme.Lumen
 import com.subhashh.lumen.data.toRef
@@ -337,9 +340,18 @@ fun DetailsSheet(
 /** The caption, or a prompt to add one; tap to edit. */
 @Composable
 private fun CaptionRow(caption: String?, colors: SheetColors, onEdit: () -> Unit) {
+    val editLabel = caption?.let { stringResource(R.string.viewer_caption_edit, it) } ?: stringResource(R.string.viewer_add_caption)
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth().padding(top = 8.dp).pressable(onEdit, pressedScale = 0.98f).padding(horizontal = 4.dp, vertical = 4.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 8.dp)
+            .pressable(onEdit, pressedScale = 0.98f)
+            .semantics(mergeDescendants = true) {
+                role = androidx.compose.ui.semantics.Role.Button
+                contentDescription = editLabel
+            }
+            .padding(horizontal = 4.dp, vertical = 4.dp),
     ) {
         Text(
             caption ?: stringResource(R.string.viewer_add_caption),
@@ -574,7 +586,9 @@ private fun WhenHeader(item: MediaItem, d: MediaDetails?, colors: SheetColors, o
     val yourTime = stringResource(R.string.viewer_your_time)
     if (Lumen.material) {
         // Material: the day and the time on one line, and a pencil to change them.
-        val day = DateTimeFormatter.ofPattern(android.text.format.DateFormat.getBestDateTimePattern(Locale.getDefault(), "EEEdMMMy"), Locale.getDefault())
+        // Android's pattern can hold letters Java's formatter doesn't know: then the locale's own date.
+        val day = runCatching { DateTimeFormatter.ofPattern(android.text.format.DateFormat.getBestDateTimePattern(Locale.getDefault(), "EEEdMMMy"), Locale.getDefault()) }
+            .getOrElse { DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM) }
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 4.dp)) {
             Column(Modifier.weight(1f)) {
                 Text(
