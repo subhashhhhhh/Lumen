@@ -1063,6 +1063,10 @@
     <string name="viewer_wallpaper_set_home">Wallpaper set on the home screen</string>
     <string name="viewer_wallpaper_set_lock">Wallpaper set on the lock screen</string>
     <string name="viewer_wallpaper_set_both">Wallpaper set on both screens</string>
+    <string name="wallpaper_preview">Preview</string>
+    <string name="wallpaper_set">Set wallpaper</string>
+    <string name="wallpaper_lock">Lock screen</string>
+    <string name="wallpaper_home">Home screen</string>
     <string name="viewer_wallpaper_failed">Couldn\'t set the wallpaper</string>
 
     <!-- Map -->

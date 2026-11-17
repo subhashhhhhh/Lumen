@@ -185,6 +185,26 @@ class StyleRenderTest {
     }
 
     @Test
+    fun wallpaper() = render("wallpaper") {
+        // A made-up picture: bands of colour, so the framing and the card's corners show.
+        val picture = remember {
+            Bitmap.createBitmap(600, 900, Bitmap.Config.ARGB_8888).also { b ->
+                val canvas = android.graphics.Canvas(b)
+                val paint = android.graphics.Paint()
+                listOf(0xFF2E5E8C, 0xFF4F8F6B, 0xFFE0B04A, 0xFFC0563F, 0xFF6B4F8F, 0xFF2E5E8C).forEachIndexed { i, c ->
+                    paint.color = c.toInt()
+                    canvas.drawRect(0f, i * 150f, 600f, (i + 1) * 150f, paint)
+                }
+            }
+        }
+        com.subhashh.lumen.ui.theme.AlwaysDark {
+            Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+                com.subhashh.lumen.ui.viewer.MaterialWallpaper(picture, remember { com.subhashh.lumen.ui.viewer.Framing() }, 9f / 19.5f, onCancel = {}, onSet = {})
+            }
+        }
+    }
+
+    @Test
     fun settings() = render("settings") {
         SettingsPage(PaddingValues(top = 24.dp, bottom = 24.dp)) {
             LargeTitle("Appearance")

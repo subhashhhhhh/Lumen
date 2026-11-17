@@ -642,13 +642,16 @@ private fun Mosaic(tiles: List<MosaicTile>, modifier: Modifier = Modifier) {
         val shown = tiles.takeLast(columns * rows)
         // A short first row, like the grid's last one filled from the left: here the gap goes first
         // so the newest still ends the bottom row.
-        val gap = (columns - shown.size % columns) % columns
+        // The Material style's Library is newest first, from the top left: so is this, with any
+        // short row last.
+        val newestFirst = remember { LumenPrefs(context).sortDescending }
+        val gap = if (newestFirst) 0 else (columns - shown.size % columns) % columns
         val top = (maxHeight - cell * ((shown.size + gap + columns - 1) / columns)) / 2
         val random = remember(tiles) { java.util.Random(11) }
         val jitter = remember(tiles) { List(tiles.size) { Triple(random.nextFloat() - 0.5f, random.nextFloat() - 0.5f, random.nextFloat() - 0.5f) } }
         for ((i, tile) in shown.withIndex()) {
             val (jx, jy, jr) = jitter[i]
-            val slot = i + gap
+            val slot = if (newestFirst) shown.lastIndex - i else i + gap
             coil3.compose.AsyncImage(
                 model = remember(tile.item.id) { mosaicRequest(context, tile.item) },
                 contentDescription = null,
