@@ -1,6 +1,30 @@
 package com.subhashh.lumen.ui.library
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.layout.offset
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.Velocity
+import kotlin.math.roundToInt
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -111,35 +135,35 @@ private fun indexPasses(): List<Pass> {
 
 /**
  * The Material style's indexing status, at the top left of Photos where Android galleries show
- * their backup's: a chip saying whether Lumen has caught up, which opens a panel with each
- * pass's count. Nothing at all when no Smart Feature is installed.
+ * their backup's: a chip saying whether Lumen has caught up. Tapping it opens the status in the
+ * page ([IndexShelf]) and leaves a round button here to fold it away again. Nothing at all when
+ * no Smart Feature is installed.
  */
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun IndexStatus(onOpenSettings: () -> Unit, modifier: Modifier = Modifier) {
+fun IndexStatus(open: Boolean, onToggle: () -> Unit, modifier: Modifier = Modifier) {
     val passes = indexPasses()
     if (passes.isEmpty()) return
     val scheme = MaterialTheme.colorScheme
     val left = passes.maxOf { it.left }
     val done = left == 0
-    var open by rememberSaveable { mutableStateOf(false) }
-    BackHandler(enabled = open) { open = false }
-    Box(modifier.fillMaxSize()) {
-        // A tap anywhere else puts the panel away.
+    Box(modifier.statusBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp)) {
         if (open) {
             Box(
                 Modifier
-                    .fillMaxSize()
-                    .background(scheme.scrim.copy(alpha = 0.32f))
-                    .clickable(remember { MutableInteractionSource() }, indication = null) { open = false },
-            )
-        }
-        Column(Modifier.statusBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp)) {
-            // The chip: a tick once caught up, a ring filling while there's more to do.
+                    .size(48.dp)
+                    .pressable(onToggle, pressedScale = 0.92f, shape = CircleShape)
+                    .materialSurface(scheme.surfaceContainerHighest, CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                // The chevron points left as drawn: turned to point up.
+                Icon(LumenIcons.Chevron, stringResource(R.string.index_collapse), tint = scheme.onSurface, modifier = Modifier.size(24.dp).rotate(90f))
+            }
+        } else {
+            // A tick once caught up, a ring filling while there's more to do.
             Row(
                 Modifier
                     .height(48.dp)
-                    .pressable({ open = !open }, pressedScale = 0.96f, shape = CircleShape)
+                    .pressable(onToggle, pressedScale = 0.96f, shape = CircleShape)
                     .materialSurface(scheme.surfaceContainerHigh, CircleShape)
                     .padding(start = 14.dp, end = 18.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -160,62 +184,133 @@ fun IndexStatus(onOpenSettings: () -> Unit, modifier: Modifier = Modifier) {
                     maxLines = 1,
                 )
             }
-            AnimatedVisibility(open, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
-                Column(
-                    Modifier
-                        .padding(top = 10.dp)
-                        .fillMaxWidth()
-                        .materialSurface(scheme.surfaceContainerLow, RoundedCornerShape(28.dp))
-                        .clip(RoundedCornerShape(28.dp))
-                        .clickable(remember { MutableInteractionSource() }, indication = null) {}
-                        .padding(16.dp),
-                ) {
-                    Text(
-                        if (done) stringResource(R.string.index_title_done) else pluralStringResource(R.plurals.index_title_left, left, left),
-                        color = scheme.onSurface,
-                        fontSize = 22.sp,
-                        lineHeight = 28.sp,
-                        modifier = Modifier.padding(start = 4.dp, top = 4.dp, bottom = 14.dp),
-                    )
-                    Column(Modifier.clip(RoundedCornerShape(20.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        for (pass in passes) {
-                            Column(
-                                Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).background(scheme.surfaceContainerHigh).padding(horizontal = 16.dp, vertical = 14.dp),
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(pass.icon, null, tint = scheme.onSurfaceVariant, modifier = Modifier.size(24.dp))
-                                    Spacer(Modifier.width(16.dp))
-                                    Text(stringResource(pass.name), color = scheme.onSurface, fontSize = 16.sp, modifier = Modifier.weight(1f))
-                                    Text(
-                                        if (pass.left == 0) stringResource(R.string.smart_all_count, pass.progress.total)
-                                        else stringResource(R.string.smart_count_of, pass.progress.indexed, pass.progress.total),
-                                        color = scheme.onSurfaceVariant,
-                                        fontSize = 14.sp,
-                                    )
-                                }
-                                if (pass.left > 0) {
-                                    val fraction = pass.progress.indexed.toFloat() / pass.progress.total.coerceAtLeast(1)
-                                    LinearWavyProgressIndicator(progress = { fraction }, modifier = Modifier.fillMaxWidth().padding(top = 12.dp, start = 40.dp))
-                                }
+        }
+    }
+}
+
+/** The grid as a sheet while the status is open: cut off [top] px down, its top corners rounded. */
+private data class SheetShape(val top: Float, val radius: Float) : Shape {
+    override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline {
+        val r = CornerRadius(radius)
+        return Outline.Rounded(RoundRect(0f, top, size.width, size.height.coerceAtLeast(top), topLeftCornerRadius = r, topRightCornerRadius = r))
+    }
+}
+
+/**
+ * Photos with the indexing status above it. While [open], the status (a title, each pass's count,
+ * a way to Smart Features) sits at the top of the page under the buttons and the grid ([content])
+ * moves down beneath it as a sheet with rounded corners, as Android galleries show their backup's.
+ * Back, or pulling the sheet up, folds it away. [top] is where the grid's first row starts.
+ */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+fun IndexShelf(open: Boolean, top: Dp, onClose: () -> Unit, onOpenSettings: () -> Unit, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+    val scheme = MaterialTheme.colorScheme
+    val amount = animateFloatAsState(if (open) 1f else 0f, MaterialTheme.motionScheme.defaultSpatialSpec(), label = "indexShelf")
+    var height by remember { mutableIntStateOf(0) }
+    val density = LocalDensity.current
+    // The sheet's edge sits a little above the grid's first row.
+    val cut = with(density) { (top - 8.dp).toPx() }
+    val gap = with(density) { 20.dp.toPx() }
+    val radius = with(density) { 28.dp.toPx() }
+    val page = scheme.background
+    val behind = scheme.surfaceContainer
+    BackHandler(enabled = open) { onClose() }
+    val isOpen = androidx.compose.runtime.rememberUpdatedState(open)
+    val close = androidx.compose.runtime.rememberUpdatedState(onClose)
+    val pull = remember {
+        object : NestedScrollConnection {
+            // The drag that folded the status away: the rest of it, and its fling, don't scroll the grid.
+            var folding = false
+
+            // While it's open the grid doesn't scroll: a pull upwards folds the status away.
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                if (source != NestedScrollSource.UserInput) return if (folding || isOpen.value) available else Offset.Zero
+                if (isOpen.value && available.y < 0f) {
+                    folding = true
+                    close.value()
+                }
+                return if (folding || isOpen.value) available else Offset.Zero
+            }
+
+            override suspend fun onPreFling(available: Velocity): Velocity {
+                val held = folding || isOpen.value
+                folding = false
+                return if (held) available else Velocity.Zero
+            }
+        }
+    }
+    Box(modifier.fillMaxSize().drawBehind { if (amount.value > 0f) drawRect(behind, alpha = amount.value.coerceIn(0f, 1f)) }) {
+        if (open || amount.value > 0f) {
+            val passes = indexPasses()
+            val left = passes.maxOfOrNull { it.left } ?: 0
+            val done = left == 0
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .onSizeChanged { height = it.height }
+                    .graphicsLayer { alpha = amount.value.coerceIn(0f, 1f) }
+                    .padding(top = top, start = 16.dp, end = 16.dp),
+            ) {
+                Text(
+                    if (done) stringResource(R.string.index_title_done) else pluralStringResource(R.plurals.index_title_left, left, left),
+                    color = scheme.onSurface,
+                    fontSize = 28.sp,
+                    lineHeight = 36.sp,
+                    modifier = Modifier.padding(top = 4.dp, bottom = 16.dp),
+                )
+                Column(Modifier.clip(RoundedCornerShape(28.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    for (pass in passes) {
+                        Column(
+                            Modifier.fillMaxWidth().clip(RoundedCornerShape(4.dp)).background(page).padding(horizontal = 20.dp, vertical = 18.dp),
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(pass.icon, null, tint = scheme.onSurfaceVariant, modifier = Modifier.size(24.dp))
+                                Spacer(Modifier.width(16.dp))
+                                Text(stringResource(pass.name), color = scheme.onSurface, fontSize = 16.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+                                Text(
+                                    if (pass.left == 0) stringResource(R.string.smart_all_count, pass.progress.total)
+                                    else stringResource(R.string.smart_count_of, pass.progress.indexed, pass.progress.total),
+                                    color = scheme.onSurfaceVariant,
+                                    fontSize = 14.sp,
+                                )
+                            }
+                            if (pass.left > 0) {
+                                val fraction = pass.progress.indexed.toFloat() / pass.progress.total.coerceAtLeast(1)
+                                LinearWavyProgressIndicator(progress = { fraction }, modifier = Modifier.fillMaxWidth().padding(top = 14.dp, start = 40.dp))
                             }
                         }
                     }
-                    Text(
-                        stringResource(if (done) R.string.index_note_done else R.string.index_note_left),
-                        color = scheme.onSurfaceVariant,
-                        fontSize = 14.sp,
-                        lineHeight = 20.sp,
-                        modifier = Modifier.padding(start = 4.dp, end = 4.dp, top = 14.dp),
-                    )
-                    TextButton(
-                        onClick = {
-                            open = false
-                            onOpenSettings()
-                        },
-                        modifier = Modifier.align(Alignment.End),
-                    ) { Text(stringResource(R.string.settings_category_smart_features)) }
+                    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(4.dp)).background(page).padding(horizontal = 20.dp, vertical = 18.dp)) {
+                        Text(
+                            stringResource(if (done) R.string.index_note_done else R.string.index_note_left),
+                            color = scheme.onSurface,
+                            fontSize = 16.sp,
+                            lineHeight = 22.sp,
+                        )
+                        OutlinedButton(
+                            onClick = {
+                                onClose()
+                                onOpenSettings()
+                            },
+                            modifier = Modifier.fillMaxWidth().padding(top = 14.dp).height(52.dp),
+                        ) { Text(stringResource(R.string.settings_category_smart_features), fontSize = 16.sp) }
+                    }
                 }
             }
         }
+        Box(
+            Modifier
+                .fillMaxSize()
+                // Placed lower, not drawn lower, so a photo still opens from where its thumbnail is.
+                .offset { IntOffset(0, (amount.value * (height + gap - cut)).roundToInt().coerceAtLeast(0)) }
+                .graphicsLayer {
+                    val a = amount.value.coerceIn(0f, 1f)
+                    clip = a > 0f
+                    shape = SheetShape(cut * a, radius * a)
+                }
+                .drawBehind { if (amount.value > 0f) drawRect(page) }
+                .nestedScroll(pull),
+        ) { content() }
     }
 }

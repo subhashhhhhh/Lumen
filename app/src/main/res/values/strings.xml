@@ -1090,6 +1090,7 @@
     <string name="app_appearance_dark">Dark</string>
     <string name="main_photos">Photos</string>
     <!-- Indexing status on the Photos page (Material style): a chip, and the panel it opens. -->
+    <string name="index_collapse">Hide indexing status</string>
     <string name="index_chip_done">Up to date</string>
     <plurals name="index_chip_left">
         <item quantity="one">%1$,d to index</item>

@@ -188,11 +188,9 @@ internal fun BoxScope.MainTopControls(
             )
         }
 
-        // Material: how indexing is going, at the top left of Photos; opens a panel with the counts.
+        // Material: how indexing is going, at the top left of Photos; opens the status in the page.
         if (material && tab == LumenTab.Library && !searching && selection == null && !viewerOpen && settingsPage == null && pick == null) {
-            com.subhashh.lumen.ui.library.IndexStatus(
-                onOpenSettings = { settingsPage = settingsCategoryPage(com.subhashh.lumen.ui.settings.SettingsCategory.SmartSearch) },
-            )
+            com.subhashh.lumen.ui.library.IndexStatus(open = indexOpen, onToggle = { indexOpen = !indexOpen })
         }
         if (tab == LumenTab.Library && !searching && selection == null && !viewerOpen && settingsPage == null && pick == null) {
             Row(

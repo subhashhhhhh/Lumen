@@ -118,6 +118,8 @@ internal class MainState(
     var searchColumns by mutableIntStateOf(prefs.searchColumns)
     var albumColumns by mutableIntStateOf(prefs.albumColumns)
     var menuOpen by mutableStateOf(false)
+    /** Material: the indexing status is open at the top of Photos, the grid moved down under it. */
+    var indexOpen by mutableStateOf(false)
     var zoomLevel by zoomLevelState
     // The Library opens with the tabs showing; scrolling up (back in time) folds them into the
     // Years / Months / All control, scrolling down brings them back. Years and Months keep the

@@ -320,7 +320,12 @@ internal fun BoxScope.MainPages(
                         onChooseFolder = { excludePicker = true },
                     )
                 }
-                nav.tab == LumenTab.Library -> Box(Modifier.nestedScroll(zoomBarScroll)) {
+                nav.tab == LumenTab.Library -> com.subhashh.lumen.ui.library.IndexShelf(
+                    open = indexOpen && material && pick == null && selection == null,
+                    top = gridPadding.calculateTopPadding(),
+                    onClose = { indexOpen = false },
+                    onOpenSettings = { settingsPage = settingsCategoryPage(SettingsCategory.SmartSearch) },
+                ) { Box(Modifier.nestedScroll(zoomBarScroll)) {
                     LibraryScreen(
                         title = pickTitle(pick, picked.size) ?: selection?.let { selectionTitle(selectedItems) } ?: stringResource(R.string.main_library),
                         selection = if (pick?.multiple == true) picked.keys else selection,
@@ -381,7 +386,7 @@ internal fun BoxScope.MainPages(
                             Box(Modifier.fillMaxSize())
                         }
                     }
-                }
+                } }
                 nav.openCollection == CollectionKeys.Hidden -> HiddenScreen(
                     encrypted = encryptHidden,
                     folders = hiddenFolderList,
