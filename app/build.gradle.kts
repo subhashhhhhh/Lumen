@@ -27,8 +27,8 @@ android {
         // Android 11: All files access (hidden folders) and MediaStore trash.
         minSdk = 30
         targetSdk = 37
-        versionCode = 13
-        versionName = "0.4.2"
+        versionCode = 14
+        versionName = "0.5.0"
     }
 
     signingConfigs {
