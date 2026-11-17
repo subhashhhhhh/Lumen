@@ -48,10 +48,22 @@ jobs:
           yes | "$sdkmanager" --licenses > /dev/null || true
           "$sdkmanager" "platforms;android-37.0" "ndk;30.0.16248370" "cmake;4.1.2" > /dev/null
       - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
+      # Robolectric downloads the Android runtime it simulates as the first test starts, by itself
+      # and not through Gradle, so Gradle's cache doesn't hold it.
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.m2/repository/org/robolectric
+          key: robolectric-${{ hashFiles('gradle/libs.versions.toml') }}
+          restore-keys: robolectric-
       - name: Unit tests
-        run: >
-          ./gradlew :app:testDebugUnitTest :lumen-ai:ai:testDebugUnitTest --no-daemon --continue
-          -Porg.gradle.java.installations.fromEnv=JAVA_HOME_27_X64
+        run: |
+          run() {
+            ./gradlew :app:testDebugUnitTest :lumen-ai:ai:testDebugUnitTest --no-daemon --continue \
+              -Porg.gradle.java.installations.fromEnv=JAVA_HOME_27_X64
+          }
+          # Once more when that download failed (it has, with Maven Central refusing the runner):
+          # those failures say nothing about the code.
+          run || { grep -rqs MavenArtifactFetcher app/build/test-results && run; }
       - name: Count
         if: always()
         run: |
@@ -71,11 +83,16 @@ jobs:
                   print(f"- `{failure}`")
               print()
           EOF
+      # Uploads may only come from inside this checkout, so Lumen AI's report is brought in.
+      - name: Reports
+        if: failure()
+        run: |
+          mkdir -p reports
+          cp -r app/build/reports/tests reports/lumen 2>/dev/null || true
+          cp -r ../lumen-ai/ai/build/reports/tests reports/lumen-ai 2>/dev/null || true
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: failure()
         with:
           name: test-reports
-          path: |
-            app/build/reports/tests/
-            ../lumen-ai/ai/build/reports/tests/
+          path: reports/
           retention-days: 7
