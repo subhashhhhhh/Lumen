@@ -61,7 +61,7 @@ jobs:
           rm -f "$LUMEN_KEYSTORE"
           version="${TAG#v}"
           mkdir out
-          for abi in arm64-v8a armeabi-v7a x86_64 universal; do
+          for abi in arm64-v8a x86_64; do
             cp "app/build/outputs/apk/release/app-$abi-release.apk" "out/Lumen-$version-$abi.apk"
           done
           apksigner=$(ls -d "$ANDROID_HOME"/build-tools/* | tail -1)/apksigner

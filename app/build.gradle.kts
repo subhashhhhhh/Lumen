@@ -42,14 +42,16 @@ android {
         }
     }
 
-    // Release APKs per processor, plus one universal APK. Only for release tasks, so debug and
-    // profile builds stay a single APK.
+    // Release APKs per processor. Only for release tasks, so debug and profile builds stay a
+    // single APK. No 32-bit ARM APK, and so no universal one either: the only 32-bit Android 11+
+    // phones are low-memory ones well below what Lumen is built for (see DeviceClass), 4% of
+    // downloads. x86_64 stays for Waydroid and Chromebooks.
     splits {
         abi {
             isEnable = gradle.startParameter.taskNames.any { it.contains("Release", ignoreCase = true) }
             reset()
-            include("arm64-v8a", "armeabi-v7a", "x86_64")
-            isUniversalApk = true
+            include("arm64-v8a", "x86_64")
+            isUniversalApk = false
         }
     }
 
