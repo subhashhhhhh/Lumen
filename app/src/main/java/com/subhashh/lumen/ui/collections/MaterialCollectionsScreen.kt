@@ -386,7 +386,10 @@ fun DocumentsHeader(
     count: Int,
     onKind: (query: String) -> Unit,
     modifier: Modifier = Modifier,
+    /** The selection bar is over the name and count: they step aside rather than peek out under it. */
+    selecting: Boolean = false,
 ) {
+    val words = Modifier.graphicsLayer { alpha = if (selecting) 0f else 1f }
     val scheme = androidx.compose.material3.MaterialTheme.colorScheme
     val at = kinds.indexOfFirst { it.second == selected }
     androidx.compose.foundation.layout.Column(modifier.fillMaxWidth().statusBarsPadding()) {
@@ -396,14 +399,14 @@ fun DocumentsHeader(
             fontSize = 32.sp,
             lineHeight = 40.sp,
             maxLines = 1,
-            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 20.dp),
+            modifier = words.padding(start = 20.dp, end = 20.dp, top = 20.dp),
         )
         androidx.compose.material3.Text(
             androidx.compose.ui.res.pluralStringResource(R.plurals.collections_doc_count, count, count),
             color = scheme.onSurfaceVariant,
             fontSize = 14.sp,
             lineHeight = 20.sp,
-            modifier = Modifier.padding(start = 20.dp, top = 2.dp),
+            modifier = words.padding(start = 20.dp, top = 2.dp),
         )
         androidx.compose.foundation.lazy.LazyRow(
             // Opens with the chosen kind in view.

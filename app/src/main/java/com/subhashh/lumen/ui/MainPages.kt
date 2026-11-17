@@ -467,6 +467,7 @@ internal fun BoxScope.MainPages(
                                     count = items.size,
                                     onKind = { openCollection = CollectionKeys.documents(it) },
                                     modifier = headerModifier,
+                                    selecting = selection != null,
                                 )
                             },
                             hero = cover?.let { c -> { heroModifier -> CoverHeader(c, coverTransition, heroModifier) } },

@@ -22,6 +22,7 @@ import com.subhashh.lumen.ui.icons.LumenIcons
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -140,7 +141,13 @@ fun WallpaperScreen(
     var applying by remember { mutableStateOf(false) }
     val material = Lumen.material
 
-    BoxWithConstraints(Modifier.fillMaxSize().background(if (material) MaterialTheme.colorScheme.background else Color.Black)) {
+    BoxWithConstraints(
+        Modifier
+            .fillMaxSize()
+            .background(if (material) MaterialTheme.colorScheme.background else Color.Black)
+            // Touches stop here: a tap beside the card isn't one on the viewer underneath.
+            .pointerInput(Unit) { detectTapGestures { } },
+    ) {
         val screenW = constraints.maxWidth
         val screenH = constraints.maxHeight
         // Decoded to just cover the screen: framing at 1× maps pixel for pixel.
@@ -271,7 +278,8 @@ internal fun MaterialWallpaper(image: Bitmap?, framing: Framing, screenAspect: F
                                 fontSize = 13.sp,
                             )
                             Text(
-                                remember(now) { android.text.format.DateFormat.getTimeFormat(appContext).format(java.util.Date()).substringBefore(' ') },
+                                // Just the digits, as a lock screen's clock has them.
+                                remember(now) { java.time.format.DateTimeFormatter.ofPattern(if (android.text.format.DateFormat.is24HourFormat(appContext)) "HH:mm" else "h:mm").format(now) },
                                 style = over,
                                 fontSize = 52.sp,
                                 fontWeight = FontWeight.Light,
