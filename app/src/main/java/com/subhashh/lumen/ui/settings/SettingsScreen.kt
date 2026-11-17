@@ -152,6 +152,7 @@ private val Entries = listOf(
     SettingEntry("text-model", R.string.settings_entry_text_reader, SettingsCategory.SmartSearch, R.string.settings_kw_text_model),
     SettingEntry("text-read", R.string.settings_entry_text_read, SettingsCategory.SmartSearch, R.string.settings_kw_text_read),
     SettingEntry("wifi-only", R.string.settings_entry_wifi_only, SettingsCategory.SmartSearch, R.string.settings_kw_wifi_only),
+    SettingEntry("pretend-slow", R.string.settings_pretend_slow, SettingsCategory.Developer, R.string.settings_kw_pretend_slow),
     SettingEntry("search-details", R.string.settings_search_details, SettingsCategory.Developer, R.string.settings_kw_search_details),
     SettingEntry("photo-reminders", R.string.settings_photo_reminders, SettingsCategory.Developer, R.string.settings_kw_photo_reminders),
     SettingEntry("hf-token", R.string.settings_entry_hf_token, SettingsCategory.SmartSearch, R.string.settings_kw_hf_token),
@@ -1120,6 +1121,21 @@ private fun ColumnScope.DeveloperPage(prefs: LumenPrefs, highlight: String?, onC
     }
     PhotoRemindersGroup(highlight, onConfirm)
     Group(stringResource(R.string.settings_group_onboarding), footer = stringResource(R.string.settings_onboarding_footer)) {
+        Anchor("pretend-slow", highlight) {
+            var slow by remember { mutableStateOf(prefs.pretendSlowPhone) }
+            ToggleRow(
+                title = stringResource(R.string.settings_pretend_slow),
+                subtitle = stringResource(R.string.settings_pretend_slow_subtitle),
+                checked = slow,
+                onCheckedChange = {
+                    slow = it
+                    prefs.pretendSlowPhone = it
+                },
+                icon = LumenIcons.Timer,
+                iconColor = Orange,
+            )
+        }
+        Divider()
         Anchor("show-onboarding", highlight) {
             val context = LocalContext.current
             SettingsRow(

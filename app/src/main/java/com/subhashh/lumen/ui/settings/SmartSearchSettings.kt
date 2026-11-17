@@ -6,6 +6,14 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -169,6 +177,18 @@ internal fun SmartSearchGroup(
             icon = icon,
             iconColor = iconColor,
         )
+    }
+
+    // A phone below what Lumen is built for: said here for as long as it isn't on the lighter
+    // search model, whatever was chosen in onboarding.
+    val slow = remember(refresh) { com.subhashh.lumen.data.DeviceClass.of(context) == com.subhashh.lumen.data.DeviceClass.Slow }
+    if (slow && chosen != ModelCatalog.Fast) {
+        SlowPhoneBanner {
+            val s = state
+            if (s is DownloadState.Running && s.pack == ModelPack.Search) ModelDownloads.cancel(context, ModelPack.Search, wifiOnly)
+            chosenId = ModelCatalog.Fast.id
+            prefs.searchModel = ModelCatalog.Fast.id
+        }
     }
 
     Group(
@@ -655,4 +675,46 @@ private fun ProcessorRow(pack: ModelPack, refresh: Any?) {
         icon = LumenIcons.Code,
         iconColor = Gray,
     )
+}
+
+/**
+ * For a [com.subhashh.lumen.data.DeviceClass.Slow] phone: why smart features may drag here, and
+ * one tap to the lighter search model. Gone once that's the one chosen.
+ */
+@Composable
+private fun SlowPhoneBanner(onUseFast: () -> Unit) {
+    val colors = groupColors()
+    androidx.compose.foundation.layout.Column(
+        androidx.compose.ui.Modifier
+            .fillMaxWidth()
+            .padding(top = 12.dp)
+            .clip(com.subhashh.lumen.ui.theme.Lumen.shapes.card)
+            .background(cardColor())
+            .padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 8.dp),
+        verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp),
+    ) {
+        androidx.compose.foundation.layout.Row(
+            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp),
+        ) {
+            androidx.compose.material3.Icon(LumenIcons.Info, contentDescription = null, tint = Orange, modifier = androidx.compose.ui.Modifier.size(20.dp))
+            androidx.compose.material3.Text(
+                stringResource(R.string.device_slow_title),
+                fontSize = 16.sp,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                color = colors.text,
+            )
+        }
+        androidx.compose.material3.Text(stringResource(R.string.smart_slow_detail), fontSize = 14.sp, color = colors.secondary)
+        androidx.compose.material3.Text(
+            stringResource(R.string.smart_slow_use_fast),
+            fontSize = 15.sp,
+            fontWeight = androidx.compose.ui.text.font.FontWeight.Medium,
+            color = com.subhashh.lumen.ui.theme.Lumen.colors.accent,
+            modifier = androidx.compose.ui.Modifier
+                .clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
+                .clickable(role = androidx.compose.ui.semantics.Role.Button, onClick = onUseFast)
+                .padding(vertical = 8.dp),
+        )
+    }
 }

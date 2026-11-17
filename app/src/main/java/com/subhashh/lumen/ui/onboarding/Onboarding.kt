@@ -6,6 +6,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalDensity
 import android.Manifest
 import kotlinx.coroutines.launch
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.Rect
@@ -99,6 +100,7 @@ import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.subhashh.lumen.R
+import com.subhashh.lumen.data.DeviceClass
 import com.subhashh.lumen.data.LumenPrefs
 import com.subhashh.lumen.ai.FaceModel
 import com.subhashh.lumen.ai.ModelCatalog
@@ -404,6 +406,13 @@ private fun ColumnScope.Photos(backdrop: Backdrop, hasAccess: Boolean, onRequest
 private fun ColumnScope.Look(backdrop: Backdrop, onNext: () -> Unit) {
     val appearance = com.subhashh.lumen.ui.theme.LocalAppearance.current
     val glass = com.subhashh.lumen.ui.theme.LocalGlass.current
+    // Glass is drawn by the GPU for every frame: a slow phone starts without it (once; it's theirs to turn on).
+    val context = LocalContext.current
+    var lightened by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        if (!lightened && DeviceClass.of(context) == DeviceClass.Slow) glass.onLiquid(false)
+        lightened = true
+    }
     Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
         Title(stringResource(R.string.onboarding_look_title), stringResource(R.string.onboarding_look_subtitle))
         Card(backdrop) {
@@ -463,7 +472,7 @@ internal fun Context.openSpecial(action: String) {
 
 /** Accurate on phones with plenty of memory (8 GB or more); Fast below that. */
 private fun recommendedTier(context: Context) =
-    if (ActivityManager.MemoryInfo().also { context.getSystemService(ActivityManager::class.java).getMemoryInfo(it) }.totalMem >= 7_000_000_000L) {
+    if (DeviceClass.of(context) != DeviceClass.Slow && ActivityManager.MemoryInfo().also { context.getSystemService(ActivityManager::class.java).getMemoryInfo(it) }.totalMem >= 7_000_000_000L) {
         ModelCatalog.Accurate
     } else {
         ModelCatalog.Fast
@@ -486,11 +495,13 @@ private fun ColumnScope.Smart(backdrop: Backdrop, onNext: (downloading: Boolean)
     val context = LocalContext.current
     val prefs = remember { LumenPrefs(context) }
     val recommended = remember { recommendedTier(context) }
+    // A phone below what Lumen is built for is told so, and starts with everything off.
+    val slow = remember { DeviceClass.of(context) == DeviceClass.Slow }
     var tier by rememberSaveable { mutableStateOf(recommended.id) }
-    var search by rememberSaveable { mutableStateOf(true) }
-    var text by rememberSaveable { mutableStateOf(true) }
-    var faces by rememberSaveable { mutableStateOf(true) }
-    var subtitles by rememberSaveable { mutableStateOf(true) }
+    var search by rememberSaveable { mutableStateOf(!slow) }
+    var text by rememberSaveable { mutableStateOf(!slow) }
+    var faces by rememberSaveable { mutableStateOf(!slow) }
+    var subtitles by rememberSaveable { mutableStateOf(!slow) }
     var wifiOnly by rememberSaveable { mutableStateOf(prefs.modelWifiOnly) }
     val model = ModelCatalog.byId(tier)
     val total = (if (search) model.bytes else 0) + (if (text) OcrModel.bytes else 0) +
@@ -512,6 +523,12 @@ private fun ColumnScope.Smart(backdrop: Backdrop, onNext: (downloading: Boolean)
 
     Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
         Title(stringResource(R.string.onboarding_smart_title), stringResource(R.string.onboarding_smart_subtitle))
+        if (slow) {
+            Card(backdrop) {
+                Item(LumenIcons.Info, stringResource(R.string.device_slow_title), stringResource(R.string.onboarding_slow_detail))
+            }
+            Spacer(Modifier.height(12.dp))
+        }
         Card(backdrop) {
             Item(LumenIcons.Search, stringResource(R.string.onboarding_smart_search), stringResource(R.string.onboarding_smart_search_detail, megabytes(model.bytes(context)))) { Switch(search, { search = it }) }
             if (search) {
@@ -541,12 +558,18 @@ private fun ColumnScope.Smart(backdrop: Backdrop, onNext: (downloading: Boolean)
         )
     }
     Spacer(Modifier.height(12.dp))
+    // Without a download the tier is still remembered on a slow phone: Settings then starts from
+    // the lighter model, not the default.
+    fun skip() {
+        if (slow) prefs.searchModel = ModelCatalog.Fast.id
+        onNext(false)
+    }
     PrimaryButton(backdrop, if (total > 0) stringResource(R.string.onboarding_download_button, megabytes(total)) else stringResource(R.string.common_continue), enabled = true) {
-        if (total == 0L) onNext(false)
+        if (total == 0L) skip()
         else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) askNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
         else start()
     }
-    SecondaryButton(stringResource(R.string.common_not_now)) { onNext(false) }
+    SecondaryButton(stringResource(R.string.common_not_now)) { skip() }
 }
 
 @Composable

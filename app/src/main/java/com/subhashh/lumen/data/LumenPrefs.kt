@@ -306,6 +306,11 @@ class LumenPrefs(context: Context) {
         get() = prefs.getBoolean(KeySearchDetails, false)
         set(value) = prefs.edit { putBoolean(KeySearchDetails, value) }
 
+    /** Developer Options → Pretend This Phone Is Slow: [DeviceClass] reads Slow, to see what such a phone shows. */
+    var pretendSlowPhone: Boolean
+        get() = prefs.getBoolean(KeyPretendSlowPhone, false)
+        set(value) = prefs.edit { putBoolean(KeyPretendSlowPhone, value) }
+
     /** Before Lumen AI kept it: packs waiting to download. Only read once, to hand over. */
     val legacyModelQueue: List<String>
         get() = prefs.getString(KeyModelQueue, null)?.split(',')?.filter { it.isNotEmpty() } ?: emptyList()
@@ -402,6 +407,7 @@ class LumenPrefs(context: Context) {
         const val KeyIndexScheduleStart = "index_schedule_start"
         const val KeyIndexScheduleEnd = "index_schedule_end"
         const val KeySearchDetails = "search_details"
+        const val KeyPretendSlowPhone = "pretend_slow_phone"
         const val KeyPhotoReminders = "photo_reminders"
         const val KeySearchModel = "search_model"
         const val KeyFaceModel = "face_model"

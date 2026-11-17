@@ -533,6 +533,7 @@
     <string name="settings_kw_text_model">ocr words text in photos screenshots download remove update</string>
     <string name="settings_kw_text_read">ocr words text in photos screenshots reading progress</string>
     <string name="settings_kw_wifi_only">mobile data cellular download</string>
+    <string name="settings_kw_pretend_slow">hardware check slow phone warning test developer</string>
     <string name="settings_kw_search_details">debug search sections scores developer</string>
     <string name="settings_kw_hf_token">huggingface token download speed</string>
     <string name="settings_kw_media_management">delete favorite trash permission confirm</string>
@@ -713,6 +714,8 @@
     <!-- Settings: Developer Options -->
     <string name="settings_developer_search_footer">Splits results by how they matched (names, folders and dates; people; text in photos; Smart Search), each one row until See All, with Smart Search\'s rank and score on each photo.</string>
     <string name="settings_search_details">Search Details</string>
+    <string name="settings_pretend_slow">Pretend This Phone Is Slow</string>
+    <string name="settings_pretend_slow_subtitle">Shows what a phone below Lumen\'s bar sees in onboarding and Smart Features</string>
     <string name="settings_group_onboarding">Onboarding</string>
     <string name="settings_onboarding_footer">Shows first launch again, from the start. Nothing is reset.</string>
     <string name="settings_show_onboarding">Show Onboarding</string>
@@ -1180,6 +1183,11 @@
 
     <!-- Onboarding: Smart Features -->
     <string name="onboarding_smart_title">Smart Features</string>
+    <!-- Shown on phones with little memory or 32-bit Android, in onboarding and in Settings → Smart Features. -->
+    <string name="device_slow_title">This phone is below what Lumen is built for</string>
+    <string name="onboarding_slow_detail">Smart features are made for recent phones with 6 GB of memory or more. Here they would be slow and can warm the phone, so they start off. Turn on only what you want.</string>
+    <string name="smart_slow_detail">Smart features can be slow here and can warm the phone. The Fast search model is much lighter than Accurate.</string>
+    <string name="smart_slow_use_fast">Switch to Fast</string>
     <string name="onboarding_smart_subtitle">Find photos by what\'s in them, the words in them, and who\'s in them. The models download once, in the background.</string>
     <string name="onboarding_smart_search">Smart Search</string>
     <string name="onboarding_smart_search_detail">“cat on a sofa”, “sunset at the beach” · %1$s</string>
