@@ -34,4 +34,25 @@
     <string name="main_search_clear">Löschen</string>
     <string name="main_search_from_your_photos">Aus deinen Fotos</string>
     <string name="main_search_field_hint">Dateien, Ordner, Monate, Jahre…</string>
+    <string name="main_merge_proposal_message">Sie haben bereits jemanden namens %1$s. Wenn dies der Fall ist, führen Sie sie zusammen, um alle %2$s als eine Person anzuzeigen.</string>
+    <plurals name="main_merge_photo_count">
+        <item quantity="one">%1$,d Foto</item>
+        <item quantity="other">%1$,d Fotos</item>
+    </plurals>
+    <string name="main_merge">Zusammenführen</string>
+    <string name="main_keep_separate">Getrennt aufbewahren</string>
+    <plurals name="main_person_photo_count">
+        <item quantity="one">%1$,d Foto</item>
+        <item quantity="other">%1$,d Fotos</item>
+    </plurals>
+    <string name="main_deselect_all">Alle abwählen</string>
+    <string name="main_cancel_selection">Auswahl abbrechen</string>
+    <string name="main_delete_permanently">Dauerhaft löschen</string>
+    <string name="main_more">Mehr</string>
+    <string name="main_delete_forever">Für immer löschen</string>
+    <string name="main_selected">Ausgewählt</string>
+    <string name="main_new_album_ellipsis">Neues Album…</string>
+    <string name="main_album_name_hint">Albumname</string>
+    <string name="main_create">Erstellen</string>
+    <string name="main_utilities">Dienstprogramme</string>
 </resources>
