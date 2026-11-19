@@ -12,6 +12,7 @@
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-blue" alt="License: Apache 2.0"></a>
   <img src="https://img.shields.io/badge/Android-11%2B-3DDC84" alt="Android 11 or later">
+  <a href="https://discord.gg/peT62dhsNy"><img src="https://img.shields.io/badge/Discord-join-5865F2?logo=discord&logoColor=white" alt="Join the Lumen Discord"></a>
 </p>
 
 <p align="center">
@@ -84,6 +85,7 @@ the same features on Android, without Google and without the cloud.
 - [Faster on Snapdragon](#faster-on-snapdragon)
 - [Permissions](#permissions)
 - [Build Lumen from the source code](#build-lumen-from-the-source-code)
+- [Discord](#discord)
 - [Report a bug](#report-a-bug)
 - [License](#license)
 
@@ -273,6 +275,11 @@ and Lumen AI, so you can see how each release was made.
 The `tools` folder has scripts for the place names, the icons, and the speed checks. You do not
 need them to build the app. The scripts that make the model files are in a different repository.
 
+## Discord
+
+Join the [Lumen Discord](https://discord.gg/peT62dhsNy) to ask questions, share what Lumen found,
+vote for features, test new versions before they are released, and help with translations.
+
 ## Report a bug
 
 1. Open the [Issues page](https://github.com/subhashhhhhh/Lumen/issues).
@@ -283,6 +290,7 @@ need them to build the app. The scripts that make the model files are in a diffe
 6. Write the steps that cause the problem.
 
 You can also open the Issues page from Lumen. Go to Settings, then About, then Report a Bug.
+If you are not sure that it is a bug, ask in #help on the [Lumen Discord](https://discord.gg/peT62dhsNy).
 
 ## License
 
