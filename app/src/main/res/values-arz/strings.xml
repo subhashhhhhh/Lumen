@@ -28,10 +28,10 @@
     <string name="main_people">أشخاص</string>
     <string name="main_albums">ملفات الصور</string>
     <string name="main_add_name">أضف اسما</string>
-    <string name="main_search_looking_inside">جار البحث في الصور</string>
+    <string name="main_search_looking_inside">جار البحث في الصور…</string>
     <plurals name="main_search_results">
-        <item quantity="one">نتيجة</item>
-        <item quantity="other">نتيجة</item>
+        <item quantity="one">%1$,d نتيجة</item>
+        <item quantity="other">%1$,d نتيجة</item>
     </plurals>
     <string name="main_search_see_all">عرض الكل</string>
     <string name="main_search_order_best">الموافقة الأفضل</string>
@@ -41,8 +41,8 @@
     <string name="main_merge_proposal_message">يوجد شخص يحمل الاسم %1$s مسبقا. إذا كان نفس الشخص، ادمج لرؤية جميع حاملي الإسم %2$s كشخص واحد.</string>
     <string name="main_merge_with_name">أتريد الدمج مع %1$s؟</string>
     <plurals name="main_merge_photo_count">
-        <item quantity="one">صورة</item>
-        <item quantity="other">صورة</item>
+        <item quantity="one">%1$,d صورة</item>
+        <item quantity="other">%1$,d صورة</item>
     </plurals>
     <string name="main_merge">ادمج</string>
     <string name="main_keep_separate">ابقهم منفصلين</string>
@@ -59,8 +59,8 @@
     <string name="main_album_empty">فارغ</string>
     <string name="main_pinned">مثبت</string>
     <plurals name="main_hero_videos">
-        <item quantity="one">فيديو</item>
-        <item quantity="other">فيديو</item>
+        <item quantity="one">%1$,d فيديو</item>
+        <item quantity="other">%1$,d فيديو</item>
     </plurals>
     <string name="main_library">مكتبة</string>
     <string name="main_zoom_years">سنوات</string>
