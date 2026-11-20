@@ -1,0 +1,108 @@
+name: Bug report
+description: Something in Lumen doesn't work as it should.
+title: "[Bug] "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this. Lumen is built by one person, so a complete report is the fastest way to a fix.
+        Questions and setup help go to [Discord #help](https://discord.gg/peT62dhsNy) instead.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you saw, and what you expected to see instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open a photo
+        2. Tap ⋯ → Rename
+        3. Swipe back
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which part of Lumen?
+      options:
+        - Library, albums and folders
+        - Photo and video viewer
+        - Smart Search
+        - Faces and People
+        - Text in photos / Live Text
+        - Subtitles
+        - Cutout
+        - Photo or video editor
+        - Hidden and the vault
+        - Indexing, battery or heat
+        - Onboarding or permissions
+        - Settings
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Lumen version
+      description: Settings → About → Version.
+      placeholder: "0.5.0"
+    validations:
+      required: true
+  - type: input
+    id: phone
+    attributes:
+      label: Phone model and RAM
+      placeholder: "Motorola Edge 50, 8 GB"
+    validations:
+      required: true
+  - type: dropdown
+    id: chip
+    attributes:
+      label: Chip
+      description: Settings → About shows it if you're not sure.
+      options:
+        - Snapdragon
+        - MediaTek / Dimensity
+        - Google Tensor
+        - Samsung Exynos
+        - Other / don't know
+    validations:
+      required: true
+  - type: input
+    id: android
+    attributes:
+      label: Android version and ROM
+      placeholder: "Android 16, stock / GrapheneOS / LineageOS 23"
+    validations:
+      required: true
+  - type: dropdown
+    id: style
+    attributes:
+      label: App style
+      description: Settings → Appearance → Style.
+      options:
+        - Lumen (Liquid Glass on)
+        - Lumen (Liquid Glass off)
+        - Material 3 Expressive
+        - Not sure
+  - type: textarea
+    id: runs-on
+    attributes:
+      label: Smart features (if relevant)
+      description: For search, faces, text or Cutout problems, what does "Runs On" say for each in Settings → Smart Features? Fast or Accurate? Is indexing finished?
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Optional. If you can, run `adb logcat -d > lumen.log` right after the problem and attach the file.
+      render: shell
+  - type: textarea
+    id: media
+    attributes:
+      label: Screenshots or screen recording
+      description: Drag files here. They help a lot for anything visual.

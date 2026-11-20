@@ -1,0 +1,29 @@
+name: Close issues waiting for information
+
+on:
+  schedule:
+    - cron: "30 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  close:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v9
+        with:
+          only-labels: needs-info
+          days-before-stale: 14
+          days-before-close: 7
+          days-before-pr-stale: -1
+          days-before-pr-close: -1
+          stale-issue-label: stale
+          remove-stale-when-updated: true
+          stale-issue-message: >
+            This issue has been waiting for more information for 14 days. It will close in 7 days unless
+            someone replies. If you still see the problem, reply with the details asked for above and it stays open.
+          close-issue-message: >
+            Closing because the information needed to look into this never arrived. If it still happens on the
+            latest version, reply here or open a new issue with the bug form and it will be picked up again.
