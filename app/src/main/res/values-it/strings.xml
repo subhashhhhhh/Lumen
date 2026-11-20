@@ -111,4 +111,42 @@
     <string name="main_view_sort">Ordina</string>
     <string name="main_view_grid">Griglia</string>
     <string name="main_view_square">Quadrato</string>
+    <string name="main_view_aspect_ratio">Formato</string>
+    <string name="main_unlock_lumen">Sblocca Lumen</string>
+    <string name="main_pick_choose_photos">Scegli foto</string>
+    <string name="main_pick_choose_a_photo">Scegli una foto</string>
+    <string name="main_pick_choose_videos">Scegli video</string>
+    <string name="main_pick_choose_a_video">Scegli un video</string>
+    <string name="main_pick_choose_items">Scegli elementi</string>
+    <string name="main_pick_choose_an_item">Scegli un elemento</string>
+    <string name="main_favorites_import_bad_file">Questo file non combacia coi preferiti Fossify o Aves</string>
+    <string name="main_settings_exported">Impostazioni esportate</string>
+    <string name="main_backup_save_failed">Impossibile salvare il backup</string>
+    <string name="main_backup_bad_file">Questo non è un backup di Lumen</string>
+    <string name="main_settings_restored">Impostazioni ripristinate</string>
+    <string name="main_all_files_title">Per nascondere devi concedere l\'accesso a tutti i file</string>
+    <string name="main_all_files_message">L\'indice di Android esclude i media nascosti, e Lumen deve avere accesso diretto alla memoria per mostrarteli. Tutto rimarrà sul tuo telefono.</string>
+    <string name="main_open_settings">Apri impostazioni</string>
+    <string name="main_reset">Reset</string>
+    <string name="main_unhidden">Tolto dai nascosti</string>
+    <string name="main_unhide_failed_count">Impossibile togliere %1$d dai nascosti</string>
+    <string name="main_unhide_failed">Impossibile togliere dai nascosti</string>
+    <string name="main_unhide_dot_folder">“%1$s” è nascosta perché inizia con un punto; rinomina la cartella con un file manager per toglierla dai nascosti</string>
+    <string name="main_unhide_folder_title">Togliere “%1$s” dai nascosti?</string>
+    <plurals name="main_unhide_folders_title">
+        <item quantity="one">Togliere la cartella %1$d dai nascosti?</item>
+        <item quantity="many">Togliere le cartelle %1$d dai nascosti?</item>
+        <item quantity="other">Togliere le cartelle %1$d dai nascosti?</item>
+    </plurals>
+    <string name="main_hidden_encrypted_find">Nascosto e criptato. Lo trovi in Raccolte → Nascosti</string>
+    <string name="main_hidden_find">Nascosto. Lo trovi in Raccolte → Nascosti</string>
+    <string name="main_hidden_and_encrypted">Nascosto e criptato</string>
+    <string name="main_hid_n_of">Nascosti %1$d di %2$d</string>
+    <string name="main_hide_some_folders_failed">Non è stato possibile nascondere alcune cartelle</string>
+    <string name="main_hide_folder_title">Nascondere “%1$s”?</string>
+    <plurals name="main_hide_folders_title">
+        <item quantity="one">Nascondere %1$d cartella?</item>
+        <item quantity="many">Nascondere %1$d cartelle?</item>
+        <item quantity="other">Nascondere %1$d cartelle?</item>
+    </plurals>
 </resources>
