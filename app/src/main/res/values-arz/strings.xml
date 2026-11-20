@@ -3,4 +3,81 @@
   Lumen's English text. Translations live in values-<language>/strings.xml and are edited on
   Weblate; keep placeholders (%1$s, %2$d) and plural forms as they are.
 --><resources>
-    </resources>
+    <string name="common_delete">حذف</string>
+    <string name="common_share">مشاركة</string>
+    <string name="common_copy">نسخ</string>
+    <string name="common_cancel">إلغاء</string>
+    <string name="common_copied">تم النسخ</string>
+    <string name="common_save">احفظ</string>
+    <string name="common_back">العودة</string>
+    <string name="common_open">افتح</string>
+    <string name="common_search">بحث</string>
+    <string name="common_select_all">تحديد الكل</string>
+    <string name="common_settings">الإعدادات</string>
+    <string name="common_details">عرض التفاصيل</string>
+    <string name="common_hide">اخفاء</string>
+    <string name="common_unhide">إلغاء الإخفاء</string>
+    <string name="common_favorite">مفضلة</string>
+    <string name="common_unfavorite">إزالة من المفضلة</string>
+    <string name="common_next">التالي</string>
+    <string name="common_not_now">لاحقا</string>
+    <string name="common_download">تنزيل</string>
+    <string name="common_add">أضف</string>
+    <string name="common_on">تشغيل</string>
+    <string name="common_off">إيقاف</string>
+    <string name="main_people">أشخاص</string>
+    <string name="main_albums">ملفات الصور</string>
+    <string name="main_add_name">أضف اسما</string>
+    <string name="main_search_looking_inside">جار البحث في الصور</string>
+    <plurals name="main_search_results">
+        <item quantity="one">نتيجة</item>
+        <item quantity="other">نتيجة</item>
+    </plurals>
+    <string name="main_search_see_all">عرض الكل</string>
+    <string name="main_search_order_best">الموافقة الأفضل</string>
+    <string name="main_search_from_your_photos">من صورك</string>
+    <string name="main_search_try">محاولة</string>
+    <string name="main_search_field_hint">ملفات، مجلدات، أشهر، سنوات…</string>
+    <string name="main_merge_proposal_message">يوجد شخص يحمل الاسم %1$s مسبقا. إذا كان نفس الشخص، ادمج لرؤية جميع حاملي الإسم %2$s كشخص واحد.</string>
+    <string name="main_merge_with_name">أتريد الدمج مع %1$s؟</string>
+    <plurals name="main_merge_photo_count">
+        <item quantity="one">صورة</item>
+        <item quantity="other">صورة</item>
+    </plurals>
+    <string name="main_merge">ادمج</string>
+    <string name="main_keep_separate">ابقهم منفصلين</string>
+    <string name="main_deselect_all">إلغاء تحديد الكل</string>
+    <string name="main_cancel_selection">إلغاء التحديد</string>
+    <string name="main_delete_permanently">أزل نهائيا</string>
+    <string name="main_more">المزيد</string>
+    <string name="main_delete_forever">إزالة نهائيا</string>
+    <string name="main_selected">تحديد</string>
+    <string name="main_new_album_ellipsis">ألبوم جديد…</string>
+    <string name="main_album_name_hint">اسم الألبوم</string>
+    <string name="main_create">انشاء</string>
+    <string name="main_hidden_locked">مغلق</string>
+    <string name="main_album_empty">فارغ</string>
+    <string name="main_pinned">مثبت</string>
+    <plurals name="main_hero_videos">
+        <item quantity="one">فيديو</item>
+        <item quantity="other">فيديو</item>
+    </plurals>
+    <string name="main_library">مكتبة</string>
+    <string name="main_zoom_years">سنوات</string>
+    <string name="main_zoom_months">أشهر</string>
+    <string name="main_zoom_all">الكل</string>
+    <string name="main_section_none">لا شيء</string>
+    <string name="main_section_months">أشهر</string>
+    <string name="main_section_days">أيام</string>
+    <string name="main_today">اليوم</string>
+    <string name="main_yesterday">البارحة</string>
+    <string name="main_no_photos_or_videos">لا صور أو فيديوهات</string>
+    <string name="main_badge_raw">RAW</string>
+    <string name="main_badge_gif">GIF</string>
+    <string name="main_view_sort">تصنيف</string>
+    <string name="main_view_square">مربع</string>
+    <string name="main_view_aspect_ratio">نسبة العرض إلى الارتفاع</string>
+    <string name="main_unlock_lumen">فتح Lumen</string>
+    <string name="main_pick_choose_photos">اختر الصور</string>
+    <string name="main_pick_choose_a_photo">اخار صورة</string>
+</resources>
