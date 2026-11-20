@@ -3,4 +3,54 @@
   Lumen's English text. Translations live in values-<language>/strings.xml and are edited on
   Weblate; keep placeholders (%1$s, %2$d) and plural forms as they are.
 --><resources>
-    </resources>
+    <string name="common_cancel">Annulla</string>
+    <string name="common_done">Fatto</string>
+    <string name="common_delete">Cancella</string>
+    <string name="common_share">Condividi</string>
+    <string name="common_copy">Copia</string>
+    <string name="common_copied">Copiato</string>
+    <string name="common_rename">Rinomina</string>
+    <string name="common_remove">Rimuovi</string>
+    <string name="common_save">Salva</string>
+    <string name="common_back">Indietro</string>
+    <string name="common_open">Apri</string>
+    <string name="common_search">Cerca</string>
+    <string name="common_select_all">Seleziona tutto</string>
+    <string name="common_settings">Impostazioni</string>
+    <string name="common_details">Dettagli</string>
+    <string name="common_hide">Nascondi</string>
+    <string name="common_unhide">Mostra</string>
+    <string name="common_restore">Ripristina</string>
+    <string name="common_favorite">Metti nei preferiti</string>
+    <string name="common_unfavorite">Togli dai preferiti</string>
+    <string name="common_continue">Continua</string>
+    <string name="common_next">Prossimo</string>
+    <string name="common_not_now">Non ora</string>
+    <string name="common_download">Scarica</string>
+    <string name="common_install">Installa</string>
+    <string name="common_update">Aggiorna</string>
+    <string name="common_retry">Riprova</string>
+    <string name="common_allow">Permetti</string>
+    <string name="common_add">Aggiungi</string>
+    <string name="common_on">On</string>
+    <string name="common_off">Off</string>
+    <string name="main_people">Persone</string>
+    <string name="main_albums">Album</string>
+    <string name="main_add_name">Aggiungi nome</string>
+    <string name="main_search_looking_inside">Cerco nelle foto…</string>
+    <plurals name="main_search_results">
+        <item quantity="one">%1$,d risultato</item>
+        <item quantity="many">%1$,d risultati</item>
+        <item quantity="other">%1$,d risultati</item>
+    </plurals>
+    <string name="main_search_show_less">Mostra meno</string>
+    <string name="main_search_see_all">Mostra tutto</string>
+    <string name="main_search_order_best">Corrispondenza migliore</string>
+    <string name="main_search_no_results_hint">Prova descrivendo il soggetto, come \"gatto su divano\" (se le Funzioni Smart sono attive), o con il nome del file / cartella, o con mese o anno.</string>
+    <string name="main_search_recent">Recenti</string>
+    <string name="main_search_clear">Cancella testo</string>
+    <string name="main_search_from_your_photos">Dalle tue foto</string>
+    <string name="main_search_try">Prova</string>
+    <string name="main_search_field_hint">File, cartella, mese, anno…</string>
+    <string name="main_merge_with_name">Unire con %1$s?</string>
+</resources>
