@@ -53,4 +53,62 @@
     <string name="main_search_try">Prova</string>
     <string name="main_search_field_hint">File, cartella, mese, anno…</string>
     <string name="main_merge_with_name">Unire con %1$s?</string>
+    <plurals name="main_merge_photo_count">
+        <item quantity="one">%1$,d foto</item>
+        <item quantity="many">%1$,d foto</item>
+        <item quantity="other">%1$,d foto</item>
+    </plurals>
+    <string name="main_merge">Unisci</string>
+    <string name="main_keep_separate">Tieni separati</string>
+    <plurals name="main_person_photo_count">
+        <item quantity="one">%1$,d foto</item>
+        <item quantity="many">%1$,d foto</item>
+        <item quantity="other">%1$,d foto</item>
+    </plurals>
+    <string name="main_deselect_all">Deseleziona tutto</string>
+    <string name="main_cancel_selection">Annulla selezione</string>
+    <string name="main_delete_permanently">Cancella definitivamente</string>
+    <string name="main_more">Di più</string>
+    <string name="main_delete_forever">Cancella per sempre</string>
+    <string name="main_selected">Selezionati</string>
+    <string name="main_new_album_ellipsis">Nuovo album…</string>
+    <string name="main_album_name_hint">Nome dell\'album</string>
+    <string name="main_create">Crea</string>
+    <string name="main_utilities">Utilità</string>
+    <string name="main_album_empty">Vuoto</string>
+    <string name="main_pinned">Salvati</string>
+    <plurals name="main_hero_photos">
+        <item quantity="one">%1$,d foto</item>
+        <item quantity="many">%1$,d foto</item>
+        <item quantity="other">%1$,d foto</item>
+    </plurals>
+    <plurals name="main_hero_videos">
+        <item quantity="one">%1$,d video</item>
+        <item quantity="many">%1$,d video</item>
+        <item quantity="other">%1$,d video</item>
+    </plurals>
+    <string name="main_list_separator">", "</string>
+    <string name="main_library">Libreria</string>
+    <string name="main_collections">Raccolte</string>
+    <string name="main_tabs">Schede</string>
+    <string name="main_zoom_years">Anni</string>
+    <string name="main_zoom_months">Mesi</string>
+    <string name="main_zoom_all">Tutto</string>
+    <plurals name="main_item_count">
+        <item quantity="one">%1$d elemento</item>
+        <item quantity="many">%1$d elementi</item>
+        <item quantity="other">%1$d elementi</item>
+    </plurals>
+    <string name="main_section_none">Niente</string>
+    <string name="main_section_months">Mesi</string>
+    <string name="main_section_days">Giorni</string>
+    <string name="main_today">Oggi</string>
+    <string name="main_yesterday">Ieri</string>
+    <string name="main_no_photos_or_videos">No foto o video</string>
+    <string name="main_badge_raw">RAW</string>
+    <string name="main_badge_gif">GIF</string>
+    <string name="main_view_filter">Filtro</string>
+    <string name="main_view_sort">Ordina</string>
+    <string name="main_view_grid">Griglia</string>
+    <string name="main_view_square">Quadrato</string>
 </resources>
