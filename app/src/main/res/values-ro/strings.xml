@@ -204,4 +204,9 @@
     <string name="main_empty_trash">Gol</string>
     <string name="main_delete_forever_title_case">Șterge definitiv</string>
     <string name="main_pick_add_count">Adaugă %1$d</string>
+    <string name="main_empty_trash_message_one">Acest element va fi șters definitiv.</string>
+    <string name="main_sort_by">Sortează după %1$s</string>
+    <string name="main_people_options">Opțiuni pentru persoane</string>
+    <string name="main_people_circles">Cercuri</string>
+    <string name="main_people_squares">Pătrate</string>
 </resources>
