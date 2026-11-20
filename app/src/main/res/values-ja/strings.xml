@@ -3,4 +3,71 @@
   Lumen's English text. Translations live in values-<language>/strings.xml and are edited on
   Weblate; keep placeholders (%1$s, %2$d) and plural forms as they are.
 --><resources>
-    </resources>
+    <string name="common_cancel">キャンセル</string>
+    <string name="common_done">完了</string>
+    <string name="common_delete">削除</string>
+    <string name="common_share">共有</string>
+    <string name="common_copy">コピー</string>
+    <string name="common_copied">コピーしました</string>
+    <string name="common_rename">名前を変更</string>
+    <string name="common_remove">削除</string>
+    <string name="common_save">保存</string>
+    <string name="common_back">戻る</string>
+    <string name="common_open">開く</string>
+    <string name="common_search">検索</string>
+    <string name="common_select_all">すべて選択</string>
+    <string name="common_settings">設定</string>
+    <string name="common_details">詳細</string>
+    <string name="common_hide">非表示</string>
+    <string name="common_unhide">再表示</string>
+    <string name="common_restore">復元</string>
+    <string name="common_favorite">お気に入り</string>
+    <string name="common_unfavorite">お気に入り解除</string>
+    <string name="common_continue">続ける</string>
+    <string name="common_next">次へ</string>
+    <string name="common_not_now">今じゃない</string>
+    <string name="common_download">ダウンロード</string>
+    <string name="common_install">インストール</string>
+    <string name="common_update">アップデート</string>
+    <string name="common_retry">再試行</string>
+    <string name="common_allow">許可</string>
+    <string name="common_add">追加</string>
+    <string name="common_on">オン</string>
+    <string name="common_off">オフ</string>
+    <string name="main_people">人々</string>
+    <string name="main_albums">アルバム</string>
+    <string name="main_add_name">名前を追加</string>
+    <string name="main_search_looking_inside">検索中…</string>
+    <plurals name="main_search_results">
+        <item quantity="other">%1$,d 件の検索結果</item>
+    </plurals>
+    <string name="main_search_show_less">表示を省略</string>
+    <string name="main_search_see_all">すべて見る</string>
+    <string name="main_search_order_best">ベストマッチ</string>
+    <string name="main_search_no_results_hint">写真に写っているものを説明してみてください。例えば、「ソファの上の猫」（設定のスマート機能を使用）などです。あるいは、ファイル名、フォルダ名、月、年などを指定することもできます。</string>
+    <string name="main_search_recent">最近</string>
+    <string name="main_search_clear">クリア</string>
+    <string name="main_search_from_your_photos">あなたの写真から</string>
+    <string name="main_search_try">試す</string>
+    <string name="main_search_field_hint">ファイル、フォルダー、月、年…</string>
+    <string name="main_merge_with_name">%1$s と統合しますか？</string>
+    <string name="main_merge_proposal_message">既に「%1$s」という名前のユーザーが存在します。もしこれがそのユーザーであれば、すべての「%2$s」を1人のユーザーとして統合してください。</string>
+    <plurals name="main_merge_photo_count">
+        <item quantity="other">%1$,d 枚の写真</item>
+    </plurals>
+    <string name="main_merge">統合</string>
+    <string name="main_keep_separate">統合しない</string>
+    <plurals name="main_person_photo_count">
+        <item quantity="other">%1$,d 枚の写真</item>
+    </plurals>
+    <string name="main_deselect_all">すべて選択解除</string>
+    <string name="main_cancel_selection">選択をキャンセル</string>
+    <string name="main_delete_permanently">完全に削除</string>
+    <string name="main_more">その他</string>
+    <string name="main_delete_forever">永久に削除</string>
+    <string name="main_selected">選択済み</string>
+    <string name="main_new_album_ellipsis">新しいアルバムを作成…</string>
+    <string name="main_album_name_hint">アルバム名</string>
+    <string name="main_create">作成</string>
+    <string name="main_utilities">ユーティリティ</string>
+</resources>
