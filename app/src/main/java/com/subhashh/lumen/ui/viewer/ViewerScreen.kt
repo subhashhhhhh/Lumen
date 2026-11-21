@@ -1309,21 +1309,34 @@ private fun SubtitleOverlay(item: MediaItem, player: Player, modifier: Modifier 
  * Android can take a hardware decoder back while a video plays ("Released by resource manager"),
  * for example when the background indexer is decoding videos too: the player stops with an
  * error and the video looks paused. Prepare again, which picks up at the same position.
- * A few tries per video, so a file that really can't play doesn't loop.
+ *
+ * Spaced out ([RetryDelaysMs]): whatever took the decoder is often still holding it a moment
+ * later, and three tries in a row used to be spent within a second and give up. Playing again
+ * resets the count; a file that really can't play never does, so it doesn't loop.
  */
 private fun recoverFromDecoderLoss(player: ExoPlayer) = object : Player.Listener {
     private var tries = 0
+    private val handler = Handler(Looper.getMainLooper())
+    private val retry = Runnable { player.prepare() }
 
     override fun onMediaItemTransition(mediaItem: PlayerMediaItem?, reason: Int) {
         tries = 0
+        handler.removeCallbacks(retry)
+    }
+
+    override fun onIsPlayingChanged(isPlaying: Boolean) {
+        if (isPlaying) tries = 0
     }
 
     override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
-        if (tries++ >= 3) return
-        android.util.Log.w("LumenVideo", "Playback error, preparing again", error)
-        player.prepare()
+        val delay = RetryDelaysMs.getOrNull(tries++) ?: return
+        android.util.Log.w("LumenVideo", "Playback error, preparing again in $delay ms", error)
+        handler.removeCallbacks(retry)
+        handler.postDelayed(retry, delay)
     }
 }
+
+private val RetryDelaysMs = longArrayOf(0, 300, 1_000, 2_000)
 
 private val Speeds = listOf(1f, 1.25f, 1.5f, 2f, 0.5f)
 
