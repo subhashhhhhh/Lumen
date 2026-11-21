@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Lumen's English text. Translations live in values-<language>/strings.xml and are edited on
+  Weblate; keep placeholders (%1$s, %2$d) and plural forms as they are.
+--><resources>
+    <string name="common_cancel">Annulla</string>
+    <string name="common_done">Fatto</string>
+    <string name="common_delete">Cancella</string>
+    <string name="common_share">Condividi</string>
+    <string name="common_copy">Copia</string>
+    <string name="common_copied">Copiato</string>
+    <string name="common_rename">Rinomina</string>
+    <string name="common_remove">Rimuovi</string>
+    <string name="common_save">Salva</string>
+    <string name="common_back">Indietro</string>
+    <string name="common_open">Apri</string>
+    <string name="common_search">Cerca</string>
+    <string name="common_select_all">Seleziona tutto</string>
+    <string name="common_settings">Impostazioni</string>
+    <string name="common_details">Dettagli</string>
+    <string name="common_hide">Nascondi</string>
+    <string name="common_unhide">Mostra</string>
+    <string name="common_restore">Ripristina</string>
+    <string name="common_favorite">Metti nei preferiti</string>
+    <string name="common_unfavorite">Togli dai preferiti</string>
+    <string name="common_continue">Continua</string>
+    <string name="common_next">Prossimo</string>
+    <string name="common_not_now">Non ora</string>
+    <string name="common_download">Scarica</string>
+    <string name="common_install">Installa</string>
+    <string name="common_update">Aggiorna</string>
+    <string name="common_retry">Riprova</string>
+    <string name="common_allow">Permetti</string>
+    <string name="common_add">Aggiungi</string>
+    <string name="common_on">On</string>
+    <string name="common_off">Off</string>
+    <string name="main_people">Persone</string>
+    <string name="main_albums">Album</string>
+    <string name="main_add_name">Aggiungi nome</string>
+    <string name="main_search_looking_inside">Cerco nelle foto…</string>
+    <plurals name="main_search_results">
+        <item quantity="one">%1$,d risultato</item>
+        <item quantity="many">%1$,d risultati</item>
+        <item quantity="other">%1$,d risultati</item>
+    </plurals>
+    <string name="main_search_show_less">Mostra meno</string>
+    <string name="main_search_see_all">Mostra tutto</string>
+    <string name="main_search_order_best">Corrispondenza migliore</string>
+    <string name="main_search_no_results_hint">Prova descrivendo il soggetto, come \"gatto su divano\" (se le Funzioni Smart sono attive), o con il nome del file / cartella, o con mese o anno.</string>
+    <string name="main_search_recent">Recenti</string>
+    <string name="main_search_clear">Cancella testo</string>
+    <string name="main_search_from_your_photos">Dalle tue foto</string>
+    <string name="main_search_try">Prova</string>
+    <string name="main_search_field_hint">File, cartella, mese, anno…</string>
+    <string name="main_merge_with_name">Unire con %1$s?</string>
+    <plurals name="main_merge_photo_count">
+        <item quantity="one">%1$,d foto</item>
+        <item quantity="many">%1$,d foto</item>
+        <item quantity="other">%1$,d foto</item>
+    </plurals>
+    <string name="main_merge">Unisci</string>
+    <string name="main_keep_separate">Tieni separati</string>
+    <plurals name="main_person_photo_count">
+        <item quantity="one">%1$,d foto</item>
+        <item quantity="many">%1$,d foto</item>
+        <item quantity="other">%1$,d foto</item>
+    </plurals>
+    <string name="main_deselect_all">Deseleziona tutto</string>
+    <string name="main_cancel_selection">Annulla selezione</string>
+    <string name="main_delete_permanently">Cancella definitivamente</string>
+    <string name="main_more">Di più</string>
+    <string name="main_delete_forever">Cancella per sempre</string>
+    <string name="main_selected">Selezionati</string>
+    <string name="main_new_album_ellipsis">Nuovo album…</string>
+    <string name="main_album_name_hint">Nome dell\'album</string>
+    <string name="main_create">Crea</string>
+    <string name="main_utilities">Utilità</string>
+    <string name="main_album_empty">Vuoto</string>
+    <string name="main_pinned">Salvati</string>
+    <plurals name="main_hero_photos">
+        <item quantity="one">%1$,d foto</item>
+        <item quantity="many">%1$,d foto</item>
+        <item quantity="other">%1$,d foto</item>
+    </plurals>
+    <plurals name="main_hero_videos">
+        <item quantity="one">%1$,d video</item>
+        <item quantity="many">%1$,d video</item>
+        <item quantity="other">%1$,d video</item>
+    </plurals>
+    <string name="main_list_separator">", "</string>
+    <string name="main_library">Libreria</string>
+    <string name="main_collections">Raccolte</string>
+    <string name="main_tabs">Schede</string>
+    <string name="main_zoom_years">Anni</string>
+    <string name="main_zoom_months">Mesi</string>
+    <string name="main_zoom_all">Tutto</string>
+    <plurals name="main_item_count">
+        <item quantity="one">%1$d elemento</item>
+        <item quantity="many">%1$d elementi</item>
+        <item quantity="other">%1$d elementi</item>
+    </plurals>
+    <string name="main_section_none">Niente</string>
+    <string name="main_section_months">Mesi</string>
+    <string name="main_section_days">Giorni</string>
+    <string name="main_today">Oggi</string>
+    <string name="main_yesterday">Ieri</string>
+    <string name="main_no_photos_or_videos">No foto o video</string>
+    <string name="main_badge_raw">RAW</string>
+    <string name="main_badge_gif">GIF</string>
+    <string name="main_view_filter">Filtro</string>
+    <string name="main_view_sort">Ordina</string>
+    <string name="main_view_grid">Griglia</string>
+    <string name="main_view_square">Quadrato</string>
+    <string name="main_view_aspect_ratio">Formato</string>
+    <string name="main_unlock_lumen">Sblocca Lumen</string>
+    <string name="main_pick_choose_photos">Scegli foto</string>
+    <string name="main_pick_choose_a_photo">Scegli una foto</string>
+    <string name="main_pick_choose_videos">Scegli video</string>
+    <string name="main_pick_choose_a_video">Scegli un video</string>
+    <string name="main_pick_choose_items">Scegli elementi</string>
+    <string name="main_pick_choose_an_item">Scegli un elemento</string>
+    <string name="main_favorites_import_bad_file">Questo file non combacia coi preferiti Fossify o Aves</string>
+    <string name="main_settings_exported">Impostazioni esportate</string>
+    <string name="main_backup_save_failed">Impossibile salvare il backup</string>
+    <string name="main_backup_bad_file">Questo non è un backup di Lumen</string>
+    <string name="main_settings_restored">Impostazioni ripristinate</string>
+    <string name="main_all_files_title">Per nascondere devi concedere l\'accesso a tutti i file</string>
+    <string name="main_all_files_message">L\'indice di Android esclude i media nascosti, e Lumen deve avere accesso diretto alla memoria per mostrarteli. Tutto rimarrà sul tuo telefono.</string>
+    <string name="main_open_settings">Apri impostazioni</string>
+    <string name="main_reset">Reset</string>
+    <string name="main_unhidden">Tolto dai nascosti</string>
+    <string name="main_unhide_failed_count">Impossibile togliere %1$d dai nascosti</string>
+    <string name="main_unhide_failed">Impossibile togliere dai nascosti</string>
+    <string name="main_unhide_dot_folder">“%1$s” è nascosta perché inizia con un punto; rinomina la cartella con un file manager per toglierla dai nascosti</string>
+    <string name="main_unhide_folder_title">Togliere “%1$s” dai nascosti?</string>
+    <plurals name="main_unhide_folders_title">
+        <item quantity="one">Togliere la cartella %1$d dai nascosti?</item>
+        <item quantity="many">Togliere le cartelle %1$d dai nascosti?</item>
+        <item quantity="other">Togliere le cartelle %1$d dai nascosti?</item>
+    </plurals>
+    <string name="main_hidden_encrypted_find">Nascosto e criptato. Lo trovi in Raccolte → Nascosti</string>
+    <string name="main_hidden_find">Nascosto. Lo trovi in Raccolte → Nascosti</string>
+    <string name="main_hidden_and_encrypted">Nascosto e criptato</string>
+    <string name="main_hid_n_of">Nascosti %1$d di %2$d</string>
+    <string name="main_hide_some_folders_failed">Non è stato possibile nascondere alcune cartelle</string>
+    <string name="main_hide_folder_title">Nascondere “%1$s”?</string>
+    <plurals name="main_hide_folders_title">
+        <item quantity="one">Nascondere %1$d cartella?</item>
+        <item quantity="many">Nascondere %1$d cartelle?</item>
+        <item quantity="other">Nascondere %1$d cartelle?</item>
+    </plurals>
+</resources>

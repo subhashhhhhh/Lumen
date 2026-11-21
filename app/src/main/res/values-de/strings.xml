@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Lumen's English text. Translations live in values-<language>/strings.xml and are edited on
+  Weblate; keep placeholders (%1$s, %2$d) and plural forms as they are.
+--><resources>
+    <string name="common_cancel">Abbrechen</string>
+    <string name="common_done">Fertig</string>
+    <string name="common_delete">Löschen</string>
+    <string name="common_share">Teilen</string>
+    <string name="common_copy">Kopieren</string>
+    <string name="common_copied">Kopiert</string>
+    <string name="common_rename">Umbenennen</string>
+    <string name="common_remove">Entfernen</string>
+    <string name="common_save">Speichern</string>
+    <string name="common_back">Zurück</string>
+    <string name="common_open">Öffnen</string>
+    <string name="common_search">Suche</string>
+    <string name="common_select_all">Alle auswählen</string>
+    <string name="common_settings">Einstellungen</string>
+    <string name="common_details">Details</string>
+    <string name="common_hide">Verstecken</string>
+    <string name="common_restore">Wiederherstellen</string>
+    <string name="common_favorite">Favoriten</string>
+    <string name="main_search_looking_inside">Blick ins Innere der Fotos…</string>
+    <plurals name="main_search_results">
+        <item quantity="one">%1$,d Ergebnis</item>
+        <item quantity="other">%1$,d Ergebnisse</item>
+    </plurals>
+    <string name="main_search_show_less">Weniger anzeigen</string>
+    <string name="main_search_see_all">Alle anzeigen</string>
+    <string name="main_search_order_best">Beste Übereinstimmung</string>
+    <string name="main_search_no_results_hint">Versuchen Sie, zu beschreiben, was auf dem Foto zu sehen ist, zum Beispiel „Katze auf einem Sofa“ (mit den „Smart Features“ in den Einstellungen), oder geben Sie einen Dateinamen, einen Ordner, einen Monat oder ein Jahr an.</string>
+    <string name="main_search_recent">Neueste</string>
+    <string name="main_search_clear">Löschen</string>
+    <string name="main_search_from_your_photos">Aus deinen Fotos</string>
+    <string name="main_search_field_hint">Dateien, Ordner, Monate, Jahre…</string>
+    <string name="main_merge_proposal_message">Sie haben bereits jemanden namens %1$s. Wenn dies der Fall ist, führen Sie sie zusammen, um alle %2$s als eine Person anzuzeigen.</string>
+    <plurals name="main_merge_photo_count">
+        <item quantity="one">%1$,d Foto</item>
+        <item quantity="other">%1$,d Fotos</item>
+    </plurals>
+    <string name="main_merge">Zusammenführen</string>
+    <string name="main_keep_separate">Getrennt aufbewahren</string>
+    <plurals name="main_person_photo_count">
+        <item quantity="one">%1$,d Foto</item>
+        <item quantity="other">%1$,d Fotos</item>
+    </plurals>
+    <string name="main_deselect_all">Alle abwählen</string>
+    <string name="main_cancel_selection">Auswahl abbrechen</string>
+    <string name="main_delete_permanently">Dauerhaft löschen</string>
+    <string name="main_more">Mehr</string>
+    <string name="main_delete_forever">Für immer löschen</string>
+    <string name="main_selected">Ausgewählt</string>
+    <string name="main_new_album_ellipsis">Neues Album…</string>
+    <string name="main_album_name_hint">Albumname</string>
+    <string name="main_create">Erstellen</string>
+    <string name="main_utilities">Dienstprogramme</string>
+    <string name="main_add_name">Namen hinzufügen</string>
+    <string name="main_albums">Alben</string>
+    <string name="main_merge_with_name">Mit %1$s zusammenführen?</string>
+    <string name="main_hidden_set_up">Einrichten</string>
+    <string name="main_album_empty">Empty</string>
+    <string name="main_pinned">Pinned</string>
+    <plurals name="main_hero_photos">
+        <item quantity="one">%1$,d Photo</item>
+        <item quantity="other">%1$,d Photos</item>
+    </plurals>
+    <plurals name="main_hero_videos">
+        <item quantity="one">%1$,d Video</item>
+        <item quantity="other">%1$,d Videos</item>
+    </plurals>
+    <string name="main_list_separator">", "</string>
+    <string name="main_library">Library</string>
+    <string name="main_collections">Collections</string>
+    <string name="main_tabs">Tabs</string>
+    <string name="main_zoom_years">Years</string>
+    <string name="main_zoom_months">Months</string>
+    <string name="main_zoom_all">All</string>
+    <string name="main_pick_choose_videos">Choose Videos</string>
+    <string name="main_pick_choose_a_video">Choose a Video</string>
+</resources>

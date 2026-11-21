@@ -37,8 +37,8 @@
     <string name="common_hide">Ocultar</string>
     <string name="common_unhide">Mostrar</string>
     <plurals name="main_search_results">
-        <item quantity="one">%1$d Resultado</item>
-        <item quantity="many">%1$d Resultados</item>
+        <item quantity="one">%1$,d Resultado</item>
+        <item quantity="many">%1$,d Resultados</item>
         <item quantity="other">%1$,d Resultados</item>
     </plurals>
     <string name="main_search_looking_inside">Examinando las fotos…</string>
@@ -50,7 +50,7 @@
     <string name="main_search_from_your_photos">Desde tus fotos</string>
     <string name="main_search_try">Intentar</string>
     <string name="main_search_field_hint">Archivos, carpetas, meses, años…</string>
-    <string name="main_merge_with_name">Combinar con %1$s</string>
+    <string name="main_merge_with_name">Combinar con %1$s?</string>
     <string name="main_merge_proposal_message">Ya tienes a alguien llamado %1$s. Si se trata de esa persona, combina los perfiles para que todos los elementos de %2$s aparezcan como una sola persona.</string>
     <plurals name="main_merge_photo_count">
         <item quantity="one">%1$,d foto</item>
@@ -123,7 +123,7 @@
     <string name="main_pick_choose_an_item">Seleccionar un Elemento</string>
     <string name="main_favorites_import_bad_file">Ese no es un archivo de favoritos de Fossify ni de Aves</string>
     <plurals name="main_favorites_import_none">
-        <item quantity="one">Ninguno de sus %1$d favoritos está en este teléfono.</item>
+        <item quantity="one">Ninguno de sus %1$d favoritos está en este teléfono</item>
         <item quantity="many">Ninguno de sus %1$d favoritos está en este teléfono</item>
         <item quantity="other">Ninguno de sus %1$d favoritos está en este teléfono</item>
     </plurals>
