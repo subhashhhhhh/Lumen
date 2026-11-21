@@ -5,6 +5,15 @@ import coil3.request.ImageRequest
 import com.subhashh.lumen.data.MediaItem
 import coil3.memory.MemoryCache
 
+/**
+ * What to load for [item]'s screen-size decode ([ImageKeys.screen]) shown [width]×[height]: the
+ * photo itself, or a video's first frame. Never the video through Coil's own frame decoder: that
+ * takes a hardware decoder, and with the player starting its own Android took the player's away
+ * ([GridThumbnail.firstFrame] decodes in software).
+ */
+fun screenImage(item: MediaItem, width: Int, height: Int): Any =
+    if (item.isVideo) com.subhashh.lumen.data.GridThumbnail(item, minOf(width, height).coerceAtLeast(1), persist = false) else item.uri
+
 /** Identifies one version of a file: a rotate or edit changes [MediaItem.modified], and with it every key. */
 val MediaItem.version: String get() = "$id@$modified"
 

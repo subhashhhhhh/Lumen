@@ -40,6 +40,7 @@ import com.subhashh.lumen.ui.images.version
 import coil3.SingletonImageLoader
 import com.subhashh.lumen.ui.images.ImageKeys
 import com.subhashh.lumen.ui.images.bestPlaceholderKey
+import com.subhashh.lumen.ui.images.screenImage
 import kotlin.math.roundToInt
 
 /**
@@ -256,7 +257,7 @@ fun PhotoTransitionOverlay(transition: PhotoTransition) {
             model = remember(item.version) {
                 val size = transition.targetSize()
                 ImageRequest.Builder(context)
-                    .data(item.uri)
+                    .data(screenImage(item, size.width, size.height))
                     // Decode once at screen size, starting the moment the photo is tapped; the
                     // viewer and the close flight reuse it under the same key. A fixed size
                     // matters: otherwise Coil sizes it from the first (cell-sized) frame.

@@ -37,6 +37,7 @@ import coil3.SingletonImageLoader
 import coil3.memory.MemoryCache
 import coil3.request.ImageRequest
 import com.subhashh.lumen.ui.images.ImageKeys
+import com.subhashh.lumen.ui.images.screenImage
 import kotlin.math.roundToInt
 import android.os.Handler
 import android.os.Looper
@@ -474,10 +475,12 @@ fun ViewerScreen(
                 val key = ImageKeys.screen(item)
                 if (loader.memoryCache?.get(MemoryCache.Key(key)) != null) continue
                 val target = fullScreenRect(item, width, height)
+                val w = target.width.roundToInt().coerceAtLeast(1)
+                val h = target.height.roundToInt().coerceAtLeast(1)
                 loader.enqueue(
                     ImageRequest.Builder(context)
-                        .data(item.uri)
-                        .size(target.width.roundToInt().coerceAtLeast(1), target.height.roundToInt().coerceAtLeast(1))
+                        .data(screenImage(item, w, h))
+                        .size(w, h)
                         .memoryCacheKey(key)
                         .build(),
                 )
