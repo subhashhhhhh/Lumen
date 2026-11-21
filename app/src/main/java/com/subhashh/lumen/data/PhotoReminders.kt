@@ -16,7 +16,7 @@ import androidx.compose.runtime.setValue
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.edit
-import com.subhashh.lumen.MainActivity
+import com.subhashh.lumen.GalleryActivity
 import com.subhashh.lumen.R
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.json.JSONArray
@@ -46,7 +46,7 @@ object PhotoReminders {
     private const val Channel = "photo_reminders"
     const val ActionFire = "com.subhashh.lumen.REMINDER"
     const val ExtraId = "reminder_id"
-    /** On MainActivity's intent: open this photo in the viewer. */
+    /** On GalleryActivity's intent: open this photo in the viewer. */
     const val ExtraOpenMedia = "open_media_id"
 
     /** The Developer Options switch, as state, so open menus follow it. */
@@ -180,7 +180,7 @@ object PhotoReminders {
         val open = PendingIntent.getActivity(
             context,
             reminder.id,
-            Intent(context, MainActivity::class.java)
+            Intent(context, GalleryActivity::class.java)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
                 .putExtra(ExtraOpenMedia, reminder.mediaIds.firstOrNull() ?: -1L),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,

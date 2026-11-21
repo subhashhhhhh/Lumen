@@ -1,6 +1,8 @@
 package com.subhashh.lumen.ui.search
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
+import com.subhashh.lumen.ui.theme.Lumen
 import com.subhashh.lumen.data.MediaThumbnail
 import coil3.compose.AsyncImage
 import androidx.compose.ui.text.style.TextOverflow
@@ -59,6 +61,13 @@ import androidx.annotation.StringRes
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.subhashh.lumen.R
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.foundation.layout.height
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import com.subhashh.lumen.ui.selection.dragToSelect
 import com.subhashh.lumen.data.MediaCollection
 import com.subhashh.lumen.data.MediaItem
 import com.subhashh.lumen.data.CollectionKeys
@@ -192,6 +201,12 @@ fun SearchScreen(
     columns: Int,
     onColumnsChange: (Int) -> Unit,
     modifier: Modifier = Modifier,
+    /** People to offer before anything is typed (the Material style's row of faces). */
+    topPeople: List<Pair<Person, MediaItem>> = emptyList(),
+    /** Selected ids while selecting (long-press a result to start); null when not. */
+    selection: Set<Long>? = null,
+    /** The selection changed; [section] is the list it's in. */
+    onSelectionChange: (section: String, Set<Long>?) -> Unit = { _, _ -> },
 ) {
     val colors = MaterialTheme.colorScheme
     val keyboard = LocalSoftwareKeyboardController.current
@@ -208,7 +223,7 @@ fun SearchScreen(
     val bucket = ImageKeys.thumbBucket(cellPx)
 
     if (query.isBlank()) {
-        Suggestions(recent, suggested, suggestions, contentPadding, onSuggestion, onClearRecent, modifier)
+        Suggestions(recent, suggested, suggestions, contentPadding, onSuggestion, onClearRecent, modifier, topPeople) { onOpenPerson(CollectionKeys.person(it.id)) }
         return
     }
     // Where each cell was last placed, so a tap outside the active section can still fly from it.
@@ -219,6 +234,39 @@ fun SearchScreen(
     val shown = remember(sections, lookingInside, order) {
         sections?.let { visibleSections(it, lookingInside) }.orEmpty().map { it.ordered() }
     }
+    // Long-press selects in the one list of results (with Search Details, in the first section).
+    val selectIn = (shown.firstOrNull { it.id == SearchSection.All } ?: shown.firstOrNull())?.id
+    val peopleRow = people.isNotEmpty() || unnamed != null
+    val albumsRow = albums.isNotEmpty()
+    // Ids in grid order, for a drag across cells: null for titles, rows and other sections.
+    val gridIds = remember(shown, expanded, columns, peopleRow, albumsRow, selectIn) {
+        buildList<Long?> {
+            repeat((if (peopleRow) 2 else 0) + (if (albumsRow) 2 else 0)) { add(null) }
+            for (section in shown) {
+                add(null)
+                repeat(shownCount(section, expanded, columns)) { add(if (section.id == selectIn) section.items[it].id else null) }
+            }
+        }
+    }
+    val currentSelection by rememberUpdatedState(selection)
+    // A long-press's release reaches the cell's tap handler too: not a tap (see LibraryScreen).
+    val longPressActive = remember { booleanArrayOf(false) }
+    val haptics = LocalHapticFeedback.current
+    val density = LocalDensity.current
+    val selectable = if (picked != null || selectIn == null) Modifier else Modifier.dragToSelect(
+        gridState = gridState,
+        ids = { gridIds },
+        selection = { currentSelection.orEmpty() },
+        onSelectionChange = { onSelectionChange(selectIn, it) },
+        onStart = {
+            longPressActive[0] = true
+            keyboard?.hide()
+            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+        },
+        onEnd = { longPressActive[0] = false },
+        edgeTop = with(density) { contentPadding.calculateTopPadding().toPx() },
+        edgeBottom = with(density) { contentPadding.calculateBottomPadding().toPx() },
+    )
     LazyVerticalGrid(
         columns = GridCells.Fixed(columns),
         state = gridState,
@@ -228,7 +276,8 @@ fun SearchScreen(
         modifier = modifier
             .fillMaxSize()
             .nestedScroll(hideKeyboard)
-            .pinchColumns(ColumnSteps, columns, onColumnsChange),
+            .pinchColumns(ColumnSteps, columns, onColumnsChange)
+            .then(selectable),
     ) {
         if (people.isNotEmpty() || unnamed != null) {
             item(span = { GridItemSpan(maxLineSpan) }) { SectionTitle(stringResource(R.string.main_people)) }
@@ -280,6 +329,7 @@ fun SearchScreen(
                         },
                         detail = if (lookingInside && n > 0) lookingText else null,
                         action = if (n > 1) stringResource(SearchOrder.current.label) else null,
+                        actionIcon = LumenIcons.Sort,
                         onAction = {
                             SearchOrder.current = SearchOrder.entries[(SearchOrder.current.ordinal + 1) % SearchOrder.entries.size]
                         },
@@ -309,8 +359,15 @@ fun SearchScreen(
                     bucket = bucket,
                     fit = false,
                     showDuration = columns <= 5,
-                    selected = picked?.let { item.id in it },
-                    onClick = {
+                    selected = picked?.let { item.id in it } ?: selection?.takeIf { section.id == selectIn }?.let { item.id in it },
+                    onClick = click@{
+                        if (longPressActive[0]) return@click
+                        val chosen = selection
+                        if (chosen != null) {
+                            // Selecting: a tap ticks or unticks; other sections wait.
+                            if (section.id == selectIn) onSelectionChange(section.id, if (item.id in chosen) chosen - item.id else chosen + item.id)
+                            return@click
+                        }
                         keyboard?.hide()
                         placed[cellKey]?.let { transition.register(item.id, it) }
                         onOpen(section.id, index)
@@ -368,18 +425,43 @@ private fun PersonCell(person: Person, cover: MediaItem, label: String, labelCol
 }
 
 @Composable
-private fun SectionTitle(text: String, detail: String? = null, action: String? = null, onAction: () -> Unit = {}) {
+private fun SectionTitle(
+    text: String,
+    detail: String? = null,
+    action: String? = null,
+    /** Material: an icon in the action's chip (the order of the results). */
+    actionIcon: androidx.compose.ui.graphics.vector.ImageVector? = null,
+    onAction: () -> Unit = {},
+) {
+    val material = Lumen.material
     Row(
-        Modifier.padding(start = 16.dp, end = 10.dp, top = 12.dp, bottom = 8.dp),
-        verticalAlignment = Alignment.Bottom,
+        Modifier.padding(start = 16.dp, end = if (material) 16.dp else 10.dp, top = 12.dp, bottom = 8.dp),
+        verticalAlignment = if (material) Alignment.CenterVertically else Alignment.Bottom,
     ) {
-        Text(text, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
+        Text(text, fontSize = 20.sp, fontWeight = Lumen.type.strong, color = MaterialTheme.colorScheme.onBackground)
         if (detail != null) {
             Spacer(Modifier.width(8.dp))
             Text(detail, fontSize = 15.sp, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
         }
         Spacer(Modifier.weight(1f))
-        if (action != null) {
+        if (action != null && material) {
+            // Material: a tonal chip, as Android's own apps offer a list's order.
+            val scheme = MaterialTheme.colorScheme
+            Row(
+                Modifier
+                    .height(36.dp)
+                    .pressable(onAction, pressedScale = 0.94f, shape = CircleShape)
+                    .background(scheme.surfaceContainerHigh, CircleShape)
+                    .padding(start = if (actionIcon != null) 12.dp else 16.dp, end = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (actionIcon != null) {
+                    Icon(actionIcon, null, tint = scheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                }
+                Text(action, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = scheme.onSurface, maxLines = 1)
+            }
+        } else if (action != null) {
             Text(
                 action,
                 fontSize = 15.sp,
@@ -404,8 +486,11 @@ private fun Suggestions(
     onSuggestion: (String) -> Unit,
     onClearRecent: () -> Unit,
     modifier: Modifier = Modifier,
+    topPeople: List<Pair<Person, MediaItem>> = emptyList(),
+    onOpenPerson: (Person) -> Unit = {},
 ) {
     val onBackground = MaterialTheme.colorScheme.onBackground
+    val material = Lumen.material
     Column(
         modifier
             .fillMaxSize()
@@ -413,16 +498,49 @@ private fun Suggestions(
             .padding(contentPadding)
             .padding(horizontal = 16.dp),
     ) {
-        Text(
+        if (!material) Text(
             stringResource(R.string.common_search),
-            fontSize = 34.sp,
-            fontWeight = FontWeight.Bold,
+            style = Lumen.type.screenTitle,
             color = onBackground,
             modifier = Modifier.padding(start = 4.dp, bottom = 12.dp),
         )
-        if (recent.isNotEmpty()) {
+        // Material: faces across the top, then what was searched before as a plain list.
+        if (material && topPeople.isNotEmpty()) {
+            Row(
+                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(top = 8.dp, bottom = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                for ((person, cover) in topPeople.take(12)) {
+                    val who = person.name ?: stringResource(R.string.search_person_unnamed)
+                    FaceAvatar(person, cover, Modifier.size(64.dp).pressable({ onOpenPerson(person) }, shape = CircleShape).semantics { contentDescription = who })
+                }
+            }
+        }
+        if (material && recent.isNotEmpty()) {
+            val scheme = MaterialTheme.colorScheme
+            recent.forEach { term ->
+                Row(
+                    Modifier.fillMaxWidth().pressable({ onSuggestion(term) }, pressedScale = 0.99f).padding(horizontal = 8.dp, vertical = 18.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(LumenIcons.History, null, tint = scheme.onSurfaceVariant, modifier = Modifier.size(24.dp))
+                    Spacer(Modifier.width(20.dp))
+                    Text(term, fontSize = 17.sp, color = scheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+                androidx.compose.material3.HorizontalDivider(color = scheme.outlineVariant)
+            }
+            Text(
+                stringResource(R.string.main_search_clear),
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Medium,
+                color = scheme.primary,
+                modifier = Modifier.align(Alignment.End).pressable(onClearRecent, shape = CircleShape).padding(horizontal = 12.dp, vertical = 10.dp),
+            )
+            Spacer(Modifier.size(12.dp))
+        }
+        if (!material && recent.isNotEmpty()) {
             Row(Modifier.fillMaxWidth().padding(start = 4.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(stringResource(R.string.main_search_recent), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = onBackground, modifier = Modifier.weight(1f))
+                Text(stringResource(R.string.main_search_recent), fontSize = 20.sp, fontWeight = Lumen.type.strong, color = onBackground, modifier = Modifier.weight(1f))
                 Text(
                     stringResource(R.string.main_search_clear),
                     fontSize = 15.sp,
@@ -437,7 +555,7 @@ private fun Suggestions(
             Text(
                 stringResource(R.string.main_search_from_your_photos),
                 fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
+                fontWeight = Lumen.type.strong,
                 color = onBackground,
                 modifier = Modifier.padding(start = 4.dp, bottom = 10.dp),
             )
@@ -455,7 +573,7 @@ private fun Suggestions(
                             model = MediaThumbnail(cover.uri),
                             contentDescription = null,
                             contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(14.dp)),
+                            modifier = Modifier.fillMaxWidth().aspectRatio(1f).clip(if (Lumen.material) Lumen.shapes.cover else RoundedCornerShape(14.dp)),
                         )
                         Text(
                             term.replaceFirstChar { it.uppercase() },
@@ -491,9 +609,9 @@ private fun Chips(items: List<String>, onClick: (String) -> Unit) {
         items.forEach { item ->
             Row(
                 Modifier
-                    .pressable({ onClick(item) }, pressedScale = 0.94f)
+                    .pressable({ onClick(item) }, pressedScale = 0.94f, shape = CircleShape)
                     .clip(CircleShape)
-                    .background(onBackground.copy(alpha = 0.08f))
+                    .background(if (Lumen.material) MaterialTheme.colorScheme.surfaceContainerHigh else onBackground.copy(alpha = 0.08f))
                     .padding(horizontal = 14.dp, vertical = 9.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {

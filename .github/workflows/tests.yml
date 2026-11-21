@@ -1,0 +1,98 @@
+# The unit tests, run on GitHub for every push and pull request instead of on the owner's Mac
+# (8 GB, and each run means compiling the app). Lumen's tests and Lumen AI's, the latter from the
+# lumen-ai commit pinned in .github/lumen-ai.commit: the same one a release is built from, so a
+# pin left behind shows up here and not on release day. That commit must be on GitHub.
+#
+# Read-only access and no stored credentials, as it runs Gradle with every plugin and dependency.
+# Actions are pinned to commits, not movable tags.
+name: Tests
+on:
+  push:
+    branches-ignore: ["weblate-*"]
+  pull_request:
+  workflow_dispatch:
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  test:
+    # A branch of this repository is tested when it's pushed; only forks need the pull request run.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: lumen-ai at its pinned commit, next to the app (settings.gradle.kts builds it from source)
+        run: |
+          commit=$(tr -d '[:space:]' < .github/lumen-ai.commit)
+          git init -q ../lumen-ai
+          git -C ../lumen-ai fetch -q --depth 1 https://github.com/subhashhhhhh/lumen-ai.git "$commit" \
+            || { echo "::error::lumen-ai $commit (.github/lumen-ai.commit) isn't on GitHub: push lumen-ai first"; exit 1; }
+          git -C ../lumen-ai checkout -q FETCH_HEAD
+      # Builds run on JDK 17; the tests themselves on JDK 27 (Robolectric's Android 16 needs 21+).
+      # The last one listed becomes JAVA_HOME; Gradle is told where the other is below.
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: |
+            27
+            17
+      # The runner has the Android SDK; this adds the versions the build asks for.
+      - name: SDK, NDK and CMake versions the build asks for
+        run: |
+          sdkmanager=$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | sort -V | tail -1)
+          yes | "$sdkmanager" --licenses > /dev/null || true
+          "$sdkmanager" "platforms;android-37.0" "ndk;30.0.16248370" "cmake;4.1.2" > /dev/null
+      - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
+      # Robolectric downloads the Android runtime it simulates as the first test starts, by itself
+      # and not through Gradle, so Gradle's cache doesn't hold it.
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.m2/repository/org/robolectric
+          key: robolectric-${{ hashFiles('gradle/libs.versions.toml') }}
+          restore-keys: robolectric-
+      - name: Unit tests
+        run: |
+          run() {
+            ./gradlew :app:testDebugUnitTest :lumen-ai:ai:testDebugUnitTest --no-daemon --continue \
+              -Porg.gradle.java.installations.fromEnv=JAVA_HOME_27_X64
+          }
+          # Once more when that download failed (it has, with Maven Central refusing the runner):
+          # those failures say nothing about the code.
+          run || { grep -rqs MavenArtifactFetcher app/build/test-results && run; }
+      - name: Count
+        if: always()
+        run: |
+          python3 - <<'EOF' >> "$GITHUB_STEP_SUMMARY"
+          import glob, xml.etree.ElementTree as E
+          for name, folder in (("Lumen", "app"), ("Lumen AI", "../lumen-ai/ai")):
+              tests = failed = 0
+              names = []
+              for path in glob.glob(folder + "/build/test-results/testDebugUnitTest/*.xml"):
+                  root = E.parse(path).getroot()
+                  tests += int(root.get("tests"))
+                  failed += int(root.get("failures")) + int(root.get("errors"))
+                  names += [f"{case.get('classname').split('.')[-1]}.{case.get('name')}"
+                            for case in root.iter("testcase") if case.find("failure") is not None or case.find("error") is not None]
+              print(f"**{name}:** {tests} tests, {failed} failed")
+              for failure in names:
+                  print(f"- `{failure}`")
+              print()
+          EOF
+      # Uploads may only come from inside this checkout, so Lumen AI's report is brought in.
+      - name: Reports
+        if: failure()
+        run: |
+          mkdir -p reports
+          cp -r app/build/reports/tests reports/lumen 2>/dev/null || true
+          cp -r ../lumen-ai/ai/build/reports/tests reports/lumen-ai 2>/dev/null || true
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: failure()
+        with:
+          name: test-reports
+          path: reports/
+          retention-days: 7

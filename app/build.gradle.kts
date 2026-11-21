@@ -6,7 +6,8 @@ plugins {
 
 /** Lumen Lab's repository, when it's checked out next to this one (see sourceSets below). */
 val lab: File = rootProject.file("../lumen-lab")
-val hasLab = lab.resolve("src/java").isDirectory
+// -PnoLab leaves it out, to try a debug or profile build with only what a release has.
+val hasLab = lab.resolve("src/java").isDirectory && !providers.gradleProperty("noLab").isPresent
 
 /**
  * The release key stays outside the repository. Release builds are signed only when its password
@@ -26,8 +27,8 @@ android {
         // Android 11: All files access (hidden folders) and MediaStore trash.
         minSdk = 30
         targetSdk = 37
-        versionCode = 13
-        versionName = "0.4.2"
+        versionCode = 14
+        versionName = "0.5.0"
     }
 
     signingConfigs {
@@ -41,14 +42,16 @@ android {
         }
     }
 
-    // Release APKs per processor, plus one universal APK. Only for release tasks, so debug and
-    // profile builds stay a single APK.
+    // Release APKs per processor. Only for release tasks, so debug and profile builds stay a
+    // single APK. No 32-bit ARM APK, and so no universal one either: the only 32-bit Android 11+
+    // phones are low-memory ones well below what Lumen is built for (see DeviceClass), 4% of
+    // downloads. x86_64 stays for Waydroid and Chromebooks.
     splits {
         abi {
             isEnable = gradle.startParameter.taskNames.any { it.contains("Release", ignoreCase = true) }
             reset()
-            include("arm64-v8a", "armeabi-v7a", "x86_64")
-            isUniversalApk = true
+            include("arm64-v8a", "x86_64")
+            isUniversalApk = false
         }
     }
 
@@ -171,6 +174,9 @@ dependencies {
     // Android's org.json is a stub in local tests; the real one stands in.
     testImplementation(libs.org.json)
     testImplementation(libs.robolectric)
+    // Draws Lumen's components in each style off the phone (StyleRenderTest).
+    testImplementation(platform(libs.compose.bom))
+    testImplementation(libs.compose.ui.test.junit4)
     implementation(libs.androidx.profileinstaller)
     baselineProfile(project(":baselineprofile"))
     implementation(libs.androidx.core.ktx)
@@ -188,6 +194,8 @@ dependencies {
     implementation(libs.compose.ui)
     implementation(libs.compose.foundation)
     implementation(libs.compose.material3)
+    // Material colour schemes from a chosen colour (MaterialKolor, MIT).
+    implementation(libs.material.kolor)
     implementation(libs.compose.ui.tooling.preview)
     debugImplementation(libs.compose.ui.tooling)
 

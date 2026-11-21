@@ -1,6 +1,7 @@
 package com.subhashh.lumen.ui.viewer
 
 import android.content.ClipData
+import com.subhashh.lumen.ui.components.Spinner
 import android.content.ClipboardManager
 import android.content.ContentValues
 import android.content.Context
@@ -22,7 +23,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -167,7 +167,7 @@ fun CutoutLayer(state: CutoutState, modifier: Modifier = Modifier) {
                 slow = true
             }
             if (slow) {
-                CircularProgressIndicator(
+                Spinner(
                     color = Color.White,
                     strokeWidth = 3.dp,
                     modifier = Modifier

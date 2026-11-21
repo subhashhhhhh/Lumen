@@ -1,11 +1,14 @@
 package com.subhashh.lumen.ui.library
 
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.foundation.shape.RoundedCornerShape
+import com.subhashh.lumen.ui.theme.Lumen
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.aspectRatio
@@ -92,8 +95,10 @@ fun LibraryScreen(
     modifier: Modifier = Modifier,
     /** Extra space above the title, e.g. for an album's back button. */
     titleTopPadding: Dp = 16.dp,
-    /** Whole photos letterboxed in their cells instead of square crops. */
-    aspectRatioGrid: Boolean = false,
+    /** The title and month over the top of the grid. Material's Photos page goes without. */
+    showHeader: Boolean = true,
+    /** Square crops, whole photos letterboxed, or a mosaic of whole photos ([GridStyle]). */
+    gridStyle: GridStyle = GridStyle.Square,
     emptyText: String = stringResource(R.string.main_no_photos_or_videos),
     /** Columns, saved by the caller so the choice survives restarts. */
     columns: Int = ColumnSteps[DefaultColumnStep],
@@ -114,6 +119,11 @@ fun LibraryScreen(
      */
     hero: (@Composable (Modifier) -> Unit)? = null,
     heroHeight: Dp = 0.dp,
+    /**
+     * A header of the page's own over the top of the grid, scrolling away with it (it can be
+     * tapped, unlike [hero]); [contentPadding]'s top should leave room for it.
+     */
+    topContent: (@Composable (Modifier) -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val grid = sections ?: remember(items) { GridSections.of(context, items, SectionMode.None) }
@@ -122,6 +132,8 @@ fun LibraryScreen(
     // Decode thumbnails for the cell size actually shown, so fewer, bigger cells stay sharp.
     val cellPx = with(LocalDensity.current) { LocalConfiguration.current.screenWidthDp.dp.roundToPx() } / columns
     val thumbBucket = ImageKeys.thumbBucket(cellPx)
+    val mosaic = if (gridStyle == GridStyle.Mosaic) remember(entries, columns) { mosaicLayout(entries, columns) } else null
+    val gridWidth = LocalConfiguration.current.screenWidthDp.dp
 
     // iOS Photos opens at the newest photo, which sits at the bottom of the grid. Only on first
     // load — later refreshes (a deletion, returning to the app) must keep the scroll position.
@@ -165,10 +177,12 @@ fun LibraryScreen(
             )
         }
         LazyVerticalGrid(
-            columns = GridCells.Fixed(columns),
+            // A mosaic is cut into many narrow columns, each photo spanning its share; its gaps
+            // are the cells' own padding (spacing here would come between every column).
+            columns = GridCells.Fixed(if (mosaic != null) MosaicUnits else columns),
             state = gridState,
             contentPadding = contentPadding,
-            horizontalArrangement = Arrangement.spacedBy(2.dp),
+            horizontalArrangement = Arrangement.spacedBy(if (mosaic != null) 0.dp else 2.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp),
             modifier = Modifier
                 .fillMaxSize()
@@ -196,7 +210,13 @@ fun LibraryScreen(
                         is GridEntry.Cell -> entry.item.id
                     }
                 },
-                span = { i -> if (entries[i] is GridEntry.Header) GridItemSpan(maxLineSpan) else GridItemSpan(1) },
+                span = { i ->
+                    when {
+                        entries[i] is GridEntry.Header -> GridItemSpan(maxLineSpan)
+                        mosaic != null -> GridItemSpan(mosaic.spans[i])
+                        else -> GridItemSpan(1)
+                    }
+                },
                 contentType = { i -> if (entries[i] is GridEntry.Header) 0 else 1 },
             ) { i ->
                 val entry = entries[i]
@@ -210,8 +230,9 @@ fun LibraryScreen(
                 Thumbnail(
                     item = item,
                     bucket = thumbBucket,
-                    fit = aspectRatioGrid,
-                    showDuration = columns <= 5 && selection == null,
+                    fit = gridStyle == GridStyle.AspectRatio,
+                    square = mosaic == null,
+                    showDuration = columns <= 5,
                     selected = selection?.let { item.id in it },
                     onClick = click@{
                         if (longPressActive[0]) return@click
@@ -222,9 +243,19 @@ fun LibraryScreen(
                             onSelectionChange(if (item.id in current) current - item.id else current + item.id)
                         }
                     },
-                    modifier = Modifier.transitionCell(transition, item.id),
+                    modifier = (if (mosaic != null) Modifier.padding(horizontal = 1.dp).height(gridWidth * mosaic.heights[i]) else Modifier)
+                        .transitionCell(transition, item.id),
                 )
             }
+        }
+
+        if (topContent != null) {
+            topContent(
+                Modifier.offset {
+                    // Rides the grid's first row; gone once that row is.
+                    IntOffset(0, if (gridState.firstVisibleItemIndex == 0) -gridState.firstVisibleItemScrollOffset else -edgeTop.toInt() * 2)
+                },
+            )
         }
 
         if (items.isEmpty()) {
@@ -247,21 +278,22 @@ fun LibraryScreen(
 
         val collapseFrom = with(density) { (heroHeight - 240.dp).toPx() }
         val collapseOver = with(density) { 80.dp.toPx() }
-        LibraryHeader(
+        // Under a cover, the title (with its scrim) arrives as the cover leaves; while
+        // selecting it's needed for the count.
+        val headerShown = {
+            when {
+                hero == null || currentSelection != null -> 1f
+                gridState.firstVisibleItemIndex > 0 -> 1f
+                else -> ((gridState.firstVisibleItemScrollOffset - collapseFrom) / collapseOver).coerceIn(0f, 1f)
+            }
+        }
+        if (showHeader) LibraryHeader(
             title = title,
             subtitle = if (showMonth) visibleMonth else "",
             topPadding = titleTopPadding,
             modifier = Modifier
                 .align(Alignment.TopStart)
-                .graphicsLayer {
-                    // Under a cover, the title (with its scrim) arrives as the cover leaves; while
-                    // selecting it's needed for the count.
-                    alpha = when {
-                        hero == null || currentSelection != null -> 1f
-                        gridState.firstVisibleItemIndex > 0 -> 1f
-                        else -> ((gridState.firstVisibleItemScrollOffset - collapseFrom) / collapseOver).coerceIn(0f, 1f)
-                    }
-                },
+                .graphicsLayer { alpha = headerShown() },
         )
     }
 }
@@ -273,7 +305,7 @@ private fun SectionHeader(label: String) {
         label,
         color = MaterialTheme.colorScheme.onBackground,
         fontSize = 17.sp,
-        fontWeight = FontWeight.SemiBold,
+        fontWeight = Lumen.type.emphasis,
         modifier = Modifier.padding(start = 14.dp, end = 14.dp, top = 18.dp, bottom = 8.dp),
     )
 }
@@ -283,6 +315,8 @@ internal fun Thumbnail(
     item: MediaItem,
     bucket: Int,
     fit: Boolean,
+    /** False in a mosaic, where the caller sizes the cell to the photo's shape. */
+    square: Boolean = true,
     showDuration: Boolean,
     /** null when not selecting. */
     selected: Boolean?,
@@ -296,9 +330,24 @@ internal fun Thumbnail(
         spring(dampingRatio = 0.7f, stiffness = 700f),
         label = "selectScale",
     )
+    // Material: a selected photo also rounds its corners, as Android's own galleries do.
+    val material = Lumen.material
+    // Lumen's tick takes the bottom right corner while selecting: the length (or RAW, GIF) moves
+    // to the left one, so a video can still be told from a photo, and the heart waits.
+    val badgeAside = !material && selected != null
+    // Only while selecting: an animation per cell isn't free, and the grid makes cells as it scrolls.
+    val corner = if (material && selected != null) {
+        animateFloatAsState(
+            if (selected) 1f else 0f,
+            spring(dampingRatio = 0.7f, stiffness = 700f),
+            label = "selectCorner",
+        ).value
+    } else {
+        0f
+    }
     Box(
         modifier
-            .aspectRatio(1f)
+            .then(if (square) Modifier.aspectRatio(1f) else Modifier)
             .clickable(onClick = onClick),
     ) {
         Box(
@@ -307,6 +356,10 @@ internal fun Thumbnail(
                 .graphicsLayer {
                     scaleX = scale
                     scaleY = scale
+                    if (corner > 0.01f) {
+                        shape = RoundedCornerShape(SelectedCorner.toPx() * corner)
+                        clip = true
+                    }
                 }
                 // Letterboxed cells stay clear around the photo; square crops get a loading tint.
                 .then(if (fit) Modifier else Modifier.background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))),
@@ -343,7 +396,18 @@ internal fun Thumbnail(
                     modifier = Modifier.fillMaxSize(),
                 )
             }
-            if (showDuration && (item.isVideo || item.mimeType == "image/gif" || item.isRaw)) {
+            if (material && showDuration && item.isVideo) {
+                // Material: the length and a play mark at the top right, as Android galleries show videos.
+                Row(Modifier.align(Alignment.TopEnd).padding(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(formatDuration(item.durationMs), style = OverlayText)
+                    Icon(
+                        LumenIcons.Play,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.padding(start = 3.dp).size(16.dp).shadow(3.dp, CircleShape, clip = false),
+                    )
+                }
+            } else if (showDuration && (item.isVideo || item.mimeType == "image/gif" || item.isRaw)) {
                 Text(
                     // GIFs move and RAW files are special; say so, as iOS does.
                     text = when {
@@ -353,11 +417,11 @@ internal fun Thumbnail(
                     },
                     style = OverlayText,
                     modifier = Modifier
-                        .align(Alignment.BottomEnd)
+                        .align(if (badgeAside) Alignment.BottomStart else Alignment.BottomEnd)
                         .padding(4.dp),
                 )
             }
-            if (item.isFavorite && showDuration) {
+            if (item.isFavorite && showDuration && !badgeAside) {
                 // A small white heart, bottom-left, like iOS Photos.
                 Icon(
                     LumenIcons.HeartFilled,
@@ -371,19 +435,44 @@ internal fun Thumbnail(
                 )
             }
         }
-        if (selected != null) SelectionMark(selected, Modifier.align(Alignment.BottomEnd).padding(6.dp))
+        // Material marks the top corner, as Android galleries do.
+        if (selected != null) SelectionMark(selected, if (material) Modifier.align(Alignment.TopStart).padding(8.dp) else Modifier.align(Alignment.BottomEnd).padding(6.dp))
     }
 }
 
 /** iOS-style marker: an empty ring when selectable, a filled check when selected. */
 @Composable
 internal fun SelectionMark(selected: Boolean, modifier: Modifier = Modifier) {
-    if (selected) {
+    if (selected && Lumen.material) {
+        // Material: a tick on the primary colour that grows into place.
+        val still = com.subhashh.lumen.ui.theme.LocalMotion.current.reduce
+        val pop = remember { androidx.compose.animation.core.Animatable(if (still) 1f else 0.6f) }
+        androidx.compose.runtime.LaunchedEffect(Unit) { pop.animateTo(1f, spring(dampingRatio = 0.7f, stiffness = 600f)) }
         Box(
             modifier
-                .size(22.dp)
+                .size(24.dp)
+                .graphicsLayer {
+                    scaleX = pop.value
+                    scaleY = pop.value
+                }
                 .clip(CircleShape)
-                .background(Color.White),
+                .background(MaterialTheme.colorScheme.primary),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                LumenIcons.Check,
+                contentDescription = stringResource(R.string.main_selected),
+                tint = MaterialTheme.colorScheme.onPrimary,
+                modifier = Modifier.size(16.dp),
+            )
+        }
+    } else if (selected) {
+        val material = false
+        Box(
+            modifier
+                .size(if (material) 24.dp else 22.dp)
+                .clip(CircleShape)
+                .background(if (material) MaterialTheme.colorScheme.onPrimary else Color.White),
         ) {
             Icon(
                 LumenIcons.Selected,
@@ -404,8 +493,16 @@ internal fun SelectionMark(selected: Boolean, modifier: Modifier = Modifier) {
     }
 }
 
+/** A selected photo's corners in the Material style. */
+private val SelectedCorner = 16.dp
+
 @Composable
-internal fun LibraryHeader(title: String, subtitle: String, topPadding: Dp, modifier: Modifier = Modifier) {
+internal fun LibraryHeader(
+    title: String,
+    subtitle: String,
+    topPadding: Dp,
+    modifier: Modifier = Modifier,
+) {
     Column(
         modifier
             .fillMaxWidth()
@@ -416,7 +513,11 @@ internal fun LibraryHeader(title: String, subtitle: String, topPadding: Dp, modi
             .statusBarsPadding()
             .padding(top = topPadding, start = 20.dp, end = 20.dp, bottom = 72.dp),
     ) {
-        Text(title, style = OverlayText.copy(fontSize = 34.sp, fontWeight = FontWeight.Bold))
+        Text(
+            title,
+            style = if (Lumen.material) OverlayText.copy(fontSize = 36.sp, lineHeight = 44.sp, fontWeight = FontWeight.Medium)
+            else OverlayText.copy(fontSize = 34.sp, fontWeight = FontWeight.Bold),
+        )
         if (subtitle.isNotEmpty()) {
             Text(subtitle, style = OverlayText.copy(fontSize = 15.sp, color = Color(0xCCFFFFFF)))
         }

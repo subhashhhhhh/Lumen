@@ -4,7 +4,7 @@
 set -e
 PKG=com.subhashh.lumen.debug
 adb shell am force-stop $PKG
-adb shell am start -n $PKG/com.subhashh.lumen.MainActivity >/dev/null
+adb shell am start -n $PKG/com.subhashh.lumen.GalleryActivity >/dev/null
 sleep 4
 adb shell dumpsys gfxinfo $PKG reset >/dev/null
 for i in 1 2 3 4 5 6; do

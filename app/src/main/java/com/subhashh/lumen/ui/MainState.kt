@@ -96,9 +96,20 @@ internal class MainState(
     // A picker starts unfiltered: the asked-for types already narrow it, and a saved
     // "Videos" filter would leave a photo picker empty.
     var filter by mutableStateOf(if (pick != null) LibraryFilter.All else prefs.libraryFilter)
-    var aspectRatioGrid by mutableStateOf(prefs.aspectRatioGrid)
+    var gridStyle by mutableStateOf(prefs.gridStyle)
     var sort by mutableStateOf(prefs.librarySort)
     var sortDescending by mutableStateOf(prefs.sortDescending)
+
+    private val settingsScrolls = HashMap<String, androidx.compose.foundation.ScrollState>()
+
+    /** Where each open Settings page is scrolled to, so going back to one finds it as it was. */
+    fun settingsScroll(page: String) = settingsScrolls.getOrPut(page) { androidx.compose.foundation.ScrollState(0) }
+
+    /** Settings was left: next time its pages open at the top. */
+    fun forgetSettingsScroll() = settingsScrolls.clear()
+
+    /** Material's Documents: what Smart Search found for each kind (by its query), newest first. */
+    var documentItems by mutableStateOf<Map<String, List<MediaItem>>>(emptyMap())
     // A person's Show filter is for this visit: opening another person starts at All again.
     var personFilter by mutableStateOf(LibraryFilter.All)
     var personSort by mutableStateOf(prefs.personSort)
@@ -107,6 +118,8 @@ internal class MainState(
     var searchColumns by mutableIntStateOf(prefs.searchColumns)
     var albumColumns by mutableIntStateOf(prefs.albumColumns)
     var menuOpen by mutableStateOf(false)
+    /** Material: the indexing status is open at the top of Photos, the grid moved down under it. */
+    var indexOpen by mutableStateOf(false)
     var zoomLevel by zoomLevelState
     // The Library opens with the tabs showing; scrolling up (back in time) folds them into the
     // Years / Months / All control, scrolling down brings them back. Years and Months keep the

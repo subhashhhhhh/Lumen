@@ -42,7 +42,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.subhashh.lumen.data.MediaItem
 import com.subhashh.lumen.ai.Person
-import com.subhashh.lumen.ui.theme.LocalDarkTheme
+import com.subhashh.lumen.ui.theme.Lumen
+import com.subhashh.lumen.ui.components.DialogAction
+import com.subhashh.lumen.ui.components.DialogActionList
+import com.subhashh.lumen.ui.components.DialogScrim
+import com.subhashh.lumen.ui.components.dialogCard
+import com.subhashh.lumen.ui.components.dialogInset
 
 /** Naming [person] [name], which [match] already has: offer to make them one person. */
 @Immutable
@@ -67,58 +72,49 @@ fun MergePeopleDialog(
 ) {
     val open = proposal != null
     BackHandler(enabled = open, onBack = onDismiss)
-    AnimatedVisibility(visible = open, enter = fadeIn(tween(160)), exit = fadeOut(tween(160))) {
-        Box(
-            Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.4f))
-                .clickable(remember { MutableInteractionSource() }, indication = null, onClick = onDismiss),
-        )
-    }
+    DialogScrim(open, onDismiss)
     AnimatedVisibility(
         visible = open,
         enter = scaleIn(spring(dampingRatio = 0.8f, stiffness = 600f), initialScale = 0.9f) + fadeIn(tween(140)),
         exit = fadeOut(tween(120)),
     ) {
         val p = proposal ?: return@AnimatedVisibility
-        val dark = LocalDarkTheme.current
-        val card = if (dark) Color(0xFF2C2C2E) else Color.White
-        val text = if (dark) Color.White else Color.Black
-        val secondary = if (dark) Color(0x99EBEBF5) else Color(0x993C3C43)
-        val divider = secondary.copy(alpha = 0.3f)
-        val blue = Color(0xFF0A84FF)
+        val card = Lumen.colors.dialog
+        val material = Lumen.material
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Column(
                 Modifier
-                    .width(300.dp)
-                    .clip(RoundedCornerShape(22.dp))
-                    .background(card)
-                    .clickable(remember { MutableInteractionSource() }, indication = null) {}
+                    .width(if (material) 320.dp else 300.dp)
+                    .dialogCard()
                     .padding(top = 24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Faces(p, ring = card)
                 Spacer(Modifier.height(16.dp))
+                // Centred in both styles: the faces above are.
                 Text(
                     stringResource(R.string.main_merge_with_name, p.name),
-                    color = text,
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.SemiBold,
+                    color = Lumen.colors.text,
+                    style = Lumen.type.dialogTitle,
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(horizontal = 18.dp),
+                    modifier = Modifier.padding(horizontal = dialogInset),
                 )
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(if (material) 12.dp else 6.dp))
                 Text(
                     stringResource(R.string.main_merge_proposal_message, p.name, photos((p.person.mediaIds + p.match.mediaIds).size)),
-                    color = secondary,
+                    color = Lumen.colors.secondary,
                     fontSize = 14.sp,
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(horizontal = 18.dp),
+                    modifier = Modifier.padding(horizontal = dialogInset),
                 )
                 Spacer(Modifier.height(20.dp))
-                Action(stringResource(R.string.main_merge), blue, divider, bold = true) { onMerge(p) }
-                Action(stringResource(R.string.main_keep_separate), blue, divider) { onKeepSeparate(p) }
-                Action(stringResource(R.string.common_cancel), blue, divider, onClick = onDismiss)
+                DialogActionList(
+                    listOf(
+                        DialogAction(stringResource(R.string.main_merge), primary = true) { onMerge(p) },
+                        DialogAction(stringResource(R.string.main_keep_separate)) { onKeepSeparate(p) },
+                        DialogAction(stringResource(R.string.common_cancel), onClick = onDismiss),
+                    ),
+                )
             }
         }
     }
@@ -150,22 +146,6 @@ private fun Face(person: Person, cover: MediaItem, ring: Color, modifier: Modifi
     ) {
         FaceAvatar(person, cover, Modifier.fillMaxSize())
     }
-}
-
-@Composable
-private fun Action(label: String, color: Color, divider: Color, bold: Boolean = false, onClick: () -> Unit) {
-    Box(Modifier.fillMaxWidth().height(0.5.dp).background(divider))
-    Text(
-        label,
-        color = color,
-        fontSize = 17.sp,
-        fontWeight = if (bold) FontWeight.SemiBold else FontWeight.Normal,
-        textAlign = TextAlign.Center,
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = 13.dp),
-    )
 }
 
 @Composable

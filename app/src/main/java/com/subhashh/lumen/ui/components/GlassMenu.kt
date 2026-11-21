@@ -45,6 +45,10 @@ import androidx.compose.ui.res.stringResource
 import com.kyant.backdrop.Backdrop
 import com.subhashh.lumen.R
 import com.subhashh.lumen.ui.theme.LocalGlassColors
+import com.subhashh.lumen.ui.theme.Lumen
+import androidx.compose.foundation.background
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.draw.clip
 
 @Immutable
 data class MenuItem(
@@ -95,6 +99,8 @@ fun GlassMenu(
         modifier = modifier,
     ) {
         val colors = LocalGlassColors.current
+        val material = Lumen.material
+        val divider = if (material) Lumen.colors.divider else colors.contentSecondary.copy(alpha = 0.2f)
         var submenu by remember { mutableStateOf<MenuItem?>(null) }
         LaunchedEffect(open) { if (!open) submenu = null }
         Column(
@@ -102,37 +108,37 @@ fun GlassMenu(
                 .width(240.dp)
                 .glass(
                     backdrop,
-                    shape = RoundedCornerShape(22.dp),
+                    shape = Lumen.shapes.menu,
                     blurRadius = 16.dp,
                     tint = colors.fallbackTint.copy(alpha = 0.82f),
                 )
+                .then(if (material) Modifier.clip(Lumen.shapes.menu) else Modifier)
                 .animateContentSize(spring(dampingRatio = 0.85f, stiffness = 600f))
-                .padding(vertical = 6.dp),
+                .padding(vertical = if (material) 8.dp else 6.dp),
         ) {
             val parent = submenu
             if (parent != null) {
                 Row(
                     Modifier
-                        .fillMaxWidth()
-                        .height(46.dp)
+                        .menuRow(material, highlighted = false)
                         .clickable { submenu = null }
-                        .padding(horizontal = 14.dp),
+                        .padding(horizontal = if (material) 12.dp else 14.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(LumenIcons.Back, null, tint = colors.content, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text(parent.label, color = colors.content, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                    Text(parent.label, color = colors.content, fontSize = 16.sp, fontWeight = Lumen.type.emphasis)
                 }
-                HorizontalDivider(color = colors.contentSecondary.copy(alpha = 0.2f), modifier = Modifier.padding(vertical = 4.dp))
+                HorizontalDivider(color = divider, modifier = Modifier.padding(vertical = 4.dp))
                 parent.submenu.orEmpty().forEach { item ->
-                    if (item.startsGroup) HorizontalDivider(color = colors.contentSecondary.copy(alpha = 0.2f), modifier = Modifier.padding(vertical = 4.dp))
+                    if (item.startsGroup) HorizontalDivider(color = divider, modifier = Modifier.padding(vertical = 4.dp))
                     MenuRow(item, colors) { onDismiss(); item.onClick() }
                 }
             } else {
                 sections.filter { it.isNotEmpty() }.forEachIndexed { index, section ->
                     if (index > 0) {
                         HorizontalDivider(
-                            color = colors.contentSecondary.copy(alpha = 0.2f),
+                            color = divider,
                             modifier = Modifier.padding(vertical = 4.dp),
                         )
                     }
@@ -156,17 +162,22 @@ fun GlassMenu(
 
 @Composable
 private fun MenuRow(item: MenuItem, colors: GlassColors, onClick: () -> Unit) {
+    val material = Lumen.material
+    // Material marks the current choice with a tonal pill behind the whole row, as well as the tick.
+    val highlighted = material && item.checked
+    val content = if (highlighted) MaterialTheme.colorScheme.onSecondaryContainer else colors.content
+    @Suppress("NAME_SHADOWING")
+    val colors = if (highlighted) colors.copy(content = content) else colors
     Row(
         Modifier
-            .fillMaxWidth()
-            .height(46.dp)
+            .menuRow(material, highlighted)
             .clickable(onClick = onClick)
-            .padding(horizontal = 18.dp),
+            .padding(horizontal = if (material) 12.dp else 18.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             item.label,
-            color = if (item.destructive) Color(0xFFFF453A) else colors.content,
+            color = if (item.destructive) Lumen.colors.destructive else colors.content,
             fontSize = 16.sp,
             modifier = Modifier.weight(1f),
         )
@@ -187,7 +198,7 @@ private fun MenuRow(item: MenuItem, colors: GlassColors, onClick: () -> Unit) {
         }
         if (item.submenu != null) {
             Icon(
-                LumenIcons.Back,
+                LumenIcons.Chevron,
                 null,
                 tint = colors.contentSecondary,
                 modifier = Modifier
@@ -197,3 +208,19 @@ private fun MenuRow(item: MenuItem, colors: GlassColors, onClick: () -> Unit) {
         }
     }
 }
+
+/**
+ * A menu row's box. Lumen: edge to edge. Material: inset from the menu's sides and rounded, so
+ * its ripple and the current choice's tonal fill are pills.
+ */
+@Composable
+private fun Modifier.menuRow(material: Boolean, highlighted: Boolean): Modifier =
+    if (material) {
+        padding(horizontal = 8.dp)
+            .fillMaxWidth()
+            .height(48.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .then(if (highlighted) Modifier.background(MaterialTheme.colorScheme.secondaryContainer) else Modifier)
+    } else {
+        fillMaxWidth().height(46.dp)
+    }

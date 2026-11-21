@@ -1,6 +1,7 @@
 package com.subhashh.lumen.ui.editor
 
 import android.graphics.Bitmap
+import com.subhashh.lumen.ui.components.Spinner
 import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
 import androidx.compose.foundation.Canvas
@@ -21,7 +22,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -155,7 +155,7 @@ fun PhotoEditorScreen(
     Box(Modifier.fillMaxSize().background(Color.Black)) {
         val bitmap = preview
         if (bitmap == null) {
-            CircularProgressIndicator(Modifier.align(Alignment.Center), color = Color.White)
+            Spinner(Modifier.align(Alignment.Center), color = Color.White)
             return@Box
         }
         val frame = edit.frameSize(bitmap.width.toFloat(), bitmap.height.toFloat())
@@ -476,6 +476,7 @@ private fun FilterPanel(bitmap: Bitmap, edit: PhotoEdit, onEdit: (PhotoEdit) -> 
             ) {
                 val look = remember(edit, filter) { edit.copy(filter = filter) }
                 val paint = remember(look.adjustments, filter) { PhotoEditRenderer.paint(look) }
+                val accent = EditorAccent
                 Canvas(
                     Modifier
                         .size(68.dp)
@@ -494,7 +495,7 @@ private fun FilterPanel(bitmap: Bitmap, edit: PhotoEdit, onEdit: (PhotoEdit) -> 
                         crop.bottom - crop.height * (1f - side / height) / 2f,
                     )
                     drawIntoCanvas { PhotoEditRenderer.draw(it.nativeCanvas, source, look, square, size.width, size.height, paint, finished = false) }
-                    if (selected) drawRoundRect(EditorAccent, style = Stroke(3.dp.toPx()), cornerRadius = androidx.compose.ui.geometry.CornerRadius(10.dp.toPx()))
+                    if (selected) drawRoundRect(accent, style = Stroke(3.dp.toPx()), cornerRadius = androidx.compose.ui.geometry.CornerRadius(10.dp.toPx()))
                 }
                 Text(
                     stringResource(filterLabel(filter)),

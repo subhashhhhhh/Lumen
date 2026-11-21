@@ -1,6 +1,8 @@
 package com.subhashh.lumen.ui.viewer
 
 import com.subhashh.lumen.R
+import androidx.compose.foundation.shape.CircleShape
+import com.subhashh.lumen.ui.theme.Lumen
 import com.subhashh.lumen.data.toRef
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
@@ -35,6 +37,7 @@ import coil3.SingletonImageLoader
 import coil3.memory.MemoryCache
 import coil3.request.ImageRequest
 import com.subhashh.lumen.ui.images.ImageKeys
+import com.subhashh.lumen.ui.images.screenImage
 import kotlin.math.roundToInt
 import android.os.Handler
 import android.os.Looper
@@ -472,10 +475,12 @@ fun ViewerScreen(
                 val key = ImageKeys.screen(item)
                 if (loader.memoryCache?.get(MemoryCache.Key(key)) != null) continue
                 val target = fullScreenRect(item, width, height)
+                val w = target.width.roundToInt().coerceAtLeast(1)
+                val h = target.height.roundToInt().coerceAtLeast(1)
                 loader.enqueue(
                     ImageRequest.Builder(context)
-                        .data(item.uri)
-                        .size(target.width.roundToInt().coerceAtLeast(1), target.height.roundToInt().coerceAtLeast(1))
+                        .data(screenImage(item, w, h))
+                        .size(w, h)
                         .memoryCacheKey(key)
                         .build(),
                 )
@@ -522,7 +527,20 @@ fun ViewerScreen(
 
         // Everything was deleted out from under us.
         LaunchedEffect(items.isEmpty()) { if (items.isEmpty()) close(Velocity.Zero) }
-        BackHandler(enabled = !parked) { close(Velocity.Zero) }
+        if (Lumen.material) {
+            // Material: the back gesture previews leaving, the photo already on its way down.
+            androidx.activity.compose.PredictiveBackHandler(enabled = !parked) { events ->
+                try {
+                    events.collect { motion.onBackProgress(1f - (1f - it.progress) * (1f - it.progress), height.toFloat()) }
+                    close(Velocity.Zero)
+                } catch (cancelled: kotlin.coroutines.cancellation.CancellationException) {
+                    motion.onBackCancelled()
+                    throw cancelled
+                }
+            }
+        } else {
+            BackHandler(enabled = !parked) { close(Velocity.Zero) }
+        }
         BackHandler(enabled = !parked && motion.infoOpen) { motion.closeInfo() }
         BackHandler(enabled = !parked && moreOpen) { moreOpen = false }
         BackHandler(enabled = !parked && cutout.open) { cutout.clear() }
@@ -623,10 +641,22 @@ fun ViewerScreen(
             if (current == null) return@AnimatedVisibility
             CompositionLocalProvider(LocalGlassColors provides com.subhashh.lumen.ui.theme.overMediaGlass()) {
                 Box(Modifier.fillMaxSize()) {
+                    val launch = { sender: android.content.IntentSender ->
+                        playingBeforeRequest = player?.isPlaying == true
+                        requestLauncher.launch(IntentSenderRequest.Builder(sender).build())
+                    }
+                    val toggleFavorite = { item: MediaItem ->
+                        haptics.performHapticFeedback(if (item.isFavorite) HapticFeedbackType.ToggleOff else HapticFeedbackType.ToggleOn)
+                        if (MediaActions.setFavoriteDirectly(context, listOf(item), !item.isFavorite)) onMediaChanged()
+                        else launch(MediaActions.favoriteRequest(context, item))
+                    }
                     TopBar(
                         backdrop = backdrop,
                         item = current,
                         onBack = { close(Velocity.Zero) },
+                        // Material's top row: Favourite (not for Hidden, the trash or another app's file), and the date opens Details.
+                        onFavorite = if (Lumen.material && !inTrash && !inHidden && !external) ({ toggleFavorite(current) }) else null,
+                        onDetails = motion::openInfo,
                         // Recently Deleted items only get restore / delete forever.
                         onMore = if (inTrash || inHidden) null else ({ moreOpen = !moreOpen }),
                         // Live Text's button: only when the photo has text.
@@ -659,13 +689,34 @@ fun ViewerScreen(
                             FilmStrip(items, pager, filmStrip.heightDp.dp)
                             Spacer(Modifier.height(12.dp))
                         }
-                        val launch = { sender: android.content.IntentSender ->
-                            playingBeforeRequest = player?.isPlaying == true
-                            requestLauncher.launch(IntentSenderRequest.Builder(sender).build())
+                        // Material 3 Expressive: one floating toolbar of plain icon buttons, not a row of circles.
+                        val material = Lumen.material
+                        @Composable
+                        fun GlassIconButton(
+                            backdrop: Backdrop,
+                            icon: androidx.compose.ui.graphics.vector.ImageVector,
+                            contentDescription: String,
+                            onClick: () -> Unit,
+                            tint: Color = LocalGlassColors.current.content,
+                        ) {
+                            // Material: the icon with its name under it, straight on the page.
+                            if (material) {
+                                Column(
+                                    // Four across, on a narrow phone too.
+                                    Modifier.width(minOf(84.dp, (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp.dp - 32.dp) / 4)).pressable(onClick, shape = RoundedCornerShape(16.dp)).padding(vertical = 8.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                ) {
+                                    Icon(icon, contentDescription = null, tint = tint)
+                                    Spacer(Modifier.height(6.dp))
+                                    Text(contentDescription, color = tint, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                                }
+                            } else {
+                                com.subhashh.lumen.ui.components.GlassIconButton(backdrop, icon, contentDescription, onClick, tint = tint)
+                            }
                         }
                         Row(
                             Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
+                            horizontalArrangement = if (material) Arrangement.SpaceEvenly else Arrangement.SpaceBetween,
                         ) {
                             if (external) {
                                 GlassIconButton(
@@ -703,7 +754,7 @@ fun ViewerScreen(
                                     backdrop = backdrop,
                                     icon = LumenIcons.DeleteForever,
                                     contentDescription = stringResource(R.string.viewer_delete_permanently),
-                                    tint = Color(0xFFFF453A),
+                                    tint = Lumen.colors.destructive,
                                     onClick = { onDeleteHidden(current) },
                                 )
                             } else if (inTrash) {
@@ -717,7 +768,7 @@ fun ViewerScreen(
                                     backdrop = backdrop,
                                     icon = LumenIcons.DeleteForever,
                                     contentDescription = stringResource(R.string.viewer_delete_forever),
-                                    tint = Color(0xFFFF453A),
+                                    tint = Lumen.colors.destructive,
                                     onClick = { onConfirmDelete(current, true) { launch(MediaActions.deleteForeverRequest(context, current)) } },
                                 )
                             } else {
@@ -727,20 +778,15 @@ fun ViewerScreen(
                                     contentDescription = stringResource(R.string.common_share),
                                     onClick = { MediaActions.share(context, current) },
                                 )
-                                GlassIconButton(
+                                // Material keeps Favourite at the top and opens Details from the date (or a swipe up).
+                                if (!material) GlassIconButton(
                                     backdrop = backdrop,
                                     icon = if (current.isFavorite) LumenIcons.HeartFilled else LumenIcons.Heart,
                                     contentDescription = stringResource(R.string.common_favorite),
-                                    tint = if (current.isFavorite) Color(0xFFFF375F) else LocalGlassColors.current.content,
-                                    onClick = {
-                                        haptics.performHapticFeedback(
-                                            if (current.isFavorite) HapticFeedbackType.ToggleOff else HapticFeedbackType.ToggleOn,
-                                        )
-                                        if (MediaActions.setFavoriteDirectly(context, listOf(current), !current.isFavorite)) onMediaChanged()
-                                        else launch(MediaActions.favoriteRequest(context, current))
-                                    },
+                                    tint = if (current.isFavorite) Lumen.colors.favorite else LocalGlassColors.current.content,
+                                    onClick = { toggleFavorite(current) },
                                 )
-                                GlassIconButton(
+                                if (!material) GlassIconButton(
                                     backdrop = backdrop,
                                     icon = LumenIcons.Info,
                                     contentDescription = stringResource(R.string.common_details),
@@ -758,6 +804,12 @@ fun ViewerScreen(
                                         },
                                     )
                                 }
+                                if (material) GlassIconButton(
+                                    backdrop = backdrop,
+                                    icon = LumenIcons.Add,
+                                    contentDescription = stringResource(R.string.viewer_add_to),
+                                    onClick = { onCopyToAlbum(current) },
+                                )
                                 GlassIconButton(
                                     backdrop = backdrop,
                                     icon = LumenIcons.Delete,
@@ -989,8 +1041,54 @@ private fun TopBar(
     liveTextOn: Boolean? = null,
     onLiveText: () -> Unit = {},
     modifier: Modifier = Modifier,
+    /** Material only: Favourite sits here rather than under the photo. */
+    onFavorite: (() -> Unit)? = null,
+    onDetails: () -> Unit = {},
 ) {
     val colors = LocalGlassColors.current
+    if (Lumen.material) {
+        // Material: plain icons on the page, and the date in the middle of the screen whatever
+        // is either side of it (tap it for Details). Live Text sits on the left so the two
+        // sides stay even and the date has room.
+        Box(modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 8.dp, vertical = 8.dp)) {
+            val context = LocalContext.current
+            val (day, time) = remember(item.takenAt) { formatTakenAt(context, item.takenAt) }
+            val glow = Shadow(color = MaterialTheme.colorScheme.background.copy(alpha = 0.95f), blurRadius = 14f)
+            if (liveTextOn != null) {
+                com.subhashh.lumen.ui.components.BareIconButton(
+                    if (liveTextOn) LumenIcons.LiveTextFilled else LumenIcons.LiveText,
+                    stringResource(R.string.viewer_live_text),
+                    onLiveText,
+                    modifier = Modifier.align(Alignment.CenterStart),
+                    tint = if (liveTextOn) MaterialTheme.colorScheme.primary else colors.content,
+                )
+            }
+            Column(
+                Modifier
+                    .align(Alignment.Center)
+                    // Clear of two buttons' width on each side, so it can't run under them.
+                    .padding(horizontal = 100.dp)
+                    .pressable(onDetails, shape = RoundedCornerShape(16.dp))
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(day, color = colors.content, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, style = TextStyle(fontSize = 17.sp, fontWeight = FontWeight.Medium, shadow = glow))
+                Text(time, color = colors.contentSecondary, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, style = TextStyle(fontSize = 13.sp, shadow = glow))
+            }
+            Row(Modifier.align(Alignment.CenterEnd)) {
+                if (onFavorite != null) {
+                    com.subhashh.lumen.ui.components.BareIconButton(
+                        if (item.isFavorite) LumenIcons.HeartFilled else LumenIcons.Heart,
+                        stringResource(R.string.common_favorite),
+                        onFavorite,
+                        tint = if (item.isFavorite) Lumen.colors.favorite else colors.content,
+                    )
+                }
+                if (onMore != null) com.subhashh.lumen.ui.components.BareIconButton(LumenIcons.More, stringResource(R.string.viewer_more), onMore)
+            }
+        }
+        return
+    }
     Box(
         modifier
             .fillMaxWidth()
@@ -1035,7 +1133,7 @@ private fun TopBar(
             Text(
                 day,
                 color = colors.content,
-                style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.SemiBold, shadow = glow),
+                style = TextStyle(fontSize = 15.sp, fontWeight = Lumen.type.emphasis, shadow = glow),
             )
             Text(time, color = colors.contentSecondary, style = TextStyle(fontSize = 12.sp, shadow = glow))
         }
@@ -1074,7 +1172,7 @@ private fun VideoControls(backdrop: Backdrop, player: Player) {
             tint = colors.content,
             modifier = Modifier
                 .size(44.dp)
-                .pressable(playPause::onClick, pressedScale = 0.8f)
+                .pressable(playPause::onClick, pressedScale = 0.8f, shape = CircleShape)
                 .padding(10.dp),
         )
         Text(formatClock(position), color = colors.content, fontSize = 12.sp)
@@ -1094,7 +1192,7 @@ private fun VideoControls(backdrop: Backdrop, player: Player) {
                 player.seekTo(position)
                 scrubbing = false
             },
-            color = colors.content,
+            color = if (Lumen.material) MaterialTheme.colorScheme.primary else colors.content,
             trackColor = colors.contentSecondary.copy(alpha = 0.3f),
             modifier = Modifier
                 .weight(1f)
@@ -1106,7 +1204,7 @@ private fun VideoControls(backdrop: Backdrop, player: Player) {
             formatSpeed(speed),
             color = colors.content,
             fontSize = 13.sp,
-            fontWeight = FontWeight.SemiBold,
+            fontWeight = Lumen.type.emphasis,
             textAlign = TextAlign.Center,
             modifier = Modifier
                 .padding(start = 10.dp)
@@ -1141,7 +1239,7 @@ private fun CaptionsButton(backdrop: Backdrop, on: Boolean, onClick: () -> Unit)
     Box(
         Modifier
             .size(44.dp)
-            .pressable(onClick, pressedScale = 0.85f)
+            .pressable(onClick, pressedScale = 0.85f, shape = CircleShape)
             .glass(backdrop, shape = RoundedCornerShape(50)),
         contentAlignment = Alignment.Center,
     ) {
@@ -1149,7 +1247,7 @@ private fun CaptionsButton(backdrop: Backdrop, on: Boolean, onClick: () -> Unit)
             stringResource(R.string.viewer_captions_cc),
             color = if (on) MaterialTheme.colorScheme.primary else colors.content,
             fontSize = 14.sp,
-            fontWeight = FontWeight.Bold,
+            fontWeight = Lumen.type.strong,
         )
     }
 }
@@ -1211,21 +1309,34 @@ private fun SubtitleOverlay(item: MediaItem, player: Player, modifier: Modifier 
  * Android can take a hardware decoder back while a video plays ("Released by resource manager"),
  * for example when the background indexer is decoding videos too: the player stops with an
  * error and the video looks paused. Prepare again, which picks up at the same position.
- * A few tries per video, so a file that really can't play doesn't loop.
+ *
+ * Spaced out ([RetryDelaysMs]): whatever took the decoder is often still holding it a moment
+ * later, and three tries in a row used to be spent within a second and give up. Playing again
+ * resets the count; a file that really can't play never does, so it doesn't loop.
  */
 private fun recoverFromDecoderLoss(player: ExoPlayer) = object : Player.Listener {
     private var tries = 0
+    private val handler = Handler(Looper.getMainLooper())
+    private val retry = Runnable { player.prepare() }
 
     override fun onMediaItemTransition(mediaItem: PlayerMediaItem?, reason: Int) {
         tries = 0
+        handler.removeCallbacks(retry)
+    }
+
+    override fun onIsPlayingChanged(isPlaying: Boolean) {
+        if (isPlaying) tries = 0
     }
 
     override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
-        if (tries++ >= 3) return
-        android.util.Log.w("LumenVideo", "Playback error, preparing again", error)
-        player.prepare()
+        val delay = RetryDelaysMs.getOrNull(tries++) ?: return
+        android.util.Log.w("LumenVideo", "Playback error, preparing again in $delay ms", error)
+        handler.removeCallbacks(retry)
+        handler.postDelayed(retry, delay)
     }
 }
+
+private val RetryDelaysMs = longArrayOf(0, 300, 1_000, 2_000)
 
 private val Speeds = listOf(1f, 1.25f, 1.5f, 2f, 0.5f)
 

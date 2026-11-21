@@ -3,7 +3,7 @@
 set -e
 PKG=com.subhashh.lumen.debug
 adb shell am force-stop $PKG
-adb shell am start -n $PKG/com.subhashh.lumen.MainActivity >/dev/null
+adb shell am start -n $PKG/com.subhashh.lumen.GalleryActivity >/dev/null
 sleep 4
 adb shell dumpsys gfxinfo $PKG reset >/dev/null
 for xy in "200 1500" "610 1500" "1000 1500" "200 1900" "610 1900" "1000 1900"; do

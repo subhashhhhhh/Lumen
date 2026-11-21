@@ -29,7 +29,11 @@ import android.provider.Settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import com.subhashh.lumen.ui.theme.LocalDarkTheme
+import com.subhashh.lumen.ui.theme.Lumen
+import androidx.compose.foundation.shape.CircleShape
 import com.subhashh.lumen.ui.theme.Appearance
+import com.subhashh.lumen.ui.theme.DesignStyle
+import com.subhashh.lumen.ui.theme.MaterialPalette
 import com.subhashh.lumen.ui.theme.LocalAppearance
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.height
@@ -51,6 +55,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -104,7 +109,12 @@ private data class SettingEntry(
 private val Entries = listOf(
     SettingEntry("theme", R.string.settings_theme, SettingsCategory.Appearance, R.string.settings_kw_theme),
     SettingEntry("reduce-motion", R.string.settings_reduce_motion, SettingsCategory.Appearance, R.string.settings_kw_reduce_motion),
+    SettingEntry("style", R.string.settings_style, SettingsCategory.Appearance, R.string.settings_kw_style),
+    SettingEntry("accent", R.string.settings_accent, SettingsCategory.Appearance, R.string.settings_kw_accent),
+    SettingEntry("palette", R.string.settings_palette, SettingsCategory.Appearance, R.string.settings_kw_palette),
+    SettingEntry("pure-black", R.string.settings_pure_black, SettingsCategory.Appearance, R.string.settings_kw_pure_black),
     SettingEntry("liquid-glass", R.string.settings_liquid_glass, SettingsCategory.Appearance, R.string.settings_kw_liquid_glass),
+    SettingEntry("app-icon", R.string.settings_app_icon, SettingsCategory.Appearance, R.string.settings_kw_app_icon),
     SettingEntry("reduce-blur", R.string.settings_reduce_blur, SettingsCategory.Appearance, R.string.settings_kw_reduce_blur),
     SettingEntry("date-headers", R.string.settings_date_headers, SettingsCategory.Library, R.string.settings_kw_date_headers),
     SettingEntry("excluded", R.string.settings_excluded_folders, SettingsCategory.Library, R.string.settings_kw_excluded),
@@ -142,6 +152,7 @@ private val Entries = listOf(
     SettingEntry("text-model", R.string.settings_entry_text_reader, SettingsCategory.SmartSearch, R.string.settings_kw_text_model),
     SettingEntry("text-read", R.string.settings_entry_text_read, SettingsCategory.SmartSearch, R.string.settings_kw_text_read),
     SettingEntry("wifi-only", R.string.settings_entry_wifi_only, SettingsCategory.SmartSearch, R.string.settings_kw_wifi_only),
+    SettingEntry("pretend-slow", R.string.settings_pretend_slow, SettingsCategory.Developer, R.string.settings_kw_pretend_slow),
     SettingEntry("search-details", R.string.settings_search_details, SettingsCategory.Developer, R.string.settings_kw_search_details),
     SettingEntry("photo-reminders", R.string.settings_photo_reminders, SettingsCategory.Developer, R.string.settings_kw_photo_reminders),
     SettingEntry("hf-token", R.string.settings_entry_hf_token, SettingsCategory.SmartSearch, R.string.settings_kw_hf_token),
@@ -161,12 +172,18 @@ private val Entries = listOf(
     SettingEntry("version", R.string.settings_version, SettingsCategory.About, R.string.settings_kw_version),
 )
 
+private val MaterialOnly = setOf("accent", "palette", "pure-black")
+private val LumenOnly = setOf("liquid-glass")
+
 /** Every query word must appear in the setting's name, page or keywords. */
-private fun search(context: Context, query: String, developer: Boolean): List<SettingEntry> {
+private fun search(context: Context, query: String, developer: Boolean, material: Boolean): List<SettingEntry> {
     val words = query.lowercase().split(' ').filter { it.isNotBlank() }
     if (words.isEmpty()) return emptyList()
     return Entries.filter { e ->
         if (e.category == SettingsCategory.Developer && !developer) return@filter false
+        // Rows only one style has: not found from the other, where there'd be nothing to show.
+        if (e.id in MaterialOnly && !material) return@filter false
+        if (e.id in LumenOnly && material) return@filter false
         val text = "${context.getString(e.title)} ${context.getString(e.category.titleRes)} ${context.getString(e.keywords)}".lowercase()
         words.all { it in text }
     }
@@ -214,6 +231,8 @@ fun SettingsScreen(
     val status = remember(refresh) { PermissionStatus.read(context) }
     val prefs = remember { LumenPrefs(context) }
 
+    // The main page's rows wear coloured badges; inside a category Material's are plain icons.
+    CompositionLocalProvider(LocalSettingsBadges provides (category == null)) {
     SettingsPage(contentPadding, modifier) {
         when (category) {
             null -> {
@@ -221,7 +240,7 @@ fun SettingsScreen(
                 var query by rememberSaveable { mutableStateOf("") }
                 SearchBox(query, onQueryChange = { query = it })
                 if (query.isNotBlank()) {
-                    val results = search(context, query, prefs.developerOptions)
+                    val results = search(context, query, prefs.developerOptions, Lumen.material)
                     if (results.isEmpty()) {
                         Text(
                             stringResource(R.string.settings_no_match, query.trim()),
@@ -311,11 +330,33 @@ fun SettingsScreen(
         }
         Spacer(Modifier.height(24.dp))
     }
+    }
 }
 
 @Composable
 private fun CategoryRow(category: SettingsCategory, value: String?, onOpen: (SettingsCategory) -> Unit) {
-    SettingsRow(title = stringResource(category.titleRes), value = value, onClick = { onOpen(category) }, icon = category.icon(), iconColor = category.color())
+    // Material: what's inside goes under the name, as Android's own Settings does, after what it's set to.
+    val summary = if (Lumen.material) listOfNotNull(value, stringResource(category.summary())).joinToString("  ·  ") else null
+    SettingsRow(
+        title = stringResource(category.titleRes),
+        subtitle = summary,
+        value = value.takeIf { summary == null },
+        onClick = { onOpen(category) },
+        icon = category.icon(),
+        iconColor = category.color(),
+    )
+}
+
+private fun SettingsCategory.summary() = when (this) {
+    SettingsCategory.Appearance -> R.string.settings_summary_appearance
+    SettingsCategory.Library -> R.string.settings_summary_library
+    SettingsCategory.PhotosVideos -> R.string.settings_summary_photos_videos
+    SettingsCategory.Privacy -> R.string.settings_summary_privacy
+    SettingsCategory.SmartSearch -> R.string.settings_summary_smart_features
+    SettingsCategory.Permissions -> R.string.settings_summary_permissions
+    SettingsCategory.Backup -> R.string.settings_summary_backup
+    SettingsCategory.About -> R.string.settings_summary_about
+    SettingsCategory.Developer -> R.string.settings_summary_developer
 }
 
 private fun SettingsCategory.icon() = when (this) {
@@ -350,9 +391,9 @@ private fun SearchBox(query: String, onQueryChange: (String) -> Unit) {
         Modifier
             .fillMaxWidth()
             .padding(bottom = 6.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(colors.card)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+            .clip(if (Lumen.material) CircleShape else RoundedCornerShape(12.dp))
+            .background(if (Lumen.material) Lumen.colors.card else colors.card)
+            .padding(horizontal = if (Lumen.material) 20.dp else 12.dp, vertical = if (Lumen.material) 16.dp else 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(LumenIcons.Search, contentDescription = null, tint = colors.secondary, modifier = Modifier.size(18.dp))
@@ -364,7 +405,7 @@ private fun SearchBox(query: String, onQueryChange: (String) -> Unit) {
                 onValueChange = onQueryChange,
                 singleLine = true,
                 textStyle = TextStyle(color = colors.text, fontSize = 17.sp),
-                cursorBrush = SolidColor(Blue),
+                cursorBrush = SolidColor(Lumen.colors.accent),
                 modifier = Modifier.fillMaxWidth(),
             )
         }
@@ -387,6 +428,7 @@ private fun SearchBox(query: String, onQueryChange: (String) -> Unit) {
 internal fun Anchor(id: String, highlight: String?, content: @Composable () -> Unit) {
     val requester = remember { BringIntoViewRequester() }
     val flash = remember { Animatable(0f) }
+    val accent = com.subhashh.lumen.ui.theme.Lumen.colors.accent
     LaunchedEffect(highlight) {
         if (highlight == id) {
             delay(250) // let the page lay out first
@@ -398,7 +440,7 @@ internal fun Anchor(id: String, highlight: String?, content: @Composable () -> U
     Box(
         Modifier
             .bringIntoViewRequester(requester)
-            .drawBehind { drawRect(Blue.copy(alpha = 0.28f * flash.value)) },
+            .drawBehind { drawRect(accent.copy(alpha = 0.28f * flash.value)) },
     ) { content() }
 }
 
@@ -428,6 +470,56 @@ private fun ColumnScope.AppearancePage(highlight: String?) {
                 iconColor = Blue,
             )
         }
+    }
+    val style = com.subhashh.lumen.ui.theme.LocalStyle.current
+    Group(
+        stringResource(R.string.settings_group_style),
+        footer = stringResource(R.string.settings_style_footer),
+    ) {
+        Anchor("style", highlight) {
+            PickerRow(
+                title = stringResource(R.string.settings_style),
+                options = DesignStyle.entries.map { stringResource(it.labelRes) },
+                selected = style.current.ordinal,
+                onSelect = { style.onChange(DesignStyle.entries[it]) },
+                icon = LumenIcons.Collections,
+                iconColor = Orange,
+            )
+        }
+    }
+    Group(stringResource(R.string.settings_app_icon), footer = stringResource(R.string.settings_app_icon_footer)) {
+        Anchor("app-icon", highlight) { AppIconPicker() }
+    }
+    if (style.material) {
+        Group(
+            stringResource(R.string.settings_group_colour),
+            footer = stringResource(R.string.settings_colour_footer),
+        ) {
+            Anchor("accent", highlight) { AccentRow(style.accent, style.onAccent) }
+            Divider()
+            Anchor("palette", highlight) {
+                PickerRow(
+                    title = stringResource(R.string.settings_palette),
+                    options = MaterialPalette.entries.map { stringResource(it.labelRes) },
+                    selected = style.palette.ordinal,
+                    onSelect = { style.onPalette(MaterialPalette.entries[it]) },
+                    icon = LumenIcons.Palette,
+                    iconColor = Pink,
+                )
+            }
+            Divider()
+            Anchor("pure-black", highlight) {
+                ToggleRow(
+                    title = stringResource(R.string.settings_pure_black),
+                    subtitle = stringResource(R.string.settings_pure_black_subtitle),
+                    checked = style.pureBlack,
+                    onCheckedChange = style.onPureBlack,
+                    icon = LumenIcons.DarkTheme,
+                    iconColor = Gray,
+                )
+            }
+        }
+        return
     }
     val glass = com.subhashh.lumen.ui.theme.LocalGlass.current
     Group(
@@ -910,7 +1002,7 @@ private fun ColumnScope.AboutPage(
                             )
                         }
                     },
-                    icon = LumenIcons.LiveText,
+                    icon = LumenIcons.Globe,
                     iconColor = Blue,
                 )
             }
@@ -920,7 +1012,7 @@ private fun ColumnScope.AboutPage(
             SettingsRow(
                 title = stringResource(R.string.settings_translate),
                 onClick = { open(TranslateUrl) },
-                icon = LumenIcons.Edit,
+                icon = LumenIcons.Translate,
                 iconColor = Green,
             )
         }
@@ -976,13 +1068,14 @@ private fun ColumnScope.AboutPage(
 @Composable
 private fun AboutHeader(version: String, onDeveloper: () -> Unit) {
     val colors = groupColors()
+    val accent = Lumen.colors.accent
     Column(
         Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 20.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         com.subhashh.lumen.ui.components.AppIcon(96.dp)
         Spacer(Modifier.height(14.dp))
-        Text("Lumen", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = colors.text)
+        Text("Lumen", fontSize = 28.sp, fontWeight = if (Lumen.material) FontWeight.Medium else FontWeight.Bold, color = colors.text)
         Text(stringResource(R.string.settings_version_value, version), fontSize = 15.sp, color = colors.secondary)
         Spacer(Modifier.height(10.dp))
         val developerName = "Subhash Gottumukkala"
@@ -991,7 +1084,7 @@ private fun AboutHeader(version: String, onDeveloper: () -> Unit) {
         Text(
             androidx.compose.ui.text.buildAnnotatedString {
                 append(madeBy.substring(0, nameStart))
-                withStyle(androidx.compose.ui.text.SpanStyle(color = Blue, fontWeight = FontWeight.Medium)) { append(developerName) }
+                withStyle(androidx.compose.ui.text.SpanStyle(color = accent, fontWeight = FontWeight.Medium)) { append(developerName) }
                 append(madeBy.substring((nameStart + developerName.length).coerceAtMost(madeBy.length)))
             },
             fontSize = 15.sp,
@@ -1028,6 +1121,21 @@ private fun ColumnScope.DeveloperPage(prefs: LumenPrefs, highlight: String?, onC
     }
     PhotoRemindersGroup(highlight, onConfirm)
     Group(stringResource(R.string.settings_group_onboarding), footer = stringResource(R.string.settings_onboarding_footer)) {
+        Anchor("pretend-slow", highlight) {
+            var slow by remember { mutableStateOf(prefs.pretendSlowPhone) }
+            ToggleRow(
+                title = stringResource(R.string.settings_pretend_slow),
+                subtitle = stringResource(R.string.settings_pretend_slow_subtitle),
+                checked = slow,
+                onCheckedChange = {
+                    slow = it
+                    prefs.pretendSlowPhone = it
+                },
+                icon = LumenIcons.Timer,
+                iconColor = Orange,
+            )
+        }
+        Divider()
         Anchor("show-onboarding", highlight) {
             val context = LocalContext.current
             SettingsRow(

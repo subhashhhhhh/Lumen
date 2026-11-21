@@ -58,7 +58,25 @@ import com.subhashh.lumen.ui.transition.CoverTransition
 import com.subhashh.lumen.ui.transition.HeroCover
 import com.subhashh.lumen.ui.transition.PhotoTransition
 import com.subhashh.lumen.ui.transition.coverPage
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.draw.drawBehind
 import kotlinx.coroutines.launch
+
+/**
+ * Where a page is: enough to draw it. The page on screen is the one for the app's current state;
+ * in the Material style the one Back leads to is drawn from its own [PageNav] underneath.
+ */
+@androidx.compose.runtime.Immutable
+internal data class PageNav(val searching: Boolean, val settingsPage: String?, val tab: LumenTab, val openCollection: String?) {
+    /** A name for what this page remembers while it's under another. */
+    val id: String get() = "$searching|$settingsPage|$tab|$openCollection"
+}
 
 /**
  * The page [MainScaffold] shows under its glass controls: Search, Settings and its sub-pages, the
@@ -123,12 +141,21 @@ internal fun BoxScope.MainPages(
     openViewer: (String, Int) -> Unit,
     collectionsPage: @Composable (Modifier) -> Unit,
     peoplePage: @Composable (Modifier) -> Unit,
+    people: List<Pair<com.subhashh.lumen.ai.Person, MediaItem>>,
+    /** Material: the page Back leads to, and the pages behind that; and the gesture taking us there. */
+    previous: PageNav?,
+    trail: List<PageNav>,
+    keepBeneath: Boolean,
+    back: com.subhashh.lumen.ui.components.BackGesture,
 ) {
     with(s) {
         // Its own lambda, as it was inside MainScaffold: a page's own changes rebuild only the page.
-        val screens: @Composable () -> Unit = {
+        // A page is drawn for a [PageNav], not for "where the app is now": in the Material style
+        // the page to go back to is drawn too, under the one on top.
+        val material = com.subhashh.lumen.ui.theme.Lumen.material
+        val page: @Composable (PageNav) -> Unit = { nav ->
             when {
-                searching -> SearchScreen(
+                nav.searching -> SearchScreen(
                     query = searchQuery,
                     sections = searchSections,
                     lookingInside = smartPending,
@@ -157,7 +184,17 @@ internal fun BoxScope.MainPages(
                         recentSearches = emptyList()
                     },
                     gridState = searchGrid,
-                    contentPadding = PaddingValues(top = statusTop + 72.dp, bottom = navBottom + 96.dp),
+                    // Material's field is at the bottom: the page starts right under the status bar.
+                    contentPadding = PaddingValues(top = statusTop + (if (material) 8.dp else 72.dp), bottom = navBottom + 96.dp),
+                    topPeople = people,
+                    selection = selection.takeIf { pick == null },
+                    onSelectionChange = { section, chosen ->
+                        if (pick == null) {
+                            // The selection bar acts on this section's list.
+                            searchSection = section
+                            selection = chosen
+                        }
+                    },
                     transition = transition,
                     onOpen = { section, index ->
                         rememberSearch(searchQuery)
@@ -179,11 +216,11 @@ internal fun BoxScope.MainPages(
                     },
                 )
                 library == null -> Unit
-                settingsPage == SettingsLicenses -> LicensesScreen(
+                nav.settingsPage == SettingsLicenses -> LicensesScreen(
                     contentPadding = PaddingValues(top = statusTop + 72.dp, bottom = navBottom + 96.dp),
                 )
-                settingsPage == SettingsMain || settingsPage?.startsWith(SettingsCategoryPrefix) == true -> SettingsScreen(
-                    category = SettingsCategory.of(settingsPage?.removePrefix(SettingsCategoryPrefix)),
+                nav.settingsPage == SettingsMain || nav.settingsPage?.startsWith(SettingsCategoryPrefix) == true -> SettingsScreen(
+                    category = SettingsCategory.of(nav.settingsPage?.removePrefix(SettingsCategoryPrefix)),
                     highlight = settingsHighlight,
                     onOpenCategory = { category, highlight ->
                         settingsHighlight = highlight
@@ -274,7 +311,7 @@ internal fun BoxScope.MainPages(
                         ) { importLauncher.launch(arrayOf("application/json", "application/octet-stream", "text/plain")) }
                     },
                 )
-                settingsPage == SettingsExcluded -> {
+                nav.settingsPage == SettingsExcluded -> {
                     val all = allItems.orEmpty()
                     // Hidden folders count too, once Hidden has been scanned.
                     val hiddenFiles = hiddenAll.orEmpty()
@@ -292,7 +329,12 @@ internal fun BoxScope.MainPages(
                         onChooseFolder = { excludePicker = true },
                     )
                 }
-                tab == LumenTab.Library -> Box(Modifier.nestedScroll(zoomBarScroll)) {
+                nav.tab == LumenTab.Library -> com.subhashh.lumen.ui.library.IndexShelf(
+                    open = indexOpen && material && pick == null && selection == null,
+                    top = gridPadding.calculateTopPadding(),
+                    onClose = { indexOpen = false },
+                    onOpenSettings = { settingsPage = settingsCategoryPage(SettingsCategory.SmartSearch) },
+                ) { Box(Modifier.nestedScroll(zoomBarScroll)) {
                     LibraryScreen(
                         title = pickTitle(pick, picked.size) ?: selection?.let { selectionTitle(selectedItems) } ?: stringResource(R.string.main_library),
                         selection = if (pick?.multiple == true) picked.keys else selection,
@@ -302,11 +344,13 @@ internal fun BoxScope.MainPages(
                                 pick == null -> selection = it
                             }
                         },
-                        aspectRatioGrid = aspectRatioGrid,
+                        gridStyle = gridStyle,
                         columns = gridColumns,
                         onColumnsChange = onGridColumns,
                         emptyText = stringResource(filter.emptyText),
                         startAtEnd = chronological,
+                        // Material's Photos page has no title (its selection bar says how many); picking still names what's wanted.
+                        showHeader = !material || pick != null,
                         showMonth = sort == LibrarySort.Date,
                         scrollLabel = scrollLabel,
                         sections = librarySections,
@@ -335,6 +379,7 @@ internal fun BoxScope.MainPages(
                                 listState = if (level == ZoomLevel.Years) yearsList else monthsList,
                                 contentPadding = gridPadding,
                                 emptyText = stringResource(filter.emptyText),
+                                showHeader = !com.subhashh.lumen.ui.theme.Lumen.material,
                                 onOpen = { period ->
                                     if (level == ZoomLevel.Years) {
                                         zoomLevel = ZoomLevel.Months
@@ -350,12 +395,13 @@ internal fun BoxScope.MainPages(
                             Box(Modifier.fillMaxSize())
                         }
                     }
-                }
-                openCollection == CollectionKeys.Hidden -> HiddenScreen(
+                } }
+                nav.openCollection == CollectionKeys.Hidden -> HiddenScreen(
                     encrypted = encryptHidden,
                     folders = hiddenFolderList,
                     gridState = hiddenGrid,
-                    title = albumSelection?.let { albumSelectionTitle(it.size, folders = true) } ?: stringResource(R.string.main_hidden),
+                    // Material's selection bar says how many; the page keeps its name.
+                    title = albumSelection?.takeIf { !material }?.let { albumSelectionTitle(it.size, folders = true) } ?: stringResource(R.string.main_hidden),
                     columns = albumColumns,
                     onColumnsChange = onAlbumColumns,
                     selection = albumSelection,
@@ -366,9 +412,11 @@ internal fun BoxScope.MainPages(
                 else -> {
                     // Collections and People keep one place here, under an album or person
                     // opened from them (see coverUnderlay): never rebuilt as its cover flies.
-                    val key = openCollection
+                    // Material stacks pages: Collections or People under an album is the page
+                    // beneath (a layer of its own, below), not drawn again here.
+                    val key = nav.openCollection
                     val fromPeople = CollectionKeys.personId(key) != null && personFromPeople
-                    val coverPage = key != null && (CollectionKeys.isFolder(key) || CollectionKeys.personId(key) != null)
+                    val coverPage = !material && key != null && (CollectionKeys.isFolder(key) || CollectionKeys.personId(key) != null)
                     if (key == null || (coverPage && !fromPeople)) {
                         collectionsPage(if (key == null) Modifier else Modifier.coverUnderlay(coverTransition))
                     }
@@ -377,10 +425,19 @@ internal fun BoxScope.MainPages(
                     }
                     if (key != null && key != CollectionKeys.People) {
                         val cover = heroWithLabel(key)
-                        val items = openItems ?: itemsOf(key)
+                        // Material: a kind of document has a page of its own design (a plain
+                        // title, how many, and the other kinds a tap away), not an album's.
+                        val docQuery = if (material && pick == null) CollectionKeys.documentQuery(key) else null
+                        val docTop = statusTop + 152.dp
+                        // What's worked out for the open collection is this page's when it's the one open.
+                        val isOpen = key == openCollection
+                        val items = if (isOpen) openItems ?: itemsOf(key) else itemsOf(key)
                         LibraryScreen(
-                            title = pickTitle(pick, picked.size) ?: selection?.let { selectionTitle(selectedItems) }
+                            title = pickTitle(pick, picked.size) ?: selection?.takeIf { !material }?.let { selectionTitle(selectedItems) }
                                 ?: personOf(key)?.let { it.name ?: stringResource(R.string.main_add_name) }
+                                ?: CollectionKeys.documentQuery(key)?.let { query ->
+                                    com.subhashh.lumen.ui.collections.DocumentKinds.firstOrNull { it.second == query }?.let { stringResource(it.first) }
+                                }
                                 ?: (utilities + folders).firstOrNull { it.key == key }?.title
                                 ?: hiddenFolderList?.firstOrNull { it.collection.key == key }?.collection?.title.orEmpty(),
                             selection = if (pick?.multiple == true) picked.keys else selection,
@@ -390,11 +447,11 @@ internal fun BoxScope.MainPages(
                                     pick == null -> selection = it
                                 }
                             },
-                            aspectRatioGrid = aspectRatioGrid,
+                            gridStyle = gridStyle,
                             columns = gridColumns,
                             onColumnsChange = onGridColumns,
                             items = items,
-                            sections = collectionSections,
+                            sections = collectionSections.takeIf { isOpen },
                             curvedEdge = curvedEdge,
                             startAtEnd = (chronological && cover == null) || key == CollectionKeys.RecentlyDeleted,
                             showMonth = sort == LibrarySort.Date || key == CollectionKeys.RecentlyDeleted,
@@ -402,6 +459,17 @@ internal fun BoxScope.MainPages(
                             gridState = collectionGrid,
                             contentPadding = PaddingValues(top = if (cover != null) heroHeight + 2.dp else statusTop + 152.dp, bottom = navBottom + 96.dp),
                             titleTopPadding = 64.dp,
+                            showHeader = docQuery == null,
+                            topContent = if (docQuery == null) null else { headerModifier ->
+                                com.subhashh.lumen.ui.collections.DocumentsHeader(
+                                    kinds = com.subhashh.lumen.ui.collections.DocumentKinds.filter { it.second == docQuery || !documentItems[it.second].isNullOrEmpty() },
+                                    selected = docQuery,
+                                    count = items.size,
+                                    onKind = { openCollection = CollectionKeys.documents(it) },
+                                    modifier = headerModifier,
+                                    selecting = selection != null,
+                                )
+                            },
                             hero = cover?.let { c -> { heroModifier -> CoverHeader(c, coverTransition, heroModifier) } },
                             heroHeight = heroHeight,
                             modifier = Modifier.coverPage(coverTransition),
@@ -415,6 +483,90 @@ internal fun BoxScope.MainPages(
                 }
             }
         }
-        screens()
+        val current = PageNav(searching, settingsPage, tab, openCollection)
+        if (!material) {
+            // Lumen's own style: one page, switched in place as it always was.
+            androidx.compose.runtime.CompositionLocalProvider(
+                com.subhashh.lumen.ui.settings.LocalSettingsScroll provides current.settingsPage?.let { settingsScroll(it) },
+            ) { page(current) }
+        } else {
+            // Material: the page on top and, while it's on its way out (or its cover is flying),
+            // the page beneath it. Keyed by where each is, so the one beneath simply stays when
+            // the top one goes; each keeps what it remembers (scroll, a search typed) while under.
+            val holder = rememberSaveableStateHolder()
+            val beneath = previous?.takeIf { back.active || coverTransition.flying || keepBeneath }
+            val known = remember { HashSet<String>() }
+            LaunchedEffect(current, previous) {
+                // Pages no longer on the way back are forgotten: next time they open fresh.
+                val live = setOfNotNull(current.id, previous?.id) + trail.map { it.id }
+                known.filter { it !in live }.forEach { holder.removeState(it); known.remove(it) }
+                known += live
+            }
+            // Whichever edge the thumb came from, the page leaves the way Android's own back
+            // animation does: out to the right, the page beneath coming from the left (mirrored
+            // in right-to-left languages).
+            val side = if (androidx.compose.ui.platform.LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl) -1f else 1f
+            val scrim = MaterialTheme.colorScheme.scrim
+            val backdropColor = MaterialTheme.colorScheme.background
+            for (nav in listOfNotNull(beneath, current)) {
+                key(nav) {
+                    val top = nav == current
+                    Box(
+                        Modifier
+                            .fillMaxSize()
+                            .graphicsLayer {
+                                val pull = back.eased
+                                val out = back.commit
+                                if (top) {
+                                    // Pulls away: smaller, rounder and aside; then off that way.
+                                    if (pull > 0f || out > 0f) {
+                                        val scale = 1f - 0.1f * pull
+                                        scaleX = scale
+                                        scaleY = scale
+                                        // Far enough aside that the page beneath is plainly there to see.
+                                        translationX = side * size.width * (0.16f * pull + 0.84f * out)
+                                        alpha = 1f - out * out
+                                        shape = RoundedCornerShape(32.dp.toPx() * pull)
+                                        clip = true
+                                    }
+                                } else if (back.active) {
+                                    // Comes forward from a little way back.
+                                    val near = 0.94f + 0.06f * maxOf(out, pull * 0.35f)
+                                    scaleX = near
+                                    scaleY = near
+                                    // And drifts in from the other side.
+                                    translationX = -side * size.width * 0.05f * (1f - maxOf(out, pull * 0.5f))
+                                } else {
+                                    // Under an album or person: seen only while its cover flies.
+                                    alpha = coverTransition.parentAlpha()
+                                    val s = coverTransition.parentScale()
+                                    scaleX = s
+                                    scaleY = s
+                                }
+                            }
+                            // Opaque, so the page beneath shows only where this one has pulled away;
+                            // an album or person arriving on its cover fades in over what's beneath.
+                            .drawBehind {
+                                val cover = top && (CollectionKeys.isFolder(nav.openCollection) || CollectionKeys.personId(nav.openCollection) != null)
+                                drawRect(backdropColor, alpha = if (cover && !nav.searching && nav.settingsPage == null) coverTransition.pageAlpha() else 1f)
+                            }
+                            .drawWithContent {
+                                drawContent()
+                                // Dimmed while it's the page beneath, lifting as it comes forward.
+                                if (!top && back.active) drawRect(scrim, alpha = 0.36f * (1f - back.commit) * (1f - back.eased * 0.4f))
+                            }
+                            // Touches belong to the page on top.
+                            .pointerInput(Unit) {},
+                    ) {
+                        holder.SaveableStateProvider(nav.id) {
+                            androidx.compose.runtime.CompositionLocalProvider(
+                                com.subhashh.lumen.ui.settings.LocalSettingsScroll provides nav.settingsPage?.let { settingsScroll(it) },
+                            ) { page(nav) }
+                        }
+                    }
+                }
+            }
+        }
+
     }
 }

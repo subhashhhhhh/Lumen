@@ -1,6 +1,7 @@
 package com.subhashh.lumen.ui.settings
 
 import android.content.Intent
+import com.subhashh.lumen.ui.theme.Lumen
 import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -32,6 +33,8 @@ private val Credits = listOf(
         R.string.licenses_used_liquid_glass_easy,
         "https://pub.dev/packages/liquid_glass_easy",
     ),
+    Credit("Material Symbols", "Google", "Apache 2.0", R.string.licenses_used_material_symbols, "https://github.com/google/material-design-icons"),
+    Credit("MaterialKolor", "Jordon de Hoog", "MIT", R.string.licenses_used_material_kolor, "https://github.com/jordond/materialkolor"),
     Credit("Telephoto", "Saket Narayan", "Apache 2.0", R.string.licenses_used_telephoto, "https://github.com/saket/telephoto"),
     Credit("Coil", "Coil Contributors", "Apache 2.0", R.string.licenses_used_coil, "https://github.com/coil-kt/coil"),
     Credit(
@@ -144,7 +147,7 @@ fun LicensesScreen(contentPadding: PaddingValues, modifier: Modifier = Modifier)
                         }
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                 ) {
-                    Text(credit.name, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = colors.text)
+                    Text(credit.name, fontSize = 16.sp, fontWeight = Lumen.type.emphasis, color = colors.text)
                     Text("${credit.by} · ${credit.license}", fontSize = 13.sp, color = colors.secondary)
                     Text(stringResource(credit.usedFor), fontSize = 13.sp, color = colors.secondary)
                 }

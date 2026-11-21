@@ -1,0 +1,28 @@
+name: Feature request
+description: Suggest something Lumen could do.
+title: "[Feature] "
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please search the [open issues](https://github.com/subhashhhhhh/Lumen/issues) first; a 👍 on an existing request helps decide what comes next.
+        Lumen stays local-first: everything runs on the phone, with no account and no cloud.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?
+      description: The situation or problem, not just the feature. "I can't find screenshots of receipts" beats "add a receipts album".
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like Lumen to do?
+    validations:
+      required: true
+  - type: textarea
+    id: today
+    attributes:
+      label: How do you do it today?
+      description: Another app, a workaround, or not at all. Screenshots of how another app does it are welcome.

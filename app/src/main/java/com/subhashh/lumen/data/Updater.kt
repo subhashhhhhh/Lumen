@@ -66,12 +66,12 @@ object Updater {
                 val assets = json.optJSONArray("assets")
                 val apks = (0 until (assets?.length() ?: 0)).map { assets!!.getJSONObject(it) }
                     .filter { it.getString("name").endsWith(".apk", ignoreCase = true) }
-                // The APK for this phone's processor ("Lumen-0.2.0-arm64-v8a.apk"), else the
-                // universal one, else whatever APK there is.
+                // The APK for this phone's processor ("Lumen-0.2.0-arm64-v8a.apk"), else a universal
+                // one. Never just any APK: one for another processor downloads and then won't
+                // install (32-bit ARM phones have none since 0.5.0).
                 val apk = Build.SUPPORTED_ABIS.firstNotNullOfOrNull { abi -> apks.firstOrNull { "-$abi." in it.getString("name") } }
                     ?: apks.firstOrNull { "universal" in it.getString("name") }
-                    ?: apks.firstOrNull()
-                    ?: return@runCatching Check.Failed("The latest release has no APK")
+                    ?: return@runCatching if (apks.isEmpty()) Check.Failed("The latest release has no APK") else Check.UpToDate
                 if (!isNewer(version, installedVersion(context))) return@runCatching Check.UpToDate
                 Check.Available(
                     Release(

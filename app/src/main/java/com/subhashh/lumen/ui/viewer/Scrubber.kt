@@ -35,7 +35,9 @@ fun Scrubber(
     modifier: Modifier = Modifier,
 ) {
     var active by remember { mutableStateOf(false) }
-    val barHeight by animateDpAsState(if (active) 10.dp else 5.dp, label = "scrubberHeight")
+    // Material's track is thicker at rest, like its sliders.
+    val rest = if (com.subhashh.lumen.ui.theme.Lumen.material) 8.dp else 5.dp
+    val barHeight by animateDpAsState(if (active) rest * 2 else rest, label = "scrubberHeight")
 
     Box(
         modifier

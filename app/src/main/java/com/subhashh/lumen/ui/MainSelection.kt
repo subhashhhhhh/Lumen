@@ -136,9 +136,10 @@ internal fun BoxScope.MainSelectionBars(
             visible = selecting && peopleSelection == null && !viewerOpen,
             enter = fadeIn(tween(180)) + slideInVertically(tween(220)) { it / 2 },
             exit = fadeOut(tween(150)) + slideOutVertically(tween(180)) { it / 2 },
+            // Material's is docked to the bottom edge and pads itself above the gesture bar.
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = navBottom + 12.dp),
+                .padding(bottom = if (com.subhashh.lumen.ui.theme.Lumen.material) 0.dp else navBottom + 12.dp),
         ) {
             val launch = { sender: android.content.IntentSender ->
                 selectionLauncher.launch(IntentSenderRequest.Builder(sender).build())
@@ -278,7 +279,8 @@ internal fun BoxScope.MainSelectionBars(
             origin = TransformOrigin(1f, 1f),
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(bottom = navBottom + 12.dp + 48.dp + 12.dp, end = 16.dp),
+                // Above the bar: Material's is a taller sheet, docked to the bottom edge.
+                .padding(bottom = navBottom + (if (com.subhashh.lumen.ui.theme.Lumen.material) 100.dp else 72.dp), end = 16.dp),
         )
     }
 }

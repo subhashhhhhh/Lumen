@@ -1,6 +1,7 @@
 package com.subhashh.lumen.ui.library
 
 import androidx.compose.foundation.background
+import com.subhashh.lumen.ui.theme.Lumen
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
@@ -115,6 +116,7 @@ fun TimelineScreen(
     onOpen: (Period) -> Unit,
     emptyText: String,
     modifier: Modifier = Modifier,
+    showHeader: Boolean = true,
 ) {
     val cardHeight = if (level == ZoomLevel.Years) 320.dp else 220.dp
 
@@ -144,7 +146,7 @@ fun TimelineScreen(
                 modifier = Modifier.align(Alignment.Center),
             )
         }
-        LibraryHeader(title = stringResource(R.string.main_library), subtitle = "", topPadding = 16.dp, modifier = Modifier.align(Alignment.TopStart))
+        if (showHeader) LibraryHeader(title = stringResource(R.string.main_library), subtitle = "", topPadding = 16.dp, modifier = Modifier.align(Alignment.TopStart))
     }
 }
 
@@ -157,8 +159,8 @@ private fun PeriodCard(period: Period, height: Dp, onClick: () -> Unit) {
         Modifier
             .fillMaxWidth()
             .height(height)
-            .pressable(onClick, pressedScale = 0.97f)
-            .clip(RoundedCornerShape(22.dp))
+            .pressable(onClick, pressedScale = 0.97f, shape = if (Lumen.material) RoundedCornerShape(28.dp) else RoundedCornerShape(22.dp))
+            .clip(if (Lumen.material) RoundedCornerShape(28.dp) else RoundedCornerShape(22.dp))
             .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)),
     ) {
         AsyncImage(
@@ -185,7 +187,7 @@ private fun PeriodCard(period: Period, height: Dp, onClick: () -> Unit) {
                 .align(Alignment.BottomStart)
                 .padding(18.dp),
         ) {
-            Text(period.title, color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+            Text(period.title, color = Color.White, fontSize = 26.sp, fontWeight = Lumen.type.strong)
             Text(period.subtitle, color = Color.White.copy(alpha = 0.85f), fontSize = 14.sp)
         }
     }

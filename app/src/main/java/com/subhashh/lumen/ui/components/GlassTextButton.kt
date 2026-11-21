@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kyant.backdrop.Backdrop
 import com.subhashh.lumen.ui.theme.LocalGlassColors
+import com.subhashh.lumen.ui.theme.Lumen
 
 /** A glass capsule with a text label, the same height as [GlassIconButton] (e.g. "Select All"). */
 @Composable
@@ -22,6 +23,18 @@ fun GlassTextButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    if (Lumen.material) {
+        MaterialMorphSurface(onClick, LocalGlassColors.current.tint, modifier.height(48.dp), square = false) {
+            Text(
+                text,
+                color = LocalGlassColors.current.content,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.padding(horizontal = 20.dp),
+            )
+        }
+        return
+    }
     Box(
         modifier = modifier
             .height(48.dp)

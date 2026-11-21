@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.NonRestartableComposable
@@ -77,6 +79,7 @@ internal fun BoxScope.MainTopControls(
     popSettings: () -> Unit,
     closeCollection: (String?) -> Unit,
 ) {
+    val material = com.subhashh.lumen.ui.theme.Lumen.material
     with(s) {
         if (selecting && !viewerOpen) {
             val albums = albumSelection
@@ -100,14 +103,18 @@ internal fun BoxScope.MainTopControls(
                     }
                 },
                 onCancel = { endSelection() },
-                modifier = Modifier
+                title = (chosenPeople?.size ?: albums?.size ?: selectedItems.size).let { n ->
+                    androidx.compose.ui.res.pluralStringResource(R.plurals.main_n_selected, n, n)
+                },
+                // Material's is a bar across the top, under the status bar by its own padding.
+                modifier = if (material) Modifier.align(Alignment.TopCenter) else Modifier
                     .align(Alignment.TopEnd)
                     .statusBarsPadding()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
             )
         }
 
-        if (searching && !viewerOpen) {
+        if (searching && !viewerOpen && !selecting) {
             SearchField(
                 backdrop = backdrop,
                 query = searchQuery,
@@ -115,10 +122,19 @@ internal fun BoxScope.MainTopControls(
                 autoFocus = focusSearch,
                 onAutoFocused = { focusSearch = false },
                 onSubmit = { rememberSearch(searchQuery) },
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .statusBarsPadding()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                // Material: at the bottom, under the thumb, riding up with the keyboard.
+                modifier = if (material) {
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .imePadding()
+                        .navigationBarsPadding()
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                } else {
+                    Modifier
+                        .align(Alignment.TopCenter)
+                        .statusBarsPadding()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                },
             )
         }
 
@@ -172,6 +188,10 @@ internal fun BoxScope.MainTopControls(
             )
         }
 
+        // Material: how indexing is going, at the top left of Photos; opens the status in the page.
+        if (material && tab == LumenTab.Library && !searching && selection == null && !viewerOpen && settingsPage == null && pick == null) {
+            com.subhashh.lumen.ui.library.IndexStatus(open = indexOpen, onToggle = { indexOpen = !indexOpen })
+        }
         if (tab == LumenTab.Library && !searching && selection == null && !viewerOpen && settingsPage == null && pick == null) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -396,7 +416,8 @@ internal fun BoxScope.MainTopControls(
                 .padding(top = 64.dp, end = 16.dp),
         )
 
-        if ((inCollection || inSettings) && !viewerOpen) {
+        // Material has no Back button: Android's back gesture (or button) is how to go back.
+        if ((inCollection || inSettings) && !viewerOpen && !material) {
             GlassIconButton(
                 backdrop = backdrop,
                 icon = LumenIcons.Back,

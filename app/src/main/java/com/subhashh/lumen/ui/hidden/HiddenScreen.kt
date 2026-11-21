@@ -1,6 +1,8 @@
 package com.subhashh.lumen.ui.hidden
 
 import androidx.compose.animation.core.animateFloat
+import com.subhashh.lumen.ui.components.Spinner
+import com.subhashh.lumen.ui.theme.Lumen
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.graphicsLayer
@@ -18,7 +20,6 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -102,11 +103,11 @@ fun HiddenScreen(
             if (encrypted) {
                 UnlockingVault()
                 Spacer(Modifier.height(18.dp))
-                Text(stringResource(R.string.hidden_unlocking_vault), color = colors.onBackground, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.hidden_unlocking_vault), color = colors.onBackground, fontSize = 16.sp, fontWeight = Lumen.type.emphasis)
                 Spacer(Modifier.height(4.dp))
                 Text(stringResource(R.string.hidden_unlocking_vault_detail), color = colors.onBackground.copy(alpha = 0.55f), fontSize = 13.sp)
             } else {
-                CircularProgressIndicator(Modifier.size(28.dp), strokeWidth = 2.5.dp)
+                Spinner(Modifier.size(if (Lumen.material) 40.dp else 28.dp), strokeWidth = 2.5.dp)
                 Spacer(Modifier.height(14.dp))
                 Text(stringResource(R.string.hidden_scanning), color = colors.onBackground.copy(alpha = 0.6f), fontSize = 15.sp)
             }
@@ -156,7 +157,7 @@ private fun UnlockingVault() {
         ),
         label = "unlockAngle",
     )
-    val accent = androidx.compose.ui.graphics.Color(0xFF30D158)
+    val accent = Lumen.colors.positive
     val track = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f)
     Box(Modifier.size(88.dp), contentAlignment = Alignment.Center) {
         androidx.compose.foundation.Canvas(

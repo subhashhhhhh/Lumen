@@ -126,6 +126,7 @@
     <string name="main_view_grid">Grid</string>
     <string name="main_view_square">Square</string>
     <string name="main_view_aspect_ratio">Aspect Ratio</string>
+    <string name="main_view_mosaic">Mosaic</string>
 
     <!-- App lock and picker -->
     <string name="main_unlock_lumen">Unlock Lumen</string>
@@ -434,6 +435,16 @@
     <string name="settings_category_backup">Backup &amp; Import</string>
     <string name="settings_category_about">About</string>
     <string name="settings_category_developer">Developer Options</string>
+    <!-- Under each category's name on the Settings page, in the Material style: what's inside. -->
+    <string name="settings_summary_appearance">Theme, style and colours</string>
+    <string name="settings_summary_library">Date headers, the grid\'s edge and excluded folders</string>
+    <string name="settings_summary_photos_videos">The viewer, videos, maps and slideshows</string>
+    <string name="settings_summary_privacy">Hidden, App Lock and encryption</string>
+    <string name="settings_summary_smart_features">Search, faces, text, subtitles and cutout</string>
+    <string name="settings_summary_permissions">What Lumen may use on this phone</string>
+    <string name="settings_summary_backup">Save or bring back settings and favourites</string>
+    <string name="settings_summary_about">Version, updates, language and licences</string>
+    <string name="settings_summary_developer">Tools for testing Lumen</string>
 
     <!-- Settings: main page -->
     <string name="settings_search_hint">Search settings</string>
@@ -480,8 +491,13 @@
 
     <!-- Settings search: extra words people might search for each setting by, separated by spaces.
          Lowercase; any word typed must appear in the setting's name, page or these words. -->
+    <string name="settings_kw_app_icon">launcher home screen logo colour color customize</string>
     <string name="settings_kw_theme">dark mode light mode night appearance</string>
     <string name="settings_kw_reduce_motion">animations accessibility springs</string>
+    <string name="settings_kw_style">design material you expressive android ios look language</string>
+    <string name="settings_kw_accent">material you monet wallpaper accent color colour custom theme</string>
+    <string name="settings_kw_palette">palette vibrant expressive tonal monochrome rainbow colours</string>
+    <string name="settings_kw_pure_black">amoled oled black dark battery</string>
     <string name="settings_kw_liquid_glass">glass refraction lens effect gpu</string>
     <string name="settings_kw_reduce_blur">blur transparency solid frosted readability battery</string>
     <string name="settings_kw_date_headers">sections days months years grouping</string>
@@ -518,6 +534,7 @@
     <string name="settings_kw_text_model">ocr words text in photos screenshots download remove update</string>
     <string name="settings_kw_text_read">ocr words text in photos screenshots reading progress</string>
     <string name="settings_kw_wifi_only">mobile data cellular download</string>
+    <string name="settings_kw_pretend_slow">hardware check slow phone warning test developer</string>
     <string name="settings_kw_search_details">debug search sections scores developer</string>
     <string name="settings_kw_hf_token">huggingface token download speed</string>
     <string name="settings_kw_media_management">delete favorite trash permission confirm</string>
@@ -540,6 +557,32 @@
     <string name="settings_theme">Theme</string>
     <string name="settings_reduce_motion">Reduce Motion</string>
     <string name="settings_reduce_motion_subtitle">No flying photos, springs or bounces</string>
+    <string name="settings_group_style">Style</string>
+    <string name="settings_style">Style</string>
+    <string name="settings_style_footer">Lumen is the app\'s own look. Material 3 Expressive is Android\'s: its own pages, icons and motion, your colours, and the newest photos first. Liquid Glass belongs to Lumen\'s look.</string>
+    <string name="settings_group_colour">Colour</string>
+    <string name="settings_colour_footer">Colour is what Material builds its whole scheme from: your wallpaper\'s, one of these, or one you mix. Palette sets how far the other colours stray from it. Pure Black makes the dark theme\'s backgrounds black, which saves power on OLED screens.</string>
+    <string name="settings_accent">Colour</string>
+    <string name="settings_accent_wallpaper">Wallpaper</string>
+    <string name="settings_accent_default">Lumen blue</string>
+    <string name="settings_accent_custom">Custom</string>
+    <string name="settings_accent_hue">Hue</string>
+    <string name="settings_palette">Palette</string>
+    <string name="settings_pure_black">Pure Black</string>
+    <string name="settings_pure_black_subtitle">Black backgrounds in the dark theme</string>
+    <string name="settings_app_icon">App Icon</string>
+    <string name="settings_app_icon_footer">The icon changes when you leave Lumen, and the Home screen can take a few seconds to show it. Some launchers drop Lumen\'s Home screen shortcut when its icon changes; add it again from the app list.</string>
+    <!-- Names of the app icons. First Light and Bloom are the two designs; the rest are their colours. -->
+    <string name="app_icon_first_light">First Light</string>
+    <string name="app_icon_dusk">Dusk</string>
+    <string name="app_icon_ocean">Ocean</string>
+    <string name="app_icon_forest">Forest</string>
+    <string name="app_icon_rose">Rose</string>
+    <string name="app_icon_graphite">Graphite</string>
+    <string name="app_icon_bloom">Bloom</string>
+    <string name="app_icon_bloom_dark">Bloom Dark</string>
+    <string name="app_icon_bloom_ocean">Bloom Ocean</string>
+    <string name="app_icon_bloom_sunset">Bloom Sunset</string>
     <string name="settings_group_glass">Glass</string>
     <string name="settings_glass_footer">Liquid Glass: buttons, bars, menus and switches made of glass that bends what\'s behind it. Off, they\'re solid. Reduce Blur keeps the glass with much less blur: clearer, and lighter on the GPU.</string>
     <string name="settings_liquid_glass">Liquid Glass</string>
@@ -672,6 +715,8 @@
     <!-- Settings: Developer Options -->
     <string name="settings_developer_search_footer">Splits results by how they matched (names, folders and dates; people; text in photos; Smart Search), each one row until See All, with Smart Search\'s rank and score on each photo.</string>
     <string name="settings_search_details">Search Details</string>
+    <string name="settings_pretend_slow">Pretend This Phone Is Slow</string>
+    <string name="settings_pretend_slow_subtitle">Shows what a phone below Lumen\'s bar sees in onboarding and Smart Features</string>
     <string name="settings_group_onboarding">Onboarding</string>
     <string name="settings_onboarding_footer">Shows first launch again, from the start. Nothing is reset.</string>
     <string name="settings_show_onboarding">Show Onboarding</string>
@@ -849,6 +894,8 @@
     <string name="licenses_used_liquid_glass_easy">The motion of the glass selection pill in the tab bar</string>
     <string name="licenses_used_telephoto">Zooming and tiled loading of large photos</string>
     <string name="licenses_used_coil">Image loading</string>
+    <string name="licenses_used_material_symbols">The icons of the Material 3 Expressive style</string>
+    <string name="licenses_used_material_kolor">Material colour schemes from the colour you choose</string>
     <string name="editor_edit">Edit</string>
     <string name="editor_crop">Crop</string>
     <string name="editor_adjust">Adjust</string>
@@ -1020,6 +1067,13 @@
     <string name="viewer_wallpaper_set_home">Wallpaper set on the home screen</string>
     <string name="viewer_wallpaper_set_lock">Wallpaper set on the lock screen</string>
     <string name="viewer_wallpaper_set_both">Wallpaper set on both screens</string>
+    <string name="settings_accent_preset">Colour %1$d</string>
+    <string name="search_person_unnamed">Unnamed person</string>
+    <string name="viewer_caption_edit">Caption: %1$s. Edit</string>
+    <string name="wallpaper_preview">Preview</string>
+    <string name="wallpaper_set">Set wallpaper</string>
+    <string name="wallpaper_lock">Lock screen</string>
+    <string name="wallpaper_home">Home screen</string>
     <string name="viewer_wallpaper_failed">Couldn\'t set the wallpaper</string>
 
     <!-- Map -->
@@ -1045,6 +1099,49 @@
     <string name="app_appearance_system">Match Phone</string>
     <string name="app_appearance_light">Light</string>
     <string name="app_appearance_dark">Dark</string>
+    <string name="main_photos">Photos</string>
+    <!-- Indexing status on the Photos page (Material style): a chip, and the panel it opens. -->
+    <string name="index_collapse">Hide indexing status</string>
+    <string name="index_chip_done">Up to date</string>
+    <plurals name="index_chip_left">
+        <item quantity="one">%1$,d to index</item>
+        <item quantity="other">%1$,d to index</item>
+    </plurals>
+    <string name="index_title_done">Everything is indexed</string>
+    <plurals name="index_title_left">
+        <item quantity="one">Indexing %1$,d item</item>
+        <item quantity="other">Indexing %1$,d items</item>
+    </plurals>
+    <string name="index_search">Search</string>
+    <string name="index_text">Text in photos</string>
+    <string name="index_faces">Faces</string>
+    <string name="index_note_done">New photos and videos are added as they arrive.</string>
+    <string name="index_note_left">Lumen works through the rest while the phone charges, or in the hours you\'ve set.</string>
+    <string name="viewer_add_to">Add to</string>
+    <string name="collections_view_all">View all</string>
+    <string name="collections_places">Places</string>
+    <string name="collections_places_soon">Places are on the way</string>
+    <string name="collections_places_soon_detail">Your photos by where they were taken, and a map of them all, in a later version.</string>
+    <string name="collections_documents">Documents</string>
+    <string name="collections_other">Other collections</string>
+    <string name="collections_doc_documents">Documents</string>
+    <string name="collections_doc_receipts">Receipts</string>
+    <string name="collections_doc_tickets">Tickets</string>
+    <string name="collections_doc_identity">Identity</string>
+    <string name="collections_doc_books">Books</string>
+    <string name="collections_doc_notes">Notes</string>
+    <plurals name="collections_doc_count">
+        <item quantity="one">%1$,d item</item>
+        <item quantity="other">%1$,d items</item>
+    </plurals>
+    <string name="app_style_lumen">Lumen</string>
+    <string name="app_style_material">Material 3 Expressive</string>
+    <string name="app_palette_tonal">Tonal</string>
+    <string name="app_palette_vibrant">Vibrant</string>
+    <string name="app_palette_expressive">Expressive</string>
+    <string name="app_palette_fruit_salad">Fruit Salad</string>
+    <string name="app_palette_rainbow">Rainbow</string>
+    <string name="app_palette_monochrome">Monochrome</string>
 
     <!-- Onboarding: welcome -->
     <string name="onboarding_tagline">Your photos, smarter.\nAnd they never leave your phone.</string>
@@ -1078,6 +1175,8 @@
     <string name="onboarding_look_subtitle">Pick how Lumen looks. You can change it any time in Settings.</string>
     <string name="onboarding_theme">Theme</string>
     <string name="onboarding_theme_detail">Follow your phone, or always light or dark</string>
+    <string name="onboarding_style_lumen_detail">Lumen\'s own look</string>
+    <string name="onboarding_style_material_detail">Android\'s design language, in your wallpaper\'s colours</string>
     <string name="onboarding_liquid_glass">Liquid Glass</string>
     <string name="onboarding_liquid_glass_detail">Buttons, bars and menus made of glass. Off, they\'re solid</string>
     <string name="onboarding_reduce_blur">Reduce Blur</string>
@@ -1085,6 +1184,11 @@
 
     <!-- Onboarding: Smart Features -->
     <string name="onboarding_smart_title">Smart Features</string>
+    <!-- Shown on phones with little memory or 32-bit Android, in onboarding and in Settings → Smart Features. -->
+    <string name="device_slow_title">This phone is below what Lumen is built for</string>
+    <string name="onboarding_slow_detail">Smart features are made for recent phones with 6 GB of memory or more. Here they would be slow and can warm the phone, so they start off. Turn on only what you want.</string>
+    <string name="smart_slow_detail">Smart features can be slow here and can warm the phone. The Fast search model is much lighter than Accurate.</string>
+    <string name="smart_slow_use_fast">Switch to Fast</string>
     <string name="onboarding_smart_subtitle">Find photos by what\'s in them, the words in them, and who\'s in them. The models download once, in the background.</string>
     <string name="onboarding_smart_search">Smart Search</string>
     <string name="onboarding_smart_search_detail">“cat on a sofa”, “sunset at the beach” · %1$s</string>

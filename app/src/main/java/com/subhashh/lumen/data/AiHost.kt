@@ -8,7 +8,7 @@ import android.media.MediaDataSource
 import com.awxkee.jxlcoder.JxlCoder
 import com.awxkee.jxlcoder.PreferredColorConfig
 import com.awxkee.jxlcoder.ScaleMode
-import com.subhashh.lumen.MainActivity
+import com.subhashh.lumen.GalleryActivity
 import com.subhashh.lumen.R
 import com.subhashh.lumen.ai.AiNotifications
 import com.subhashh.lumen.ai.AiSettings
@@ -71,7 +71,7 @@ class AiHost(context: Context) : LumenAiHost {
     override val notifications = object : AiNotifications {
         override val smallIcon = R.drawable.ic_launcher_monochrome
         override fun contentIntent(context: Context): PendingIntent =
-            PendingIntent.getActivity(context, 0, Intent(context, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
+            PendingIntent.getActivity(context, 0, Intent(context, GalleryActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
     }
 }
 

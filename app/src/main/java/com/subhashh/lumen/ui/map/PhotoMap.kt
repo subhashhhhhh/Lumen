@@ -219,7 +219,7 @@ fun PhotoMapScreen(point: GeoPoint, title: String?, onBack: () -> Unit, onOpenIn
             Modifier.statusBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            GlassIconButton(backdrop, LumenIcons.Back, stringResource(R.string.common_back), onClick = onBack)
+            if (!com.subhashh.lumen.ui.theme.Lumen.material) GlassIconButton(backdrop, LumenIcons.Back, stringResource(R.string.common_back), onClick = onBack)
             if (title != null) {
                 Text(
                     title,
@@ -242,7 +242,7 @@ fun PhotoMapScreen(point: GeoPoint, title: String?, onBack: () -> Unit, onOpenIn
                 .navigationBarsPadding()
                 .padding(bottom = 24.dp)
                 .glass(backdrop, CircleShape)
-                .pressable(onOpenInMaps, pressedScale = 0.94f)
+                .pressable(onOpenInMaps, pressedScale = 0.94f, shape = CircleShape)
                 .padding(horizontal = 20.dp, vertical = 14.dp),
         )
     }

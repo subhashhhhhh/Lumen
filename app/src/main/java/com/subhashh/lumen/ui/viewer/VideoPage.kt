@@ -1,6 +1,7 @@
 package com.subhashh.lumen.ui.viewer
 
 import androidx.compose.animation.AnimatedVisibility
+import com.subhashh.lumen.ui.theme.Lumen
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -57,10 +58,12 @@ import androidx.media3.ui.compose.SURFACE_TYPE_SURFACE_VIEW
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.subhashh.lumen.data.MediaItem
-import com.subhashh.lumen.ui.images.versioned
+import kotlin.math.roundToInt
 import com.subhashh.lumen.ui.images.version
 import coil3.SingletonImageLoader
 import com.subhashh.lumen.ui.images.bestPlaceholderKey
+import com.subhashh.lumen.ui.images.screenImage
+import com.subhashh.lumen.ui.images.ImageKeys
 
 /** The viewer owns a single player; only the current page attaches to it, others show a still frame. */
 @Composable
@@ -213,7 +216,7 @@ fun VideoPage(
                         stringResource(if (shown == FlashKind.Back) R.string.viewer_seek_back else R.string.viewer_seek_ahead),
                         color = Color.White,
                         fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold,
+                        fontWeight = Lumen.type.emphasis,
                     )
                     else -> Icon(
                         if (shown == FlashKind.Pause) LumenIcons.Pause else LumenIcons.Play,
@@ -265,13 +268,19 @@ private fun VideoSize.displayAspect(): Float? {
 @Composable
 private fun StillFrame(item: MediaItem) {
     val context = LocalContext.current
+    val window = androidx.compose.ui.platform.LocalWindowInfo.current.containerSize
     AsyncImage(
         model = remember(item.version) {
+            // The same screen-size first frame the open transition and the viewer's preloading
+            // make, under the same key: decoded once, not once per place it's shown.
+            val rect = fullScreenRect(item, window.width.toFloat(), window.height.toFloat())
+            val w = rect.width.roundToInt().coerceAtLeast(1)
+            val h = rect.height.roundToInt().coerceAtLeast(1)
             ImageRequest.Builder(context)
-                .data(item.uri)
-                .versioned(item)
-                // Sharp from the first frame when the open transition already decoded it at
-                // screen size; neighbors not decoded yet start from the grid thumbnail.
+                .data(screenImage(item, w, h))
+                .size(w, h)
+                .memoryCacheKey(ImageKeys.screen(item))
+                // Neighbors not decoded yet start from the grid thumbnail.
                 .placeholderMemoryCacheKey(bestPlaceholderKey(SingletonImageLoader.get(context), item))
                 .build()
         },

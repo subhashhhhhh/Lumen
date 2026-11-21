@@ -1,6 +1,7 @@
 package com.subhashh.lumen.ui.collections
 
 import com.subhashh.lumen.ui.icons.LumenIcons
+import com.subhashh.lumen.ui.theme.Lumen
 import com.subhashh.lumen.ui.images.version
 import com.subhashh.lumen.ui.components.pressable
 import com.subhashh.lumen.ui.images.ImageKeys
@@ -210,8 +211,7 @@ internal fun rememberAlbumGridGestures(
 internal fun ScreenTitle(title: String) {
     Text(
         title,
-        fontSize = 34.sp,
-        fontWeight = FontWeight.Bold,
+        style = Lumen.type.screenTitle,
         color = MaterialTheme.colorScheme.onBackground,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
@@ -232,8 +232,7 @@ private fun SectionHeader(title: String, trailing: String? = null, onTrailingCli
     ) {
         Text(
             title,
-            fontSize = 22.sp,
-            fontWeight = FontWeight.Bold,
+            style = Lumen.type.sectionTitle,
             color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.weight(1f),
         )
@@ -262,22 +261,27 @@ private fun UtilityGroup(
     modifier: Modifier = Modifier,
 ) {
     val colors = groupColors()
+    val material = Lumen.material
     Column(
         modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(Lumen.shapes.card)
             .background(colors.card),
     ) {
         utilities.forEachIndexed { i, collection ->
-            if (i > 0) HorizontalDivider(color = colors.divider, modifier = Modifier.padding(start = 60.dp))
+            // Material: rows are segments with the page showing between them, as in Settings.
+            if (i > 0 && material) Box(Modifier.fillMaxWidth().height(2.dp).background(MaterialTheme.colorScheme.background))
+            else if (i > 0) HorizontalDivider(color = colors.divider, modifier = Modifier.padding(start = 60.dp))
             Row(
                 Modifier
                     .fillMaxWidth()
                     .clickable { onOpen(collection.key) }
-                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                    .padding(horizontal = if (material) 16.dp else 14.dp, vertical = if (material) 12.dp else 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Box(
+                if (material) {
+                    com.subhashh.lumen.ui.settings.IconBadge(utilityIcon(collection.key), utilityColor(collection.key))
+                } else Box(
                     Modifier
                         .size(32.dp)
                         .clip(RoundedCornerShape(8.dp))
@@ -286,7 +290,7 @@ private fun UtilityGroup(
                 ) {
                     Icon(utilityIcon(collection.key), contentDescription = null, tint = Color.White, modifier = Modifier.size(19.dp))
                 }
-                Spacer(Modifier.width(14.dp))
+                Spacer(Modifier.width(if (material) 16.dp else 14.dp))
                 Text(
                     collection.title,
                     fontSize = 16.sp,
@@ -304,9 +308,9 @@ private fun UtilityGroup(
                     fontSize = 16.sp,
                     color = colors.secondary,
                 )
-                Spacer(Modifier.width(6.dp))
-                Icon(
-                    LumenIcons.Back,
+                if (!material) Spacer(Modifier.width(6.dp))
+                if (!material) Icon(
+                    LumenIcons.Chevron,
                     contentDescription = null,
                     tint = colors.secondary,
                     // The back chevron turned around, as in Settings.
@@ -367,7 +371,7 @@ private fun utilityColor(key: String): Color = when (key) {
     else -> Color(0xFF8E8E93)
 }
 
-private fun utilityIcon(key: String): ImageVector = when (key) {
+internal fun utilityIcon(key: String): ImageVector = when (key) {
     CollectionKeys.Favorites -> LumenIcons.HeartFilled
     CollectionKeys.Videos -> LumenIcons.Video
     CollectionKeys.Screenshots -> LumenIcons.Screenshot
@@ -393,7 +397,8 @@ internal fun AlbumCard(
         spring(dampingRatio = 0.7f, stiffness = 700f),
         label = "selectScale",
     )
-    Column(Modifier.pressable(onClick, pressedScale = 0.96f)) {
+    // The ripple follows the cover's corners at the top; square-ish below, where the name sits.
+    Column(Modifier.pressable(onClick, pressedScale = 0.96f, shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomStart = 4.dp, bottomEnd = 4.dp))) {
         Box(Modifier.fillMaxWidth().aspectRatio(1f)) {
             Box(
                 coverModifier
@@ -402,7 +407,7 @@ internal fun AlbumCard(
                         scaleX = scale
                         scaleY = scale
                     }
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(Lumen.shapes.cover)
                     .background(onBackground.copy(alpha = 0.07f)),
                 contentAlignment = Alignment.Center,
             ) {
@@ -445,7 +450,7 @@ internal fun AlbumCard(
 }
 
 @Composable
-private fun Cover(item: MediaItem) {
+internal fun Cover(item: MediaItem) {
     val context = LocalContext.current
     AsyncImage(
         // Own cache key: covers are larger than grid thumbnails, so they must not reuse those bitmaps.

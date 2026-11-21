@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Ask a question or get help
+    url: https://discord.gg/peT62dhsNy
+    about: Setup, "is this normal?", and how-to questions go to #help on the Lumen Discord.
+  - name: Translate Lumen
+    url: https://hosted.weblate.org/engage/lumen/
+    about: Add or fix a translation on Weblate. No issue needed.

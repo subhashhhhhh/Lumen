@@ -34,7 +34,12 @@ import kotlin.math.roundToInt
  * too big for Android's own thumbnails (three columns and fewer) decoded every original photo
  * again on every launch.
  */
-data class GridThumbnail(val item: MediaItem, val sizePx: Int)
+data class GridThumbnail(
+    val item: MediaItem,
+    val sizePx: Int,
+    /** False for screen-size video stills: big, and only worth keeping in memory. */
+    val persist: Boolean = true,
+)
 
 class GridThumbnailFetcher(
     private val data: GridThumbnail,
@@ -47,7 +52,7 @@ class GridThumbnailFetcher(
         // One entry per file version and size: a rotate or edit changes the version. Videos are
         // v2: first frames now, where v1 had Android's mid-video pick.
         val key = "${if (data.item.isVideo) "v2" else "v1"}:${data.item.id}@${data.item.modified}:${data.sizePx}"
-        cache.openSnapshot(key)?.use { snapshot ->
+        if (data.persist) cache.openSnapshot(key)?.use { snapshot ->
             BitmapFactory.decodeFile(snapshot.data.toFile().path)?.let { cached ->
                 return@withContext ImageFetchResult(cached.asImage(), isSampled = true, dataSource = DataSource.DISK)
             }
@@ -57,7 +62,7 @@ class GridThumbnailFetcher(
         } else {
             create(options.context, data.item, data.sizePx)
         }
-        save(key, bitmap)
+        if (data.persist) save(key, bitmap)
         ImageFetchResult(bitmap.asImage(), isSampled = true, dataSource = DataSource.DISK)
     }
 
@@ -130,8 +135,27 @@ class GridThumbnailFetcher(
          * Frame 0, scaled so its shorter side covers a [sizePx] square. The box is square and as
          * big as the longer side needs, so the shape comes out right whichever way the video is
          * rotated. Null if the video can't be read; the caller falls back to Android's thumbnail.
+         *
+         * Decoded in software: phones run only a few hardware decoders at once, and a thumbnail
+         * taking one makes Android take one back from Lumen, sometimes the playing video's (it
+         * stopped while swiping through reels). Videos the software decoder can't do go through
+         * MediaMetadataRetriever (hardware), one at a time.
          */
-        fun firstFrame(context: Context, item: MediaItem, sizePx: Int): Bitmap? = runCatching {
+        @OptIn(com.subhashh.lumen.ai.LumenAiEngine::class)
+        fun firstFrame(context: Context, item: MediaItem, sizePx: Int): Bitmap? {
+            val w = item.width
+            val h = item.height
+            val box = if (w > 0 && h > 0) (sizePx.toLong() * maxOf(w, h) / minOf(w, h)).toInt() else sizePx
+            runCatching { com.subhashh.lumen.ai.KeyframeDecoder(context, item.uri, software = true).firstFrame(box) }
+                .onFailure { android.util.Log.i("LumenThumbs", "Software first frame failed for ${item.name}: ${it.message}") }
+                .getOrNull()?.let { return it }
+            return synchronized(HardwareFrames) { retrieverFrame(context, item, sizePx) }
+        }
+
+        /** Hardware first frames, one at a time, so they never hold more than one decoder. */
+        private val HardwareFrames = Any()
+
+        private fun retrieverFrame(context: Context, item: MediaItem, sizePx: Int): Bitmap? = runCatching {
             MediaMetadataRetriever().use { retriever ->
                 if (item.uri.scheme == "file") retriever.setDataSource(item.uri.path) else retriever.setDataSource(context, item.uri)
                 fun int(key: Int) = retriever.extractMetadata(key)?.toIntOrNull() ?: 0

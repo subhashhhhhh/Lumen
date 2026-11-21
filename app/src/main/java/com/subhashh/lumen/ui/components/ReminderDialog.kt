@@ -37,7 +37,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Text
 import androidx.compose.material3.TimeInput
-import androidx.compose.material3.TimePickerDefaults
+import androidx.compose.material3.TimeInputDefaults
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
@@ -71,7 +71,7 @@ import com.subhashh.lumen.data.MediaThumbnail
 import com.subhashh.lumen.data.PhotoReminders
 import com.subhashh.lumen.ui.images.ImageKeys
 import com.subhashh.lumen.ui.images.version
-import com.subhashh.lumen.ui.theme.LocalDarkTheme
+import com.subhashh.lumen.ui.theme.Lumen
 import kotlinx.coroutines.delay
 import java.time.Instant
 import java.time.LocalDate
@@ -91,14 +91,7 @@ fun ReminderDialog(
 ) {
     val open = !items.isNullOrEmpty()
     BackHandler(enabled = open, onBack = onDismiss)
-    AnimatedVisibility(visible = open, enter = fadeIn(tween(160)), exit = fadeOut(tween(160))) {
-        Box(
-            Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.45f))
-                .clickable(remember { MutableInteractionSource() }, indication = null, onClick = onDismiss),
-        )
-    }
+    DialogScrim(open, onDismiss, strong = true)
     AnimatedVisibility(
         visible = open,
         enter = scaleIn(spring(dampingRatio = 0.8f, stiffness = 600f), initialScale = 0.92f) + fadeIn(tween(140)),
@@ -146,11 +139,11 @@ fun ReminderDialog(
         }
         val valid = at > now
 
-        val dark = LocalDarkTheme.current
-        val card = if (dark) Color(0xFF1C1C1E) else Color.White
-        val text = if (dark) Color.White else Color.Black
-        val secondary = if (dark) Color(0x99EBEBF5) else Color(0x993C3C43)
-        val accent = Color(0xFF0A84FF)
+        val card = Lumen.colors.panel
+        val text = Lumen.colors.text
+        val secondary = Lumen.colors.secondary
+        val accent = Lumen.colors.accent
+        val material = Lumen.material
 
         Box(
             Modifier
@@ -165,11 +158,9 @@ fun ReminderDialog(
                     .padding(horizontal = 12.dp)
                     .widthIn(max = 380.dp)
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(card)
-                    .clickable(remember { MutableInteractionSource() }, indication = null) {}
+                    .dialogCard(card, if (material) Lumen.shapes.dialog else RoundedCornerShape(24.dp))
                     .verticalScroll(rememberScrollState())
-                    .padding(top = 20.dp),
+                    .padding(top = if (material) 24.dp else 20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Row(
@@ -194,7 +185,7 @@ fun ReminderDialog(
                     )
                     Spacer(Modifier.width(14.dp))
                     Column {
-                        Text(stringResource(R.string.reminder_dialog_title), color = text, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                        Text(stringResource(R.string.reminder_dialog_title), color = text, style = if (material) Lumen.type.sectionTitle else Lumen.type.dialogTitle)
                         Text(
                             pluralStringResource(R.plurals.reminder_dialog_items, chosen.size, chosen.size),
                             color = secondary,
@@ -207,9 +198,9 @@ fun ReminderDialog(
                     Modifier
                         .padding(horizontal = 16.dp)
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(secondary.copy(alpha = 0.12f))
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                        .clip(Lumen.shapes.field)
+                        .background(Lumen.colors.field)
+                        .padding(horizontal = if (material) 16.dp else 12.dp, vertical = if (material) 14.dp else 10.dp),
                 ) {
                     if (note.isEmpty()) Text(stringResource(R.string.reminder_note_hint), color = secondary, fontSize = 16.sp)
                     BasicTextField(
@@ -237,28 +228,35 @@ fun ReminderDialog(
                         dayContentColor = text,
                         disabledDayContentColor = secondary.copy(alpha = 0.4f),
                         selectedDayContainerColor = accent,
-                        selectedDayContentColor = Color.White,
+                        selectedDayContentColor = Lumen.colors.onAccent,
                         todayContentColor = accent,
                         todayDateBorderColor = accent,
                     ),
                 )
                 TimeInput(
                     state = timeState,
-                    colors = TimePickerDefaults.colors(
-                        timeSelectorSelectedContainerColor = accent.copy(alpha = 0.25f),
-                        timeSelectorUnselectedContainerColor = secondary.copy(alpha = 0.15f),
-                        timeSelectorSelectedContentColor = text,
-                        timeSelectorUnselectedContentColor = text,
+                    // Material: the scheme's own. Lumen: the focused field tinted with the accent.
+                    colors = if (material) TimeInputDefaults.colors() else TimeInputDefaults.colors(
                         periodSelectorSelectedContainerColor = accent.copy(alpha = 0.25f),
                         periodSelectorSelectedContentColor = text,
-                        periodSelectorUnselectedContentColor = secondary,
+                        periodSelectorContentColor = secondary,
                         periodSelectorBorderColor = secondary.copy(alpha = 0.4f),
+                        periodSelectorContainerColor = Color.Transparent,
+                        timeTextFieldColors = androidx.compose.material3.TextFieldDefaults.colors(
+                            focusedContainerColor = accent.copy(alpha = 0.25f),
+                            unfocusedContainerColor = secondary.copy(alpha = 0.15f),
+                            focusedTextColor = text,
+                            unfocusedTextColor = text,
+                            focusedIndicatorColor = accent,
+                            unfocusedIndicatorColor = Color.Transparent,
+                            cursorColor = accent,
+                        ),
                     ),
                 )
                 if (!valid) {
                     Text(
                         stringResource(R.string.reminder_in_past),
-                        color = Color(0xFFFF453A),
+                        color = Lumen.colors.destructive,
                         fontSize = 13.sp,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.padding(horizontal = 20.dp),
@@ -284,31 +282,14 @@ fun ReminderDialog(
                     )
                     Spacer(Modifier.height(12.dp))
                 }
-                Box(Modifier.fillMaxWidth().height(0.5.dp).background(secondary.copy(alpha = 0.3f)))
-                Row(Modifier.fillMaxWidth().height(50.dp)) {
-                    Text(
-                        stringResource(R.string.common_cancel),
-                        color = accent,
-                        fontSize = 17.sp,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier
-                            .weight(1f)
-                            .clickable(onClick = onDismiss)
-                            .padding(vertical = 14.dp),
-                    )
-                    Box(Modifier.width(0.5.dp).height(50.dp).background(secondary.copy(alpha = 0.3f)))
-                    Text(
-                        stringResource(R.string.reminder_set),
-                        color = if (valid) accent else secondary,
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier
-                            .weight(1f)
-                            .clickable(enabled = valid) { onSet(at, note) }
-                            .padding(vertical = 14.dp),
-                    )
-                }
+                DialogButtons(
+                    cancel = stringResource(R.string.common_cancel),
+                    onCancel = onDismiss,
+                    confirm = stringResource(R.string.reminder_set),
+                    onConfirm = { onSet(at, note) },
+                    enabled = valid,
+                    height = 50.dp,
+                )
             }
         }
     }

@@ -1,10 +1,12 @@
 package com.subhashh.lumen.ui.onboarding
 
 import androidx.core.graphics.drawable.toBitmap
+import com.subhashh.lumen.ui.theme.Lumen
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalDensity
 import android.Manifest
 import kotlinx.coroutines.launch
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.Rect
@@ -98,6 +100,7 @@ import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.subhashh.lumen.R
+import com.subhashh.lumen.data.DeviceClass
 import com.subhashh.lumen.data.LumenPrefs
 import com.subhashh.lumen.ai.FaceModel
 import com.subhashh.lumen.ai.ModelCatalog
@@ -184,7 +187,7 @@ fun Onboarding(
 @Composable
 private fun ColumnScope.Title(title: String, subtitle: String) {
     Spacer(Modifier.height(24.dp))
-    Text(title, color = ink, fontSize = 34.sp, fontWeight = FontWeight.Bold)
+    Text(title, color = ink, style = Lumen.type.screenTitle)
     Spacer(Modifier.height(8.dp))
     Text(subtitle, color = ink.copy(alpha = 0.75f), fontSize = 17.sp)
     Spacer(Modifier.height(24.dp))
@@ -193,6 +196,19 @@ private fun ColumnScope.Title(title: String, subtitle: String) {
 /** The big glass button at the bottom of each step. */
 @Composable
 private fun PrimaryButton(backdrop: Backdrop, text: String, enabled: Boolean = true, onClick: () -> Unit) {
+    if (Lumen.material) {
+        // Material: a filled button in the primary colour, squaring off as it's pressed.
+        @OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+        androidx.compose.material3.Button(
+            onClick = onClick,
+            shapes = androidx.compose.material3.ButtonDefaults.shapes(),
+            enabled = enabled,
+            modifier = Modifier.fillMaxWidth().height(56.dp),
+        ) {
+            Text(text, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+        }
+        return
+    }
     Box(
         Modifier
             .fillMaxWidth()
@@ -201,7 +217,7 @@ private fun PrimaryButton(backdrop: Backdrop, text: String, enabled: Boolean = t
             .pressable(onClick, enabled = enabled, pressedScale = 0.96f),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text, color = ink.copy(alpha = if (enabled) 1f else 0.4f), fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+        Text(text, color = ink.copy(alpha = if (enabled) 1f else 0.4f), fontSize = 17.sp, fontWeight = Lumen.type.emphasis)
     }
 }
 
@@ -212,7 +228,40 @@ private fun SecondaryButton(text: String, onClick: () -> Unit) {
         color = ink.copy(alpha = 0.8f),
         fontSize = 16.sp,
         textAlign = TextAlign.Center,
-        modifier = Modifier.fillMaxWidth().pressable(onClick, pressedScale = 0.96f).padding(14.dp),
+        modifier = Modifier.fillMaxWidth().pressable(onClick, pressedScale = 0.96f, shape = CircleShape).padding(14.dp),
+    )
+}
+
+/** One of a few choices side by side (theme, style, model): the chosen one is filled in. */
+@Composable
+private fun OptionChip(label: String, selected: Boolean, onClick: () -> Unit) {
+    if (Lumen.material) {
+        val scheme = MaterialTheme.colorScheme
+        Text(
+            label,
+            color = if (selected) scheme.onSecondaryContainer else scheme.onSurfaceVariant,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier
+                .clip(CircleShape)
+                .background(if (selected) scheme.secondaryContainer else Color.Transparent)
+                .border(1.dp, if (selected) Color.Transparent else scheme.outlineVariant, CircleShape)
+                .pressable(onClick, shape = CircleShape)
+                .padding(horizontal = 14.dp, vertical = 8.dp),
+        )
+        return
+    }
+    Text(
+        label,
+        color = ink,
+        fontSize = 13.sp,
+        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+        modifier = Modifier
+            .clip(CircleShape)
+            .background(ink.copy(alpha = if (selected) 0.25f else 0.08f))
+            .border(1.dp, ink.copy(alpha = if (selected) 0.5f else 0f), CircleShape)
+            .pressable(onClick, pressedScale = 0.95f)
+            .padding(horizontal = 12.dp, vertical = 7.dp),
     )
 }
 
@@ -234,7 +283,7 @@ private fun Item(icon: ImageVector, title: String, subtitle: String, trailing: @
         Icon(icon, null, tint = ink, modifier = Modifier.size(24.dp))
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
-            Text(title, color = ink, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            Text(title, color = ink, fontSize = 16.sp, fontWeight = Lumen.type.emphasis)
             Text(subtitle, color = ink.copy(alpha = 0.65f), fontSize = 13.sp)
         }
         trailing()
@@ -255,7 +304,7 @@ private fun ColumnScope.Welcome(backdrop: Backdrop, onNext: () -> Unit) {
                     stringResource(R.string.app_name),
                     color = ink,
                     fontSize = 44.sp,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = Lumen.type.strong,
                     modifier = Modifier.align(Alignment.CenterHorizontally),
                 )
                 Spacer(Modifier.height(8.dp))
@@ -357,35 +406,48 @@ private fun ColumnScope.Photos(backdrop: Backdrop, hasAccess: Boolean, onRequest
 private fun ColumnScope.Look(backdrop: Backdrop, onNext: () -> Unit) {
     val appearance = com.subhashh.lumen.ui.theme.LocalAppearance.current
     val glass = com.subhashh.lumen.ui.theme.LocalGlass.current
+    // Glass is drawn by the GPU for every frame: a slow phone starts without it (once; it's theirs to turn on).
+    val context = LocalContext.current
+    var lightened by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        if (!lightened && DeviceClass.of(context) == DeviceClass.Slow) glass.onLiquid(false)
+        lightened = true
+    }
     Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
         Title(stringResource(R.string.onboarding_look_title), stringResource(R.string.onboarding_look_subtitle))
         Card(backdrop) {
             Item(LumenIcons.DarkTheme, stringResource(R.string.onboarding_theme), stringResource(R.string.onboarding_theme_detail))
             Row(Modifier.fillMaxWidth().padding(start = 38.dp, bottom = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 for (a in com.subhashh.lumen.ui.theme.Appearance.entries) {
-                    val selected = a == appearance.current
-                    Text(
-                        stringResource(a.labelRes),
-                        color = ink,
-                        fontSize = 13.sp,
-                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .background(ink.copy(alpha = if (selected) 0.25f else 0.08f))
-                            .border(1.dp, ink.copy(alpha = if (selected) 0.5f else 0f), CircleShape)
-                            .pressable({ appearance.onChange(a) }, pressedScale = 0.95f)
-                            .padding(horizontal = 12.dp, vertical = 7.dp),
-                    )
+                    OptionChip(stringResource(a.labelRes), selected = a == appearance.current) { appearance.onChange(a) }
                 }
             }
         }
         Spacer(Modifier.height(12.dp))
+        // The design language: Lumen's own, or Material 3 Expressive. Changes this very screen.
+        val style = com.subhashh.lumen.ui.theme.LocalStyle.current
         Card(backdrop) {
-            Item(LumenIcons.Image, stringResource(R.string.onboarding_liquid_glass), stringResource(R.string.onboarding_liquid_glass_detail)) {
-                Switch(glass.liquid, glass.onLiquid)
+            Item(
+                LumenIcons.Collections,
+                stringResource(R.string.settings_style),
+                stringResource(if (style.material) R.string.onboarding_style_material_detail else R.string.onboarding_style_lumen_detail),
+            )
+            Row(Modifier.fillMaxWidth().padding(start = 38.dp, bottom = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                for (s in com.subhashh.lumen.ui.theme.DesignStyle.entries) {
+                    OptionChip(stringResource(s.labelRes), selected = s == style.current) { style.onChange(s) }
+                }
             }
-            Item(LumenIcons.Hide, stringResource(R.string.onboarding_reduce_blur), stringResource(R.string.onboarding_reduce_blur_detail)) {
-                Switch(glass.reduceBlur && glass.liquid, glass.onReduceBlur, enabled = glass.liquid)
+        }
+        // Glass is part of Lumen's own style.
+        if (!style.material) {
+            Spacer(Modifier.height(12.dp))
+            Card(backdrop) {
+                Item(LumenIcons.Image, stringResource(R.string.onboarding_liquid_glass), stringResource(R.string.onboarding_liquid_glass_detail)) {
+                    Switch(glass.liquid, glass.onLiquid)
+                }
+                Item(LumenIcons.Hide, stringResource(R.string.onboarding_reduce_blur), stringResource(R.string.onboarding_reduce_blur_detail)) {
+                    Switch(glass.reduceBlur && glass.liquid, glass.onReduceBlur, enabled = glass.liquid)
+                }
             }
         }
     }
@@ -398,7 +460,7 @@ private fun Toggle(on: Boolean, onTurnOff: () -> Unit = {}, onTurnOn: () -> Unit
     Switch(
         checked = on,
         onCheckedChange = { if (it) onTurnOn() else onTurnOff() },
-        colors = SwitchDefaults.colors(checkedTrackColor = Color(0xFF34C759)),
+        colors = if (Lumen.material) SwitchDefaults.colors() else SwitchDefaults.colors(checkedTrackColor = Color(0xFF34C759)),
     )
 }
 
@@ -410,7 +472,7 @@ internal fun Context.openSpecial(action: String) {
 
 /** Accurate on phones with plenty of memory (8 GB or more); Fast below that. */
 private fun recommendedTier(context: Context) =
-    if (ActivityManager.MemoryInfo().also { context.getSystemService(ActivityManager::class.java).getMemoryInfo(it) }.totalMem >= 7_000_000_000L) {
+    if (DeviceClass.of(context) != DeviceClass.Slow && ActivityManager.MemoryInfo().also { context.getSystemService(ActivityManager::class.java).getMemoryInfo(it) }.totalMem >= 7_000_000_000L) {
         ModelCatalog.Accurate
     } else {
         ModelCatalog.Fast
@@ -433,11 +495,13 @@ private fun ColumnScope.Smart(backdrop: Backdrop, onNext: (downloading: Boolean)
     val context = LocalContext.current
     val prefs = remember { LumenPrefs(context) }
     val recommended = remember { recommendedTier(context) }
+    // A phone below what Lumen is built for is told so, and starts with everything off.
+    val slow = remember { DeviceClass.of(context) == DeviceClass.Slow }
     var tier by rememberSaveable { mutableStateOf(recommended.id) }
-    var search by rememberSaveable { mutableStateOf(true) }
-    var text by rememberSaveable { mutableStateOf(true) }
-    var faces by rememberSaveable { mutableStateOf(true) }
-    var subtitles by rememberSaveable { mutableStateOf(true) }
+    var search by rememberSaveable { mutableStateOf(!slow) }
+    var text by rememberSaveable { mutableStateOf(!slow) }
+    var faces by rememberSaveable { mutableStateOf(!slow) }
+    var subtitles by rememberSaveable { mutableStateOf(!slow) }
     var wifiOnly by rememberSaveable { mutableStateOf(prefs.modelWifiOnly) }
     val model = ModelCatalog.byId(tier)
     val total = (if (search) model.bytes else 0) + (if (text) OcrModel.bytes else 0) +
@@ -459,24 +523,21 @@ private fun ColumnScope.Smart(backdrop: Backdrop, onNext: (downloading: Boolean)
 
     Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
         Title(stringResource(R.string.onboarding_smart_title), stringResource(R.string.onboarding_smart_subtitle))
+        if (slow) {
+            Card(backdrop) {
+                Item(LumenIcons.Info, stringResource(R.string.device_slow_title), stringResource(R.string.onboarding_slow_detail))
+            }
+            Spacer(Modifier.height(12.dp))
+        }
         Card(backdrop) {
             Item(LumenIcons.Search, stringResource(R.string.onboarding_smart_search), stringResource(R.string.onboarding_smart_search_detail, megabytes(model.bytes(context)))) { Switch(search, { search = it }) }
             if (search) {
                 Row(Modifier.fillMaxWidth().padding(start = 38.dp, bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     for (m in ModelCatalog.all) {
-                        val selected = m.id == tier
-                        Text(
+                        OptionChip(
                             if (m == recommended) stringResource(R.string.onboarding_tier_recommended, tierLabel(m)) else tierLabel(m),
-                            color = ink,
-                            fontSize = 13.sp,
-                            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                            modifier = Modifier
-                                .clip(CircleShape)
-                                .background(ink.copy(alpha = if (selected) 0.25f else 0.08f))
-                                .border(1.dp, ink.copy(alpha = if (selected) 0.5f else 0f), CircleShape)
-                                .pressable({ tier = m.id }, pressedScale = 0.95f)
-                                .padding(horizontal = 12.dp, vertical = 7.dp),
-                        )
+                            selected = m.id == tier,
+                        ) { tier = m.id }
                     }
                 }
             }
@@ -497,12 +558,18 @@ private fun ColumnScope.Smart(backdrop: Backdrop, onNext: (downloading: Boolean)
         )
     }
     Spacer(Modifier.height(12.dp))
+    // Without a download the tier is still remembered on a slow phone: Settings then starts from
+    // the lighter model, not the default.
+    fun skip() {
+        if (slow) prefs.searchModel = ModelCatalog.Fast.id
+        onNext(false)
+    }
     PrimaryButton(backdrop, if (total > 0) stringResource(R.string.onboarding_download_button, megabytes(total)) else stringResource(R.string.common_continue), enabled = true) {
-        if (total == 0L) onNext(false)
+        if (total == 0L) skip()
         else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) askNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
         else start()
     }
-    SecondaryButton(stringResource(R.string.common_not_now)) { onNext(false) }
+    SecondaryButton(stringResource(R.string.common_not_now)) { skip() }
 }
 
 @Composable
@@ -523,12 +590,16 @@ private fun ColumnScope.Schedule(backdrop: Backdrop, onNext: () -> Unit) {
                     .fillMaxWidth()
                     .padding(bottom = 12.dp)
                     .glass(backdrop, RoundedCornerShape(24.dp), blurRadius = 16.dp, tint = glassTint(if (selected) 0.26f else 0.1f))
-                    .border(1.5.dp, ink.copy(alpha = if (selected) 0.7f else 0f), RoundedCornerShape(24.dp))
-                    .pressable({ overnight = night }, pressedScale = 0.97f)
+                    .border(
+                        if (Lumen.material) 2.dp else 1.5.dp,
+                        (if (Lumen.material) Lumen.colors.accent else ink).copy(alpha = if (selected) (if (Lumen.material) 1f else 0.7f) else 0f),
+                        RoundedCornerShape(24.dp),
+                    )
+                    .pressable({ overnight = night }, pressedScale = 0.97f, shape = RoundedCornerShape(24.dp))
                     .padding(18.dp),
             ) {
                 Column {
-                    Text(title, color = ink, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                    Text(title, color = ink, fontSize = 18.sp, fontWeight = Lumen.type.emphasis)
                     Spacer(Modifier.height(4.dp))
                     Text(subtitle, color = ink.copy(alpha = 0.7f), fontSize = 14.sp)
                 }
@@ -594,13 +665,16 @@ private fun Mosaic(tiles: List<MosaicTile>, modifier: Modifier = Modifier) {
         val shown = tiles.takeLast(columns * rows)
         // A short first row, like the grid's last one filled from the left: here the gap goes first
         // so the newest still ends the bottom row.
-        val gap = (columns - shown.size % columns) % columns
+        // The Material style's Library is newest first, from the top left: so is this, with any
+        // short row last.
+        val newestFirst = remember { LumenPrefs(context).sortDescending }
+        val gap = if (newestFirst) 0 else (columns - shown.size % columns) % columns
         val top = (maxHeight - cell * ((shown.size + gap + columns - 1) / columns)) / 2
         val random = remember(tiles) { java.util.Random(11) }
         val jitter = remember(tiles) { List(tiles.size) { Triple(random.nextFloat() - 0.5f, random.nextFloat() - 0.5f, random.nextFloat() - 0.5f) } }
         for ((i, tile) in shown.withIndex()) {
             val (jx, jy, jr) = jitter[i]
-            val slot = i + gap
+            val slot = if (newestFirst) shown.lastIndex - i else i + gap
             coil3.compose.AsyncImage(
                 model = remember(tile.item.id) { mosaicRequest(context, tile.item) },
                 contentDescription = null,
@@ -631,7 +705,7 @@ private fun ColumnScope.Finish(backdrop: Backdrop, photos: List<MediaItem>, down
     Mosaic(tiles, Modifier.fillMaxWidth().weight(1f))
     Column(Modifier.graphicsLayer { alpha = fade.value }) {
         Spacer(Modifier.height(16.dp))
-        Text(stringResource(R.string.onboarding_done_title), color = ink, fontSize = 40.sp, fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+        Text(stringResource(R.string.onboarding_done_title), color = ink, fontSize = 40.sp, fontWeight = Lumen.type.strong, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
         Spacer(Modifier.height(10.dp))
         Text(
             if (downloading) stringResource(R.string.onboarding_done_downloading)

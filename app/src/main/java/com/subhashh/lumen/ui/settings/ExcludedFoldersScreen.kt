@@ -108,9 +108,9 @@ private fun FolderRow(folder: String, subtitle: String, action: String, onAction
         Spacer(Modifier.width(12.dp))
         Text(
             action,
-            color = Color(0xFF0A84FF),
+            color = com.subhashh.lumen.ui.theme.Lumen.colors.accent,
             fontSize = 16.sp,
-            fontWeight = FontWeight.SemiBold,
+            fontWeight = com.subhashh.lumen.ui.theme.Lumen.type.emphasis,
             modifier = Modifier.clickable(onClick = onAction),
         )
     }

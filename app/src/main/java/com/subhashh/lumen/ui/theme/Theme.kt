@@ -2,7 +2,24 @@ package com.subhashh.lumen.ui.theme
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.isSystemInDarkTheme
+import android.content.Context
+import android.os.Build
+import com.materialkolor.PaletteStyle
+import com.materialkolor.dynamicColorScheme
+import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.MaterialExpressiveTheme
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.movableContentOf
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.remember
+import androidx.compose.material3.MotionScheme
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
@@ -47,7 +64,7 @@ val LocalGlassColors = staticCompositionLocalOf { DarkGlass }
 @Composable
 fun overMediaGlass(): GlassColors {
     val colors = LocalGlassColors.current
-    return if (LocalDarkTheme.current) colors.copy(tint = Color(0x8C1C1C1E)) else colors
+    return if (LocalDarkTheme.current && !LocalStyle.current.material) colors.copy(tint = Color(0x8C1C1C1E)) else colors
 }
 
 /** Whether Lumen is drawing dark, which can differ from the phone (Settings → Appearance). */
@@ -112,18 +129,159 @@ private val LightScheme = lightColorScheme(
     onSurface = Color.Black,
 )
 
+/**
+ * Material's colours when they can't come from the wallpaper (Android 11, or Dynamic Colour off):
+ * a scheme built around Lumen's blue.
+ */
+private val MaterialDarkScheme = darkColorScheme(
+    primary = Color(0xFFAAC7FF), onPrimary = Color(0xFF0A305F),
+    primaryContainer = Color(0xFF284777), onPrimaryContainer = Color(0xFFD6E3FF),
+    secondary = Color(0xFFBEC6DC), onSecondary = Color(0xFF283141),
+    secondaryContainer = Color(0xFF3E4759), onSecondaryContainer = Color(0xFFDAE2F9),
+    tertiary = Color(0xFFDDBCE0), onTertiary = Color(0xFF3F2844),
+    tertiaryContainer = Color(0xFF573E5C), onTertiaryContainer = Color(0xFFFAD8FD),
+    error = Color(0xFFFFB4AB), onError = Color(0xFF690005),
+    errorContainer = Color(0xFF93000A), onErrorContainer = Color(0xFFFFDAD6),
+    background = Color(0xFF111318), onBackground = Color(0xFFE2E2E9),
+    surface = Color(0xFF111318), onSurface = Color(0xFFE2E2E9),
+    surfaceVariant = Color(0xFF44474E), onSurfaceVariant = Color(0xFFC4C6D0),
+    outline = Color(0xFF8E9099), outlineVariant = Color(0xFF44474E),
+    inverseSurface = Color(0xFFE2E2E9), inverseOnSurface = Color(0xFF2E3036), inversePrimary = Color(0xFF415F91),
+    surfaceDim = Color(0xFF111318), surfaceBright = Color(0xFF37393E),
+    surfaceContainerLowest = Color(0xFF0C0E13), surfaceContainerLow = Color(0xFF191C20),
+    surfaceContainer = Color(0xFF1D2024), surfaceContainerHigh = Color(0xFF282A2F),
+    surfaceContainerHighest = Color(0xFF33353A),
+)
+
+private val MaterialLightScheme = lightColorScheme(
+    primary = Color(0xFF415F91), onPrimary = Color.White,
+    primaryContainer = Color(0xFFD6E3FF), onPrimaryContainer = Color(0xFF284777),
+    secondary = Color(0xFF565F71), onSecondary = Color.White,
+    secondaryContainer = Color(0xFFDAE2F9), onSecondaryContainer = Color(0xFF3E4759),
+    tertiary = Color(0xFF705575), onTertiary = Color.White,
+    tertiaryContainer = Color(0xFFFAD8FD), onTertiaryContainer = Color(0xFF573E5C),
+    error = Color(0xFFBA1A1A), onError = Color.White,
+    errorContainer = Color(0xFFFFDAD6), onErrorContainer = Color(0xFF93000A),
+    background = Color(0xFFF9F9FF), onBackground = Color(0xFF191C20),
+    surface = Color(0xFFF9F9FF), onSurface = Color(0xFF191C20),
+    surfaceVariant = Color(0xFFE0E2EC), onSurfaceVariant = Color(0xFF44474E),
+    outline = Color(0xFF74777F), outlineVariant = Color(0xFFC4C6D0),
+    inverseSurface = Color(0xFF2E3036), inverseOnSurface = Color(0xFFF0F0F7), inversePrimary = Color(0xFFAAC7FF),
+    surfaceDim = Color(0xFFD9D9E0), surfaceBright = Color(0xFFF9F9FF),
+    surfaceContainerLowest = Color.White, surfaceContainerLow = Color(0xFFF3F3FA),
+    surfaceContainer = Color(0xFFEDEDF4), surfaceContainerHigh = Color(0xFFE7E8EE),
+    surfaceContainerHighest = Color(0xFFE2E2E9),
+)
+
+/**
+ * Material's colours. With nothing chosen they are the wallpaper's as Android makes them (Material
+ * You, Android 12+) or the scheme above. A chosen [accent], a [palette] other than Tonal, or
+ * [pureBlack] builds the scheme from one colour instead: the accent, else the wallpaper's own.
+ */
+private fun materialScheme(context: Context, accent: Color?, palette: MaterialPalette, pureBlack: Boolean, dark: Boolean): ColorScheme {
+    val wallpaper = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+    if (accent == null && palette == MaterialPalette.Tonal && !(pureBlack && dark)) {
+        return when {
+            wallpaper -> if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+            dark -> MaterialDarkScheme
+            else -> MaterialLightScheme
+        }
+    }
+    val seed = accent
+        ?: if (wallpaper) Color(context.getColor(android.R.color.system_accent1_500)) else Color(0xFF0A84FF)
+    return dynamicColorScheme(
+        seedColor = seed,
+        isDark = dark,
+        isAmoled = pureBlack && dark,
+        style = when (palette) {
+            MaterialPalette.Tonal -> PaletteStyle.TonalSpot
+            MaterialPalette.Vibrant -> PaletteStyle.Vibrant
+            MaterialPalette.Expressive -> PaletteStyle.Expressive
+            MaterialPalette.FruitSalad -> PaletteStyle.FruitSalad
+            MaterialPalette.Rainbow -> PaletteStyle.Rainbow
+            MaterialPalette.Monochrome -> PaletteStyle.Monochrome
+        },
+    )
+}
+
+/** Material's floating controls are solid and tonal: the "glass" colours are just that surface. */
+private fun materialGlass(scheme: ColorScheme) = GlassColors(
+    tint = scheme.surfaceContainerHigh,
+    fallbackTint = scheme.surfaceContainerHigh,
+    content = scheme.onSurface,
+    contentSecondary = scheme.onSurfaceVariant,
+    selection = scheme.secondaryContainer,
+)
+
+/**
+ * Lumen's theme in the chosen style (Settings → Appearance → Style). Switching style must not
+ * rebuild [content], or every screen would lose its place (the open Settings page, onboarding's
+ * step).
+ */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun LumenTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit,
 ) {
-    androidx.compose.runtime.CompositionLocalProvider(
-        LocalGlassColors provides if (darkTheme) DarkGlass else LightGlass,
+    val style = LocalStyle.current
+    val material = style.material
+    // The icon set goes with the style. Set here, ahead of everything that draws an icon.
+    if (com.subhashh.lumen.ui.icons.LumenIcons.material != material) com.subhashh.lumen.ui.icons.LumenIcons.material = material
+    val context = LocalContext.current
+    // The two styles are two different theme calls. Movable, so the screens are carried from one
+    // to the other with everything they remember, instead of being thrown away and rebuilt.
+    val currentContent by rememberUpdatedState(content)
+    val screens = remember { movableContentOf { currentContent() } }
+    val scheme = if (!material) {
+        if (darkTheme) DarkScheme else LightScheme
+    } else {
+        remember(style.accent, style.palette, style.pureBlack, darkTheme, context) {
+            materialScheme(context, style.accent, style.palette, style.pureBlack, darkTheme)
+        }
+    }
+    CompositionLocalProvider(
+        LocalGlassColors provides when {
+            material -> materialGlass(scheme)
+            darkTheme -> DarkGlass
+            else -> LightGlass
+        },
         LocalDarkTheme provides darkTheme,
+        LocalLumenColors provides if (material) materialColors(scheme) else lumenColors(darkTheme),
+        LocalLumenShapes provides if (material) MaterialStyleShapes else LumenStyleShapes,
     ) {
-        MaterialTheme(
-            colorScheme = if (darkTheme) DarkScheme else LightScheme,
-            content = content,
+        if (material) {
+            MaterialExpressiveTheme(colorScheme = scheme, motionScheme = MotionScheme.expressive()) { WithType(MaterialStyleType, screens) }
+        } else {
+            MaterialTheme(colorScheme = scheme) { WithType(LumenStyleType, screens) }
+        }
+    }
+}
+
+/**
+ * Provides [type] laid over the theme's body text style, which is what a plain Text starts from:
+ * a token that only names a size and weight keeps the body's line height and spacing.
+ */
+@Composable
+private fun WithType(type: LumenType, content: @Composable () -> Unit) {
+    val body = LocalTextStyle.current
+    val merged = remember(type, body) {
+        type.copy(
+            screenTitle = body.merge(type.screenTitle),
+            sectionTitle = body.merge(type.sectionTitle),
+            dialogTitle = body.merge(type.dialogTitle),
         )
     }
+    CompositionLocalProvider(LocalLumenType provides merged, content = content)
+}
+
+/**
+ * For screens that are dark whatever the theme (the editors, Set as Wallpaper): in the Material
+ * style their colours must come from the dark scheme, or a light theme's dark-on-light roles
+ * would land on black. Lumen's own style names those screens' colours outright, so nothing changes.
+ */
+@Composable
+fun AlwaysDark(content: @Composable () -> Unit) {
+    // Always through the theme, so the screen keeps its state if the phone's theme flips while it's open.
+    LumenTheme(darkTheme = LocalStyle.current.material || LocalDarkTheme.current, content = content)
 }

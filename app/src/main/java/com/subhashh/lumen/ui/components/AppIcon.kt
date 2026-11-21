@@ -13,12 +13,17 @@ import androidx.compose.ui.unit.Dp
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.toBitmap
 import com.subhashh.lumen.R
+import com.subhashh.lumen.data.LauncherIcon
 
-/** Lumen's icon as the system draws it: background, flare and the phone's icon shape. */
+/**
+ * One of Lumen's icons as the system draws it, in the phone's icon shape: [icon], or the one on
+ * the Home screen now.
+ */
 @Composable
-fun AppIcon(size: Dp, modifier: Modifier = Modifier) {
+fun AppIcon(size: Dp, modifier: Modifier = Modifier, icon: LauncherIcon? = null) {
     val context = LocalContext.current
     val px = with(LocalDensity.current) { size.roundToPx() }
-    val icon = remember(px) { ContextCompat.getDrawable(context, R.mipmap.ic_launcher)?.toBitmap(px, px)?.asImageBitmap() }
-    if (icon != null) Image(icon, contentDescription = stringResource(R.string.app_name), modifier = modifier.size(size))
+    val shown = icon ?: remember { LauncherIcon.chosen(context) }
+    val bitmap = remember(px, shown) { ContextCompat.getDrawable(context, shown.icon)?.toBitmap(px, px)?.asImageBitmap() }
+    if (bitmap != null) Image(bitmap, contentDescription = stringResource(R.string.app_name), modifier = modifier.size(size))
 }

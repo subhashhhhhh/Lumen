@@ -26,6 +26,11 @@ object CollectionKeys {
 
     /** Every person found in photos (Collections → People → Open). */
     const val People = "people"
+
+    /** A kind of document Smart Search finds ("receipt", "ticket"): its own page in the Material style. */
+    private const val DocumentPrefix = "docs:"
+    fun documents(query: String) = "$DocumentPrefix$query"
+    fun documentQuery(key: String?) = key?.takeIf { it.startsWith(DocumentPrefix) }?.removePrefix(DocumentPrefix)
     private const val PersonPrefix = "person:"
 
     /** One person's photos (Collections → People). */

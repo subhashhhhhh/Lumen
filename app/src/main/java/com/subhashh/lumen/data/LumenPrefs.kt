@@ -6,6 +6,8 @@ import com.subhashh.lumen.ui.library.SectionMode
 import android.content.Context
 import androidx.core.content.edit
 import com.subhashh.lumen.ui.theme.Appearance
+import com.subhashh.lumen.ui.theme.DesignStyle
+import com.subhashh.lumen.ui.theme.MaterialPalette
 
 /**
  * Settings → Photos → Ultra HDR. Match Brightness lets highlights glow within what the screen
@@ -27,10 +29,12 @@ class LumenPrefs(context: Context) {
             ?: LibraryFilter.All
         set(value) = prefs.edit { putString(KeyFilter, value.name) }
 
-    /** Show whole photos letterboxed in their cells instead of square crops. */
-    var aspectRatioGrid: Boolean
-        get() = prefs.getBoolean(KeyAspect, false)
-        set(value) = prefs.edit { putBoolean(KeyAspect, value) }
+    /** The Library's grid: square crops, whole photos letterboxed, or a mosaic. Was a yes/no for letterboxing. */
+    var gridStyle: com.subhashh.lumen.ui.library.GridStyle
+        get() = prefs.getString(KeyGridStyle, null)
+            ?.let { name -> com.subhashh.lumen.ui.library.GridStyle.entries.firstOrNull { it.name == name } }
+            ?: if (prefs.getBoolean(KeyAspect, false)) com.subhashh.lumen.ui.library.GridStyle.AspectRatio else com.subhashh.lumen.ui.library.GridStyle.Square
+        set(value) = prefs.edit { putString(KeyGridStyle, value.name) }
 
     /** Grid columns, shared by the Library and albums. */
     var gridColumns: Int
@@ -95,9 +99,14 @@ class LumenPrefs(context: Context) {
             ?: LibrarySort.Date
         set(value) = prefs.edit { putString(KeySort, value.name) }
 
+    /**
+     * Each style keeps its own order: Lumen's reads oldest first with the newest at the bottom
+     * until changed, Material 3 Expressive newest first from the top, as Android galleries do.
+     * Switching style switches to that style's order.
+     */
     var sortDescending: Boolean
-        get() = prefs.getBoolean(KeySortDescending, false)
-        set(value) = prefs.edit { putBoolean(KeySortDescending, value) }
+        get() = if (designStyle == DesignStyle.Material) prefs.getBoolean(KeySortDescendingMaterial, true) else prefs.getBoolean(KeySortDescending, false)
+        set(value) = prefs.edit { putBoolean(if (designStyle == DesignStyle.Material) KeySortDescendingMaterial else KeySortDescending, value) }
 
     /** Videos start playing as soon as they're on screen. */
     var videoAutoplay: Boolean
@@ -142,6 +151,30 @@ class LumenPrefs(context: Context) {
     var slideshowRepeat: Boolean
         get() = prefs.getBoolean(KeySlideRepeat, false)
         set(value) = prefs.edit { putBoolean(KeySlideRepeat, value) }
+
+    /** Settings → Appearance → Style: Lumen's own look, or Material 3 Expressive. */
+    var designStyle: DesignStyle
+        get() = prefs.getString(KeyDesignStyle, null)
+            ?.let { name -> DesignStyle.entries.firstOrNull { it.name == name } }
+            ?: DesignStyle.Lumen
+        set(value) = prefs.edit { putString(KeyDesignStyle, value.name) }
+
+    /** Material's accent colour as ARGB; null takes the wallpaper's (Android 12+) or Lumen's blue. */
+    var materialAccent: Int?
+        get() = if (prefs.contains(KeyMaterialAccent)) prefs.getInt(KeyMaterialAccent, 0) else null
+        set(value) = prefs.edit { if (value == null) remove(KeyMaterialAccent) else putInt(KeyMaterialAccent, value) }
+
+    /** How Material builds its scheme from that colour. */
+    var materialPalette: MaterialPalette
+        get() = prefs.getString(KeyMaterialPalette, null)
+            ?.let { name -> MaterialPalette.entries.firstOrNull { it.name == name } }
+            ?: MaterialPalette.Tonal
+        set(value) = prefs.edit { putString(KeyMaterialPalette, value.name) }
+
+    /** Material's dark theme on black, for OLED screens. */
+    var pureBlack: Boolean
+        get() = prefs.getBoolean(KeyPureBlack, false)
+        set(value) = prefs.edit { putBoolean(KeyPureBlack, value) }
 
     /** Settings → Appearance → Liquid Glass: glass that bends what's behind it. */
     var liquidGlass: Boolean
@@ -275,6 +308,11 @@ class LumenPrefs(context: Context) {
         get() = prefs.getBoolean(KeySearchDetails, false)
         set(value) = prefs.edit { putBoolean(KeySearchDetails, value) }
 
+    /** Developer Options → Pretend This Phone Is Slow: [DeviceClass] reads Slow, to see what such a phone shows. */
+    var pretendSlowPhone: Boolean
+        get() = prefs.getBoolean(KeyPretendSlowPhone, false)
+        set(value) = prefs.edit { putBoolean(KeyPretendSlowPhone, value) }
+
     /** Before Lumen AI kept it: packs waiting to download. Only read once, to hand over. */
     val legacyModelQueue: List<String>
         get() = prefs.getString(KeyModelQueue, null)?.split(',')?.filter { it.isNotEmpty() } ?: emptyList()
@@ -371,6 +409,7 @@ class LumenPrefs(context: Context) {
         const val KeyIndexScheduleStart = "index_schedule_start"
         const val KeyIndexScheduleEnd = "index_schedule_end"
         const val KeySearchDetails = "search_details"
+        const val KeyPretendSlowPhone = "pretend_slow_phone"
         const val KeyPhotoReminders = "photo_reminders"
         const val KeySearchModel = "search_model"
         const val KeyFaceModel = "face_model"
@@ -390,12 +429,17 @@ class LumenPrefs(context: Context) {
         const val KeyMuted = "video_muted"
         const val KeySort = "library_sort"
         const val KeySortDescending = "library_sort_descending"
+        const val KeySortDescendingMaterial = "library_sort_descending_material"
         const val KeyAlbumSort = "album_sort"
         const val KeyAlbumSortReversed = "album_sort_reversed"
         const val KeyPinned = "pinned_albums"
         const val KeyCovers = "album_covers"
         const val KeyCreated = "created_albums"
         const val KeyAppearance = "appearance"
+        const val KeyDesignStyle = "design_style"
+        const val KeyMaterialAccent = "material_accent"
+        const val KeyMaterialPalette = "material_palette"
+        const val KeyPureBlack = "pure_black"
         const val KeyLiquidGlass = "liquid_glass"
         const val KeyReduceBlur = "reduce_blur"
         const val KeyExcluded = "excluded_folders"
@@ -406,6 +450,7 @@ class LumenPrefs(context: Context) {
         const val MaxRecentSearches = 8
         const val KeyFilter = "library_filter"
         const val KeyAspect = "aspect_ratio_grid"
+        const val KeyGridStyle = "grid_style"
     }
 }
 
