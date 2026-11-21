@@ -344,7 +344,7 @@ internal fun BoxScope.MainPages(
                                 pick == null -> selection = it
                             }
                         },
-                        aspectRatioGrid = aspectRatioGrid,
+                        gridStyle = gridStyle,
                         columns = gridColumns,
                         onColumnsChange = onGridColumns,
                         emptyText = stringResource(filter.emptyText),
@@ -447,7 +447,7 @@ internal fun BoxScope.MainPages(
                                     pick == null -> selection = it
                                 }
                             },
-                            aspectRatioGrid = aspectRatioGrid,
+                            gridStyle = gridStyle,
                             columns = gridColumns,
                             onColumnsChange = onGridColumns,
                             items = items,

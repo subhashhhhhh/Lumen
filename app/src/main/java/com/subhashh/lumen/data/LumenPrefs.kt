@@ -29,10 +29,12 @@ class LumenPrefs(context: Context) {
             ?: LibraryFilter.All
         set(value) = prefs.edit { putString(KeyFilter, value.name) }
 
-    /** Show whole photos letterboxed in their cells instead of square crops. */
-    var aspectRatioGrid: Boolean
-        get() = prefs.getBoolean(KeyAspect, false)
-        set(value) = prefs.edit { putBoolean(KeyAspect, value) }
+    /** The Library's grid: square crops, whole photos letterboxed, or a mosaic. Was a yes/no for letterboxing. */
+    var gridStyle: com.subhashh.lumen.ui.library.GridStyle
+        get() = prefs.getString(KeyGridStyle, null)
+            ?.let { name -> com.subhashh.lumen.ui.library.GridStyle.entries.firstOrNull { it.name == name } }
+            ?: if (prefs.getBoolean(KeyAspect, false)) com.subhashh.lumen.ui.library.GridStyle.AspectRatio else com.subhashh.lumen.ui.library.GridStyle.Square
+        set(value) = prefs.edit { putString(KeyGridStyle, value.name) }
 
     /** Grid columns, shared by the Library and albums. */
     var gridColumns: Int
@@ -448,6 +450,7 @@ class LumenPrefs(context: Context) {
         const val MaxRecentSearches = 8
         const val KeyFilter = "library_filter"
         const val KeyAspect = "aspect_ratio_grid"
+        const val KeyGridStyle = "grid_style"
     }
 }
 

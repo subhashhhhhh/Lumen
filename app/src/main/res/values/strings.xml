@@ -126,6 +126,7 @@
     <string name="main_view_grid">Grid</string>
     <string name="main_view_square">Square</string>
     <string name="main_view_aspect_ratio">Aspect Ratio</string>
+    <string name="main_view_mosaic">Mosaic</string>
 
     <!-- App lock and picker -->
     <string name="main_unlock_lumen">Unlock Lumen</string>

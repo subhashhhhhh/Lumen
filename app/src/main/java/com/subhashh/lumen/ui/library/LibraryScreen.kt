@@ -97,8 +97,8 @@ fun LibraryScreen(
     titleTopPadding: Dp = 16.dp,
     /** The title and month over the top of the grid. Material's Photos page goes without. */
     showHeader: Boolean = true,
-    /** Whole photos letterboxed in their cells instead of square crops. */
-    aspectRatioGrid: Boolean = false,
+    /** Square crops, whole photos letterboxed, or a mosaic of whole photos ([GridStyle]). */
+    gridStyle: GridStyle = GridStyle.Square,
     emptyText: String = stringResource(R.string.main_no_photos_or_videos),
     /** Columns, saved by the caller so the choice survives restarts. */
     columns: Int = ColumnSteps[DefaultColumnStep],
@@ -132,6 +132,8 @@ fun LibraryScreen(
     // Decode thumbnails for the cell size actually shown, so fewer, bigger cells stay sharp.
     val cellPx = with(LocalDensity.current) { LocalConfiguration.current.screenWidthDp.dp.roundToPx() } / columns
     val thumbBucket = ImageKeys.thumbBucket(cellPx)
+    val mosaic = if (gridStyle == GridStyle.Mosaic) remember(entries, columns) { mosaicLayout(entries, columns) } else null
+    val gridWidth = LocalConfiguration.current.screenWidthDp.dp
 
     // iOS Photos opens at the newest photo, which sits at the bottom of the grid. Only on first
     // load — later refreshes (a deletion, returning to the app) must keep the scroll position.
@@ -175,10 +177,12 @@ fun LibraryScreen(
             )
         }
         LazyVerticalGrid(
-            columns = GridCells.Fixed(columns),
+            // A mosaic is cut into many narrow columns, each photo spanning its share; its gaps
+            // are the cells' own padding (spacing here would come between every column).
+            columns = GridCells.Fixed(if (mosaic != null) MosaicUnits else columns),
             state = gridState,
             contentPadding = contentPadding,
-            horizontalArrangement = Arrangement.spacedBy(2.dp),
+            horizontalArrangement = Arrangement.spacedBy(if (mosaic != null) 0.dp else 2.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp),
             modifier = Modifier
                 .fillMaxSize()
@@ -206,7 +210,13 @@ fun LibraryScreen(
                         is GridEntry.Cell -> entry.item.id
                     }
                 },
-                span = { i -> if (entries[i] is GridEntry.Header) GridItemSpan(maxLineSpan) else GridItemSpan(1) },
+                span = { i ->
+                    when {
+                        entries[i] is GridEntry.Header -> GridItemSpan(maxLineSpan)
+                        mosaic != null -> GridItemSpan(mosaic.spans[i])
+                        else -> GridItemSpan(1)
+                    }
+                },
                 contentType = { i -> if (entries[i] is GridEntry.Header) 0 else 1 },
             ) { i ->
                 val entry = entries[i]
@@ -220,7 +230,8 @@ fun LibraryScreen(
                 Thumbnail(
                     item = item,
                     bucket = thumbBucket,
-                    fit = aspectRatioGrid,
+                    fit = gridStyle == GridStyle.AspectRatio,
+                    square = mosaic == null,
                     showDuration = columns <= 5,
                     selected = selection?.let { item.id in it },
                     onClick = click@{
@@ -232,7 +243,8 @@ fun LibraryScreen(
                             onSelectionChange(if (item.id in current) current - item.id else current + item.id)
                         }
                     },
-                    modifier = Modifier.transitionCell(transition, item.id),
+                    modifier = (if (mosaic != null) Modifier.padding(horizontal = 1.dp).height(gridWidth * mosaic.heights[i]) else Modifier)
+                        .transitionCell(transition, item.id),
                 )
             }
         }
@@ -303,6 +315,8 @@ internal fun Thumbnail(
     item: MediaItem,
     bucket: Int,
     fit: Boolean,
+    /** False in a mosaic, where the caller sizes the cell to the photo's shape. */
+    square: Boolean = true,
     showDuration: Boolean,
     /** null when not selecting. */
     selected: Boolean?,
@@ -333,7 +347,7 @@ internal fun Thumbnail(
     }
     Box(
         modifier
-            .aspectRatio(1f)
+            .then(if (square) Modifier.aspectRatio(1f) else Modifier)
             .clickable(onClick = onClick),
     ) {
         Box(

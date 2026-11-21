@@ -96,7 +96,7 @@ internal class MainState(
     // A picker starts unfiltered: the asked-for types already narrow it, and a saved
     // "Videos" filter would leave a photo picker empty.
     var filter by mutableStateOf(if (pick != null) LibraryFilter.All else prefs.libraryFilter)
-    var aspectRatioGrid by mutableStateOf(prefs.aspectRatioGrid)
+    var gridStyle by mutableStateOf(prefs.gridStyle)
     var sort by mutableStateOf(prefs.librarySort)
     var sortDescending by mutableStateOf(prefs.sortDescending)
 

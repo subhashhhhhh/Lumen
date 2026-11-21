@@ -19,8 +19,8 @@ fun viewMenuItems(
     sort: LibrarySort,
     descending: Boolean,
     onSort: (LibrarySort, descending: Boolean) -> Unit,
-    aspectRatioGrid: Boolean? = null,
-    onAspectRatioGrid: (Boolean) -> Unit = {},
+    gridStyle: GridStyle? = null,
+    onGridStyle: (GridStyle) -> Unit = {},
 ): List<MenuItem> = buildList {
     add(
         MenuItem(
@@ -47,17 +47,14 @@ fun viewMenuItems(
             ),
         ),
     )
-    if (aspectRatioGrid != null) {
-        val square = stringResource(R.string.main_view_square)
-        val aspect = stringResource(R.string.main_view_aspect_ratio)
+    if (gridStyle != null) {
         add(
             MenuItem(
                 stringResource(R.string.main_view_grid),
-                value = if (aspectRatioGrid) aspect else square,
-                submenu = listOf(
-                    MenuItem(square, checked = !aspectRatioGrid) { onAspectRatioGrid(false) },
-                    MenuItem(aspect, checked = aspectRatioGrid) { onAspectRatioGrid(true) },
-                ),
+                value = stringResource(gridStyle.label),
+                submenu = GridStyle.entries.map { option ->
+                    MenuItem(stringResource(option.label), checked = option == gridStyle) { onGridStyle(option) }
+                },
             ),
         )
     }

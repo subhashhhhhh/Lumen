@@ -188,7 +188,7 @@ private fun MainState.Scaffold(
     }
     val monthsList = rememberLazyListState()
     val yearsList = rememberLazyListState()
-    SideEffect { transition.fitCells = aspectRatioGrid }
+    SideEffect { transition.fitCells = gridStyle == com.subhashh.lumen.ui.library.GridStyle.AspectRatio }
 
     val utilities = remember(library, trash, pick) {
         MediaCollections.utilities(context, library.orEmpty(), trash).filter {
@@ -728,10 +728,10 @@ private fun MainState.Scaffold(
                         prefs.librarySort = newSort
                         prefs.sortDescending = descending
                     },
-                    aspectRatioGrid = aspectRatioGrid,
-                    onAspectRatioGrid = {
-                        aspectRatioGrid = it
-                        prefs.aspectRatioGrid = it
+                    gridStyle = gridStyle,
+                    onGridStyle = {
+                        gridStyle = it
+                        prefs.gridStyle = it
                     },
                 ),
             ),
