@@ -38,6 +38,13 @@ class GalleryActivity : ComponentActivity() {
         }
     }
 
+    @OptIn(com.subhashh.lumen.ai.LumenAiEngine::class)
+    override fun onStart() {
+        super.onStart()
+        // Opening Lumen resets Android's daily time for background indexing as a foreground service.
+        com.subhashh.lumen.ai.SmartIndex.appOpened(this)
+    }
+
     // A new app icon goes on once Lumen is out of sight (see LauncherIcon.applyPending).
     override fun onStop() {
         super.onStop()
