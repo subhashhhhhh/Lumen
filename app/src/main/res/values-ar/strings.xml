@@ -162,4 +162,119 @@
     <string name="main_backup_save_failed">تعذّر حفظ النسخة الاحتياطية</string>
     <string name="main_backup_bad_file">هذه ليست نسخة احتياطية من Lumen</string>
     <string name="main_settings_restored">تمت استعادة الإعدادات</string>
+    <string name="main_all_files_title">الإخفاء يحتاج إلى الوصول إلى كل الملفات</string>
+    <string name="main_all_files_message">يتجاهل فهرس وسائط Android الصور المخفية عن قصد، لذلك يجب أن يتعامل Lumen مع التخزين مباشرة لإخفائها وإظهارها. لا يغادر أي شيء هاتفك أبدًا.</string>
+    <string name="main_open_settings">فتح الإعدادات</string>
+    <string name="main_reset_lock_title">إعادة تعيين قفل المحتويات المخفية؟</string>
+    <string name="main_reset_lock_message">لا يوجد قفل شاشة على هاتفك، لذا يمكن لأي شخص يحمله فعل هذا. تبقى الصور المخفية مخفية؛ ستضبط قفلًا جديدًا تاليا.</string>
+    <string name="main_reset">إعادة تعيين</string>
+    <string name="main_unhidden">تم الإظهار</string>
+    <string name="main_unhide_failed_count">تعذّر إظهار %1$d</string>
+    <string name="main_unhide_failed">تعذّر الإظهار</string>
+    <string name="main_unhide_dot_folder">“%1$s” مخفي بسبب اسمه الذي يبدأ بنقطة؛ أعد تسمية هذا المجلد في إدارة الملفات لإظهاره</string>
+    <string name="main_unhide_folder_title">إظهار “%1$s”؟</string>
+    <plurals name="main_unhide_folders_title">
+        <item quantity="zero">إظهار %1$d مجلدات؟</item>
+        <item quantity="one">إظهار %1$d مجلدات؟</item>
+        <item quantity="two">إظهار %1$d مجلدات؟</item>
+        <item quantity="few">إظهار %1$d مجلدات؟</item>
+        <item quantity="many">إظهار %1$d مجلدات؟</item>
+        <item quantity="other">إظهار %1$d مجلدات؟</item>
+    </plurals>
+    <plurals name="main_unhide_folders_message">
+        <item quantity="zero">هاته العناصر مخفية كمجلدات كاملة، لذا ستظهر كل عناصر %1$d مجددًا في مكتبة Lumen وفي تطبيقات المعرض الأخرى.</item>
+        <item quantity="one">هاته العناصر مخفية كمجلدات كاملة، لذا ستظهر كل عناصر %1$d مجددًا في مكتبة Lumen وفي تطبيقات المعرض الأخرى.</item>
+        <item quantity="two">هاته العناصر مخفية كمجلدات كاملة، لذا ستظهر كل عناصر %1$d مجددًا في مكتبة Lumen وفي تطبيقات المعرض الأخرى.</item>
+        <item quantity="few">هاته العناصر مخفية كمجلدات كاملة، لذا ستظهر كل عناصر %1$d مجددًا في مكتبة Lumen وفي تطبيقات المعرض الأخرى.</item>
+        <item quantity="many">هاته العناصر مخفية كمجلدات كاملة، لذا ستظهر كل عناصر %1$d مجددًا في مكتبة Lumen وفي تطبيقات المعرض الأخرى.</item>
+        <item quantity="other">هاته العناصر مخفية كمجلدات كاملة، لذا ستظهر كل عناصر %1$d مجددًا في مكتبة Lumen وفي تطبيقات المعرض الأخرى.</item>
+    </plurals>
+    <string name="main_hidden_encrypted_find">مخفي ومشفّر. اعثر عليه في: المجموعات ← المخفي</string>
+    <string name="main_hidden_find">مخفي. اعثر عليه في: المجموعات ← المخفي</string>
+    <string name="main_hidden_and_encrypted">مخفي ومشفّر</string>
+    <string name="main_hid_n_of">تم إخفاء %1$d من %2$d</string>
+    <string name="main_hide_some_folders_failed">تعذّر إخفاء بعض المجلدات</string>
+    <string name="main_hide_folder_title">إخفاء “%1$s”؟</string>
+    <plurals name="main_hide_folders_title">
+        <item quantity="zero">إخفاء %1$d مجلدات؟</item>
+        <item quantity="one">إخفاء %1$d مجلدات؟</item>
+        <item quantity="two">إخفاء %1$d مجلدات؟</item>
+        <item quantity="few">إخفاء %1$d مجلدات؟</item>
+        <item quantity="many">إخفاء %1$d مجلدات؟</item>
+        <item quantity="other">إخفاء %1$d مجلدات؟</item>
+    </plurals>
+    <plurals name="main_hide_folder_encrypt_message">
+        <item quantity="zero">ستُشفّر كل عناصر %1$d إلى خزنة Lumen: لن يستطيع أي تطبيق آخر رؤيتها. ستكون في: المجموعات ← المخفي.</item>
+        <item quantity="one">ستُشفّر كل عناصر %1$d إلى خزنة Lumen: لن يستطيع أي تطبيق آخر رؤيتها. ستكون في: المجموعات ← المخفي.</item>
+        <item quantity="two">ستُشفّر كل عناصر %1$d إلى خزنة Lumen: لن يستطيع أي تطبيق آخر رؤيتها. ستكون في: المجموعات ← المخفي.</item>
+        <item quantity="few">ستُشفّر كل عناصر %1$d إلى خزنة Lumen: لن يستطيع أي تطبيق آخر رؤيتها. ستكون في: المجموعات ← المخفي.</item>
+        <item quantity="many">ستُشفّر كل عناصر %1$d إلى خزنة Lumen: لن يستطيع أي تطبيق آخر رؤيتها. ستكون في: المجموعات ← المخفي.</item>
+        <item quantity="other">ستُشفّر كل %1$d عناصر فيه إلى خزنة Lumen: لن يستطيع أي تطبيق آخر رؤيتها. ستكون في: المجموعات ← المخفي.</item>
+    </plurals>
+    <plurals name="main_hide_folders_encrypt_message">
+        <item quantity="zero">ستُشفّر كل عناصر %1$d إلى خزنة Lumen: لن يستطيع أي تطبيق آخر رؤيتها. ستكون في: المجموعات ← المخفي.</item>
+        <item quantity="one">ستُشفّر كل عناصر %1$d إلى خزنة Lumen: لن يستطيع أي تطبيق آخر رؤيتها. ستكون في: المجموعات ← المخفي.</item>
+        <item quantity="two">ستُشفّر كل عناصر %1$d إلى خزنة Lumen: لن يستطيع أي تطبيق آخر رؤيتها. ستكون في: المجموعات ← المخفي.</item>
+        <item quantity="few">ستُشفّر كل عناصر %1$d إلى خزنة Lumen: لن يستطيع أي تطبيق آخر رؤيتها. ستكون في: المجموعات ← المخفي.</item>
+        <item quantity="many">ستُشفّر كل عناصر %1$d إلى خزنة Lumen: لن يستطيع أي تطبيق آخر رؤيتها. ستكون في: المجموعات ← المخفي.</item>
+        <item quantity="other">ستُشفّر كل عناصر %1$d إلى خزنة Lumen: لن يستطيع أي تطبيق آخر رؤيتها. ستكون في: المجموعات ← المخفي.</item>
+    </plurals>
+    <plurals name="main_hide_folder_message">
+        <item quantity="zero">ستُخفى كل عناصر %1$d من مكتبة Lumen ومن التطبيقات التي تستخدم فهرس وسائط Android، مثل Google Photos. لا يزال مديرو الملفات والمعارض التي تنظر إلى التخزين مباشرة قادرين على رؤيتها. ستكون في: المجموعات ← المخفي.</item>
+        <item quantity="one">ستُخفى كل عناصر %1$d من مكتبة Lumen ومن التطبيقات التي تستخدم فهرس وسائط Android، مثل Google Photos. لا يزال مديرو الملفات والمعارض التي تنظر إلى التخزين مباشرة قادرين على رؤيتها. ستكون في: المجموعات ← المخفي.</item>
+        <item quantity="two">ستُخفى كل عناصر %1$d من مكتبة Lumen ومن التطبيقات التي تستخدم فهرس وسائط Android، مثل Google Photos. لا يزال مديرو الملفات والمعارض التي تنظر إلى التخزين مباشرة قادرين على رؤيتها. ستكون في: المجموعات ← المخفي.</item>
+        <item quantity="few">ستُخفى كل عناصر %1$d من مكتبة Lumen ومن التطبيقات التي تستخدم فهرس وسائط Android، مثل Google Photos. لا يزال مديرو الملفات والمعارض التي تنظر إلى التخزين مباشرة قادرين على رؤيتها. ستكون في: المجموعات ← المخفي.</item>
+        <item quantity="many">ستُخفى كل عناصر %1$d من مكتبة Lumen ومن التطبيقات التي تستخدم فهرس وسائط Android، مثل Google Photos. لا يزال مديرو الملفات والمعارض التي تنظر إلى التخزين مباشرة قادرين على رؤيتها. ستكون في: المجموعات ← المخفي.</item>
+        <item quantity="other">ستُخفى كل عناصر %1$d من مكتبة Lumen ومن التطبيقات التي تستخدم فهرس وسائط Android، مثل Google Photos. لا يزال مديرو الملفات والمعارض التي تنظر إلى التخزين مباشرة قادرين على رؤيتها. ستكون في: المجموعات ← المخفي.</item>
+    </plurals>
+    <plurals name="main_hide_folders_message">
+        <item quantity="zero">ستُخفى كل عناصر %1$d من مكتبة Lumen ومن التطبيقات التي تستخدم فهرس وسائط Android، مثل Google Photos. لا يزال مديرو الملفات والمعارض التي تنظر إلى التخزين مباشرة قادرين على رؤيتها. ستكون في: المجموعات ← المخفي.</item>
+        <item quantity="one">ستُخفى كل عناصر %1$d من مكتبة Lumen ومن التطبيقات التي تستخدم فهرس وسائط Android، مثل Google Photos. لا يزال مديرو الملفات والمعارض التي تنظر إلى التخزين مباشرة قادرين على رؤيتها. ستكون في: المجموعات ← المخفي.</item>
+        <item quantity="two">ستُخفى كل عناصر %1$d من مكتبة Lumen ومن التطبيقات التي تستخدم فهرس وسائط Android، مثل Google Photos. لا يزال مديرو الملفات والمعارض التي تنظر إلى التخزين مباشرة قادرين على رؤيتها. ستكون في: المجموعات ← المخفي.</item>
+        <item quantity="few">ستُخفى كل عناصر %1$d من مكتبة Lumen ومن التطبيقات التي تستخدم فهرس وسائط Android، مثل Google Photos. لا يزال مديرو الملفات والمعارض التي تنظر إلى التخزين مباشرة قادرين على رؤيتها. ستكون في: المجموعات ← المخفي.</item>
+        <item quantity="many">ستُخفى كل عناصر %1$d من مكتبة Lumen ومن التطبيقات التي تستخدم فهرس وسائط Android، مثل Google Photos. لا يزال مديرو الملفات والمعارض التي تنظر إلى التخزين مباشرة قادرين على رؤيتها. ستكون في: المجموعات ← المخفي.</item>
+        <item quantity="other">ستُخفى كل عناصر %1$d من مكتبة Lumen ومن التطبيقات التي تستخدم فهرس وسائط Android، مثل Google Photos. لا يزال مديرو الملفات والمعارض التي تنظر إلى التخزين مباشرة قادرين على رؤيتها. ستكون في: المجموعات ← المخفي.</item>
+    </plurals>
+    <string name="main_vault_wrong_lock">أُنشئت هذه الخزنة بقفل Lumen مختلف؛ أدخل ذلك القفل لفتحها</string>
+    <string name="main_vault_partial_encrypt">تم تشفير %1$d؛ تعذّر تشفير %2$d وبقيت كما كانت</string>
+    <string name="main_vault_partial_decrypt">تم فك تشفير %1$d؛ تعذّر فك تشفير %2$d وبقيت كما كانت</string>
+    <string name="main_encrypt_hidden_on">تشفير المخفيات مفعّل</string>
+    <plurals name="main_encrypted_items">
+        <item quantity="zero">تم تشفير %1$d عنصرًا مخفيًا</item>
+        <item quantity="one">تم تشفير %1$d عنصر مخفيًا</item>
+        <item quantity="two">تم تشفير %1$d عناصر مخفيًا</item>
+        <item quantity="few">تم تشفير %1$d عنصرًا مخفيًا</item>
+        <item quantity="many">تم تشفير %1$d عنصرًا مخفيًا</item>
+        <item quantity="other">تم تشفير %1$d عنصرًا مخفيًا</item>
+    </plurals>
+    <plurals name="main_decrypted_items">
+        <item quantity="one">تم فك تشفير %1$d عنصرًا؛ أصبحت مخفية بالطريقة المعتادة مجددًا</item>
+        <item quantity="other">تم فك تشفير %1$d عنصرًا؛ أصبحت مخفية بالطريقة المعتادة مجددًا</item>
+    </plurals>
+    <string name="main_delete_this_item">حذف هذا العنصر؟</string>
+    <plurals name="main_delete_items_title">
+        <item quantity="one">حذف %1$d عناصر؟</item>
+        <item quantity="other">حذف %1$d عناصر؟</item>
+    </plurals>
+    <string name="main_delete_hidden_message">لا يمكن للعناصر المخفية الانتقال إلى المحذوفة مؤخرًا، لذا هذا حذف نهائي.</string>
+    <string name="main_deleted">تم الحذف</string>
+    <string name="main_delete_failed">تعذّر حذف %1$d من %2$d</string>
+    <string name="main_excluded_name">تم استبعاد “%1$s”. تراجع في: الإعدادات ← المجلدات المستبعدة</string>
+    <plurals name="main_excluded_folders">
+        <item quantity="one">تم استبعاد %1$d مجلدات. تراجع في: الإعدادات ← المجلدات المستبعدة</item>
+        <item quantity="other">تم استبعاد %1$d مجلدات. تراجع في: الإعدادات ← المجلدات المستبعدة</item>
+    </plurals>
+    <string name="main_rotating">جارٍ التدوير…</string>
+    <string name="main_rotate_failed">تعذّر تدوير %1$d من %2$d</string>
+    <string name="main_merge_with_ellipsis">دمج مع…</string>
+    <string name="main_select_people">تحديد الأشخاص</string>
+    <plurals name="main_n_selected">
+        <item quantity="one">تم تحديد %1$d</item>
+        <item quantity="other">تم تحديد %1$d</item>
+    </plurals>
+    <string name="main_this_person">هذا الشخص</string>
+    <string name="main_the_person_you_chose">الشخص الذي اخترته</string>
+    <string name="main_merge_people_title">دمج الأشخاص؟</string>
+    <string name="main_merge_people_message_named">ستظهر صور %1$s و%2$s كشخص واحد باسم %3$s.</string>
+    <string name="main_merge_people_message">ستظهر صور %1$s و%2$s كشخص واحد.</string>
 </resources>
