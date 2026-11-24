@@ -207,4 +207,10 @@
     <string name="settings_reminder_cancel_title">Diese Erinnerung abbrechen?</string>
     <string name="settings_reminder_no_note">Keine Beschreibung</string>
     <string name="settings_reminders_waiting_footer">Tippen Sie auf eine Erinnerung, um sie abzubrechen.</string>
+    <string name="main_delete_this_item">Dieses Element löschen?</string>
+    <plurals name="main_delete_items_title">
+        <item quantity="one">%1$d Element löschen?</item>
+        <item quantity="other">%1$d Elemente löschen?</item>
+    </plurals>
+    <string name="main_save_copy_failed">Die Kopie konnte nicht gespeichert werden</string>
 </resources>
