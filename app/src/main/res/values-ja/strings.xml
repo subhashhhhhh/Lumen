@@ -1,0 +1,249 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Lumen's English text. Translations live in values-<language>/strings.xml and are edited on
+  Weblate; keep placeholders (%1$s, %2$d) and plural forms as they are.
+--><resources>
+    <string name="common_cancel">キャンセル</string>
+    <string name="common_done">完了</string>
+    <string name="common_delete">削除</string>
+    <string name="common_share">共有</string>
+    <string name="common_copy">コピー</string>
+    <string name="common_copied">コピーしました</string>
+    <string name="common_rename">名前を変更</string>
+    <string name="common_remove">削除</string>
+    <string name="common_save">保存</string>
+    <string name="common_back">戻る</string>
+    <string name="common_open">開く</string>
+    <string name="common_search">検索</string>
+    <string name="common_select_all">すべて選択</string>
+    <string name="common_settings">設定</string>
+    <string name="common_details">詳細</string>
+    <string name="common_hide">非表示</string>
+    <string name="common_unhide">再表示</string>
+    <string name="common_restore">復元</string>
+    <string name="common_favorite">お気に入り</string>
+    <string name="common_unfavorite">お気に入り解除</string>
+    <string name="common_continue">続ける</string>
+    <string name="common_next">次へ</string>
+    <string name="common_not_now">今じゃない</string>
+    <string name="common_download">ダウンロード</string>
+    <string name="common_install">インストール</string>
+    <string name="common_update">アップデート</string>
+    <string name="common_retry">再試行</string>
+    <string name="common_allow">許可</string>
+    <string name="common_add">追加</string>
+    <string name="common_on">オン</string>
+    <string name="common_off">オフ</string>
+    <string name="main_people">人々</string>
+    <string name="main_albums">アルバム</string>
+    <string name="main_add_name">名前を追加</string>
+    <string name="main_search_looking_inside">検索中…</string>
+    <plurals name="main_search_results">
+        <item quantity="other">%1$,d 件の検索結果</item>
+    </plurals>
+    <string name="main_search_show_less">表示を省略</string>
+    <string name="main_search_see_all">すべて見る</string>
+    <string name="main_search_order_best">ベストマッチ</string>
+    <string name="main_search_no_results_hint">写真に写っているものを説明してみてください。例えば、「ソファの上の猫」（設定のスマート機能を使用）などです。あるいは、ファイル名、フォルダ名、月、年などを指定することもできます。</string>
+    <string name="main_search_recent">最近</string>
+    <string name="main_search_clear">クリア</string>
+    <string name="main_search_from_your_photos">あなたの写真から</string>
+    <string name="main_search_try">試す</string>
+    <string name="main_search_field_hint">ファイル、フォルダー、月、年…</string>
+    <string name="main_merge_with_name">%1$s と統合しますか？</string>
+    <string name="main_merge_proposal_message">既に「%1$s」という名前のユーザーが存在します。もしこれがそのユーザーであれば、すべての「%2$s」を1人のユーザーとして統合してください。</string>
+    <plurals name="main_merge_photo_count">
+        <item quantity="other">%1$,d 枚の写真</item>
+    </plurals>
+    <string name="main_merge">統合</string>
+    <string name="main_keep_separate">統合しない</string>
+    <plurals name="main_person_photo_count">
+        <item quantity="other">%1$,d 枚の写真</item>
+    </plurals>
+    <string name="main_deselect_all">すべて選択解除</string>
+    <string name="main_cancel_selection">選択をキャンセル</string>
+    <string name="main_delete_permanently">完全に削除</string>
+    <string name="main_more">その他</string>
+    <string name="main_delete_forever">永久に削除</string>
+    <string name="main_selected">選択済み</string>
+    <string name="main_new_album_ellipsis">新しいアルバムを作成…</string>
+    <string name="main_album_name_hint">アルバム名</string>
+    <string name="main_create">作成</string>
+    <string name="main_utilities">ユーティリティ</string>
+    <string name="main_star_title">Lumen を楽しんでいますか？</string>
+    <string name="main_star_message">Lumenは無料で、たった一人で開発しています。GitHubでスターを付けていただけると、より多くの方にLumenを見つけていただけます。</string>
+    <string name="main_star_confirm">GitHubでスターをつける</string>
+    <string name="main_star_later">今はしない</string>
+    <string name="main_hidden_locked">ロック中</string>
+    <string name="main_hidden_set_up">セットアップ</string>
+    <string name="main_album_empty">空</string>
+    <string name="main_pinned">ピン留め済み</string>
+    <plurals name="main_hero_photos">
+        <item quantity="other">%1$,d 枚の写真</item>
+    </plurals>
+    <plurals name="main_hero_videos">
+        <item quantity="other">%1$,d 件の動画</item>
+    </plurals>
+    <string name="main_list_separator">", "</string>
+    <string name="main_library">ライブラリ</string>
+    <string name="main_collections">コレクション</string>
+    <string name="main_tabs">タブ</string>
+    <string name="main_zoom_years">年</string>
+    <string name="main_zoom_months">月</string>
+    <string name="main_zoom_all">すべて</string>
+    <plurals name="main_item_count">
+        <item quantity="other">%1$d アイテム</item>
+    </plurals>
+    <string name="main_section_none">なし</string>
+    <string name="main_section_months">月ごと</string>
+    <string name="main_section_days">日ごと</string>
+    <string name="main_today">今日</string>
+    <string name="main_yesterday">昨日</string>
+    <string name="main_no_photos_or_videos">写真または動画がありません</string>
+    <string name="main_badge_raw">RAW</string>
+    <string name="main_badge_gif">GIF</string>
+    <string name="main_view_filter">フィルター</string>
+    <string name="main_view_sort">並べ替え</string>
+    <string name="main_view_grid">グリッド</string>
+    <string name="main_view_square">四角</string>
+    <string name="main_view_aspect_ratio">アスペクトを維持</string>
+    <string name="main_unlock_lumen">Lumen をロック解除</string>
+    <string name="main_pick_choose_photos">写真を選択</string>
+    <string name="main_pick_choose_a_photo">写真を選択</string>
+    <string name="main_pick_choose_videos">動画を選択</string>
+    <string name="main_pick_choose_a_video">動画を選択</string>
+    <string name="main_pick_choose_items">アイテムを選択</string>
+    <string name="main_pick_choose_an_item">アイテムを選択</string>
+    <string name="main_favorites_import_bad_file">これはFossifyやAvesのお気に入りファイルではありません</string>
+    <plurals name="main_favorites_import_none">
+        <item quantity="other">この端末には%1$dお気に入りが一つもありません</item>
+    </plurals>
+    <plurals name="main_favorites_import_already">
+        <item quantity="other">すべての%1$dはすでにお気に入りです</item>
+    </plurals>
+    <string name="main_favorites_import_found">%2$d件中%1$d件見つかりました。%3$d件をお気に入りとしてマークします</string>
+    <string name="main_settings_exported">設定をエクスポートしました</string>
+    <string name="main_backup_save_failed">バックアップを保存できませんでした</string>
+    <string name="main_backup_bad_file">これは Lumen のバックアップではありません</string>
+    <string name="main_settings_restored">設定を復元しました</string>
+    <string name="main_all_files_title">非表示にはすべてのファイルへのアクセスが必要です</string>
+    <string name="main_all_files_message">Android のメディアインデックスは意図的に非表示の写真をスキップするため、Lumen はストレージに直接アクセスして写真の表示/非表示を切り替える必要があります。データがデバイスから外部に送信されることはありません。</string>
+    <string name="main_open_settings">設定を開く</string>
+    <string name="main_reset_lock_title">非表示のロックをリセットしますか？</string>
+    <string name="main_reset_lock_message">お使いのデバイスには画面ロック機能がないため、誰でもこの操作を行うことができます。非表示にした写真は非表示のままです。次回、新しいロックを設定してください。</string>
+    <string name="main_reset">リセット</string>
+    <string name="main_unhidden">非表示を解除しました</string>
+    <string name="main_unhide_failed_count">%1$d の非表示を解除できませんでした</string>
+    <string name="main_unhide_failed">非表示を解除できませんでした</string>
+    <string name="main_unhide_dot_folder">「%1$s」はドット名で隠されています。ファイルマネージャーでそのフォルダの名前を変更して表示させてください</string>
+    <string name="main_unhide_folder_title">「%1$s」の非表示を解除しますか？</string>
+    <plurals name="main_unhide_folders_title">
+        <item quantity="other">%1$d フォルダーの非表示を解除しますか？</item>
+    </plurals>
+    <plurals name="main_unhide_folders_message">
+        <item quantity="other">これらはフォルダ全体として非表示になっているため、フォルダ内のすべての%1$d個のアイテムが Lumen のライブラリや他のギャラリーアプリに再び表示されます。</item>
+    </plurals>
+    <string name="main_hidden_encrypted_find">非表示され、暗号化されています。コレクション → 非表示 から見つけてください</string>
+    <string name="main_hidden_find">非表示にしました。コレクション → 非表示から見つけてください</string>
+    <string name="main_hidden_and_encrypted">非表示、暗号化しました</string>
+    <string name="main_hid_n_of">%2$d の %1$d に非表示にしました</string>
+    <string name="main_hide_some_folders_failed">一部のフォルダを非表示にできませんでした</string>
+    <string name="main_hide_folder_title">「%1$s」を非表示にしますか？</string>
+    <plurals name="main_hide_folders_title">
+        <item quantity="other">%1$d 件のフォルダーを非表示にしますか？</item>
+    </plurals>
+    <plurals name="main_hide_folder_encrypt_message">
+        <item quantity="other">その中の%1$d個のアイテムはすべて Lumen の保管庫に暗号化されて保存されます。他のアプリからは見ることができません。それらは コレクション → 非表示 に表示されます。</item>
+    </plurals>
+    <plurals name="main_hide_folders_encrypt_message">
+        <item quantity="other">これらのアイテムに含まれる%1$d個のアイテムはすべて Lumen の保管庫に暗号化されて保存されます。他のアプリからは見ることができません。アイテムは コレクション → 非表示 に表示されます。</item>
+    </plurals>
+    <plurals name="main_hide_folder_message">
+        <item quantity="other">%1$d個のアイテムは、Lumen のライブラリや、Google フォトなど Android のメディアインデックスを使用するアプリから非表示になります。ただし、ストレージを直接参照するファイルマネージャーやギャラリーでは、引き続き表示されます。これらのアイテムは コレクション → 非表示 に表示されます。</item>
+    </plurals>
+    <plurals name="main_hide_folders_message">
+        <item quantity="other">これらの中の%1$d個のアイテムは、Lumen のライブラリや、Google フォトなど Android のメディアインデックスを使用するアプリから非表示になります。ただし、ストレージを直接参照するファイルマネージャーやギャラリーでは引き続き表示されます。これらのアイテムは コレクション → 非表示 に表示されます。</item>
+    </plurals>
+    <string name="main_vault_wrong_lock">この保管庫は別の Lumen のロックがされています。開けるにはそのロックを解除してください</string>
+    <string name="main_vault_partial_encrypt">%1$d は完了しましたが、%2$d は暗号化できず、そのままの状態になりました</string>
+    <string name="main_vault_partial_decrypt">%1$d は完了しましたが、%2$d は復号化できず、そのままの状態です</string>
+    <string name="main_encrypt_hidden_on">暗号化した非表示はオンです</string>
+    <plurals name="main_encrypted_items">
+        <item quantity="other">暗号化された%1$d個の非表示アイテム</item>
+    </plurals>
+    <plurals name="main_decrypted_items">
+        <item quantity="other">%1$d個のアイテムを復号化しました。それらは再び通常の方法で隠されています</item>
+    </plurals>
+    <string name="main_delete_this_item">このアイテムを削除しますか？</string>
+    <plurals name="main_delete_items_title">
+        <item quantity="other">%1$d個のアイテムを削除しますか？</item>
+    </plurals>
+    <string name="main_delete_hidden_message">非表示にしたアイテムは「最近削除したアイテム」に移動できないため、これは永続的な削除となります。</string>
+    <string name="main_deleted">削除しました</string>
+    <string name="main_delete_failed">%2$d のうち %1$d を削除できませんでした</string>
+    <string name="main_excluded_name">「%1$s」を除外しました。設定 → 除外フォルダで元に戻せます</string>
+    <plurals name="main_excluded_folders">
+        <item quantity="other">除外されたフォルダーが%1$d個あります。設定 → 除外フォルダー で元に戻せます</item>
+    </plurals>
+    <string name="main_rotating">回転しています…</string>
+    <string name="main_rotate_failed">%2$d個中%1$d個の回転ができませんでした</string>
+    <string name="main_merge_with_ellipsis">統合する…</string>
+    <string name="main_select_people">人を選択</string>
+    <plurals name="main_n_selected">
+        <item quantity="other">%1$d 件選択中</item>
+    </plurals>
+    <string name="main_this_person">この人</string>
+    <string name="main_the_person_you_chose">あなたが選んだ人</string>
+    <string name="main_merge_people_title">人を統合しますか？</string>
+    <string name="main_merge_people_message_named">%1$s と %2$s の写真は、%3$s という名前の1人の人物として表示されます。</string>
+    <string name="main_merge_people_message">%1$s と %2$s の写真は、1人の人物として表示されます。</string>
+    <string name="main_biometrics_missing">まず、デバイスの設定で指紋認証または顔認証を追加してください</string>
+    <string name="main_lock_needed_for_encrypt">まず、Lumen ロックを設定してください（プライバシー → Lumen ロックの設定）</string>
+    <string name="main_encrypt_hidden_title">非表示を暗号化しますか？</string>
+    <plurals name="main_encrypt_hidden_message_count">
+        <item quantity="other">%1$d個の非表示アイテムは、他のアプリやファイルマネージャーでは読み取れない暗号化された保管庫に移動します（除外されたフォルダはそのまま残ります）。保管庫はストレージ上に残るため、Lumen をアンインストールしてもデータは保持されます。Lumen のロックで再び開くことができます。\n\nLumen をアンインストールしてロックを忘れてしまった場合、これらのファイルは誰にも復元できません。短いPINコードよりもパスワードの方が安全です。</item>
+    </plurals>
+    <string name="main_encrypt_hidden_message_all">非表示フォルダ内のすべてのデータは、他のアプリやファイルマネージャーでは読み取れない暗号化された保管庫に移動されます（除外されたフォルダはそのまま残ります）。データはストレージ上に残るため、Lumen をアンインストールしても削除されません。Lumen のロック機能を使えば、再びアクセスできるようになります。\n\nLumen をアンインストールしてロックを忘れてしまった場合、これらのファイルは誰にも復元できません。短いPINコードよりもパスワードの方が安全です。</string>
+    <string name="main_encrypt">暗号化</string>
+    <string name="main_decrypt_hidden_title">非表示の暗号化を停止しますか？</string>
+    <string name="main_decrypt_hidden_message">保管庫内のすべてのファイルは元の場所に復号化され、通常の方法で隠されます。つまり、ライブラリからは削除されますが、ファイルマネージャーや一部のギャラリーからは表示されます。</string>
+    <string name="main_decrypt">復号化</string>
+    <string name="main_import_settings_title">設定をインポートしますか？</string>
+    <string name="main_import_settings_message">現在の設定、アルバムの並び順、除外項目はバックアップデータに置き換えられます。バックアップデータ内のお気に入りは、あなたのお気に入りに追加されます。</string>
+    <string name="main_import">インポート</string>
+    <string name="main_hidden">非表示</string>
+    <string name="main_album_empty_hint">このアルバムは空です。\n写真を追加するには、… → アルバムに移動 または アルバムにコピー を選択します。</string>
+    <string name="main_empty_trash">空にする</string>
+    <string name="main_empty_trash_title">最近削除したアイテムを削除しますか？</string>
+    <string name="main_empty_trash_message_one">このアイテムは永久に削除されます。</string>
+    <plurals name="main_empty_trash_message">
+        <item quantity="other">%1$d 件のアイテムは永久に削除されます。</item>
+    </plurals>
+    <string name="main_delete_forever_title_case">永久に削除</string>
+    <plurals name="main_trash_message">
+        <item quantity="other">これは「最近削除したアイテム」に30日間保存されます。</item>
+    </plurals>
+    <plurals name="main_delete_forever_message">
+        <item quantity="other">%1$d 件のアイテムは永久に削除されます。</item>
+    </plurals>
+    <string name="main_pick_add_count">%1$d を追加</string>
+    <string name="main_view_options">オプションを表示</string>
+    <string name="main_album_options">アルバムオプション</string>
+    <string name="main_sort_by">%1$s で並べ替え</string>
+    <string name="main_people_options">人々のオプション</string>
+    <string name="main_people_circles">円形</string>
+    <string name="main_people_squares">四角形</string>
+    <string name="main_show_hidden_people">非表示にした人を表示</string>
+    <string name="main_person_options">人のオプション</string>
+    <string name="main_add_name_ellipsis">名前を追加…</string>
+    <string name="main_rename_ellipsis">名前を変更…</string>
+    <string name="main_unhide_person">非表示を解除</string>
+    <string name="main_hide_person">非表示にする</string>
+    <string name="main_merge_select_two">2人以上選択して統合します</string>
+    <plurals name="main_merge_people_count_title">
+        <item quantity="other">%1$d人と統合しますか？</item>
+    </plurals>
+    <string name="main_merge_many_message">これらの写真は同一人物として表示されます。</string>
+    <string name="main_merge_many_message_named">これらの写真は、%1$sという名前の1人の人物として表示されます。</string>
+    <string name="main_merge_many_message_named_others">彼らの写真は、%1$s という名前の 1 人の人物として表示されます。他の名前 (%2$s) は、次のようになります。</string>
+</resources>

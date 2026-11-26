@@ -513,9 +513,9 @@
     <string name="smart_schedule_starts">Débuts</string>
     <string name="smart_schedule_ends">Fin</string>
     <string name="smart_downloads_title">Indexation et téléchargements</string>
-    <string name="smart_downloads_footer">Les modèles sont téléchargés une seule fois depuis Hugging Face ; vos photos et vos recherches ne quittent jamais ce téléphone.</string>
+    <string name="smart_downloads_footer">Les modèles sont téléchargés une seule fois depuis Hugging Face ; vos photos et vos recherches ne quittent jamais ce téléphone.</string>
     <string name="smart_index_on_battery">Index sur les batteries</string>
-    <string name="smart_index_on_battery_subtitle">Continuez à scanner sans le chargeur ; l\'appareil s\'arrête lorsque la batterie est faible</string>
+    <string name="smart_index_on_battery_subtitle">Continuez à scanner sans le chargeur ; l\'appareil s\'arrête lorsque la batterie est faible</string>
     <string name="smart_unrestricted_battery">Batterie sans restriction</string>
     <string name="smart_unrestricted_battery_subtitle">Laissez l\'indexation se poursuivre après avoir quitté Lumen ; sinon, Android la ralentit</string>
     <string name="smart_video_detail">Détails de la vidéo</string>

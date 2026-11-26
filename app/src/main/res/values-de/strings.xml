@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Lumen's English text. Translations live in values-<language>/strings.xml and are edited on
+  Weblate; keep placeholders (%1$s, %2$d) and plural forms as they are.
+--><resources>
+    <string name="common_cancel">Abbrechen</string>
+    <string name="common_done">Fertig</string>
+    <string name="common_delete">Löschen</string>
+    <string name="common_share">Teilen</string>
+    <string name="common_copy">Kopieren</string>
+    <string name="common_copied">Kopiert</string>
+    <string name="common_rename">Umbenennen</string>
+    <string name="common_remove">Entfernen</string>
+    <string name="common_save">Speichern</string>
+    <string name="common_back">Zurück</string>
+    <string name="common_open">Öffnen</string>
+    <string name="common_search">Suche</string>
+    <string name="common_select_all">Alle auswählen</string>
+    <string name="common_settings">Einstellungen</string>
+    <string name="common_details">Details</string>
+    <string name="common_hide">Verstecken</string>
+    <string name="common_restore">Wiederherstellen</string>
+    <string name="common_favorite">Favoriten</string>
+    <string name="main_search_looking_inside">Blick ins Innere der Fotos…</string>
+    <plurals name="main_search_results">
+        <item quantity="one">%1$,d Ergebnis</item>
+        <item quantity="other">%1$,d Ergebnisse</item>
+    </plurals>
+    <string name="main_search_show_less">Weniger anzeigen</string>
+    <string name="main_search_see_all">Alle anzeigen</string>
+    <string name="main_search_order_best">Beste Übereinstimmung</string>
+    <string name="main_search_no_results_hint">Versuchen Sie, zu beschreiben, was auf dem Foto zu sehen ist, zum Beispiel „Katze auf einem Sofa“ (mit den „Smart Features“ in den Einstellungen), oder geben Sie einen Dateinamen, einen Ordner, einen Monat oder ein Jahr an.</string>
+    <string name="main_search_recent">Neueste</string>
+    <string name="main_search_clear">Löschen</string>
+    <string name="main_search_from_your_photos">Aus deinen Fotos</string>
+    <string name="main_search_field_hint">Dateien, Ordner, Monate, Jahre…</string>
+    <string name="main_merge_proposal_message">Sie haben bereits jemanden namens %1$s. Wenn dies der Fall ist, führen Sie sie zusammen, um alle %2$s als eine Person anzuzeigen.</string>
+    <plurals name="main_merge_photo_count">
+        <item quantity="one">%1$,d Foto</item>
+        <item quantity="other">%1$,d Fotos</item>
+    </plurals>
+    <string name="main_merge">Zusammenführen</string>
+    <string name="main_keep_separate">Getrennt aufbewahren</string>
+    <plurals name="main_person_photo_count">
+        <item quantity="one">%1$,d Foto</item>
+        <item quantity="other">%1$,d Fotos</item>
+    </plurals>
+    <string name="main_deselect_all">Alle abwählen</string>
+    <string name="main_cancel_selection">Auswahl abbrechen</string>
+    <string name="main_delete_permanently">Dauerhaft löschen</string>
+    <string name="main_more">Mehr</string>
+    <string name="main_delete_forever">Für immer löschen</string>
+    <string name="main_selected">Ausgewählt</string>
+    <string name="main_new_album_ellipsis">Neues Album…</string>
+    <string name="main_album_name_hint">Albumname</string>
+    <string name="main_create">Erstellen</string>
+    <string name="main_utilities">Dienstprogramme</string>
+    <string name="main_add_name">Namen hinzufügen</string>
+    <string name="main_albums">Alben</string>
+    <string name="main_merge_with_name">Mit %1$s zusammenführen?</string>
+    <string name="main_hidden_set_up">Einrichten</string>
+    <string name="main_album_empty">Empty</string>
+    <string name="main_pinned">Pinned</string>
+    <plurals name="main_hero_photos">
+        <item quantity="one">%1$,d Photo</item>
+        <item quantity="other">%1$,d Photos</item>
+    </plurals>
+    <plurals name="main_hero_videos">
+        <item quantity="one">%1$,d Video</item>
+        <item quantity="other">%1$,d Videos</item>
+    </plurals>
+    <string name="main_list_separator">", "</string>
+    <string name="main_library">Library</string>
+    <string name="main_collections">Collections</string>
+    <string name="main_tabs">Tabs</string>
+    <string name="main_zoom_years">Years</string>
+    <string name="main_zoom_months">Months</string>
+    <string name="main_zoom_all">All</string>
+    <string name="main_pick_choose_videos">Choose Videos</string>
+    <string name="main_pick_choose_a_video">Choose a Video</string>
+    <string name="common_not_now">Nicht jetzt</string>
+    <string name="common_download">Herunterladen</string>
+    <string name="common_install">Installieren</string>
+    <string name="common_update">Aktualisierung</string>
+    <string name="common_retry">Erneut versuchen</string>
+    <string name="common_allow">Zulassen</string>
+    <string name="common_add">Hinzufügen</string>
+    <string name="common_on">Am</string>
+    <string name="common_off">Aus</string>
+    <string name="main_people">Menschen</string>
+    <string name="main_search_try">Versuche es</string>
+    <string name="main_hidden_locked">Gesperrt</string>
+    <string name="main_section_none">Keine</string>
+    <string name="main_section_months">Monate</string>
+    <string name="main_section_days">Tage</string>
+    <string name="main_today">Heute</string>
+    <string name="main_yesterday">Gestern</string>
+    <string name="main_no_photos_or_videos">Keine Fotos oder Videos</string>
+    <string name="main_badge_raw">RAW</string>
+    <string name="main_badge_gif">GIF</string>
+    <string name="main_view_filter">Filter</string>
+    <string name="main_view_sort">Sortieren</string>
+    <string name="main_view_grid">Raster</string>
+    <string name="main_view_square">Quadrat</string>
+    <string name="main_view_aspect_ratio">Seitenverhältnis</string>
+    <string name="main_view_mosaic">Mosaik</string>
+    <string name="main_pick_choose_photos">Fotos auswählen</string>
+    <string name="main_pick_choose_a_photo">Wähle ein Foto aus</string>
+    <string name="main_favorites_import_bad_file">Das ist keine Favoritendatei von „Fossify“ oder „Aves“.</string>
+    <plurals name="main_favorites_import_none">
+        <item quantity="one">Keines seiner %1$d Favoriten ist auf diesem Handy gespeichert</item>
+        <item quantity="other">Keines seiner %1$d Favoriten ist auf diesem Handy gespeichert</item>
+    </plurals>
+    <plurals name="main_favorites_import_already">
+        <item quantity="one">Alle %1$d sind bereits Favoriten</item>
+        <item quantity="other">Alle %1$d sind bereits Favoriten</item>
+    </plurals>
+    <string name="main_favorites_import_found">%1$d von %2$d gefunden; %3$d als Favoriten markiert</string>
+    <string name="main_settings_exported">Einstellungen exportiert</string>
+    <string name="main_backup_save_failed">Die Sicherung konnte nicht gespeichert werden</string>
+    <string name="main_backup_bad_file">Das ist kein Lumen-Backup.</string>
+    <string name="main_settings_restored">Einstellungen wiederhergestellt</string>
+    <string name="main_all_files_message">Der Medienindex von Android lässt versteckte Fotos absichtlich außer Acht, daher muss Lumen direkt mit dem Speicher arbeiten, um sie zu verbergen und anzuzeigen. Es verlassen niemals Daten Ihr Smartphone.</string>
+    <string name="main_open_settings">Einstellungen öffnen</string>
+    <string name="main_reset_lock_message">Dein Handy hat keine Bildschirmsperre, daher könnte jeder, der es in der Hand hält, dies tun. Versteckte Fotos bleiben versteckt; als Nächstes richtest du eine neue Sperre ein.</string>
+    <string name="main_reset">Zurücksetzen</string>
+    <string name="main_unhide_dot_folder">„%1$s“ wird durch seinen Punktnamen ausgeblendet; benennen Sie diesen Ordner in einem Dateimanager um, um ihn wieder einzublenden.</string>
+    <string name="main_vault_partial_encrypt">%1$d wurden verarbeitet, %2$d konnten nicht verschlüsselt werden und blieben unverändert</string>
+    <string name="main_vault_partial_decrypt">%1$d wurden verarbeitet, %2$d konnten nicht entschlüsselt werden und blieben unverändert</string>
+    <string name="main_merge_people_title">Personen zusammenführen?</string>
+    <string name="main_merge_people_message_named">Fotos von %1$s und %2$s werden als eine Person namens %3$s angezeigt.</string>
+    <string name="main_merge_people_message">Fotos von %1$s und %2$s werden als eine Person angezeigt.</string>
+    <string name="main_biometrics_missing">Fügen Sie zunächst in den Einstellungen Ihres Smartphones einen Fingerabdruck oder eine Gesichtserkennung hinzu</string>
+    <string name="main_lock_needed_for_encrypt">Richten Sie zunächst eine Lumen-Sperre ein (Datenschutz → Lumen-Sperre einrichten)</string>
+    <plurals name="main_encrypt_hidden_message_count">
+        <item quantity="one">%1$d versteckte Elemente werden in einen verschlüsselten Tresor verschoben, auf den keine andere App oder kein anderer Dateimanager zugreifen kann (ausgeschlossene Ordner bleiben unverändert). Der Tresor verbleibt auf Ihrem Speichermedium und bleibt somit auch nach der Deinstallation von Lumen erhalten; mit Ihrem Lumen-Passwort können Sie ihn wieder öffnen.\n\nWenn Sie Lumen deinstallieren und Ihr Passwort vergessen, können diese Dateien von niemandem wiederhergestellt werden. Ein Passwort ist sicherer als eine kurze PIN.</item>
+        <item quantity="other">%1$d versteckte Elemente werden in einen verschlüsselten Tresor verschoben, auf den keine andere App oder kein anderer Dateimanager zugreifen kann (ausgeschlossene Ordner bleiben unverändert). Der Tresor verbleibt auf Ihrem Speichermedium und bleibt somit auch nach der Deinstallation von Lumen erhalten; mit Ihrem Lumen-Passwort können Sie ihn wieder öffnen.\n\nWenn Sie Lumen deinstallieren und Ihr Passwort vergessen, können diese Dateien von niemandem wiederhergestellt werden. Ein Passwort ist sicherer als eine kurze PIN.</item>
+    </plurals>
+    <string name="main_view_options">Anzeigeoptionen</string>
+    <string name="main_album_options">Album-Optionen</string>
+    <string name="main_sort_by">Nach %1$s sortieren</string>
+    <string name="main_people_circles">Kreise</string>
+    <string name="main_people_squares">Quadrate</string>
+    <string name="main_add_name_ellipsis">Name hinzufügen…</string>
+    <string name="main_rename_ellipsis">Umbenennen…</string>
+    <string name="main_merge_select_two">Wählen Sie zwei oder mehr Personen zum Zusammenführen aus</string>
+    <plurals name="main_merge_people_count_title">
+        <item quantity="one">%1$d Personen zusammenführen?</item>
+        <item quantity="other">%1$d Personen zusammenführen?</item>
+    </plurals>
+    <plurals name="main_unhide_folders_message">
+        <item quantity="one">Diese sind als ganze Ordner ausgeblendet, sodass alle %1$d Elemente darin wieder in der Lumen-Bibliothek und in anderen Galerie-Apps angezeigt werden.</item>
+        <item quantity="other">Diese sind als ganze Ordner ausgeblendet, sodass alle %1$d Elemente darin wieder in der Lumen-Bibliothek und in anderen Galerie-Apps angezeigt werden.</item>
+    </plurals>
+    <string name="main_pick_add_count">%1$d hinzufügen</string>
+    <string name="main_copy_to_album_ellipsis">In Album kopieren…</string>
+    <string name="main_adjust_date_time_ellipsis">Datum und Uhrzeit einstellen…</string>
+    <string name="main_resize_or_convert_ellipsis">Größe ändern oder konvertieren…</string>
+    <string name="main_slideshow">Diashow</string>
+    <string name="main_album_cover_updated">Albumcover aktualisiert</string>
+    <string name="main_cover_updated">Cover aktualisiert</string>
+    <string name="main_removed_from">Aus %1$s entfernt</string>
+    <string name="main_move_to_album">In Album verschieben</string>
+    <string name="main_copy_to_album">In Album kopieren</string>
+    <string name="main_not_this_person">Nicht diese Person</string>
+    <string name="main_select_albums">Alben auswählen</string>
+    <string name="main_select_folders">Ordner auswählen</string>
+    <plurals name="main_albums_selected">
+        <item quantity="one">%1$d Album ausgewählt</item>
+        <item quantity="other">%1$d Alben ausgewählt</item>
+    </plurals>
+    <plurals name="main_folders_selected">
+        <item quantity="one">%1$d Ordner ausgewählt</item>
+        <item quantity="other">%1$d Ordner ausgewählt</item>
+    </plurals>
+    <string name="main_select_items">Elemente auswählen</string>
+    <plurals name="main_photos_selected">
+        <item quantity="one">%1$d Foto ausgewählt</item>
+        <item quantity="other">%1$d Fotos ausgewählt</item>
+    </plurals>
+    <plurals name="main_videos_selected">
+        <item quantity="one">%1$d Video ausgewählt</item>
+        <item quantity="other">%1$d Videos ausgewählt</item>
+    </plurals>
+    <plurals name="main_items_selected">
+        <item quantity="one">%1$d Element ausgewählt</item>
+        <item quantity="other">%1$d Elemente ausgewählt</item>
+    </plurals>
+    <string name="main_permission_message">Lumen benötigt Zugriff auf Ihre Fotos und Videos. Alle Daten verbleiben auf diesem Gerät.</string>
+    <string name="main_allow_access">Zugriff gewähren</string>
+    <string name="main_search_section_names">Namen, Ordner und Daten</string>
+    <string name="main_search_section_captions">Bildunterschriften</string>
+    <string name="main_search_section_text">Text in Fotos</string>
+    <string name="main_search_section_smart">Intelligente Suche</string>
+    <string name="settings_category_appearance">Aussehen</string>
+    <string name="settings_category_library">Bibliothek</string>
+    <string name="settings_category_photos_videos">Fotos &amp; Videos</string>
+    <string name="settings_category_privacy">Datenschutz und Sicherheit</string>
+    <string name="settings_category_smart_features">Intelligente Funktionen</string>
+    <string name="settings_category_permissions">Berechtigungen</string>
+    <string name="settings_category_backup">Sicherung und Import</string>
+    <string name="settings_category_about">Über</string>
+    <string name="settings_category_developer">Entwickleroptionen</string>
+    <string name="settings_summary_appearance">Thema, Stil und Farben</string>
+    <string name="settings_summary_library">Datumsangaben, der Rand des Rasters und ausgeschlossene Ordner</string>
+    <string name="settings_reminder_cancel">Erinnerung abbrechen</string>
+    <string name="settings_reminder_cancel_title">Diese Erinnerung abbrechen?</string>
+    <string name="settings_reminder_no_note">Keine Beschreibung</string>
+    <string name="settings_reminders_waiting_footer">Tippen Sie auf eine Erinnerung, um sie abzubrechen.</string>
+    <string name="main_delete_this_item">Dieses Element löschen?</string>
+    <plurals name="main_delete_items_title">
+        <item quantity="one">%1$d Element löschen?</item>
+        <item quantity="other">%1$d Elemente löschen?</item>
+    </plurals>
+    <string name="main_save_copy_failed">Die Kopie konnte nicht gespeichert werden</string>
+</resources>
