@@ -35,6 +35,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
 
 /**
  * Settings → Excluded folders: what Lumen ignores (with a way back), subfolders shown anyway, code
@@ -107,14 +112,23 @@ fun ExcludedFoldersScreen(
 
         // Browsing: "" is the top. Back goes up a folder before it leaves the page.
         var at by rememberSaveable { mutableStateOf("") }
+        // Each step in or out brings the folder list to the top: the rules above can be long.
+        var steps by remember { mutableIntStateOf(0) }
+        fun go(folder: String) {
+            at = folder
+            steps++
+        }
+        val browser = remember { BringIntoViewRequester() }
+        LaunchedEffect(steps) { if (steps > 0) browser.bringIntoView() }
         val parent = at.trimEnd('/').substringBeforeLast('/', "").let { if (it.isEmpty()) "" else "$it/" }
-        if (at.isNotEmpty()) BackHandler { at = parent }
+        if (at.isNotEmpty()) BackHandler { go(parent) }
         val allFolders = stringResource(R.string.settings_all_folders)
+        Column(Modifier.bringIntoViewRequester(browser)) {
         Group(if (at.isEmpty()) allFolders else at.trimEnd('/')) {
             if (at.isNotEmpty()) {
                 SettingsRow(
                     title = stringResource(R.string.settings_folder_up, if (parent.isEmpty()) allFolders else parent.trimEnd('/').substringAfterLast('/')),
-                    onClick = { at = parent },
+                    onClick = { go(parent) },
                     icon = LumenIcons.Back,
                 )
             }
@@ -126,21 +140,22 @@ fun ExcludedFoldersScreen(
                     folder in exclusions.excluded -> BrowseRow(
                         folder, stringResource(R.string.settings_folder_excluded, items), stringResource(R.string.settings_include),
                         { onInclude(folder) }, tree.children(folder).isNotEmpty(),
-                    ) { at = folder }
+                    ) { go(folder) }
                     folder in exclusions.shown -> BrowseRow(
                         folder, stringResource(R.string.settings_folder_shown, items), stringResource(R.string.settings_hide),
                         { onStopShowing(folder) }, tree.children(folder).isNotEmpty(),
-                    ) { at = folder }
+                    ) { go(folder) }
                     rule != null -> BrowseRow(
                         folder, stringResource(R.string.settings_folder_excluded_with, items, rule.trimEnd('/').substringAfterLast('/')),
                         stringResource(R.string.settings_show_anyway), { onShowAnyway(folder) }, tree.children(folder).isNotEmpty(),
-                    ) { at = folder }
+                    ) { go(folder) }
                     else -> BrowseRow(
                         folder, items, stringResource(R.string.settings_exclude),
                         { onExclude(folder) }, tree.children(folder).isNotEmpty(),
-                    ) { at = folder }
+                    ) { go(folder) }
                 }
             }
+        }
         }
     }
 }
