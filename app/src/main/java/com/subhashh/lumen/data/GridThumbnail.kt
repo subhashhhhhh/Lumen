@@ -102,17 +102,25 @@ class GridThumbnailFetcher(
         }
     }
 
-    class Factory(context: Context) : Fetcher.Factory<GridThumbnail> {
-        // Created on first use, off the main thread; size-capped, least recently used goes first.
-        private val cache by lazy {
-            DiskCache.Builder()
-                .directory(File(context.cacheDir, "thumbnails").toOkioPath())
-                .maxSizeBytes(MaxCacheBytes)
-                .build()
-        }
-
+    class Factory(private val context: Context) : Fetcher.Factory<GridThumbnail> {
         override fun create(data: GridThumbnail, options: Options, imageLoader: ImageLoader): Fetcher =
-            GridThumbnailFetcher(data, options, cache, imageLoader)
+            GridThumbnailFetcher(data, options, disk(context), imageLoader)
+
+        companion object {
+            @Volatile private var shared: DiskCache? = null
+
+            /** One cache for the process, created on first use (off the main thread); size-capped, least recently used goes first. */
+            fun disk(context: Context): DiskCache = shared ?: synchronized(this) {
+                shared ?: DiskCache.Builder()
+                    .directory(File(context.applicationContext.cacheDir, "thumbnails").toOkioPath())
+                    .maxSizeBytes(MaxCacheBytes)
+                    .build()
+                    .also { shared = it }
+            }
+
+            /** Settings → Storage: empties the thumbnail cache through its own API (it stays open while Lumen runs). */
+            fun clear(context: Context) = disk(context).clear()
+        }
     }
 
     private companion object {

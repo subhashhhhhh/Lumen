@@ -88,6 +88,7 @@ enum class SettingsCategory(val key: String, @StringRes val titleRes: Int) {
     PhotosVideos("photos", R.string.settings_category_photos_videos),
     Privacy("privacy", R.string.settings_category_privacy),
     SmartSearch("smart-search", R.string.settings_category_smart_features),
+    Storage("storage", R.string.settings_category_storage),
     Permissions("permissions", R.string.settings_category_permissions),
     Backup("backup", R.string.settings_category_backup),
     About("about", R.string.settings_category_about),
@@ -118,6 +119,7 @@ private val Entries = listOf(
     SettingEntry("reduce-blur", R.string.settings_reduce_blur, SettingsCategory.Appearance, R.string.settings_kw_reduce_blur),
     SettingEntry("date-headers", R.string.settings_date_headers, SettingsCategory.Library, R.string.settings_kw_date_headers),
     SettingEntry("excluded", R.string.settings_excluded_folders, SettingsCategory.Library, R.string.settings_kw_excluded),
+    SettingEntry("storage", R.string.settings_category_storage, SettingsCategory.Storage, R.string.settings_kw_storage),
     SettingEntry("curved-edge", R.string.settings_curved_edge, SettingsCategory.Library, R.string.settings_kw_curved_edge),
     SettingEntry("ultra-hdr", R.string.settings_ultra_hdr, SettingsCategory.PhotosVideos, R.string.settings_kw_ultra_hdr),
     SettingEntry("film-strip", R.string.settings_film_strip, SettingsCategory.PhotosVideos, R.string.settings_kw_film_strip),
@@ -294,6 +296,8 @@ fun SettingsScreen(
                         CategoryRow(SettingsCategory.Privacy, if (appLockOn) stringResource(R.string.settings_app_lock_on) else null, open)
                         Divider()
                         CategoryRow(SettingsCategory.SmartSearch, stringResource(if (smartSearchOn) R.string.common_on else R.string.common_off), open)
+                        Divider()
+                        CategoryRow(SettingsCategory.Storage, null, open)
                     }
                     Group("") {
                         CategoryRow(SettingsCategory.Permissions, stringResource(R.string.settings_permissions_count, granted.count { it }, granted.size), open)
@@ -321,6 +325,7 @@ fun SettingsScreen(
                     )
                     SettingsCategory.SmartSearch ->
                         SmartSearchGroup(prefs, refresh + hfTokenVersion, onConfirm, onEnterHfToken, highlight)
+                    SettingsCategory.Storage -> StoragePage(highlight, onConfirm) { onOpenCategory(SettingsCategory.SmartSearch, null) }
                     SettingsCategory.Permissions -> PermissionsPage(status, highlight)
                     SettingsCategory.Backup -> BackupPage(highlight, onExport, onImport, onImportFavorites)
                     SettingsCategory.About -> AboutPage(prefs, highlight, onOpenLicenses, onConfirm)
@@ -353,6 +358,7 @@ private fun SettingsCategory.summary() = when (this) {
     SettingsCategory.PhotosVideos -> R.string.settings_summary_photos_videos
     SettingsCategory.Privacy -> R.string.settings_summary_privacy
     SettingsCategory.SmartSearch -> R.string.settings_summary_smart_features
+    SettingsCategory.Storage -> R.string.settings_summary_storage
     SettingsCategory.Permissions -> R.string.settings_summary_permissions
     SettingsCategory.Backup -> R.string.settings_summary_backup
     SettingsCategory.About -> R.string.settings_summary_about
@@ -365,6 +371,7 @@ private fun SettingsCategory.icon() = when (this) {
     SettingsCategory.PhotosVideos -> LumenIcons.Image
     SettingsCategory.Privacy -> LumenIcons.Lock
     SettingsCategory.SmartSearch -> LumenIcons.Search
+    SettingsCategory.Storage -> LumenIcons.Folder
     SettingsCategory.Permissions -> LumenIcons.Shield
     SettingsCategory.Backup -> LumenIcons.Export
     SettingsCategory.About -> LumenIcons.Info
@@ -377,6 +384,7 @@ private fun SettingsCategory.color() = when (this) {
     SettingsCategory.PhotosVideos -> Orange
     SettingsCategory.Privacy -> Blue
     SettingsCategory.SmartSearch -> Purple
+    SettingsCategory.Storage -> Gray
     SettingsCategory.Permissions -> Green
     SettingsCategory.Backup -> Teal
     SettingsCategory.About -> Gray
