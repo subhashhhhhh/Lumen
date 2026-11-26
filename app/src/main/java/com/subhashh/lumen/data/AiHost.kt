@@ -70,6 +70,7 @@ class AiHost(context: Context) : LumenAiHost {
         override val indexText get() = prefs.indexText
         override val indexVideoText get() = prefs.indexVideoText
         override val indexFaces get() = prefs.indexFaces
+        override val modelMirror get() = if (prefs.modelMirror) "https://hf-mirror.com" else null
     }
 
     override val notifications = object : AiNotifications {

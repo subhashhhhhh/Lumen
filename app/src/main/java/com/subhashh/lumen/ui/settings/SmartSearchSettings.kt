@@ -77,6 +77,7 @@ internal fun SmartSearchGroup(
     var tokenRemoved by remember { mutableIntStateOf(0) }
     val hasToken = remember(refresh, tokenRemoved) { HfTokenStore(context).token != null }
     var wifiOnly by remember { mutableStateOf(prefs.modelWifiOnly) }
+    var mirror by remember { mutableStateOf(prefs.modelMirror) }
     var videoDetail by remember { mutableStateOf(prefs.videoDetail) }
     var onBattery by remember { mutableStateOf(prefs.indexOnBattery) }
     // Android's battery optimization holds background jobs back (standby quotas, Doze, and some
@@ -531,6 +532,20 @@ internal fun SmartSearchGroup(
                 },
                 icon = LumenIcons.Video,
                 iconColor = Orange,
+            )
+        }
+        Divider()
+        Anchor("download-from", highlight) {
+            PickerRow(
+                title = stringResource(R.string.smart_download_from),
+                options = listOf(stringResource(R.string.smart_download_from_hf), stringResource(R.string.smart_download_from_mirror)),
+                selected = if (mirror) 1 else 0,
+                onSelect = {
+                    mirror = it == 1
+                    prefs.modelMirror = mirror
+                },
+                icon = LumenIcons.Globe,
+                iconColor = Blue,
             )
         }
         Divider()

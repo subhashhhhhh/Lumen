@@ -868,7 +868,10 @@
 
     <!-- Indexing and Downloads -->
     <string name="smart_downloads_title">Indexing and Downloads</string>
-    <string name="smart_downloads_footer">Models download once from Hugging Face; your photos and searches never leave this phone.</string>
+    <string name="smart_downloads_footer">Models download once from Hugging Face, or from hf-mirror.com where Hugging Face is blocked (as in China). Every file is checked against its fingerprint, so a mirror can\'t change them. Your photos and searches never leave this phone.</string>
+    <string name="smart_download_from">Download From</string>
+    <string name="smart_download_from_hf">Hugging Face</string>
+    <string name="smart_download_from_mirror">hf-mirror.com (China)</string>
     <string name="smart_index_on_battery">Index on Battery</string>
     <string name="smart_index_on_battery_subtitle">Index anytime, even unplugged. Stops when the battery is low</string>
     <string name="smart_pause_title">Pause Indexing</string>
