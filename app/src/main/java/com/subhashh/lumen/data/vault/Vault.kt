@@ -29,6 +29,12 @@ object Vault {
     const val Scheme = "lumenvault"
     private const val Extension = ".lumenvault"
 
+    /** Settings → Storage: the vault's encrypted files and their total size, read without the key. */
+    fun usage(): Pair<Int, Long> {
+        val files = runCatching { dir().listFiles { f -> f.isFile && f.name.endsWith(Extension) }.orEmpty() }.getOrDefault(emptyArray())
+        return files.size to files.sumOf { it.length() }
+    }
+
     fun dir(): File = testDir ?: File(Environment.getExternalStorageDirectory(), ".LumenVault")
 
     /** Tests only: a throwaway vault folder and keys, never the real ones. */

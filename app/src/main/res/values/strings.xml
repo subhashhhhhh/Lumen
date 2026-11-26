@@ -466,6 +466,13 @@
     <string name="storage_other">Other</string>
     <string name="storage_trash">Recently Deleted</string>
     <string name="storage_trash_footer">Photos and videos you deleted. Android removes them for good after 30 days.</string>
+    <string name="storage_your_files">Your Files</string>
+    <string name="storage_your_files_footer">Your own photos and videos, not counted in Lumen\'s total. Deleted ones go for good after 30 days.</string>
+    <string name="storage_vault">Encrypted Hidden</string>
+    <plurals name="storage_vault_items">
+        <item quantity="one">%d encrypted item</item>
+        <item quantity="other">%d encrypted items</item>
+    </plurals>
     <string name="storage_part_search">Search</string>
     <string name="storage_part_faces">Faces</string>
     <string name="storage_part_text">Text</string>

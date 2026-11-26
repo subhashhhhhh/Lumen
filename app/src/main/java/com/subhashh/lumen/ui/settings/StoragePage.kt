@@ -128,9 +128,23 @@ internal fun StoragePage(highlight: String?, onConfirm: (Confirmation) -> Unit, 
                 )
             }
         }
-        if (u.trash > 0) {
-            Group("", footer = stringResource(R.string.storage_trash_footer)) {
-                SettingsRow(title = stringResource(R.string.storage_trash), value = size(u.trash), onClick = null, icon = LumenIcons.Delete, iconColor = Gray)
+        // Your own files Lumen keeps, outside its total: the vault and Recently Deleted.
+        if (u.vault > 0 || u.trash > 0) {
+            Group(stringResource(R.string.storage_your_files), footer = stringResource(R.string.storage_your_files_footer)) {
+                if (u.vault > 0) {
+                    SettingsRow(
+                        title = stringResource(R.string.storage_vault),
+                        subtitle = androidx.compose.ui.res.pluralStringResource(R.plurals.storage_vault_items, u.vaultFiles, u.vaultFiles),
+                        value = size(u.vault),
+                        onClick = null,
+                        icon = LumenIcons.Lock,
+                        iconColor = Blue,
+                    )
+                }
+                if (u.vault > 0 && u.trash > 0) Divider()
+                if (u.trash > 0) {
+                    SettingsRow(title = stringResource(R.string.storage_trash), value = size(u.trash), onClick = null, icon = LumenIcons.Delete, iconColor = Gray)
+                }
             }
         }
     }
@@ -257,6 +271,12 @@ private fun MaterialKinds(u: StorageUsage, size: (Long) -> String, onOpenSmartFe
             stringResource(label), icon, size(kind.bytes), if (u.total > 0) kind.bytes.toFloat() / u.total else 0f,
             kind.parts.takeIf { it.size > 1 }?.joinToString("  ·  ") { context.getString(it.label) + " " + size(it.bytes) },
             onClick = if (kind.type == StorageUsage.Type.Models) onOpenSmartFeatures else null,
+        )
+    }
+    if (u.vault > 0) {
+        MaterialKindRow(
+            stringResource(R.string.storage_vault), LumenIcons.Lock, size(u.vault), null,
+            androidx.compose.ui.res.pluralStringResource(R.plurals.storage_vault_items, u.vaultFiles, u.vaultFiles), null,
         )
     }
     if (u.trash > 0) {

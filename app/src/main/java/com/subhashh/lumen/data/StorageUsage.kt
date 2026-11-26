@@ -24,6 +24,9 @@ data class StorageUsage(
     val thumbnails: Long,
     /** Photos and videos in Recently Deleted: the phone's storage, not Lumen's. */
     val trash: Long,
+    /** Encrypted Hidden (the vault, /sdcard/.LumenVault): the person's own files, not Lumen's data. */
+    val vaultFiles: Int,
+    val vault: Long,
     val phoneFree: Long,
     val phoneTotal: Long,
 ) {
@@ -40,6 +43,7 @@ data class StorageUsage(
     companion object {
         suspend fun measure(context: Context): StorageUsage = withContext(Dispatchers.IO) {
             val trash = runCatching { MediaRepository(context).loadTrash().sumOf { it.size } }.getOrDefault(0L)
+            val (vaultFiles, vault) = com.subhashh.lumen.data.vault.Vault.usage()
             val noBackup = context.noBackupFilesDir
             val stats = runCatching {
                 context.getSystemService(StorageStatsManager::class.java)
@@ -101,6 +105,8 @@ data class StorageUsage(
                 oldSearch = oldSearch,
                 thumbnails = thumbnails,
                 trash = trash,
+                vaultFiles = vaultFiles,
+                vault = vault,
                 phoneFree = free,
                 phoneTotal = totalSpace,
             )
