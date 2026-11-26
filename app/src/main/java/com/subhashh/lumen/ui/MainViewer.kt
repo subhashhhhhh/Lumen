@@ -170,6 +170,7 @@ internal fun BoxScope.MainViewer(
                 onCopyToAlbum = { albumRequest = AlbumRequest(move = false, items = listOf(it)) },
                 onMoveToAlbum = { albumRequest = AlbumRequest(move = true, items = listOf(it)) },
                 onRename = { renameItem = it },
+                onEditMetadata = { item, tag, value -> metadataEdit = MetadataEdit(item, tag, value) },
                 onRotate = { item, degrees -> rotate(listOf(item), degrees) },
                 onExcludeFolder = { excludeFolders(listOf(it)) },
                 onAdjustDate = { dateRequest = listOf(it) },

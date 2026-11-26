@@ -78,6 +78,8 @@ object LumenIcons {
     val Adjust: ImageVector get() = if (material) MaterialIcons.Adjust else FluentIcons.Adjust
     val Filters: ImageVector get() = if (material) MaterialIcons.Filters else FluentIcons.Filters
     val Globe: ImageVector get() = if (material) MaterialIcons.Globe else FluentIcons.Globe
+    /** Both styles: Fluent's chat icons aren't in the set yet. */
+    val Chat: ImageVector get() = MaterialIcons.Chat
     val Translate: ImageVector get() = if (material) MaterialIcons.Translate else FluentIcons.Translate
     val History: ImageVector get() = if (material) MaterialIcons.History else FluentIcons.Restore
 

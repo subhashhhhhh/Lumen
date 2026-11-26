@@ -223,6 +223,9 @@
     <string name="main_delete_hidden_message">Hidden items can\'t go to Recently Deleted, so this is permanent.</string>
     <string name="main_deleted">Deleted</string>
     <string name="main_delete_failed">Couldn\'t delete %1$d of %2$d</string>
+    <string name="main_metadata_changed">Changed %1$s</string>
+    <string name="main_metadata_removed">Removed %1$s</string>
+    <string name="main_metadata_failed">Couldn\'t change %1$s</string>
     <string name="main_excluded_name">Excluded “%1$s”. Undo in Settings → Excluded folders</string>
     <plurals name="main_excluded_folders">
         <item quantity="one">Excluded %1$d folders. Undo in Settings → Excluded folders</item>
@@ -455,6 +458,9 @@
     <string name="main_update_message">A new version of Lumen is ready to download.</string>
     <string name="main_update_view">View Update</string>
     <string name="main_update_later">Later</string>
+    <string name="main_discord_title">Join the Lumen Discord</string>
+    <string name="main_discord_message">Get help, hear about updates first, and tell us what to build next. Testers for every kind of phone are welcome.</string>
+    <string name="main_discord_join">Join</string>
     <string name="main_star_title">Enjoying Lumen?</string>
     <string name="main_star_message">Lumen is free, and one person makes it. A star on GitHub helps more people find it.</string>
     <string name="main_star_confirm">Star on GitHub</string>
@@ -610,6 +616,10 @@
     <string name="settings_swipe_up_details">Swipe Up for Details</string>
     <string name="settings_group_location">Location</string>
     <string name="settings_maps_footer">Shows where photos were taken on a map in their details. Map tiles download from OpenFreeMap (OpenStreetMap data): it sees which area is shown, nothing else. Off: the place name and coordinates only, and Lumen doesn\'t contact it.</string>
+    <string name="settings_map_style">Map Style</string>
+    <string name="settings_map_style_match">Match App</string>
+    <string name="settings_map_style_light">Light</string>
+    <string name="settings_map_style_dark">Dark</string>
     <string name="settings_maps">Maps</string>
     <string name="settings_group_videos">Videos</string>
     <string name="settings_autoplay_videos">Autoplay Videos</string>
@@ -676,6 +686,8 @@
     <string name="settings_group_open_source">Open Source</string>
     <string name="settings_open_source_footer">Lumen is free and open source. Bugs and ideas are welcome on GitHub.</string>
     <string name="settings_github" translatable="false">GitHub</string>
+    <string name="settings_discord">Lumen Discord</string>
+    <string name="settings_discord_value">Join</string>
     <string name="settings_report_bug">Report a Bug</string>
     <string name="settings_group_language">Language</string>
     <string name="settings_language_footer">Lumen is translated by volunteers on Weblate. Anyone can add or fix a translation.</string>
@@ -724,7 +736,15 @@
     <string name="settings_show_developer_options">Show Developer Options</string>
 
     <!-- Settings: Excluded Folders -->
-    <string name="settings_excluded_intro">Lumen ignores these folders and everything inside them. The files stay where they are, and other apps still see them.</string>
+    <string name="settings_excluded_intro">Lumen ignores these folders and everything inside them, except folders you show anyway. The files stay where they are, and other apps still see them.</string>
+    <string name="settings_group_shown">Shown Anyway</string>
+    <string name="settings_all_folders">All Folders</string>
+    <string name="settings_show_anyway">Show</string>
+    <string name="settings_hide">Hide</string>
+    <string name="settings_folder_excluded">%1$s · Excluded</string>
+    <string name="settings_folder_shown">%1$s · Shown anyway</string>
+    <string name="settings_folder_excluded_with">%1$s · Excluded with %2$s</string>
+    <string name="settings_folder_up">Back to %1$s</string>
     <string name="settings_group_excluded">Excluded</string>
     <plurals name="settings_excluded_items">
         <item quantity="one">%d item</item>
@@ -853,9 +873,27 @@
 
     <!-- Indexing and Downloads -->
     <string name="smart_downloads_title">Indexing and Downloads</string>
-    <string name="smart_downloads_footer">Models download once from Hugging Face; your photos and searches never leave this phone.</string>
+    <string name="smart_downloads_footer">Models download once from Hugging Face, or from hf-mirror.com where Hugging Face is blocked (as in China). Every file is checked against its fingerprint, so a mirror can\'t change them. Your photos and searches never leave this phone.</string>
+    <string name="smart_download_from">Download From</string>
+    <string name="smart_download_from_hf">Hugging Face</string>
+    <string name="smart_download_from_mirror">hf-mirror.com (China)</string>
     <string name="smart_index_on_battery">Index on Battery</string>
-    <string name="smart_index_on_battery_subtitle">Keep scanning off the charger; stops when the battery runs low</string>
+    <string name="smart_index_on_battery_subtitle">Index anytime, even unplugged. Stops when the battery is low</string>
+    <string name="smart_pause_title">Pause Indexing</string>
+    <string name="smart_pause_footer">Stops all indexing for a while; what\'s done is kept, and it carries on where it stopped. The indexing notification has a Pause button too.</string>
+    <string name="smart_pause_off">Off</string>
+    <string name="smart_pause_until">Until %1$s</string>
+    <string name="smart_pause_until_resumed">Until you turn it back on</string>
+    <string name="smart_pause_hour">For an hour</string>
+    <string name="smart_pause_eight_hours">For 8 hours</string>
+    <string name="smart_pause_forever">Until I turn it back on</string>
+    <string name="smart_paused_until">Paused until %1$s</string>
+    <string name="smart_paused">Paused</string>
+    <string name="smart_index_search">Index for Search</string>
+    <string name="smart_index_text">Read Text in Photos</string>
+    <string name="smart_index_video_text">Read Text in Videos</string>
+    <string name="smart_index_faces">Find Faces</string>
+    <string name="smart_step_off">Off: keeps what\'s done so far</string>
     <string name="smart_unrestricted_battery">Unrestricted Battery</string>
     <string name="smart_unrestricted_battery_subtitle">Lets indexing keep going after you leave Lumen; otherwise Android holds it back</string>
     <string name="smart_video_text_title">Text in Videos</string>
@@ -1013,6 +1051,7 @@
     <string name="viewer_export_srt">Export SRT</string>
     <string name="viewer_export_vtt">Export VTT</string>
     <string name="viewer_all_metadata">All Metadata</string>
+    <string name="viewer_metadata_edit_hint">Tap a field to change it. Leave it empty to remove it.</string>
     <string name="viewer_show">Show</string>
     <string name="viewer_nothing_readable">Nothing readable in this file</string>
     <!-- After the local time when the photo was taken in another time zone, e.g. "3:40 PM your time". -->
@@ -1159,8 +1198,8 @@
     <string name="onboarding_photos_videos">Photos and Videos</string>
     <string name="onboarding_photos_videos_detail">Needed to show your library</string>
     <string name="onboarding_optional">Optional</string>
-    <string name="onboarding_location">Where Photos Were Taken</string>
-    <string name="onboarding_location_detail">For maps and place names</string>
+    <string name="onboarding_location">Location in Photos</string>
+    <string name="onboarding_location_detail">Reads where each photo was taken, for maps. Not your phone’s location</string>
     <string name="onboarding_location_blocked">Off: Android won’t ask again</string>
     <string name="onboarding_all_files">All Files</string>
     <string name="onboarding_all_files_detail">Manage folders and hidden files, like Fossify</string>
@@ -1343,7 +1382,7 @@
     <string name="data_filter_favorites">Favorites</string>
     <string name="data_filter_screenshots">Screenshots</string>
     <string name="data_empty_all">No photos or videos</string>
-    <string name="data_empty_photos">No photos</string>
+    <string name="data_empty_photos">No camera photos</string>
     <string name="data_empty_videos">No videos</string>
     <string name="data_empty_favorites">No favorites</string>
     <string name="data_empty_screenshots">No screenshots</string>

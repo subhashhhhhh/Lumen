@@ -24,8 +24,8 @@ class AiHost(context: Context) : LumenAiHost {
 
     /** The library as the user sees it: no excluded folders, no Hidden. */
     override suspend fun library(context: Context): List<MediaRef> {
-        val excluded = prefs.excludedFolders
-        return MediaRepository(context).loadLibrary().filterNot { ExcludedFolders.covers(excluded, it) }.map { it.toRef() }
+        val exclusions = prefs.exclusions
+        return MediaRepository(context).loadLibrary().filterNot { exclusions.covers(it) }.map { it.toRef() }
     }
 
     /** Encrypted Hidden videos, decrypted as they're read (a paused frame's Live Text). */
@@ -66,6 +66,11 @@ class AiHost(context: Context) : LumenAiHost {
         override val indexSchedule
             get() = if (prefs.indexScheduleOn) IndexSchedule(prefs.indexScheduleStart, prefs.indexScheduleEnd) else null
         override val videoTextRates get() = prefs.videoTextRates
+        override val indexSearch get() = prefs.indexSearch
+        override val indexText get() = prefs.indexText
+        override val indexVideoText get() = prefs.indexVideoText
+        override val indexFaces get() = prefs.indexFaces
+        override val modelMirror get() = if (prefs.modelMirror) "https://hf-mirror.com" else null
     }
 
     override val notifications = object : AiNotifications {

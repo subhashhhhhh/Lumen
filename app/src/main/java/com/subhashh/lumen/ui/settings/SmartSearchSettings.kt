@@ -74,32 +74,10 @@ internal fun SmartSearchGroup(
     val installed = remember(refresh, state, changed, chosenId) { ModelDownloads.installed(context) }
     val readerReady = remember(refresh, state, changed) { OcrModel.installed(context) }
     val facesReady = remember(refresh, state, changed) { FaceModel.installed(context) }
-    val live by SmartIndex.progress.collectAsState()
-    val counted by produceState<IndexProgress?>(null, refresh, installed) {
-        val model = installed
-        value = if (model == null) null else withContext(Dispatchers.IO) {
-            IndexProgress(EmbeddingStore.of(context, model).count(), Indexer.eligible(context).size)
-        }
-    }
-    val progress = if (installed == null) null else live ?: counted
-    val liveText by SmartIndex.textProgress.collectAsState()
-    val countedText by produceState<IndexProgress?>(null, refresh, readerReady) {
-        value = if (!readerReady) null else withContext(Dispatchers.IO) {
-            IndexProgress(TextStore.of(context).count(), Indexer.eligible(context).size)
-        }
-    }
-    val textProgress = if (!readerReady) null else liveText ?: countedText
-    val liveFaces by SmartIndex.faceProgress.collectAsState()
-    val countedFaces by produceState<Pair<IndexProgress, Int>?>(null, refresh, facesReady, liveFaces) {
-        value = if (!facesReady) null else withContext(Dispatchers.IO) {
-            val store = FaceStore.of(context)
-            IndexProgress(store.count(), Indexer.eligible(context).size) to store.peopleCount()
-        }
-    }
-    val faceProgress = countedFaces?.let { (counted, people) -> (liveFaces ?: counted) to people }
     var tokenRemoved by remember { mutableIntStateOf(0) }
     val hasToken = remember(refresh, tokenRemoved) { HfTokenStore(context).token != null }
     var wifiOnly by remember { mutableStateOf(prefs.modelWifiOnly) }
+    var mirror by remember { mutableStateOf(prefs.modelMirror) }
     var videoDetail by remember { mutableStateOf(prefs.videoDetail) }
     var onBattery by remember { mutableStateOf(prefs.indexOnBattery) }
     // Android's battery optimization holds background jobs back (standby quotas, Doze, and some
@@ -107,14 +85,17 @@ internal fun SmartSearchGroup(
     val unrestricted = remember(refresh) {
         context.getSystemService(android.os.PowerManager::class.java).isIgnoringBatteryOptimizations(context.packageName)
     }
+    val pauseFlow = remember { SmartIndex.paused(context) }
+    val pausedAt by pauseFlow.collectAsState()
+    // A pause that ran out while the screen was open reads as over when it's next shown.
+    val pausedUntil = remember(pausedAt, refresh) { if (pausedAt > System.currentTimeMillis()) pausedAt else 0L }
+    var stepSearch by remember { mutableStateOf(prefs.indexSearch) }
+    var stepText by remember { mutableStateOf(prefs.indexText) }
+    var stepVideoText by remember { mutableStateOf(prefs.indexVideoText) }
+    var stepFaces by remember { mutableStateOf(prefs.indexFaces) }
     var scheduleOn by remember { mutableStateOf(prefs.indexScheduleOn) }
     var scheduleStart by remember { mutableIntStateOf(prefs.indexScheduleStart) }
     var scheduleEnd by remember { mutableIntStateOf(prefs.indexScheduleEnd) }
-    val waitingText = when {
-        scheduleOn -> stringResource(R.string.smart_continues_schedule, clock(context, scheduleStart), clock(context, scheduleEnd))
-        onBattery -> stringResource(R.string.smart_continues_background)
-        else -> stringResource(R.string.smart_continues_charging)
-    }
     val cancelAction = stringResource(R.string.common_cancel)
     val removeAction = stringResource(R.string.common_remove)
     /** Android's own time picker, in the phone's 12- or 24-hour style. */
@@ -145,21 +126,37 @@ internal fun SmartSearchGroup(
         }
     }
 
-    /** One pack's row: its state, and Download / Update / Cancel / Retry / Remove. */
+    /**
+     * One pack's row: a round button at its end removes it (downloaded), downloads, updates or
+     * retries it, or cancels its download. A line under it only while something's happening, or
+     * its size before it's downloaded where no quality picker above already shows it.
+     */
     @Composable
-    fun PackRow(pack: ModelPack, title: String, removeTitle: String, removeMessage: String, iconColor: Color, icon: ImageVector = LumenIcons.Import) {
-        val (status, action) = remember(state, refresh, changed, chosenId) { packStatus(context, pack, state, wifiOnly) }
-        SettingsRow(
+    fun PackRow(pack: ModelPack, title: String, removeTitle: String, removeMessage: String, iconColor: Color, icon: ImageVector = LumenIcons.Folder, sizeShown: Boolean = false) {
+        val (status, action) = remember(state, refresh, changed, chosenId) { packStatus(context, pack, state, wifiOnly, sizeShown) }
+        ActionRow(
             title = title,
             subtitle = status,
-            value = action,
-            onClick = {
+            action = when (action) {
+                PackAction.Remove -> LumenIcons.Delete
+                PackAction.Cancel -> LumenIcons.Close
+                else -> LumenIcons.Import
+            },
+            actionLabel = when (action) {
+                PackAction.Remove -> removeAction
+                PackAction.Cancel -> cancelAction
+                PackAction.Retry -> stringResource(R.string.common_retry)
+                PackAction.Update -> stringResource(R.string.common_update)
+                PackAction.Download -> stringResource(R.string.common_download)
+            },
+            destructive = action == PackAction.Remove,
+            onAction = {
                 when (action) {
-                    cancelAction -> {
+                    PackAction.Cancel -> {
                         ModelDownloads.cancel(context, pack, wifiOnly)
                         changed++
                     }
-                    removeAction -> onConfirm(
+                    PackAction.Remove -> onConfirm(
                         Confirmation(
                             title = removeTitle,
                             message = context.getString(R.string.smart_remove_message_size, removeMessage, megabytes(ModelDownloads.bytes(context, pack))),
@@ -188,6 +185,46 @@ internal fun SmartSearchGroup(
             if (s is DownloadState.Running && s.pack == ModelPack.Search) ModelDownloads.cancel(context, ModelPack.Search, wifiOnly)
             chosenId = ModelCatalog.Fast.id
             prefs.searchModel = ModelCatalog.Fast.id
+        }
+    }
+
+    val pauseChoices = arrayOf(
+        stringResource(R.string.smart_pause_hour),
+        stringResource(R.string.smart_pause_eight_hours),
+        stringResource(R.string.smart_pause_forever),
+    )
+    val pauseTitle = stringResource(R.string.smart_pause_title)
+    Group("") {
+        Anchor("pause-indexing", highlight) {
+            ToggleRow(
+                title = pauseTitle,
+                subtitle = when (pausedUntil) {
+                    0L -> null
+                    Long.MAX_VALUE -> stringResource(R.string.smart_pause_until_resumed)
+                    else -> stringResource(R.string.smart_pause_until, pauseTime(context, pausedUntil))
+                },
+                checked = pausedUntil != 0L,
+                onCheckedChange = { on ->
+                    if (!on) {
+                        SmartIndex.resume(context)
+                    } else {
+                        android.app.AlertDialog.Builder(context)
+                            .setTitle(pauseTitle)
+                            .setItems(pauseChoices) { _, which ->
+                                val now = System.currentTimeMillis()
+                                SmartIndex.pause(context, when (which) {
+                                    0 -> now + 60 * 60_000L
+                                    1 -> now + 8 * 60 * 60_000L
+                                    else -> Long.MAX_VALUE
+                                })
+                            }
+                            .setNegativeButton(cancelAction, null)
+                            .show()
+                    }
+                },
+                icon = LumenIcons.Pause,
+                iconColor = Orange,
+            )
         }
     }
 
@@ -222,17 +259,19 @@ internal fun SmartSearchGroup(
                 Indigo,
             )
         }
-        if (progress != null) {
+        if (installed != null) {
             Divider()
-            val complete = progress.indexed >= progress.total
-            Anchor("indexed", highlight) {
-                SettingsRow(
-                    title = stringResource(R.string.smart_indexed),
-                    subtitle = if (complete) stringResource(R.string.smart_indexed_complete) else waitingText,
-                    value = if (complete) stringResource(R.string.smart_all_count, progress.total) else stringResource(R.string.smart_count_of, progress.indexed, progress.total),
-                    onClick = null,
-                    icon = LumenIcons.Image,
-                    iconColor = Green,
+            Anchor("index-search", highlight) {
+                ToggleRow(
+                    title = stringResource(R.string.smart_index_search),
+                                        checked = stepSearch,
+                    onCheckedChange = {
+                        stepSearch = it
+                        prefs.indexSearch = it
+                        SmartIndex.schedule(context, replace = true)
+                    },
+                    icon = LumenIcons.Search,
+                    iconColor = Indigo,
                 )
             }
         }
@@ -248,20 +287,39 @@ internal fun SmartSearchGroup(
                 ModelPack.Text, stringResource(R.string.smart_text_model), stringResource(R.string.smart_text_remove_title),
                 stringResource(R.string.smart_text_remove_message),
                 Orange,
+                sizeShown = true,
             )
         }
-        if (textProgress != null) {
+        if (readerReady) {
             Divider()
-            val complete = textProgress.indexed >= textProgress.total
-            Anchor("text-read", highlight) {
-                SettingsRow(
-                    title = stringResource(R.string.smart_text_read),
-                    subtitle = if (complete) stringResource(R.string.smart_text_read_complete) else waitingText,
-                    value = if (complete) stringResource(R.string.smart_all_count, textProgress.total) else stringResource(R.string.smart_count_of, textProgress.indexed, textProgress.total),
-                    onClick = null,
+            Anchor("index-text", highlight) {
+                ToggleRow(
+                    title = stringResource(R.string.smart_index_text),
+                                        checked = stepText,
+                    onCheckedChange = {
+                        stepText = it
+                        prefs.indexText = it
+                        SmartIndex.schedule(context, replace = true)
+                    },
                     icon = LumenIcons.Document,
                     iconColor = Orange,
                 )
+            }
+            if (stepText) {
+                Divider()
+                Anchor("index-video-text", highlight) {
+                    ToggleRow(
+                        title = stringResource(R.string.smart_index_video_text),
+                                                checked = stepVideoText,
+                        onCheckedChange = {
+                            stepVideoText = it
+                            prefs.indexVideoText = it
+                            SmartIndex.schedule(context, replace = true)
+                        },
+                        icon = LumenIcons.Document,
+                        iconColor = Orange,
+                    )
+                }
             }
         }
         ProcessorRow(ModelPack.Text, refresh)
@@ -306,23 +364,19 @@ internal fun SmartSearchGroup(
                 ModelPack.Faces, stringResource(R.string.smart_faces_model), stringResource(R.string.smart_faces_remove_title),
                 stringResource(R.string.smart_faces_remove_message),
                 Purple,
-                LumenIcons.Face,
             )
         }
-        if (faceProgress != null) {
+        if (facesReady) {
             Divider()
-            val (progress, people) = faceProgress
-            val complete = progress.indexed >= progress.total
-            Anchor("faces", highlight) {
-                SettingsRow(
-                    title = stringResource(R.string.smart_faces_title),
-                    subtitle = if (complete) {
-                        pluralStringResource(R.plurals.smart_faces_people_found, people, people)
-                    } else {
-                        pluralStringResource(R.plurals.smart_faces_people_so_far, people, waitingText, people)
+            Anchor("index-faces", highlight) {
+                ToggleRow(
+                    title = stringResource(R.string.smart_index_faces),
+                                        checked = stepFaces,
+                    onCheckedChange = {
+                        stepFaces = it
+                        prefs.indexFaces = it
+                        SmartIndex.schedule(context, replace = true)
                     },
-                    value = if (complete) stringResource(R.string.smart_all_count, progress.total) else stringResource(R.string.smart_count_of, progress.indexed, progress.total),
-                    onClick = null,
                     icon = LumenIcons.Face,
                     iconColor = Purple,
                 )
@@ -337,11 +391,11 @@ internal fun SmartSearchGroup(
         footer = stringResource(R.string.smart_subtitles_footer),
     ) {
         Anchor("subtitle-quality", highlight) {
-            PickerRow(
+            // One tier so far: shown, not offered as a choice.
+            SettingsRow(
                 title = stringResource(R.string.smart_subtitles_quality),
-                options = SpeechModel.tiers.map { stringResource(R.string.smart_option_size, modelLabel(context, it.label), megabytes(SpeechModel.bytes)) },
-                selected = 0,
-                onSelect = {},
+                value = SpeechModel.tiers.first().let { stringResource(R.string.smart_option_size, modelLabel(context, it.label), megabytes(SpeechModel.bytes)) },
+                onClick = null,
                 icon = LumenIcons.Subtitles,
                 iconColor = Purple,
             )
@@ -366,6 +420,7 @@ internal fun SmartSearchGroup(
                 ModelPack.Cutout, stringResource(R.string.smart_cutout_model), stringResource(R.string.smart_cutout_remove_title),
                 stringResource(R.string.smart_cutout_remove_message),
                 Indigo,
+                sizeShown = true,
             )
         }
         ProcessorRow(ModelPack.Cutout, refresh)
@@ -433,7 +488,6 @@ internal fun SmartSearchGroup(
             Anchor("index-on-battery", highlight) {
                 ToggleRow(
                     title = stringResource(R.string.smart_index_on_battery),
-                    subtitle = stringResource(R.string.smart_index_on_battery_subtitle),
                     checked = onBattery,
                     onCheckedChange = {
                         onBattery = it
@@ -449,7 +503,6 @@ internal fun SmartSearchGroup(
         Anchor("unrestricted-battery", highlight) {
             ToggleRow(
                 title = stringResource(R.string.smart_unrestricted_battery),
-                subtitle = stringResource(R.string.smart_unrestricted_battery_subtitle),
                 checked = unrestricted,
                 onCheckedChange = { on ->
                     // Asking needs Android's own dialog; taking it back, its battery settings list.
@@ -471,7 +524,6 @@ internal fun SmartSearchGroup(
         Anchor("video-detail", highlight) {
             PickerRow(
                 title = stringResource(R.string.smart_video_detail),
-                subtitle = stringResource(R.string.smart_video_detail_subtitle),
                 options = VideoDetail.entries.map { stringResource(R.string.smart_option_px, stringResource(videoDetailLabel(it)), it.px) },
                 selected = VideoDetail.entries.indexOf(videoDetail),
                 onSelect = {
@@ -480,6 +532,20 @@ internal fun SmartSearchGroup(
                 },
                 icon = LumenIcons.Video,
                 iconColor = Orange,
+            )
+        }
+        Divider()
+        Anchor("download-from", highlight) {
+            PickerRow(
+                title = stringResource(R.string.smart_download_from),
+                options = listOf(stringResource(R.string.smart_download_from_hf), stringResource(R.string.smart_download_from_mirror)),
+                selected = if (mirror) 1 else 0,
+                onSelect = {
+                    mirror = it == 1
+                    prefs.modelMirror = mirror
+                },
+                icon = LumenIcons.Globe,
+                iconColor = Blue,
             )
         }
         Divider()
@@ -499,7 +565,6 @@ internal fun SmartSearchGroup(
         Anchor("hf-token", highlight) {
             SettingsRow(
                 title = stringResource(R.string.smart_hf_token),
-                subtitle = stringResource(R.string.smart_hf_token_subtitle),
                 value = if (hasToken) stringResource(R.string.smart_hf_token_saved) else stringResource(R.string.smart_hf_token_none),
                 onClick = {
                     if (hasToken) {
@@ -569,6 +634,14 @@ internal fun SmartSearchGroup(
 }
 
 /** "1:00 AM" or "01:00", as the phone shows times. */
+/** When a pause ends: its time, with the day too if that isn't today. */
+private fun pauseTime(context: Context, ms: Long): String {
+    val today = android.text.format.DateUtils.isToday(ms)
+    val flags = android.text.format.DateUtils.FORMAT_SHOW_TIME or
+        (if (today) 0 else android.text.format.DateUtils.FORMAT_SHOW_WEEKDAY or android.text.format.DateUtils.FORMAT_ABBREV_WEEKDAY)
+    return android.text.format.DateUtils.formatDateTime(context, ms, flags)
+}
+
 private fun clock(context: Context, minute: Int): String =
     android.text.format.DateFormat.getTimeFormat(context).format(
         java.util.Calendar.getInstance().apply {
@@ -577,30 +650,32 @@ private fun clock(context: Context, minute: Int): String =
         }.time,
     )
 
-/** A pack's status line and its action, from the download state and the files on the phone. */
-private fun packStatus(context: Context, pack: ModelPack, state: DownloadState, wifiOnly: Boolean): Pair<String, String> {
+private enum class PackAction { Download, Update, Retry, Cancel, Remove }
+
+/**
+ * A pack's line under its row (null when there's nothing to say) and its button, from the download
+ * state and the files on the phone. Its size shows before it's downloaded only with [sizeShown]:
+ * Search and Faces show theirs in the quality picker above.
+ */
+private fun packStatus(context: Context, pack: ModelPack, state: DownloadState, wifiOnly: Boolean, sizeShown: Boolean): Pair<String?, PackAction> {
     val size = ModelDownloads.bytes(context, pack)
     val queued = pack in ModelDownloads.queue(context)
     if (state is DownloadState.Running && state.pack == pack) {
-        return context.getString(R.string.smart_status_downloading, megabytes(state.done), megabytes(state.total)) to
-            context.getString(R.string.common_cancel)
+        return context.getString(R.string.smart_status_downloading, megabytes(state.done), megabytes(state.total)) to PackAction.Cancel
     }
     if (queued && state is DownloadState.Running) {
-        return context.getString(R.string.smart_status_queued, context.getString(packLabel(state.pack))) to
-            context.getString(R.string.common_cancel)
+        return context.getString(R.string.smart_status_queued, context.getString(packLabel(state.pack))) to PackAction.Cancel
     }
     if (queued && state == DownloadState.Waiting) {
-        return context.getString(if (wifiOnly) R.string.smart_status_waiting_wifi else R.string.smart_status_waiting_connection) to
-            context.getString(R.string.common_cancel)
+        return context.getString(if (wifiOnly) R.string.smart_status_waiting_wifi else R.string.smart_status_waiting_connection) to PackAction.Cancel
     }
     if (state is DownloadState.Failed && state.pack == pack) {
-        return context.getString(R.string.smart_status_failed, state.message) to context.getString(R.string.common_retry)
+        return context.getString(R.string.smart_status_failed, state.message) to PackAction.Retry
     }
     val remaining = ModelDownloads.remainingBytes(context, pack)
     val installed = ModelDownloads.installed(context)
     return when {
-        ModelDownloads.complete(context, pack) ->
-            context.getString(R.string.smart_status_ready, megabytes(size)) to context.getString(R.string.common_remove)
+        ModelDownloads.complete(context, pack) -> null to PackAction.Remove
         // Switching tiers: the current one keeps working until the new one is in.
         pack == ModelPack.Search && installed != null && installed != ModelDownloads.model(context) ->
             context.getString(
@@ -608,11 +683,10 @@ private fun packStatus(context: Context, pack: ModelPack, state: DownloadState, 
                 modelLabel(context, installed.label),
                 modelLabel(context, ModelDownloads.model(context).label),
                 megabytes(size),
-            ) to context.getString(R.string.common_download)
+            ) to PackAction.Download
         // A newer version changed some files, or a download stopped part way: fetch the rest.
-        remaining < size ->
-            context.getString(R.string.smart_status_update, megabytes(remaining)) to context.getString(R.string.common_update)
-        else -> context.getString(R.string.smart_status_not_downloaded, megabytes(size)) to context.getString(R.string.common_download)
+        remaining < size -> context.getString(R.string.smart_status_update, megabytes(remaining)) to PackAction.Update
+        else -> (if (sizeShown) megabytes(size) else null) to PackAction.Download
     }
 }
 

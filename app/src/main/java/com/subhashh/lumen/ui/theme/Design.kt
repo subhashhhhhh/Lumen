@@ -160,7 +160,8 @@ internal fun lumenColors(dark: Boolean) = if (dark) {
         panel = Color(0xFF1C1C1E),
         sheet = Color(0xFF1C1C1E),
         text = Color.White,
-        secondary = Color(0x99EBEBF5),
+        // 70%, not iOS's 60%: grey labels were hard to read (#38).
+        secondary = Color(0xB3EBEBF5),
         divider = Color(0x33EBEBF5),
         field = Color(0xFFEBEBF5).copy(alpha = 0.12f),
         accent = Color(0xFF0A84FF),
@@ -180,7 +181,7 @@ internal fun lumenColors(dark: Boolean) = if (dark) {
         panel = Color.White,
         sheet = Color(0xFFF2F2F7),
         text = Color.Black,
-        secondary = Color(0x993C3C43),
+        secondary = Color(0xB33C3C43),
         divider = Color(0x333C3C43),
         field = Color(0xFF3C3C43).copy(alpha = 0.12f),
         accent = Color(0xFF0A84FF),

@@ -67,6 +67,18 @@ class LumenPrefs(context: Context) {
         get() = prefs.getStringSet(KeyExcluded, emptySet()).orEmpty().toSet()
         set(value) = prefs.edit { putStringSet(KeyExcluded, value) }
 
+    /** Settings → Smart Features → Download From: hf-mirror.com instead of Hugging Face (blocked in China). */
+    var modelMirror: Boolean
+        get() = prefs.getBoolean(KeyModelMirror, false)
+        set(value) = prefs.edit { putBoolean(KeyModelMirror, value) }
+
+    /** Subfolders of excluded folders that Lumen shows anyway (#45). */
+    var shownFolders: Set<String>
+        get() = prefs.getStringSet(KeyShownFolders, emptySet()).orEmpty().toSet()
+        set(value) = prefs.edit { putStringSet(KeyShownFolders, value) }
+
+    val exclusions: Exclusions get() = Exclusions(excludedFolders, shownFolders)
+
     var appearance: Appearance
         get() = prefs.getString(KeyAppearance, null)
             ?.let { name -> Appearance.entries.firstOrNull { it.name == name } }
@@ -231,6 +243,11 @@ class LumenPrefs(context: Context) {
         get() = prefs.getBoolean(KeyShowMaps, true)
         set(value) = prefs.edit { putBoolean(KeyShowMaps, value) }
 
+    /** Maps light or dark whatever the app's theme (#46: the dark map was hard to read for some). */
+    var mapStyle: MapStyle
+        get() = prefs.getString(KeyMapStyle, null)?.let { name -> MapStyle.entries.firstOrNull { it.name == name } } ?: MapStyle.MatchApp
+        set(value) = prefs.edit { putString(KeyMapStyle, value.name) }
+
     /**
      * Settings → Smart Features → Scheduled Indexing: the backlog runs only between
      * [indexScheduleStart] and [indexScheduleEnd] (minutes after midnight; may cross it), on
@@ -287,6 +304,11 @@ class LumenPrefs(context: Context) {
             if (!prefs.contains(KeyFirstDayUsed)) putLong(KeyFirstDayUsed, today)
         }
     }
+
+    /** The Lumen Discord invitation has been shown (once, on the first launch with it: 0.5.1). */
+    var discordAsked: Boolean
+        get() = prefs.getBoolean(KeyDiscordAsked, false)
+        set(value) = prefs.edit { putBoolean(KeyDiscordAsked, value) }
 
     /** The GitHub star request has been shown (it's shown once). */
     var starAsked: Boolean
@@ -351,6 +373,23 @@ class LumenPrefs(context: Context) {
         get() = prefs.getBoolean(KeyIndexOnBattery, false)
         set(value) = prefs.edit { putBoolean(KeyIndexOnBattery, value) }
 
+    /**
+     * Settings → Smart Features: which indexing steps run. Off keeps what a step has done; on
+     * again carries on. (Pausing everything for a while is Lumen AI's own: SmartIndex.pause.)
+     */
+    var indexSearch: Boolean
+        get() = prefs.getBoolean(KeyIndexSearch, true)
+        set(value) = prefs.edit { putBoolean(KeyIndexSearch, value) }
+    var indexText: Boolean
+        get() = prefs.getBoolean(KeyIndexText, true)
+        set(value) = prefs.edit { putBoolean(KeyIndexText, value) }
+    var indexVideoText: Boolean
+        get() = prefs.getBoolean(KeyIndexVideoText, true)
+        set(value) = prefs.edit { putBoolean(KeyIndexVideoText, value) }
+    var indexFaces: Boolean
+        get() = prefs.getBoolean(KeyIndexFaces, true)
+        set(value) = prefs.edit { putBoolean(KeyIndexFaces, value) }
+
     /** Collections → People: faces in circles (default) or rounded squares. */
     var peopleSquare: Boolean
         get() = prefs.getBoolean(KeyPeopleSquare, false)
@@ -388,6 +427,13 @@ class LumenPrefs(context: Context) {
         const val KeyTextRateLong = "text_rate_long"
         const val KeyTextLongMaxFrames = "text_long_max_frames"
         const val KeyIndexOnBattery = "index_on_battery"
+        const val KeyShownFolders = "shown_folders"
+        const val KeyModelMirror = "model_mirror"
+        const val KeyDiscordAsked = "discord_asked"
+        const val KeyIndexSearch = "index_search"
+        const val KeyIndexText = "index_text"
+        const val KeyIndexVideoText = "index_video_text"
+        const val KeyIndexFaces = "index_faces"
         const val KeyModelWifiOnly = "model_wifi_only"
         const val KeyModelQueue = "model_queue"
         const val KeyAiMoved = "ai_moved"
@@ -396,6 +442,7 @@ class LumenPrefs(context: Context) {
         const val KeyLastUpdateCheck = "last_update_check"
         const val KeyAvailableUpdate = "available_update"
         const val KeyShowMaps = "show_maps"
+        const val KeyMapStyle = "map_style"
         const val KeySwipeUpDetails = "swipe_up_details"
         const val KeyTextVideoVersion = "text_video_version"
         const val KeyOnboardingDone = "onboarding_done"
@@ -460,3 +507,16 @@ class LumenPrefs(context: Context) {
  * scanned after a change.
  */
 enum class VideoDetail(@StringRes val label: Int, val px: Int) { High(R.string.data_detail_high, 1280), Medium(R.string.data_size_medium, 960), Low(R.string.data_detail_low, 640) }
+
+/** Settings → Photos & Videos → Map Style. */
+enum class MapStyle(@StringRes val label: Int) {
+    MatchApp(R.string.settings_map_style_match),
+    Light(R.string.settings_map_style_light),
+    Dark(R.string.settings_map_style_dark);
+
+    fun dark(appDark: Boolean): Boolean = when (this) {
+        MatchApp -> appDark
+        Light -> false
+        Dark -> true
+    }
+}

@@ -19,8 +19,8 @@ object VaultMigration {
      * verified before its original is deleted, so a failure leaves that file where it was.
      * Excluded folders are left alone: they're often other apps' files, which must stay put.
      */
-    suspend fun encryptAll(context: Context, excluded: Set<String>, progress: (Progress) -> Unit): Result {
-        val items = HiddenMedia.withSizes(HiddenMedia.scan().filterNot { ExcludedFolders.covers(excluded, it) })
+    suspend fun encryptAll(context: Context, exclusions: com.subhashh.lumen.data.Exclusions, progress: (Progress) -> Unit): Result {
+        val items = HiddenMedia.withSizes(HiddenMedia.scan().filterNot { exclusions.covers(it) })
         val sizes = items.map { HiddenMedia.file(it)?.length() ?: 0L }
         val bytesTotal = sizes.sum()
         var bytesDone = 0L

@@ -171,7 +171,7 @@ object PhotoMaps {
 @Composable
 fun MapPreview(point: GeoPoint, onOpen: () -> Unit, modifier: Modifier = Modifier) {
     val context = LocalContext.current
-    val dark = LocalDarkTheme.current
+    val dark = mapDark()
     val density = LocalDensity.current.density
     BoxWithConstraints(modifier) {
         val w = constraints.maxWidth
@@ -191,6 +191,14 @@ fun MapPreview(point: GeoPoint, onOpen: () -> Unit, modifier: Modifier = Modifie
     }
 }
 
+/** Whether maps are drawn dark: the app's theme, or Settings → Map Style. */
+@Composable
+private fun mapDark(): Boolean {
+    val context = LocalContext.current
+    val style = remember { com.subhashh.lumen.data.LumenPrefs(context).mapStyle }
+    return style.dark(LocalDarkTheme.current)
+}
+
 @Composable
 private fun Pin(modifier: Modifier = Modifier) {
     Box(
@@ -208,10 +216,20 @@ fun PhotoMapScreen(point: GeoPoint, title: String?, onBack: () -> Unit, onOpenIn
     BackHandler(onBack = onBack)
     val backdrop = rememberLayerBackdrop()
     val glass = LocalGlassColors.current
+    val dark = mapDark()
+    // The status bar's icons follow the map, not the app: a light map in a dark app hid them (#46).
+    val view = androidx.compose.ui.platform.LocalView.current
+    androidx.compose.runtime.DisposableEffect(dark) {
+        val window = (view.context as? android.app.Activity)?.window
+        val controller = window?.let { androidx.core.view.WindowCompat.getInsetsController(it, view) }
+        val before = controller?.isAppearanceLightStatusBars
+        controller?.isAppearanceLightStatusBars = !dark
+        onDispose { if (before != null) controller.isAppearanceLightStatusBars = before }
+    }
     Box(Modifier.fillMaxSize()) {
         PhotoMaps.Interactive(
             point,
-            LocalDarkTheme.current,
+            dark,
             MaterialTheme.colorScheme.primary,
             Modifier.fillMaxSize().layerBackdrop(backdrop),
         )

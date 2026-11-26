@@ -181,7 +181,8 @@ private fun TabItem(
     ) {
         Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(24.dp))
         Spacer(Modifier.height(2.dp))
-        Text(label, color = tint, fontSize = 10.sp)
+        // The smallest text in the app: medium weight, so it isn't a hairline on glass (#38).
+        Text(label, color = tint, fontSize = 10.sp, fontWeight = FontWeight.Medium)
     }
 }
 

@@ -187,6 +187,8 @@ internal class MainState(
     var albumRequest by mutableStateOf<AlbumRequest?>(null)
     /** The item being renamed and its current file name (null while loading / closed). */
     var renameItem by mutableStateOf<MediaItem?>(null)
+    /** Details → All Metadata: a field being changed or removed (#9). */
+    var metadataEdit by mutableStateOf<MetadataEdit?>(null)
     var renameName by mutableStateOf<String?>(null)
 }
 
@@ -216,3 +218,6 @@ internal fun rememberMainState(viewModel: LibraryViewModel, pick: PickRequest?):
         )
     }
 }
+
+/** One EXIF field of [item] being edited, with its value now. */
+data class MetadataEdit(val item: MediaItem, val tag: String, val value: String)

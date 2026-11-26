@@ -25,22 +25,41 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.subhashh.lumen.R
 import com.subhashh.lumen.data.ExclusionSuggestion
+import com.subhashh.lumen.data.Exclusions
+import com.subhashh.lumen.data.FolderTree
+import com.subhashh.lumen.ui.icons.LumenIcons
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.size
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
 
 /**
- * Settings → Excluded folders: what Lumen ignores (with a way back), code projects it found, and
- * a picker for anything else. Nothing on disk changes.
+ * Settings → Excluded folders: what Lumen ignores (with a way back), subfolders shown anyway, code
+ * projects it found, and every folder with photos to browse (#44: parents too, not just albums).
+ * Nothing on disk changes.
  */
 @Composable
 fun ExcludedFoldersScreen(
-    excluded: List<Pair<String, Int>>,
+    exclusions: Exclusions,
+    tree: FolderTree,
     suggestions: List<ExclusionSuggestion>,
     contentPadding: PaddingValues,
-    onInclude: (String) -> Unit,
     onExclude: (String) -> Unit,
-    onChooseFolder: () -> Unit,
+    onInclude: (String) -> Unit,
+    onShowAnyway: (String) -> Unit,
+    onStopShowing: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = groupColors()
+    fun count(folder: String) = tree.counts[folder] ?: 0
     SettingsPage(contentPadding, modifier) {
         LargeTitle(stringResource(R.string.settings_excluded_folders))
         Text(
@@ -50,15 +69,28 @@ fun ExcludedFoldersScreen(
             modifier = Modifier.padding(start = 4.dp, end = 4.dp),
         )
 
-        if (excluded.isNotEmpty()) {
+        if (exclusions.excluded.isNotEmpty()) {
             Group(stringResource(R.string.settings_group_excluded)) {
-                excluded.forEachIndexed { i, (folder, count) ->
+                exclusions.excluded.sorted().forEachIndexed { i, folder ->
                     if (i > 0) Divider()
                     FolderRow(
                         folder,
-                        pluralStringResource(R.plurals.settings_excluded_items, count, count),
+                        pluralStringResource(R.plurals.settings_excluded_items, count(folder), count(folder)),
                         stringResource(R.string.settings_include),
                     ) { onInclude(folder) }
+                }
+            }
+        }
+
+        if (exclusions.shown.isNotEmpty()) {
+            Group(stringResource(R.string.settings_group_shown)) {
+                exclusions.shown.sorted().forEachIndexed { i, folder ->
+                    if (i > 0) Divider()
+                    FolderRow(
+                        folder,
+                        pluralStringResource(R.plurals.settings_excluded_items, count(folder), count(folder)),
+                        stringResource(R.string.settings_hide),
+                    ) { onStopShowing(folder) }
                 }
             }
         }
@@ -78,8 +110,93 @@ fun ExcludedFoldersScreen(
             }
         }
 
-        Group(stringResource(R.string.common_add)) {
-            SettingsRow(title = stringResource(R.string.settings_choose_folder), onClick = onChooseFolder)
+        // Browsing: "" is the top. Back goes up a folder before it leaves the page.
+        var at by rememberSaveable { mutableStateOf("") }
+        // Each step in or out brings the folder list to the top: the rules above can be long.
+        var steps by remember { mutableIntStateOf(0) }
+        fun go(folder: String) {
+            at = folder
+            steps++
+        }
+        val browser = remember { BringIntoViewRequester() }
+        LaunchedEffect(steps) { if (steps > 0) browser.bringIntoView() }
+        val parent = at.trimEnd('/').substringBeforeLast('/', "").let { if (it.isEmpty()) "" else "$it/" }
+        if (at.isNotEmpty()) BackHandler { go(parent) }
+        val allFolders = stringResource(R.string.settings_all_folders)
+        Column(Modifier.bringIntoViewRequester(browser)) {
+        Group(if (at.isEmpty()) allFolders else at.trimEnd('/')) {
+            if (at.isNotEmpty()) {
+                SettingsRow(
+                    title = stringResource(R.string.settings_folder_up, if (parent.isEmpty()) allFolders else parent.trimEnd('/').substringAfterLast('/')),
+                    onClick = { go(parent) },
+                    icon = LumenIcons.Back,
+                )
+            }
+            tree.children(at).forEachIndexed { i, folder ->
+                if (i > 0 || at.isNotEmpty()) Divider()
+                val items = pluralStringResource(R.plurals.settings_excluded_items, count(folder), count(folder))
+                val rule = exclusions.ruleOver(folder)
+                when {
+                    folder in exclusions.excluded -> BrowseRow(
+                        folder, stringResource(R.string.settings_folder_excluded, items), stringResource(R.string.settings_include),
+                        { onInclude(folder) }, tree.children(folder).isNotEmpty(),
+                    ) { go(folder) }
+                    folder in exclusions.shown -> BrowseRow(
+                        folder, stringResource(R.string.settings_folder_shown, items), stringResource(R.string.settings_hide),
+                        { onStopShowing(folder) }, tree.children(folder).isNotEmpty(),
+                    ) { go(folder) }
+                    rule != null -> BrowseRow(
+                        folder, stringResource(R.string.settings_folder_excluded_with, items, rule.trimEnd('/').substringAfterLast('/')),
+                        stringResource(R.string.settings_show_anyway), { onShowAnyway(folder) }, tree.children(folder).isNotEmpty(),
+                    ) { go(folder) }
+                    else -> BrowseRow(
+                        folder, items, stringResource(R.string.settings_exclude),
+                        { onExclude(folder) }, tree.children(folder).isNotEmpty(),
+                    ) { go(folder) }
+                }
+            }
+        }
+        }
+    }
+}
+
+/** A folder to browse: tapping it opens it (when it has folders inside); the action at its end applies the rule. */
+@Composable
+private fun BrowseRow(folder: String, subtitle: String, action: String, onAction: () -> Unit, hasFolders: Boolean, onOpen: () -> Unit) {
+    val colors = groupColors()
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .heightIn(min = 56.dp)
+            .then(if (hasFolders) Modifier.clickable(onClick = onOpen) else Modifier)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        androidx.compose.material3.Icon(
+            if (hasFolders) LumenIcons.FolderOpen else LumenIcons.Folder,
+            contentDescription = null,
+            tint = colors.secondary,
+            modifier = Modifier.size(22.dp),
+        )
+        Spacer(Modifier.width(14.dp))
+        Column(Modifier.weight(1f)) {
+            Text(folder.trimEnd('/').substringAfterLast('/'), fontSize = 16.sp, color = colors.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(subtitle, fontSize = 13.sp, color = colors.secondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        Spacer(Modifier.width(12.dp))
+        Text(
+            action,
+            color = com.subhashh.lumen.ui.theme.Lumen.colors.accent,
+            fontSize = 16.sp,
+            fontWeight = com.subhashh.lumen.ui.theme.Lumen.type.emphasis,
+            modifier = Modifier.clickable(onClick = onAction).padding(vertical = 6.dp),
+        )
+        if (hasFolders) {
+            Spacer(Modifier.width(6.dp))
+            androidx.compose.material3.Icon(
+                LumenIcons.Chevron, null, tint = colors.secondary,
+                modifier = Modifier.size(14.dp).graphicsLayer { rotationZ = 180f },
+            )
         }
     }
 }

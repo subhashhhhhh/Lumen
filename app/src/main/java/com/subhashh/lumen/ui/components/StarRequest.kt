@@ -31,7 +31,7 @@ fun StarRequest(prefs: LumenPrefs, canShow: Boolean, show: (Confirmation) -> Uni
     LifecycleResumeEffect(Unit) {
         prefs.countDayUsed()
         val today = java.time.LocalDate.now().toEpochDay()
-        due = !prefs.starAsked && prefs.onboardingDone == true &&
+        due = !prefs.starAsked && prefs.onboardingDone == true && !LaunchPrompts.shown &&
             prefs.daysUsed >= StarDaysUsed && today - prefs.firstDayUsed >= StarAfterDays
         onPauseOrDispose { }
     }
@@ -42,6 +42,7 @@ fun StarRequest(prefs: LumenPrefs, canShow: Boolean, show: (Confirmation) -> Uni
             delay(4_000)
             due = false
             prefs.starAsked = true
+            LaunchPrompts.shown = true
             show(
                 Confirmation(
                     title = context.getString(R.string.main_star_title),

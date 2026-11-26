@@ -385,8 +385,10 @@ internal fun SettingsRow(
     iconColor: Color = Gray,
 ) {
     val colors = groupColors()
-    if (Lumen.material) {
-        // Material: what it's set to reads as the row's second line, not at its far end.
+    if (Lumen.material && onClick != null) {
+        // Material: what it's set to reads as the row's second line, not at its far end. A row
+        // that only shows something (onClick null) keeps its value at the end, so it doesn't look
+        // like one that opens a choice.
         RowShell(title, listOfNotNull(subtitle, value).joinToString("\n").ifEmpty { null }, icon, iconColor, onClick) {}
         return
     }
@@ -406,6 +408,48 @@ internal fun SettingsRow(
                 modifier = Modifier
                     .size(16.dp)
                     .graphicsLayer { rotationZ = 180f },
+            )
+        }
+    }
+}
+
+/**
+ * A row with one action as a round icon button at its end (remove, download, cancel), so it reads
+ * as something to tap; the whole row does it too.
+ */
+@Composable
+internal fun ActionRow(
+    title: String,
+    action: ImageVector,
+    actionLabel: String,
+    onAction: () -> Unit,
+    subtitle: String? = null,
+    destructive: Boolean = false,
+    icon: ImageVector? = null,
+    iconColor: Color = Gray,
+) {
+    val colors = groupColors()
+    val material = Lumen.material
+    val scheme = androidx.compose.material3.MaterialTheme.colorScheme
+    RowShell(title, subtitle, icon, iconColor, onClick = onAction) {
+        Spacer(Modifier.width(10.dp))
+        Box(
+            Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(if (material) scheme.surfaceContainerHighest else colors.secondary.copy(alpha = 0.16f))
+                .semantics { contentDescription = actionLabel },
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                action,
+                contentDescription = null,
+                tint = when {
+                    destructive && material -> scheme.error
+                    destructive -> Color(0xFFFF453A)
+                    else -> colors.text
+                },
+                modifier = Modifier.size(20.dp),
             )
         }
     }
@@ -560,7 +604,14 @@ internal fun PickerRow(
         RowShell(
             title, listOfNotNull(options.getOrNull(selected), subtitle).joinToString("\n").ifEmpty { null }, icon, iconColor,
             onClick = { host?.open(PickerRequest(bounds, options, selected, onSelect, unavailable, onUnavailable, title)) },
-        ) {}
+        ) {
+            // A drop-down arrow: this row opens a choice (rows that only show something have none).
+            Spacer(Modifier.width(8.dp))
+            Icon(
+                LumenIcons.Chevron, null, tint = colors.secondary,
+                modifier = Modifier.size(18.dp).graphicsLayer { rotationZ = -90f },
+            )
+        }
         return
     }
     RowShell(
@@ -628,7 +679,8 @@ private class PickerHost {
 @Composable
 private fun PickerOverlay(host: PickerHost, backdrop: Backdrop) {
     val request = host.request
-    BackHandler(enabled = request != null) { host.close() }
+    // Added when it opens, so it's the newest handler and Back closes it first (#24).
+    if (request != null) BackHandler { host.close() }
     if (request != null && !Lumen.material) {
         Box(
             Modifier

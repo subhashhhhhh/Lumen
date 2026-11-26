@@ -57,7 +57,7 @@ internal class HiddenActions(
 internal fun MainState.hiddenActions(
     library: List<MediaItem>?,
     hidden: List<MediaItem>?,
-    excluded: Set<String>,
+    excluded: com.subhashh.lumen.data.Exclusions,
     activity: Activity?,
     toast: (String) -> Unit,
     endSelection: () -> Unit,

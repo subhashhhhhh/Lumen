@@ -34,7 +34,8 @@ enum class LibraryFilter(@StringRes val label: Int, @StringRes val emptyText: In
 
     fun matches(item: MediaItem): Boolean = when (this) {
         All -> true
-        Photos -> !item.isVideo
+        // Camera photos only (#43): downloads, chat images and screenshots have filters or albums of their own.
+        Photos -> item.isCameraPhoto
         Videos -> item.isVideo
         Favorites -> item.isFavorite
         Screenshots -> item.isScreenshot
