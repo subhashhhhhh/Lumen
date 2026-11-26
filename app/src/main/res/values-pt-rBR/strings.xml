@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Lumen's English text. Translations live in values-<language>/strings.xml and are edited on
+  Weblate; keep placeholders (%1$s, %2$d) and plural forms as they are.
+--><resources>
+    <string name="common_cancel">Cancelar</string>
+    <string name="common_done">Concluído</string>
+    <string name="common_delete">Deletar</string>
+    <string name="common_share">Compartilhar</string>
+    <string name="common_copy">Copiar</string>
+    <string name="common_copied">Copiado</string>
+    <string name="common_rename">Renomear</string>
+    <string name="common_remove">Remover</string>
+    <string name="common_save">Salvar</string>
+    <string name="common_back">Voltar</string>
+    <string name="common_open">Abrir</string>
+    <string name="common_search">Pesquisar</string>
+    <string name="common_select_all">Selecionar todos</string>
+    <string name="common_settings">Configurações</string>
+    <string name="common_details">Detalhes</string>
+    <string name="common_hide">Ocultar</string>
+    <string name="common_unhide">Desocultar</string>
+    <string name="common_restore">Restaurar</string>
+    <string name="common_favorite">Favorito</string>
+    <string name="common_unfavorite">Desfavoritar</string>
+    <string name="common_continue">Continuar</string>
+    <string name="common_next">Próximo</string>
+    <string name="common_not_now">Agora Não</string>
+    <string name="common_download">Baixar</string>
+    <string name="common_install">Instalar</string>
+    <string name="common_update">Atualizar</string>
+    <string name="common_retry">Tentar Novamente</string>
+    <string name="common_allow">Permitir</string>
+    <string name="common_add">Adicionar</string>
+    <string name="common_on">Ligado</string>
+    <string name="common_off">Desligado</string>
+    <string name="main_people">Pessoas</string>
+    <string name="main_albums">Álbuns</string>
+    <string name="main_add_name">Adicionar Nome</string>
+    <string name="main_search_looking_inside">Olhando dentro das fotos…</string>
+    <plurals name="main_search_results">
+        <item quantity="one">%1$,dResultado</item>
+        <item quantity="many">%1$,dResultados</item>
+        <item quantity="other">%1$,dResultados</item>
+    </plurals>
+    <string name="main_search_show_less">Mostrar Menos</string>
+    <string name="main_search_see_all">Mostrar tudo</string>
+    <string name="main_search_order_best">Melhor Resultado</string>
+    <string name="main_search_no_results_hint">Tente descrever a foto, como \"gato em cima do sofa\" (com Busca Inteligente nas confiigurações), ou um nome de arquivo, uma pasta, um mês ou ano</string>
+    <string name="main_search_recent">Recentes</string>
+    <string name="main_search_clear">Limpar</string>
+    <string name="main_search_from_your_photos">Da suas fotos</string>
+    <string name="main_search_try">Tente</string>
+    <string name="main_search_field_hint">Arquivos, pastas, meses, anos…</string>
+    <string name="main_merge_with_name">Mesclar com %1$s?</string>
+    <string name="main_merge_proposal_message">Você ja tem alguém nomeado %1$s. se é a mesma pessoa, mescle %2$s para ver como uma pessoa só.</string>
+    <plurals name="main_merge_photo_count">
+        <item quantity="one">%1$,d foto</item>
+        <item quantity="many">%1$,d fotos</item>
+        <item quantity="other">%1$,d fotos</item>
+    </plurals>
+    <string name="main_merge">Mesclar</string>
+    <string name="main_keep_separate">Manter Separado</string>
+    <plurals name="main_person_photo_count">
+        <item quantity="one">%1$,d foto</item>
+        <item quantity="many">%1$,d fotos</item>
+        <item quantity="other">%1$,d fotos</item>
+    </plurals>
+    <string name="main_deselect_all">Desselecionar tudo</string>
+    <string name="main_cancel_selection">Cancelar seleção</string>
+    <string name="main_delete_permanently">Apagar permanentemente</string>
+    <string name="main_more">Mais</string>
+    <string name="main_delete_forever">Apagar para sempre</string>
+    <string name="main_selected">Selecionado</string>
+    <string name="main_new_album_ellipsis">Novo Álbum…</string>
+</resources>

@@ -70,12 +70,12 @@
         <item quantity="other">%1$,d Videos</item>
     </plurals>
     <string name="main_list_separator">", "</string>
-    <string name="main_library">Library</string>
-    <string name="main_collections">Collections</string>
-    <string name="main_tabs">Tabs</string>
-    <string name="main_zoom_years">Years</string>
-    <string name="main_zoom_months">Months</string>
-    <string name="main_zoom_all">All</string>
+    <string name="main_library">Bibliothek</string>
+    <string name="main_collections">Kollektionen</string>
+    <string name="main_tabs">Registerkarten</string>
+    <string name="main_zoom_years">Jahre</string>
+    <string name="main_zoom_months">Monate</string>
+    <string name="main_zoom_all">Alle</string>
     <string name="main_pick_choose_videos">Choose Videos</string>
     <string name="main_pick_choose_a_video">Choose a Video</string>
     <string name="common_not_now">Nicht jetzt</string>
@@ -213,4 +213,7 @@
         <item quantity="other">%1$d Elemente löschen?</item>
     </plurals>
     <string name="main_save_copy_failed">Die Kopie konnte nicht gespeichert werden</string>
+    <string name="settings_grid_footer">Die Überschriften werden angezeigt, wenn die Fotos nach Datum sortiert sind.</string>
+    <string name="data_sort_date">Datum</string>
+    <string name="data_sort_a_z">A bis Z</string>
 </resources>
