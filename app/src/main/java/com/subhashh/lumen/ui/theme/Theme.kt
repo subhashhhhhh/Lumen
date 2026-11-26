@@ -42,7 +42,8 @@ private val DarkGlass = GlassColors(
     tint = Color(0x33FFFFFF),
     fallbackTint = Color(0xE6262628),
     content = Color.White,
-    contentSecondary = Color(0x99FFFFFF),
+    // 70%, not iOS's 60%: over bright photos 60% was hard to read (#38).
+    contentSecondary = Color(0xB3FFFFFF),
     selection = Color(0x26FFFFFF),
 )
 
@@ -50,7 +51,7 @@ private val LightGlass = GlassColors(
     tint = Color(0x80FFFFFF),
     fallbackTint = Color(0xF2F6F6F8),
     content = Color.Black,
-    contentSecondary = Color(0x99000000),
+    contentSecondary = Color(0xB3000000),
     selection = Color(0x14000000),
 )
 
