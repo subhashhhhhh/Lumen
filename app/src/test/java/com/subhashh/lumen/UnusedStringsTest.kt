@@ -10,14 +10,16 @@ import java.io.File
  *
  * Used means named as R.string.x / R.plurals.x (Kotlin, Java) or @string/x / @plurals/x (XML:
  * manifest, layouts, styles, other values files) anywhere in the app's own sources, every build
- * type. Lumen Lab doesn't count: it isn't in releases (nor on the server or GitHub), so a string only
+ * type (any folder under src/ but the tests'). Lumen Lab doesn't count: it isn't in releases (nor on the server or GitHub), so a string only
  * Lab uses is dead text to translators and belongs in Lab. Nothing looks strings up by name
  * (getIdentifier), so file scanning is the whole picture. Plain JVM: runs on the build server.
  */
 class UnusedStringsTest {
 
     private val app = listOf(File("."), File("app")).first { File(it, "src/main/res/values/strings.xml").isFile }
-    private val sourceSets = listOf("main", "debug", "profile", "release").map { File(app, "src/$it") }.filter { it.isDirectory }
+    /** Every source set the app builds from (main, debug, profile, dev, release…), not the tests'. */
+    private val sourceSets = File(app, "src").listFiles().orEmpty()
+        .filter { it.isDirectory && !it.name.startsWith("test") && !it.name.startsWith("androidTest") }
 
     /** The string and plurals names English defines. */
     private val defined: Set<String> by lazy {
