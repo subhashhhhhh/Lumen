@@ -126,11 +126,17 @@ class StorageUsageTest {
     }
 
     @Test
-    fun withNoSearchModelNothingIsRemoved() = runBlocking {
-        val index = indexOf(accurate) + indexOf(fast)
+    fun withNothingInstalledTheChosenModelIsStillKept() = runBlocking {
+        // No model on the phone yet: Settings' choice (Accurate, the default) is what downloads
+        // fetch, so its files are the ones on the way. Only the other model's are left over.
+        val partial = downloading(accurate)
+        val chosen = indexOf(accurate)
+        val other = indexOf(fast)
         val kept = others()
         StorageUsage.removeOldSearch(context)
-        for (f in index + kept) assertTrue("${f.name} must stay", f.exists())
+        assertTrue("the default model's download was deleted", partial.exists())
+        for (f in chosen + kept) assertTrue("${f.name} must stay", f.exists())
+        for (f in other) assertFalse("${f.name} is left over", f.exists())
     }
 
     // --- Measuring ---
