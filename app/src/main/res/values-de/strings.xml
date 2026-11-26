@@ -84,7 +84,6 @@
     <string name="common_update">Aktualisierung</string>
     <string name="common_retry">Erneut versuchen</string>
     <string name="common_allow">Zulassen</string>
-    <string name="common_add">Hinzufügen</string>
     <string name="common_on">Am</string>
     <string name="common_off">Aus</string>
     <string name="main_people">Menschen</string>
@@ -138,7 +137,6 @@
     </plurals>
     <string name="main_view_options">Anzeigeoptionen</string>
     <string name="main_album_options">Album-Optionen</string>
-    <string name="main_sort_by">Nach %1$s sortieren</string>
     <string name="main_people_circles">Kreise</string>
     <string name="main_people_squares">Quadrate</string>
     <string name="main_add_name_ellipsis">Name hinzufügen…</string>

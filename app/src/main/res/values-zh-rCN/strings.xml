@@ -31,7 +31,6 @@
     <string name="common_update">更新</string>
     <string name="common_retry">重试</string>
     <string name="common_allow">允许</string>
-    <string name="common_add">添加</string>
     <string name="common_on">开启</string>
     <string name="common_off">关闭</string>
     <string name="main_people">人物</string>
@@ -225,7 +224,6 @@
     <string name="main_pick_add_count">添加 %1$d 项</string>
     <string name="main_view_options">视图选项</string>
     <string name="main_album_options">相册选项</string>
-    <string name="main_sort_by">按%1$s排序</string>
     <string name="main_people_options">人物选项</string>
     <string name="main_people_circles">圆形</string>
     <string name="main_people_squares">方形</string>
@@ -565,7 +563,6 @@
         <item quantity="other">%d 张项目图片</item>
     </plurals>
     <string name="settings_exclude">排除</string>
-    <string name="settings_choose_folder">选择文件夹…</string>
     <string name="settings_folder_subtitle">%1$s · %2$s</string>
     <string name="settings_resize_title">调整尺寸或转换格式</string>
     <string name="settings_resize_message_one">在原文件所在位置保存新副本。</string>
@@ -589,9 +586,6 @@
     <string name="smart_video_low">低</string>
     <string name="smart_option_size">%1$s · %2$s</string>
     <string name="smart_option_px">%1$s · %2$d px</string>
-    <string name="smart_continues_schedule">在 %1$s 至 %2$s 期间继续处理</string>
-    <string name="smart_continues_background">在后台继续</string>
-    <string name="smart_continues_charging">在手机充电时继续</string>
     <string name="smart_all_count">全部 %1$,d 项</string>
     <string name="smart_count_of">%1$,d / %2$,d</string>
     <string name="smart_remove_message_size">%1$s（%2$s）</string>
@@ -600,36 +594,24 @@
     <string name="smart_status_waiting_wifi">正在等待 Wi-Fi…</string>
     <string name="smart_status_waiting_connection">正在等待网络连接…</string>
     <string name="smart_status_failed">下载失败：%1$s</string>
-    <string name="smart_status_ready">已就绪 · 在本机占用 %1$s</string>
     <string name="smart_status_switching">正在使用 %1$s · %2$s：%3$s</string>
     <string name="smart_status_update">有可用更新 · %1$s</string>
-    <string name="smart_status_not_downloaded">未下载 · %1$s</string>
     <string name="smart_search_title">智能搜索</string>
     <string name="smart_search_footer">按画面内容查找照片，例如「睡在沙发上的猫」。「精准」模式能找到更多结果，并支持多种语言；「快速」模式体积更小、准备更快，但仅支持英语。</string>
     <string name="smart_search_quality">搜索质量</string>
     <string name="smart_search_model">搜索模型</string>
     <string name="smart_search_remove_title">移除智能搜索？</string>
     <string name="smart_search_remove_message">移除后将无法按画面内容搜索照片，重新下载后才能恢复。文字、人脸和字幕功能不受影响</string>
-    <string name="smart_indexed">已建立索引</string>
-    <string name="smart_indexed_complete">新照片和视频会自动加入索引</string>
     <string name="smart_text_title">照片中的文字</string>
     <string name="smart_text_footer">搜索照片、截图和视频中的文字，例如聊天记录中的姓名。支持拉丁字母文字、中文和日文。</string>
     <string name="smart_text_model">文字识别引擎</string>
     <string name="smart_text_remove_title">移除文字识别？</string>
     <string name="smart_text_remove_message">移除后将无法搜索照片中的文字，已识别的文字也会删除</string>
-    <string name="smart_text_read">文字识别进度</string>
-    <string name="smart_text_read_complete">照片和视频中的文字已可搜索</string>
     <string name="smart_faces_title">人脸</string>
     <string name="smart_faces_footer">在「精选集 → 人物」中按人物归类照片和视频。为人物命名后，即可通过搜索找到他们。</string>
     <string name="smart_faces_model">人脸模型</string>
     <string name="smart_faces_remove_title">移除人脸识别？</string>
     <string name="smart_faces_remove_message">人物、姓名及合并记录都会删除；重新下载后将从头识别所有人物</string>
-    <plurals name="smart_faces_people_found">
-        <item quantity="other">已识别出 %1$,d 人</item>
-    </plurals>
-    <plurals name="smart_faces_people_so_far">
-        <item quantity="other">%1$s · 已识别出 %2$,d 人</item>
-    </plurals>
     <string name="smart_subtitles_title">字幕</string>
     <string name="smart_subtitles_footer">点击视频中的 CC，即可在本机生成字幕。支持英语、德语、法语、西班牙语、意大利语、荷兰语和波兰语语音；没有人声的音乐不会生成字幕。</string>
     <string name="smart_subtitles_quality">字幕质量</string>
@@ -657,9 +639,7 @@
     <string name="smart_downloads_title">索引与下载</string>
     <string name="smart_downloads_footer">模型仅需从 Hugging Face 下载一次；你的照片和搜索内容不会离开本机。</string>
     <string name="smart_index_on_battery">使用电池时建立索引</string>
-    <string name="smart_index_on_battery_subtitle">未充电时继续扫描，电量不足时停止</string>
     <string name="smart_unrestricted_battery">不限制电池使用</string>
-    <string name="smart_unrestricted_battery_subtitle">允许 Lumen 在后台继续建立索引，否则 Android 会限制后台处理</string>
     <string name="smart_video_text_title">视频中的文字</string>
     <string name="smart_video_text_short">短视频</string>
     <string name="smart_video_text_short_subtitle">不超过 1 分钟</string>
@@ -675,10 +655,8 @@
     <string name="smart_video_text_slow">帧数越多，识别越慢：每帧都需要一定处理时间。因此，对一段 1 分钟的视频，每秒识别 10 帧的耗时约为每秒 2 帧的 5 倍。</string>
     <string name="settings_kw_video_text">文字 字幕 帧 每秒帧数 FPS 视频 OCR 识别</string>
     <string name="smart_video_detail">视频分析精细度</string>
-    <string name="smart_video_detail_subtitle">视频中用于人脸和文字识别的帧尺寸；较低的设置在旧手机上更快</string>
     <string name="smart_wifi_only">仅通过 Wi-Fi 下载</string>
     <string name="smart_hf_token">Hugging Face 令牌</string>
-    <string name="smart_hf_token_subtitle">可选，可能加快下载速度</string>
     <string name="smart_hf_token_saved">已保存</string>
     <string name="smart_hf_token_none">无</string>
     <string name="smart_hf_token_remove_title">移除你的令牌？</string>
@@ -784,8 +762,6 @@
     <string name="viewer_rotate_right">向右旋转</string>
     <string name="viewer_rotate_180">旋转 180°</string>
     <string name="viewer_copy_all">全部复制</string>
-    <string name="viewer_call">拨打电话</string>
-    <string name="viewer_email">发送邮件</string>
     <string name="viewer_unnamed">未命名</string>
     <string name="viewer_allow_location">允许访问位置信息，以查看照片的拍摄地点</string>
     <string name="viewer_add_caption">添加说明</string>

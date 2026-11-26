@@ -35,7 +35,6 @@
     <string name="common_update">Update</string>
     <string name="common_retry">Retry</string>
     <string name="common_allow">Allow</string>
-    <string name="common_add">Add</string>
     <string name="common_on">On</string>
     <string name="common_off">Off</string>
 
@@ -288,7 +287,6 @@
     <string name="main_pick_add_count">Add %1$d</string>
     <string name="main_view_options">View options</string>
     <string name="main_album_options">Album options</string>
-    <string name="main_sort_by">Sort by %1$s</string>
     <string name="main_people_options">People options</string>
     <string name="main_people_circles">Circles</string>
     <string name="main_people_squares">Squares</string>
@@ -766,7 +764,6 @@
         <item quantity="other">%d code images</item>
     </plurals>
     <string name="settings_exclude">Exclude</string>
-    <string name="settings_choose_folder">Choose a Folder…</string>
     <!-- A folder's path, then what's in it -->
     <string name="settings_folder_subtitle">%1$s · %2$s</string>
 
@@ -799,9 +796,6 @@
     <string name="smart_option_px">%1$s · %2$d px</string>
 
     <!-- Indexing progress -->
-    <string name="smart_continues_schedule">Continues %1$s – %2$s</string>
-    <string name="smart_continues_background">Continues in the background</string>
-    <string name="smart_continues_charging">Continues while your phone charges</string>
     <string name="smart_all_count">All %1$,d</string>
     <string name="smart_count_of">%1$,d of %2$,d</string>
 
@@ -812,10 +806,8 @@
     <string name="smart_status_waiting_wifi">Waiting for Wi-Fi…</string>
     <string name="smart_status_waiting_connection">Waiting for a connection…</string>
     <string name="smart_status_failed">Couldn\'t download: %1$s</string>
-    <string name="smart_status_ready">Ready · %1$s on this phone</string>
     <string name="smart_status_switching">Using %1$s · %2$s is %3$s</string>
     <string name="smart_status_update">Update available · %1$s</string>
-    <string name="smart_status_not_downloaded">Not downloaded · %1$s</string>
 
     <!-- Smart Search -->
     <string name="smart_search_title">Smart Search</string>
@@ -824,8 +816,6 @@
     <string name="smart_search_model">Search Model</string>
     <string name="smart_search_remove_title">Remove Smart Search?</string>
     <string name="smart_search_remove_message">Searching by what\'s in photos stops working until you download it again. Text, faces and subtitles stay</string>
-    <string name="smart_indexed">Indexed</string>
-    <string name="smart_indexed_complete">New photos and videos are added as they arrive</string>
 
     <!-- Text in Photos -->
     <string name="smart_text_title">Text in Photos</string>
@@ -833,8 +823,6 @@
     <string name="smart_text_model">Text Reader</string>
     <string name="smart_text_remove_title">Remove Text Reading?</string>
     <string name="smart_text_remove_message">Searching the words in photos stops working, and the words read so far are deleted</string>
-    <string name="smart_text_read">Text Read</string>
-    <string name="smart_text_read_complete">Words in photos and videos are searchable</string>
 
     <!-- Faces -->
     <string name="smart_faces_title">Faces</string>
@@ -842,14 +830,6 @@
     <string name="smart_faces_model">Face Models</string>
     <string name="smart_faces_remove_title">Remove Faces?</string>
     <string name="smart_faces_remove_message">People, their names and merges are deleted; downloading again finds everyone from scratch</string>
-    <plurals name="smart_faces_people_found">
-        <item quantity="one">%1$,d people found</item>
-        <item quantity="other">%1$,d people found</item>
-    </plurals>
-    <plurals name="smart_faces_people_so_far">
-        <item quantity="one">%1$s · %2$,d people so far</item>
-        <item quantity="other">%1$s · %2$,d people so far</item>
-    </plurals>
 
     <!-- Subtitles -->
     <string name="smart_subtitles_title">Subtitles</string>
@@ -886,24 +866,17 @@
     <string name="smart_download_from_hf">Hugging Face</string>
     <string name="smart_download_from_mirror">hf-mirror.com (China)</string>
     <string name="smart_index_on_battery">Index on Battery</string>
-    <string name="smart_index_on_battery_subtitle">Index anytime, even unplugged. Stops when the battery is low</string>
     <string name="smart_pause_title">Pause Indexing</string>
-    <string name="smart_pause_footer">Stops all indexing for a while; what\'s done is kept, and it carries on where it stopped. The indexing notification has a Pause button too.</string>
-    <string name="smart_pause_off">Off</string>
     <string name="smart_pause_until">Until %1$s</string>
     <string name="smart_pause_until_resumed">Until you turn it back on</string>
     <string name="smart_pause_hour">For an hour</string>
     <string name="smart_pause_eight_hours">For 8 hours</string>
     <string name="smart_pause_forever">Until I turn it back on</string>
-    <string name="smart_paused_until">Paused until %1$s</string>
-    <string name="smart_paused">Paused</string>
     <string name="smart_index_search">Index for Search</string>
     <string name="smart_index_text">Read Text in Photos</string>
     <string name="smart_index_video_text">Read Text in Videos</string>
     <string name="smart_index_faces">Find Faces</string>
-    <string name="smart_step_off">Off: keeps what\'s done so far</string>
     <string name="smart_unrestricted_battery">Unrestricted Battery</string>
-    <string name="smart_unrestricted_battery_subtitle">Lets indexing keep going after you leave Lumen; otherwise Android holds it back</string>
     <string name="smart_video_text_title">Text in Videos</string>
     <string name="smart_video_text_short">Short Videos</string>
     <string name="smart_video_text_short_subtitle">Up to 1 minute</string>
@@ -921,10 +894,8 @@
     <string name="smart_video_text_slow">More frames make reading slower: every frame takes a fraction of a second, so 10 a second reads a 1-minute video about 5 times slower than 2 a second.</string>
     <string name="settings_kw_video_text">text captions subtitles frames per second fps video ocr read</string>
     <string name="smart_video_detail">Video Detail</string>
-    <string name="smart_video_detail_subtitle">Frame size for faces and text in videos; lower is faster on older phones</string>
     <string name="smart_wifi_only">Download on Wi-Fi Only</string>
     <string name="smart_hf_token">Hugging Face Token</string>
-    <string name="smart_hf_token_subtitle">Optional; can make downloads faster</string>
     <string name="smart_hf_token_saved">Saved</string>
     <string name="smart_hf_token_none">None</string>
     <string name="smart_hf_token_remove_title">Remove Your Token?</string>
@@ -1045,8 +1016,6 @@
 
     <!-- Live Text menu -->
     <string name="viewer_copy_all">Copy All</string>
-    <string name="viewer_call">Call</string>
-    <string name="viewer_email">Email</string>
 
     <!-- Details sheet -->
     <string name="viewer_unnamed">Unnamed</string>

@@ -18,7 +18,6 @@
     <string name="common_update">Mettre à jour</string>
     <string name="common_retry">Réessayer</string>
     <string name="common_allow">Autoriser</string>
-    <string name="common_add">Ajouter</string>
     <string name="main_search_recent">Récent</string>
     <string name="main_search_clear">Effacer</string>
     <string name="main_create">Créer</string>
@@ -27,7 +26,6 @@
     <string name="settings_theme">Thème</string>
     <string name="settings_group_viewer">Lecteur</string>
     <string name="settings_group_location">Localisation</string>
-    <string name="viewer_email">E-mail</string>
     <string name="viewer_location">Localisation</string>
     <string name="viewer_added">%1$s ajouté(e)</string>
     <string name="app_appearance_light">Clair</string>
@@ -181,7 +179,6 @@
     <string name="main_pick_add_count">Ajouter %1$d</string>
     <string name="main_view_options">Options d\'affichage</string>
     <string name="main_album_options">Options de l\'album</string>
-    <string name="main_sort_by">Trier par %1$s</string>
     <string name="main_people_options">Options des personnes</string>
     <string name="main_people_circles">Cercles</string>
     <string name="main_people_squares">Carrés</string>
@@ -449,7 +446,6 @@
     <string name="settings_group_suggested">Suggéré</string>
     <string name="settings_suggested_footer">Les dossiers qui ressemblent à des projets logiciels : leurs images sont généralement des icônes et des fichiers de compilation.</string>
     <string name="settings_exclude">Exclure</string>
-    <string name="settings_choose_folder">Choisissez un dossier…</string>
     <string name="settings_resize_title">Redimensionner ou convertir</string>
     <string name="settings_resize_message_one">Enregistre une nouvelle copie à côté de l\'original.</string>
     <string name="settings_resize_size">Taille</string>
@@ -467,9 +463,6 @@
     <string name="smart_video_medium">Moyen</string>
     <string name="smart_video_low">Faible</string>
     <string name="smart_option_px">%1$s · %2$d px</string>
-    <string name="smart_continues_schedule">Suite : %1$s – %2$s</string>
-    <string name="smart_continues_background">Se poursuit en arrière-plan</string>
-    <string name="smart_continues_charging">La lecture se poursuit pendant que votre téléphone se recharge</string>
     <string name="smart_all_count">Tous %1$,d</string>
     <string name="smart_count_of">%1$,d de %2$,d</string>
     <string name="smart_status_downloading">Téléchargement · %1$s sur %2$s</string>
@@ -477,25 +470,19 @@
     <string name="smart_status_waiting_wifi">En attente de connexion Wi-Fi…</string>
     <string name="smart_status_waiting_connection">En attente d\'une connexion…</string>
     <string name="smart_status_failed">Impossible de télécharger : %1$s</string>
-    <string name="smart_status_ready">Prêt · %1$s sur ce téléphone</string>
     <string name="smart_status_switching">En utilisant %1$s · %2$s, on obtient %3$s</string>
     <string name="smart_status_update">Mise à jour disponible · %1$s</string>
-    <string name="smart_status_not_downloaded">Non téléchargé · %1$s</string>
     <string name="smart_search_title">Recherche avancée</string>
     <string name="smart_search_footer">Recherchez des photos en fonction de ce qu\'elles contiennent, par exemple « chat endormi sur un canapé ». « Accurate » trouve davantage de résultats et comprend plusieurs langues ; « Fast » est plus léger et plus rapide à configurer, en anglais.</string>
     <string name="smart_search_quality">Qualité de la recherche</string>
     <string name="smart_search_model">Modèle de recherche</string>
     <string name="smart_search_remove_title">Supprimer la recherche intelligente ?</string>
     <string name="smart_search_remove_message">La recherche par contenu des photos cesse de fonctionner jusqu\'à ce que vous la téléchargiez à nouveau. Le texte, les visages et les sous-titres sont conservés</string>
-    <string name="smart_indexed">Indexé</string>
-    <string name="smart_indexed_complete">De nouvelles photos et vidéos sont ajoutées au fur et à mesure de leur réception</string>
     <string name="smart_text_title">Texte dans les photos</string>
     <string name="smart_text_footer">Recherchez des mots dans des photos, des captures d\'écran et des vidéos, par exemple un nom dans une conversation. Prend en charge les alphabets latins, le chinois et le japonais.</string>
     <string name="smart_text_model">Lecteur de texte</string>
     <string name="smart_text_remove_title">Supprimer la lecture du texte ?</string>
     <string name="smart_text_remove_message">La recherche de mots dans les photos ne fonctionne plus, et les mots lus jusqu\'à présent sont supprimés</string>
-    <string name="smart_text_read">Texte lu</string>
-    <string name="smart_text_read_complete">Les mots figurant dans les photos et les vidéos peuvent faire l\'objet d\'une recherche</string>
     <string name="smart_faces_title">Visages</string>
     <string name="smart_faces_footer">Regroupez les photos et les vidéos par personne, dans « Collections » → « Personnes ». Attribuez un nom aux personnes pour les retrouver dans la fonction « Recherche ».</string>
     <string name="smart_faces_model">Modèles de visages</string>
@@ -515,14 +502,10 @@
     <string name="smart_downloads_title">Indexation et téléchargements</string>
     <string name="smart_downloads_footer">Les modèles sont téléchargés une seule fois depuis Hugging Face ; vos photos et vos recherches ne quittent jamais ce téléphone.</string>
     <string name="smart_index_on_battery">Index sur les batteries</string>
-    <string name="smart_index_on_battery_subtitle">Continuez à scanner sans le chargeur ; l\'appareil s\'arrête lorsque la batterie est faible</string>
     <string name="smart_unrestricted_battery">Batterie sans restriction</string>
-    <string name="smart_unrestricted_battery_subtitle">Laissez l\'indexation se poursuivre après avoir quitté Lumen ; sinon, Android la ralentit</string>
     <string name="smart_video_detail">Détails de la vidéo</string>
-    <string name="smart_video_detail_subtitle">Taille des images pour les visages et le texte dans les vidéos ; une valeur plus faible permet un affichage plus rapide sur les anciens téléphones</string>
     <string name="smart_wifi_only">Téléchargement via Wi-Fi uniquement</string>
     <string name="smart_hf_token">Jeton Hugging Face</string>
-    <string name="smart_hf_token_subtitle">Facultatif ; permet d\'accélérer les téléchargements</string>
     <string name="smart_hf_token_saved">Enregistré</string>
     <string name="smart_hf_token_none">Aucun</string>
     <string name="smart_hf_token_remove_title">Supprimer votre jeton ?</string>
@@ -584,7 +567,6 @@
     <string name="viewer_rotate_right">Pivoter vers la droite</string>
     <string name="viewer_rotate_180">Pivoter de 180°</string>
     <string name="viewer_copy_all">Tout copier</string>
-    <string name="viewer_call">Appeler</string>
     <string name="viewer_unnamed">Sans titre</string>
     <string name="viewer_allow_location">Autorisez l\'accès à la localisation pour voir où les photos ont été prises</string>
     <string name="viewer_add_caption">Ajouter une légende</string>
@@ -1000,16 +982,6 @@
         <item quantity="one">Enregistre %d nouvelles copies des photos à côté des originaux.</item>
         <item quantity="many">Enregistre %d nouvelles copies des photos à côté des originaux.</item>
         <item quantity="other">Enregistre %d nouvelles copies des photos à côté des originaux.</item>
-    </plurals>
-    <plurals name="smart_faces_people_found">
-        <item quantity="one">%1$,d personne trouvée</item>
-        <item quantity="many">%1$,d personnes trouvées</item>
-        <item quantity="other">%1$,d personnes trouvées</item>
-    </plurals>
-    <plurals name="smart_faces_people_so_far">
-        <item quantity="one">%1$s · %2$,d personnes jusqu\'à présent</item>
-        <item quantity="many">%1$s · %2$,d personnes jusqu\'à présent</item>
-        <item quantity="other">%1$s · %2$,d personnes jusqu\'à présent</item>
     </plurals>
     <plurals name="viewer_audio_channels">
         <item quantity="one">Canal %d</item>

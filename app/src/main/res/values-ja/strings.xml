@@ -31,7 +31,6 @@
     <string name="common_update">アップデート</string>
     <string name="common_retry">再試行</string>
     <string name="common_allow">許可</string>
-    <string name="common_add">追加</string>
     <string name="common_on">オン</string>
     <string name="common_off">オフ</string>
     <string name="main_people">人々</string>
@@ -229,7 +228,6 @@
     <string name="main_pick_add_count">%1$d を追加</string>
     <string name="main_view_options">オプションを表示</string>
     <string name="main_album_options">アルバムオプション</string>
-    <string name="main_sort_by">%1$s で並べ替え</string>
     <string name="main_people_options">人々のオプション</string>
     <string name="main_people_circles">円形</string>
     <string name="main_people_squares">四角形</string>

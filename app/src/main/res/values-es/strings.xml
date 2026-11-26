@@ -24,7 +24,6 @@
     <string name="common_update">Actualizar</string>
     <string name="common_retry">Reintentar</string>
     <string name="common_allow">Permitir</string>
-    <string name="common_add">Agregar</string>
     <string name="common_on">Encendido</string>
     <string name="common_off">Apagado</string>
     <string name="main_people">Personas</string>
@@ -272,7 +271,6 @@
     <string name="main_pick_add_count">Añadir %1$d</string>
     <string name="main_view_options">Ver opciones</string>
     <string name="main_album_options">Opciones de álbum</string>
-    <string name="main_sort_by">Ordenar por %1$s</string>
     <string name="main_people_options">Opciones de «Personas»</string>
     <string name="main_people_circles">Círculos</string>
     <string name="main_people_squares">Cuadrados</string>

@@ -31,7 +31,6 @@
     <string name="common_update">Actualizează</string>
     <string name="common_retry">Reîncearcă</string>
     <string name="common_allow">Permite</string>
-    <string name="common_add">Adaugă</string>
     <string name="common_on">Activat</string>
     <string name="common_off">Dezactivat</string>
     <string name="main_people">Oameni</string>
@@ -205,7 +204,6 @@
     <string name="main_delete_forever_title_case">Șterge definitiv</string>
     <string name="main_pick_add_count">Adaugă %1$d</string>
     <string name="main_empty_trash_message_one">Acest element va fi șters definitiv.</string>
-    <string name="main_sort_by">Sortează după %1$s</string>
     <string name="main_people_options">Opțiuni pentru persoane</string>
     <string name="main_people_circles">Cercuri</string>
     <string name="main_people_squares">Pătrate</string>

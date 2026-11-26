@@ -31,7 +31,6 @@
     <string name="common_update">Обновить</string>
     <string name="common_retry">Повторить</string>
     <string name="common_allow">Разрешить</string>
-    <string name="common_add">Добавить</string>
     <string name="common_on">Включено</string>
     <string name="common_off">Выключено</string>
     <string name="main_people">Люди</string>
@@ -301,7 +300,6 @@
     <string name="main_pick_add_count">Добавить: %1$d</string>
     <string name="main_view_options">Параметры отображения</string>
     <string name="main_album_options">Параметры альбома</string>
-    <string name="main_sort_by">Сортировать по: %1$s</string>
     <string name="main_people_options">Параметры раздела «Люди»</string>
     <string name="main_people_circles">Круги</string>
     <string name="main_people_squares">Квадраты</string>
