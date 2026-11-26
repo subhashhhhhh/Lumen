@@ -238,6 +238,11 @@ class LumenPrefs(context: Context) {
         get() = prefs.getBoolean(KeyShowMaps, true)
         set(value) = prefs.edit { putBoolean(KeyShowMaps, value) }
 
+    /** Maps light or dark whatever the app's theme (#46: the dark map was hard to read for some). */
+    var mapStyle: MapStyle
+        get() = prefs.getString(KeyMapStyle, null)?.let { name -> MapStyle.entries.firstOrNull { it.name == name } } ?: MapStyle.MatchApp
+        set(value) = prefs.edit { putString(KeyMapStyle, value.name) }
+
     /**
      * Settings → Smart Features → Scheduled Indexing: the backlog runs only between
      * [indexScheduleStart] and [indexScheduleEnd] (minutes after midnight; may cross it), on
@@ -425,6 +430,7 @@ class LumenPrefs(context: Context) {
         const val KeyLastUpdateCheck = "last_update_check"
         const val KeyAvailableUpdate = "available_update"
         const val KeyShowMaps = "show_maps"
+        const val KeyMapStyle = "map_style"
         const val KeySwipeUpDetails = "swipe_up_details"
         const val KeyTextVideoVersion = "text_video_version"
         const val KeyOnboardingDone = "onboarding_done"
@@ -489,3 +495,16 @@ class LumenPrefs(context: Context) {
  * scanned after a change.
  */
 enum class VideoDetail(@StringRes val label: Int, val px: Int) { High(R.string.data_detail_high, 1280), Medium(R.string.data_size_medium, 960), Low(R.string.data_detail_low, 640) }
+
+/** Settings → Photos & Videos → Map Style. */
+enum class MapStyle(@StringRes val label: Int) {
+    MatchApp(R.string.settings_map_style_match),
+    Light(R.string.settings_map_style_light),
+    Dark(R.string.settings_map_style_dark);
+
+    fun dark(appDark: Boolean): Boolean = when (this) {
+        MatchApp -> appDark
+        Light -> false
+        Dark -> true
+    }
+}

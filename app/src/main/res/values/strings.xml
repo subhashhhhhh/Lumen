@@ -610,6 +610,10 @@
     <string name="settings_swipe_up_details">Swipe Up for Details</string>
     <string name="settings_group_location">Location</string>
     <string name="settings_maps_footer">Shows where photos were taken on a map in their details. Map tiles download from OpenFreeMap (OpenStreetMap data): it sees which area is shown, nothing else. Off: the place name and coordinates only, and Lumen doesn\'t contact it.</string>
+    <string name="settings_map_style">Map Style</string>
+    <string name="settings_map_style_match">Match App</string>
+    <string name="settings_map_style_light">Light</string>
+    <string name="settings_map_style_dark">Dark</string>
     <string name="settings_maps">Maps</string>
     <string name="settings_group_videos">Videos</string>
     <string name="settings_autoplay_videos">Autoplay Videos</string>

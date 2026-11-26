@@ -171,7 +171,7 @@ object PhotoMaps {
 @Composable
 fun MapPreview(point: GeoPoint, onOpen: () -> Unit, modifier: Modifier = Modifier) {
     val context = LocalContext.current
-    val dark = LocalDarkTheme.current
+    val dark = mapDark()
     val density = LocalDensity.current.density
     BoxWithConstraints(modifier) {
         val w = constraints.maxWidth
@@ -189,6 +189,14 @@ fun MapPreview(point: GeoPoint, onOpen: () -> Unit, modifier: Modifier = Modifie
             Box(Modifier.fillMaxSize().background(LocalGlassColors.current.selection))
         }
     }
+}
+
+/** Whether maps are drawn dark: the app's theme, or Settings → Map Style. */
+@Composable
+private fun mapDark(): Boolean {
+    val context = LocalContext.current
+    val style = remember { com.subhashh.lumen.data.LumenPrefs(context).mapStyle }
+    return style.dark(LocalDarkTheme.current)
 }
 
 @Composable
@@ -211,7 +219,7 @@ fun PhotoMapScreen(point: GeoPoint, title: String?, onBack: () -> Unit, onOpenIn
     Box(Modifier.fillMaxSize()) {
         PhotoMaps.Interactive(
             point,
-            LocalDarkTheme.current,
+            mapDark(),
             MaterialTheme.colorScheme.primary,
             Modifier.fillMaxSize().layerBackdrop(backdrop),
         )

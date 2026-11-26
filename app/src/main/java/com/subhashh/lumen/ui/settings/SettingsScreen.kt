@@ -602,6 +602,7 @@ private fun ColumnScope.PhotosPage(prefs: LumenPrefs, highlight: String?) {
     var autoplay by remember { mutableStateOf(prefs.videoAutoplay) }
     var loop by remember { mutableStateOf(prefs.videoLoop) }
     var maps by remember { mutableStateOf(prefs.showMaps) }
+    var mapStyle by remember { mutableStateOf(prefs.mapStyle) }
     val hdrSupported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
     if (hdrSupported) {
         Group(
@@ -670,6 +671,22 @@ private fun ColumnScope.PhotosPage(prefs: LumenPrefs, highlight: String?) {
                 icon = LumenIcons.Location,
                 iconColor = Green,
             )
+        }
+        if (maps) {
+            Divider()
+            Anchor("map-style", highlight) {
+                PickerRow(
+                    title = stringResource(R.string.settings_map_style),
+                    options = com.subhashh.lumen.data.MapStyle.entries.map { stringResource(it.label) },
+                    selected = com.subhashh.lumen.data.MapStyle.entries.indexOf(mapStyle),
+                    onSelect = {
+                        mapStyle = com.subhashh.lumen.data.MapStyle.entries[it]
+                        prefs.mapStyle = mapStyle
+                    },
+                    icon = LumenIcons.DarkTheme,
+                    iconColor = Indigo,
+                )
+            }
         }
     }
     Group(stringResource(R.string.settings_group_videos)) {
