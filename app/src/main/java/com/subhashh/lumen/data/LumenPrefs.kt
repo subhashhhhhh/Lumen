@@ -305,6 +305,11 @@ class LumenPrefs(context: Context) {
         }
     }
 
+    /** The Lumen Discord invitation has been shown (once, on the first launch with it: 0.5.1). */
+    var discordAsked: Boolean
+        get() = prefs.getBoolean(KeyDiscordAsked, false)
+        set(value) = prefs.edit { putBoolean(KeyDiscordAsked, value) }
+
     /** The GitHub star request has been shown (it's shown once). */
     var starAsked: Boolean
         get() = prefs.getBoolean(KeyStarAsked, false)
@@ -424,6 +429,7 @@ class LumenPrefs(context: Context) {
         const val KeyIndexOnBattery = "index_on_battery"
         const val KeyShownFolders = "shown_folders"
         const val KeyModelMirror = "model_mirror"
+        const val KeyDiscordAsked = "discord_asked"
         const val KeyIndexSearch = "index_search"
         const val KeyIndexText = "index_text"
         const val KeyIndexVideoText = "index_video_text"

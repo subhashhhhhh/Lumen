@@ -458,6 +458,9 @@
     <string name="main_update_message">A new version of Lumen is ready to download.</string>
     <string name="main_update_view">View Update</string>
     <string name="main_update_later">Later</string>
+    <string name="main_discord_title">Join the Lumen Discord</string>
+    <string name="main_discord_message">Get help, hear about updates first, and tell us what to build next. Testers for every kind of phone are welcome.</string>
+    <string name="main_discord_join">Join</string>
     <string name="main_star_title">Enjoying Lumen?</string>
     <string name="main_star_message">Lumen is free, and one person makes it. A star on GitHub helps more people find it.</string>
     <string name="main_star_confirm">Star on GitHub</string>
@@ -683,6 +686,8 @@
     <string name="settings_group_open_source">Open Source</string>
     <string name="settings_open_source_footer">Lumen is free and open source. Bugs and ideas are welcome on GitHub.</string>
     <string name="settings_github" translatable="false">GitHub</string>
+    <string name="settings_discord">Lumen Discord</string>
+    <string name="settings_discord_value">Join</string>
     <string name="settings_report_bug">Report a Bug</string>
     <string name="settings_group_language">Language</string>
     <string name="settings_language_footer">Lumen is translated by volunteers on Weblate. Anyone can add or fix a translation.</string>

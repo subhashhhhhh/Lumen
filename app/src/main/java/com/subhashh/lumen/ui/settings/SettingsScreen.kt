@@ -995,6 +995,16 @@ private fun ColumnScope.AboutPage(
             )
         }
         Divider()
+        Anchor("discord", highlight) {
+            SettingsRow(
+                title = stringResource(R.string.settings_discord),
+                value = stringResource(R.string.settings_discord_value),
+                onClick = { open(com.subhashh.lumen.ui.components.DiscordUrl) },
+                icon = LumenIcons.Chat,
+                iconColor = Indigo,
+            )
+        }
+        Divider()
         Anchor("report-bug", highlight) {
             SettingsRow(
                 title = stringResource(R.string.settings_report_bug),

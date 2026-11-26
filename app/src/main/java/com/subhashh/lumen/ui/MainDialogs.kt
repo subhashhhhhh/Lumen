@@ -172,6 +172,11 @@ internal fun BoxScope.MainDialogs(
             canShow = announce == null && confirmation == null && !viewerOpen && !selecting && settingsPage == null && pick == null,
             show = { confirmation = it },
         )
+        com.subhashh.lumen.ui.components.DiscordRequest(
+            prefs,
+            canShow = announce == null && confirmation == null && !viewerOpen && !selecting && settingsPage == null && pick == null,
+            show = { confirmation = it },
+        )
         com.subhashh.lumen.ui.components.StarRequest(
             prefs,
             canShow = announce == null && confirmation == null && !viewerOpen && !selecting && settingsPage == null && pick == null,
