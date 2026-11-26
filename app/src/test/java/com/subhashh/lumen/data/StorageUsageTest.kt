@@ -170,6 +170,6 @@ class StorageUsageTest {
     @Test
     fun oneThumbnailCacheForTheWholeApp() {
         // Storage's Clear goes through the same cache the grid writes to, or the grid's stays open on deleted files.
-        assertSame(GridThumbnail.Factory.disk(context), GridThumbnail.Factory.disk(context.applicationContext))
+        assertSame(GridThumbnailFetcher.Factory.disk(context), GridThumbnailFetcher.Factory.disk(context.applicationContext))
     }
 }
