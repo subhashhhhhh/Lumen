@@ -104,6 +104,8 @@ object ExcludedFolders {
             val root = segments.take(codeAt).joinToString("/", postfix = "/")
             counts[root] = (counts[root] ?: 0) + 1
         }
-        return counts.map { (folder, n) -> ExclusionSuggestion(folder, n) }.sortedByDescending { it.itemCount }
+        // Never suggest a folder shown anyway, or one around it: excluding it would undo that choice.
+        return counts.filterKeys { root -> exclusions.shown.none { it.startsWith(root) } }
+            .map { (folder, n) -> ExclusionSuggestion(folder, n) }.sortedByDescending { it.itemCount }
     }
 }
