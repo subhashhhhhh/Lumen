@@ -351,6 +351,23 @@ class LumenPrefs(context: Context) {
         get() = prefs.getBoolean(KeyIndexOnBattery, false)
         set(value) = prefs.edit { putBoolean(KeyIndexOnBattery, value) }
 
+    /**
+     * Settings → Smart Features: which indexing steps run. Off keeps what a step has done; on
+     * again carries on. (Pausing everything for a while is Lumen AI's own: SmartIndex.pause.)
+     */
+    var indexSearch: Boolean
+        get() = prefs.getBoolean(KeyIndexSearch, true)
+        set(value) = prefs.edit { putBoolean(KeyIndexSearch, value) }
+    var indexText: Boolean
+        get() = prefs.getBoolean(KeyIndexText, true)
+        set(value) = prefs.edit { putBoolean(KeyIndexText, value) }
+    var indexVideoText: Boolean
+        get() = prefs.getBoolean(KeyIndexVideoText, true)
+        set(value) = prefs.edit { putBoolean(KeyIndexVideoText, value) }
+    var indexFaces: Boolean
+        get() = prefs.getBoolean(KeyIndexFaces, true)
+        set(value) = prefs.edit { putBoolean(KeyIndexFaces, value) }
+
     /** Collections → People: faces in circles (default) or rounded squares. */
     var peopleSquare: Boolean
         get() = prefs.getBoolean(KeyPeopleSquare, false)
@@ -388,6 +405,10 @@ class LumenPrefs(context: Context) {
         const val KeyTextRateLong = "text_rate_long"
         const val KeyTextLongMaxFrames = "text_long_max_frames"
         const val KeyIndexOnBattery = "index_on_battery"
+        const val KeyIndexSearch = "index_search"
+        const val KeyIndexText = "index_text"
+        const val KeyIndexVideoText = "index_video_text"
+        const val KeyIndexFaces = "index_faces"
         const val KeyModelWifiOnly = "model_wifi_only"
         const val KeyModelQueue = "model_queue"
         const val KeyAiMoved = "ai_moved"

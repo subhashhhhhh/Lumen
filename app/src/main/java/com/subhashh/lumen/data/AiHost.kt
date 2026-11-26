@@ -66,6 +66,10 @@ class AiHost(context: Context) : LumenAiHost {
         override val indexSchedule
             get() = if (prefs.indexScheduleOn) IndexSchedule(prefs.indexScheduleStart, prefs.indexScheduleEnd) else null
         override val videoTextRates get() = prefs.videoTextRates
+        override val indexSearch get() = prefs.indexSearch
+        override val indexText get() = prefs.indexText
+        override val indexVideoText get() = prefs.indexVideoText
+        override val indexFaces get() = prefs.indexFaces
     }
 
     override val notifications = object : AiNotifications {

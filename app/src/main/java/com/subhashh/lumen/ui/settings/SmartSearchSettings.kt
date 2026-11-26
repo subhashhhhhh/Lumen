@@ -107,10 +107,20 @@ internal fun SmartSearchGroup(
     val unrestricted = remember(refresh) {
         context.getSystemService(android.os.PowerManager::class.java).isIgnoringBatteryOptimizations(context.packageName)
     }
+    val pauseFlow = remember { SmartIndex.paused(context) }
+    val pausedAt by pauseFlow.collectAsState()
+    // A pause that ran out while the screen was open reads as over when it's next shown.
+    val pausedUntil = remember(pausedAt, refresh) { if (pausedAt > System.currentTimeMillis()) pausedAt else 0L }
+    var stepSearch by remember { mutableStateOf(prefs.indexSearch) }
+    var stepText by remember { mutableStateOf(prefs.indexText) }
+    var stepVideoText by remember { mutableStateOf(prefs.indexVideoText) }
+    var stepFaces by remember { mutableStateOf(prefs.indexFaces) }
     var scheduleOn by remember { mutableStateOf(prefs.indexScheduleOn) }
     var scheduleStart by remember { mutableIntStateOf(prefs.indexScheduleStart) }
     var scheduleEnd by remember { mutableIntStateOf(prefs.indexScheduleEnd) }
     val waitingText = when {
+        pausedUntil == Long.MAX_VALUE -> stringResource(R.string.smart_paused)
+        pausedUntil != 0L -> stringResource(R.string.smart_paused_until, pauseTime(context, pausedUntil))
         scheduleOn -> stringResource(R.string.smart_continues_schedule, clock(context, scheduleStart), clock(context, scheduleEnd))
         onBattery -> stringResource(R.string.smart_continues_background)
         else -> stringResource(R.string.smart_continues_charging)
@@ -191,6 +201,46 @@ internal fun SmartSearchGroup(
         }
     }
 
+    val pauseChoices = arrayOf(
+        stringResource(R.string.smart_pause_hour),
+        stringResource(R.string.smart_pause_eight_hours),
+        stringResource(R.string.smart_pause_forever),
+    )
+    val pauseTitle = stringResource(R.string.smart_pause_title)
+    Group(pauseTitle, footer = stringResource(R.string.smart_pause_footer)) {
+        Anchor("pause-indexing", highlight) {
+            ToggleRow(
+                title = pauseTitle,
+                subtitle = when (pausedUntil) {
+                    0L -> null
+                    Long.MAX_VALUE -> stringResource(R.string.smart_pause_until_resumed)
+                    else -> stringResource(R.string.smart_pause_until, pauseTime(context, pausedUntil))
+                },
+                checked = pausedUntil != 0L,
+                onCheckedChange = { on ->
+                    if (!on) {
+                        SmartIndex.resume(context)
+                    } else {
+                        android.app.AlertDialog.Builder(context)
+                            .setTitle(pauseTitle)
+                            .setItems(pauseChoices) { _, which ->
+                                val now = System.currentTimeMillis()
+                                SmartIndex.pause(context, when (which) {
+                                    0 -> now + 60 * 60_000L
+                                    1 -> now + 8 * 60 * 60_000L
+                                    else -> Long.MAX_VALUE
+                                })
+                            }
+                            .setNegativeButton(cancelAction, null)
+                            .show()
+                    }
+                },
+                icon = LumenIcons.Pause,
+                iconColor = Orange,
+            )
+        }
+    }
+
     Group(
         stringResource(R.string.smart_search_title),
         footer = stringResource(R.string.smart_search_footer),
@@ -224,6 +274,23 @@ internal fun SmartSearchGroup(
         }
         if (progress != null) {
             Divider()
+            Anchor("index-search", highlight) {
+                ToggleRow(
+                    title = stringResource(R.string.smart_index_search),
+                    subtitle = if (stepSearch) null else stringResource(R.string.smart_step_off),
+                    checked = stepSearch,
+                    onCheckedChange = {
+                        stepSearch = it
+                        prefs.indexSearch = it
+                        SmartIndex.schedule(context, replace = true)
+                    },
+                    icon = LumenIcons.Search,
+                    iconColor = Indigo,
+                )
+            }
+        }
+        if (progress != null) {
+            Divider()
             val complete = progress.indexed >= progress.total
             Anchor("indexed", highlight) {
                 SettingsRow(
@@ -249,6 +316,40 @@ internal fun SmartSearchGroup(
                 stringResource(R.string.smart_text_remove_message),
                 Orange,
             )
+        }
+        if (textProgress != null) {
+            Divider()
+            Anchor("index-text", highlight) {
+                ToggleRow(
+                    title = stringResource(R.string.smart_index_text),
+                    subtitle = if (stepText) null else stringResource(R.string.smart_step_off),
+                    checked = stepText,
+                    onCheckedChange = {
+                        stepText = it
+                        prefs.indexText = it
+                        SmartIndex.schedule(context, replace = true)
+                    },
+                    icon = LumenIcons.Document,
+                    iconColor = Orange,
+                )
+            }
+            if (stepText) {
+                Divider()
+                Anchor("index-video-text", highlight) {
+                    ToggleRow(
+                        title = stringResource(R.string.smart_index_video_text),
+                        subtitle = if (stepVideoText) null else stringResource(R.string.smart_step_off),
+                        checked = stepVideoText,
+                        onCheckedChange = {
+                            stepVideoText = it
+                            prefs.indexVideoText = it
+                            SmartIndex.schedule(context, replace = true)
+                        },
+                        icon = LumenIcons.Document,
+                        iconColor = Orange,
+                    )
+                }
+            }
         }
         if (textProgress != null) {
             Divider()
@@ -308,6 +409,23 @@ internal fun SmartSearchGroup(
                 Purple,
                 LumenIcons.Face,
             )
+        }
+        if (faceProgress != null) {
+            Divider()
+            Anchor("index-faces", highlight) {
+                ToggleRow(
+                    title = stringResource(R.string.smart_index_faces),
+                    subtitle = if (stepFaces) null else stringResource(R.string.smart_step_off),
+                    checked = stepFaces,
+                    onCheckedChange = {
+                        stepFaces = it
+                        prefs.indexFaces = it
+                        SmartIndex.schedule(context, replace = true)
+                    },
+                    icon = LumenIcons.Face,
+                    iconColor = Purple,
+                )
+            }
         }
         if (faceProgress != null) {
             Divider()
@@ -569,6 +687,14 @@ internal fun SmartSearchGroup(
 }
 
 /** "1:00 AM" or "01:00", as the phone shows times. */
+/** When a pause ends: its time, with the day too if that isn't today. */
+private fun pauseTime(context: Context, ms: Long): String {
+    val today = android.text.format.DateUtils.isToday(ms)
+    val flags = android.text.format.DateUtils.FORMAT_SHOW_TIME or
+        (if (today) 0 else android.text.format.DateUtils.FORMAT_SHOW_WEEKDAY or android.text.format.DateUtils.FORMAT_ABBREV_WEEKDAY)
+    return android.text.format.DateUtils.formatDateTime(context, ms, flags)
+}
+
 private fun clock(context: Context, minute: Int): String =
     android.text.format.DateFormat.getTimeFormat(context).format(
         java.util.Calendar.getInstance().apply {
