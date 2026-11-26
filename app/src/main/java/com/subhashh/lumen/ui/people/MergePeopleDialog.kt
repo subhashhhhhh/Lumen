@@ -71,7 +71,9 @@ fun MergePeopleDialog(
     onDismiss: () -> Unit,
 ) {
     val open = proposal != null
-    BackHandler(enabled = open, onBack = onDismiss)
+    // Added when it opens, not composed all along and switched on: Back goes to the newest
+    // handler, and a viewer opened since (its own handlers) would otherwise take it (#24).
+    if (open) BackHandler(onBack = onDismiss)
     DialogScrim(open, onDismiss)
     AnimatedVisibility(
         visible = open,

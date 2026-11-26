@@ -679,7 +679,8 @@ private class PickerHost {
 @Composable
 private fun PickerOverlay(host: PickerHost, backdrop: Backdrop) {
     val request = host.request
-    BackHandler(enabled = request != null) { host.close() }
+    // Added when it opens, so it's the newest handler and Back closes it first (#24).
+    if (request != null) BackHandler { host.close() }
     if (request != null && !Lumen.material) {
         Box(
             Modifier

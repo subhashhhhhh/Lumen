@@ -58,7 +58,9 @@ fun ResizeDialog(
     onDismiss: () -> Unit,
 ) {
     val open = count != null
-    BackHandler(enabled = open, onBack = onDismiss)
+    // Added when it opens, not composed all along and switched on: Back goes to the newest
+    // handler, and a viewer opened since (its own handlers) would otherwise take it (#24).
+    if (open) BackHandler(onBack = onDismiss)
     com.subhashh.lumen.ui.components.DialogScrim(open, onDismiss, strong = true)
     AnimatedVisibility(
         visible = open,
