@@ -86,6 +86,16 @@ android {
                 ndk { abiFilters += "arm64-v8a" }
             }
         }
+        // Profile without R8: not debuggable (debug builds run Compose several times slower), same
+        // app id and baseline profile, so it feels like profile on the phone, but builds in well
+        // under a minute instead of five (R8 is most of a profile build). For day-to-day checks;
+        // smoothness measurements and the tester still use profile.
+        create("dev") {
+            initWith(getByName("profile"))
+            isMinifyEnabled = false
+            isShrinkResources = false
+            matchingFallbacks += listOf("profile", "release")
+        }
     }
 
     // Lumen Lab (model head-to-heads and speed tests) lives in its own repository. Checked out
@@ -94,8 +104,10 @@ android {
         sourceSets {
             getByName("debug").kotlin.directories.add(lab.resolve("src/java").path)
             getByName("profile").kotlin.directories.add(lab.resolve("src/java").path)
+            getByName("dev").kotlin.directories.add(lab.resolve("src/java").path)
             getByName("debug").manifest.srcFile(lab.resolve("manifests/debug/AndroidManifest.xml"))
             getByName("profile").manifest.srcFile(lab.resolve("manifests/profile/AndroidManifest.xml"))
+            getByName("dev").manifest.srcFile(lab.resolve("manifests/profile/AndroidManifest.xml"))
         }
     }
 
@@ -133,6 +145,10 @@ tasks.withType<Test>().configureEach {
     )
 }
 
+// Dev builds skip the release lint check (two of their three minutes on the build server); the
+// profile, release and test builds still run it.
+tasks.matching { it.name.startsWith("lintVital") && it.name.contains("Dev") }.configureEach { enabled = false }
+
 // Lumen drives Lumen AI's engine directly (its own search screen, settings, Lab), not just the
 // simple LumenAi calls.
 kotlin {
@@ -158,7 +174,7 @@ baselineProfile {
 androidComponents {
     onVariants { variant ->
         variant.packaging.jniLibs.useLegacyPackaging.set(true)
-        val lab = hasLab && variant.buildType in listOf("debug", "profile")
+        val lab = hasLab && variant.buildType in listOf("debug", "profile", "dev")
         if (!lab) {
             variant.packaging.jniLibs.excludes.addAll(
                 "**/libQnnHtpPrepare.so", "**/libQnnHtpV68*.so", "**/libQnnDsp*.so", "**/libQnnGpu.so",
@@ -224,11 +240,13 @@ dependencies {
     if (hasLab) {
         debugImplementation(libs.litert) { exclude(group = "com.google.android.play") }
         "profileImplementation"(libs.litert) { exclude(group = "com.google.android.play") }
+        "devImplementation"(libs.litert) { exclude(group = "com.google.android.play") }
     }
     // Lumen Lab only (EmbeddingGemma 2); not in release.
     if (hasLab) {
         debugImplementation(libs.litertlm.android)
         "profileImplementation"(libs.litertlm.android)
+        "devImplementation"(libs.litertlm.android)
     }
     // Qualcomm's NPU: LiteRT's dispatch library and Qualcomm's QAIRT runtime (proprietary; a
     // build for F-Droid will need a flavour without them). Lumen AI uses it on supported chips.
