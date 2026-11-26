@@ -96,4 +96,151 @@
         <item quantity="other">%1$,d видео</item>
     </plurals>
     <string name="main_list_separator">", "</string>
+    <string name="main_library">Библиотека</string>
+    <string name="main_collections">Коллекции</string>
+    <string name="main_tabs">Вкладки</string>
+    <string name="main_zoom_years">Годы</string>
+    <string name="main_zoom_months">Месяцы</string>
+    <string name="main_zoom_all">Все</string>
+    <plurals name="main_item_count">
+        <item quantity="one">%1$d элемент</item>
+        <item quantity="few">%1$d элемента</item>
+        <item quantity="many">%1$d элементов</item>
+        <item quantity="other">%1$d элементов</item>
+    </plurals>
+    <string name="main_section_none">Нет</string>
+    <string name="main_section_months">Месяцы</string>
+    <string name="main_section_days">Дни</string>
+    <string name="main_today">Сегодня</string>
+    <string name="main_yesterday">Вчера</string>
+    <string name="main_no_photos_or_videos">Нет фотографий и видео</string>
+    <string name="main_badge_raw">RAW</string>
+    <string name="main_badge_gif">GIF</string>
+    <string name="main_view_filter">Фильтр</string>
+    <string name="main_view_sort">Сортировка</string>
+    <string name="main_view_grid">Сетка</string>
+    <string name="main_view_square">Квадрат</string>
+    <string name="main_view_aspect_ratio">Соотношение сторон</string>
+    <string name="main_view_mosaic">Мозаика</string>
+    <string name="main_unlock_lumen">Разблокировать Lumen</string>
+    <string name="main_pick_choose_photos">Выбрать фотографии</string>
+    <string name="main_pick_choose_a_photo">Выбрать фотографию</string>
+    <string name="main_pick_choose_videos">Выбрать видео</string>
+    <string name="main_pick_choose_a_video">Выбрать видео</string>
+    <string name="main_pick_choose_items">Выбрать элементы</string>
+    <string name="main_pick_choose_an_item">Выбрать элемент</string>
+    <string name="main_favorites_import_bad_file">Это не файл избранного из Fossify или Aves</string>
+    <plurals name="main_favorites_import_none">
+        <item quantity="one">На этом телефоне нет ни одного из %1$d избранных элементов</item>
+        <item quantity="few">На этом телефоне нет ни одного из %1$d избранных элементов</item>
+        <item quantity="many">На этом телефоне нет ни одного из %1$d избранных элементов</item>
+        <item quantity="other">На этом телефоне нет ни одного из %1$d избранных элементов</item>
+    </plurals>
+    <plurals name="main_favorites_import_already">
+        <item quantity="one">Все %1$d уже добавлены в избранное</item>
+        <item quantity="few">Все %1$d уже добавлены в избранное</item>
+        <item quantity="many">Все %1$d уже добавлены в избранное</item>
+        <item quantity="other">Все %1$d уже добавлены в избранное</item>
+    </plurals>
+    <string name="main_favorites_import_found">Найдено: %1$d из %2$d; добавляем %3$d в избранное</string>
+    <string name="main_settings_exported">Настройки экспортированы</string>
+    <string name="main_backup_save_failed">Не удалось сохранить резервную копию</string>
+    <string name="main_backup_bad_file">Это не резервная копия Lumen</string>
+    <string name="main_settings_restored">Настройки восстановлены</string>
+    <string name="main_all_files_title">Для скрытия требуется разрешение «Доступ ко всем файлам»</string>
+    <string name="main_all_files_message">Медиатека Android намеренно не отображает скрытые фотографии, поэтому Lumen должен работать напрямую с хранилищем, чтобы скрывать и показывать их. Никакие данные не покидают ваш телефон</string>
+    <string name="main_open_settings">Открыть настройки</string>
+    <string name="main_reset_lock_title">Сбросить блокировку скрытых файлов?</string>
+    <string name="main_reset_lock_message">На вашем телефоне не установлена блокировка экрана, поэтому любой, у кого окажется телефон, сможет сбросить защиту. Скрытые фотографии останутся скрытыми. Затем вы сможете установить новую блокировку</string>
+    <string name="main_reset">Сбросить</string>
+    <string name="main_unhidden">Скрытие снято</string>
+    <string name="main_unhide_failed_count">Не удалось показать %1$d</string>
+    <string name="main_unhide_failed">Не удалось показать</string>
+    <string name="main_unhide_dot_folder">«%1$s» скрыта из-за точки в названии. Чтобы показать её, переименуйте эту папку в файловом менеджере</string>
+    <string name="main_unhide_folder_title">Показать «%1$s»?</string>
+    <plurals name="main_unhide_folders_title">
+        <item quantity="one">Показать %1$d папку?</item>
+        <item quantity="few">Показать %1$d папки?</item>
+        <item quantity="many">Показать %1$d папок?</item>
+        <item quantity="other">Показать %1$d папок?</item>
+    </plurals>
+    <plurals name="main_unhide_folders_message">
+        <item quantity="one">Эти папки скрыты целиком, поэтому все %1$d элемент в них снова появятся в библиотеке Lumen и других приложениях-галереях</item>
+        <item quantity="few">Эти папки скрыты целиком, поэтому все %1$d элемента в них снова появятся в библиотеке Lumen и других приложениях-галереях</item>
+        <item quantity="many">Эти папки скрыты целиком, поэтому все %1$d элементов в них снова появятся в библиотеке Lumen и других приложениях-галереях</item>
+        <item quantity="other">Эти папки скрыты целиком, поэтому все %1$d элементов в них снова появятся в библиотеке Lumen и других приложениях-галереях</item>
+    </plurals>
+    <string name="main_hidden_encrypted_find">Скрыто и зашифровано. Найти можно в разделе «Коллекции» → «Скрытые»</string>
+    <string name="main_hidden_find">Скрыто. Найти можно в разделе «Коллекции» → «Скрытые»</string>
+    <string name="main_hidden_and_encrypted">Скрыто и зашифровано</string>
+    <string name="main_hid_n_of">Скрыто: %1$d из %2$d</string>
+    <string name="main_hide_some_folders_failed">Не удалось скрыть некоторые папки</string>
+    <string name="main_hide_folder_title">Скрыть «%1$s»?</string>
+    <plurals name="main_hide_folders_title">
+        <item quantity="one">Скрыть %1$d папку?</item>
+        <item quantity="few">Скрыть %1$d папки?</item>
+        <item quantity="many">Скрыть %1$d папок?</item>
+        <item quantity="other">Скрыть %1$d папок?</item>
+    </plurals>
+    <plurals name="main_hide_folder_encrypt_message">
+        <item quantity="one">Все %1$d элемент в этой папке будут зашифрованы и помещены в защищённое хранилище Lumen. Другие приложения не смогут их увидеть. Найти их можно в разделе «Коллекции» → «Скрытые</item>
+        <item quantity="few">Все %1$d элемента в этой папке будут зашифрованы и помещены в защищённое хранилище Lumen. Другие приложения не смогут их увидеть. Найти их можно в разделе «Коллекции» → «Скрытые</item>
+        <item quantity="many">Все %1$d элементов в этой папке будут зашифрованы и помещены в защищённое хранилище Lumen. Другие приложения не смогут их увидеть. Найти их можно в разделе «Коллекции» → «Скрытые</item>
+        <item quantity="other">Все %1$d элементов в этой папке будут зашифрованы и помещены в защищённое хранилище Lumen. Другие приложения не смогут их увидеть. Найти их можно в разделе «Коллекции» → «Скрытые</item>
+    </plurals>
+    <plurals name="main_hide_folders_encrypt_message">
+        <item quantity="one">Все элементы (%1$d) в этих папках будут зашифрованы и помещены в защищённое хранилище Lumen. Другие приложения не смогут их увидеть. Найти их можно в разделе «Коллекции» → «Скрытые</item>
+        <item quantity="few">Все элементы (%1$d) в этих папках будут зашифрованы и помещены в защищённое хранилище Lumen. Другие приложения не смогут их увидеть. Найти их можно в разделе «Коллекции» → «Скрытые</item>
+        <item quantity="many">Все элементы (%1$d) в этих папках будут зашифрованы и помещены в защищённое хранилище Lumen. Другие приложения не смогут их увидеть. Найти их можно в разделе «Коллекции» → «Скрытые</item>
+        <item quantity="other">Все элементы (%1$d) в этих папках будут зашифрованы и помещены в защищённое хранилище Lumen. Другие приложения не смогут их увидеть. Найти их можно в разделе «Коллекции» → «Скрытые</item>
+    </plurals>
+    <plurals name="main_hide_folder_message">
+        <item quantity="one">Все элементы (%1$d) в этой папке будут скрыты из библиотеки Lumen и приложений, использующих медиатеку Android, например Google Фото. Однако файловые менеджеры и галереи, обращающиеся напрямую к хранилищу, по-прежнему смогут их видеть. Найти их можно в разделе «Коллекции» → «Скрытые</item>
+        <item quantity="few">Все элементы (%1$d) в этой папке будут скрыты из библиотеки Lumen и приложений, использующих медиатеку Android, например Google Фото. Однако файловые менеджеры и галереи, обращающиеся напрямую к хранилищу, по-прежнему смогут их видеть. Найти их можно в разделе «Коллекции» → «Скрытые</item>
+        <item quantity="many">Все элементы (%1$d) в этой папке будут скрыты из библиотеки Lumen и приложений, использующих медиатеку Android, например Google Фото. Однако файловые менеджеры и галереи, обращающиеся напрямую к хранилищу, по-прежнему смогут их видеть. Найти их можно в разделе «Коллекции» → «Скрытые</item>
+        <item quantity="other">Все элементы (%1$d) в этой папке будут скрыты из библиотеки Lumen и приложений, использующих медиатеку Android, например Google Фото. Однако файловые менеджеры и галереи, обращающиеся напрямую к хранилищу, по-прежнему смогут их видеть. Найти их можно в разделе «Коллекции» → «Скрытые</item>
+    </plurals>
+    <plurals name="main_hide_folders_message">
+        <item quantity="one">Все элементы (%1$d) в этих папках будут скрыты из библиотеки Lumen и приложений, использующих медиатеку Android, например Google Фото. Файловые менеджеры и галереи, которые обращаются напрямую к хранилищу, всё равно смогут их видеть. Найти их можно в разделе «Коллекции» → «Скрытые».</item>
+        <item quantity="few">Все элементы (%1$d) в этих папках будут скрыты из библиотеки Lumen и приложений, использующих медиатеку Android, например Google Фото. Файловые менеджеры и галереи, которые обращаются напрямую к хранилищу, всё равно смогут их видеть. Найти их можно в разделе «Коллекции» → «Скрытые».</item>
+        <item quantity="many">Все элементы (%1$d) в этих папках будут скрыты из библиотеки Lumen и приложений, использующих медиатеку Android, например Google Фото. Файловые менеджеры и галереи, которые обращаются напрямую к хранилищу, всё равно смогут их видеть. Найти их можно в разделе «Коллекции» → «Скрытые».</item>
+        <item quantity="other">Все элементы (%1$d) в этих папках будут скрыты из библиотеки Lumen и приложений, использующих медиатеку Android, например Google Фото. Файловые менеджеры и галереи, которые обращаются напрямую к хранилищу, всё равно смогут их видеть. Найти их можно в разделе «Коллекции» → «Скрытые».</item>
+    </plurals>
+    <string name="main_vault_wrong_lock">Это хранилище защищено другим паролем Lumen. Введите его, чтобы открыть хранилище.</string>
+    <string name="main_vault_partial_encrypt">Зашифровано: %1$d. Не удалось зашифровать: %2$d — они остались без изменений</string>
+    <string name="main_vault_partial_decrypt">Расшифровано: %1$d. Не удалось расшифровать: %2$d — они остались без изменений</string>
+    <string name="main_encrypt_hidden_on">Шифрование скрытых файлов включено</string>
+    <plurals name="main_encrypted_items">
+        <item quantity="one">Зашифровано скрытых элементов: %1$d</item>
+        <item quantity="few">Зашифровано скрытых элементов: %1$d</item>
+        <item quantity="many">Зашифровано скрытых элементов: %1$d</item>
+        <item quantity="other">Зашифровано скрытых элементов: %1$d</item>
+    </plurals>
+    <plurals name="main_decrypted_items">
+        <item quantity="one">Расшифровано элементов: %1$d. Теперь они снова скрыты обычным способом</item>
+        <item quantity="few">Расшифровано элементов: %1$d. Теперь они снова скрыты обычным способом</item>
+        <item quantity="many">Расшифровано элементов: %1$d. Теперь они снова скрыты обычным способом</item>
+        <item quantity="other">Расшифровано элементов: %1$d. Теперь они снова скрыты обычным способом</item>
+    </plurals>
+    <string name="main_delete_this_item">Удалить этот элемент?</string>
+    <plurals name="main_delete_items_title">
+        <item quantity="one">Удалить элементы: %1$d?</item>
+        <item quantity="few">Удалить элементы: %1$d?</item>
+        <item quantity="many">Удалить элементы: %1$d?</item>
+        <item quantity="other">Удалить элементы: %1$d?</item>
+    </plurals>
+    <string name="main_delete_hidden_message">Скрытые элементы нельзя переместить в раздел «Недавно удалённые», поэтому они будут удалены без возможности восстановления</string>
+    <string name="main_deleted">Удалено</string>
+    <string name="main_delete_failed">Не удалось удалить: %1$d из %2$d</string>
+    <string name="main_excluded_name">«%1$s» добавлена в исключённые. Отменить можно в настройках → «Исключённые папки»</string>
+    <plurals name="main_excluded_folders">
+        <item quantity="one">Исключена папка: %1$d. Отменить можно в настройках → «Исключённые папки»</item>
+        <item quantity="few">Исключено папок: %1$d. Отменить можно в настройках → «Исключённые папки»</item>
+        <item quantity="many">Исключено папок: %1$d. Отменить можно в настройках → «Исключённые папки»</item>
+        <item quantity="other">Исключено папок: %1$d. Отменить можно в настройках → «Исключённые папки»</item>
+    </plurals>
+    <string name="main_rotating">Поворачиваем…</string>
+    <string name="main_rotate_failed">Не удалось повернуть: %1$d из %2$d</string>
+    <string name="main_merge_with_ellipsis">Объединить с…</string>
+    <string name="main_select_people">Выбрать людей</string>
 </resources>
