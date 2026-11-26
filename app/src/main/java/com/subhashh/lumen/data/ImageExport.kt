@@ -165,6 +165,19 @@ object ImageExport {
         if (exif.getAttribute(ExifInterface.TAG_DATETIME_ORIGINAL) != null &&
             exif.getAttribute(ExifInterface.TAG_OFFSET_TIME_ORIGINAL) != null
         ) return
+        // The camera's own date without a time zone: keep its wall clock, and add the offset that
+        // puts it at [takenAt] (rewriting it in today's zone moved the time of day).
+        val wall = exif.getAttribute(ExifInterface.TAG_DATETIME_ORIGINAL)?.let { text ->
+            runCatching { java.time.LocalDateTime.parse(text.trim(), java.time.format.DateTimeFormatter.ofPattern("yyyy:MM:dd HH:mm:ss")) }.getOrNull()
+        }
+        if (wall != null) {
+            val seconds = wall.toEpochSecond(java.time.ZoneOffset.UTC) - takenAt / 1000
+            // A real offset: within ±14 h, in quarter hours. Otherwise the instant is from elsewhere.
+            if (kotlin.math.abs(seconds) <= 14 * 3600 && seconds % 900 == 0L) {
+                exif.setAttribute(ExifInterface.TAG_OFFSET_TIME_ORIGINAL, java.time.ZoneOffset.ofTotalSeconds(seconds.toInt()).id.let { if (it == "Z") "+00:00" else it })
+                return
+            }
+        }
         val date = Date(takenAt)
         exif.setAttribute(ExifInterface.TAG_DATETIME_ORIGINAL, SimpleDateFormat("yyyy:MM:dd HH:mm:ss", Locale.US).format(date))
         // "+05:30"; the pattern writes UTC as "Z", which EXIF doesn't have.
