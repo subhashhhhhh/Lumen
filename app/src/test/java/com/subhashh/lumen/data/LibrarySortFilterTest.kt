@@ -74,18 +74,22 @@ class LibrarySortFilterTest {
         fun shown(filter: LibraryFilter) = items.filter(filter::matches).ids
 
         assertEquals(listOf(1L, 2L, 3L, 4L), shown(LibraryFilter.All))
-        assertEquals(listOf(1L, 3L, 4L), shown(LibraryFilter.Photos))
+        // Camera photos only (#43): the screenshot isn't one.
+        assertEquals(listOf(1L, 3L), shown(LibraryFilter.Photos))
         assertEquals(listOf(2L), shown(LibraryFilter.Videos))
         assertEquals(listOf(3L), shown(LibraryFilter.Favorites))
         assertEquals(listOf(4L), shown(LibraryFilter.Screenshots))
     }
 
     @Test
-    fun photosAndVideosSplitTheLibraryExactly() {
-        val items = listOf(media(1), media(2, name = "v.mp4"), media(3, mimeType = "image/gif"))
-        for (item in items) {
-            assertTrue(LibraryFilter.Photos.matches(item) != LibraryFilter.Videos.matches(item))
-        }
-        assertFalse(LibraryFilter.Videos.matches(media(3, mimeType = "image/gif")))
+    fun photosAreCameraPhotosOnly() {
+        assertTrue(LibraryFilter.Photos.matches(media(1, relativePath = "DCIM/Camera/")))
+        assertTrue(LibraryFilter.Photos.matches(media(2, relativePath = "DCIM/OpenCamera/")))
+        // Downloads, chat images, screenshots kept in DCIM, and camera videos aren't.
+        assertFalse(LibraryFilter.Photos.matches(media(3, relativePath = "Download/")))
+        assertFalse(LibraryFilter.Photos.matches(media(4, relativePath = "Pictures/WhatsApp/")))
+        assertFalse(LibraryFilter.Photos.matches(media(5, relativePath = "DCIM/Screenshots/", mimeType = "image/png")))
+        assertFalse(LibraryFilter.Photos.matches(media(6, name = "v.mp4")))
+        assertFalse(LibraryFilter.Videos.matches(media(7, mimeType = "image/gif")))
     }
 }
