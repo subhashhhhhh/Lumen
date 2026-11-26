@@ -131,7 +131,7 @@ internal fun SmartSearchGroup(
      * its size before it's downloaded where no quality picker above already shows it.
      */
     @Composable
-    fun PackRow(pack: ModelPack, title: String, removeTitle: String, removeMessage: String, iconColor: Color, icon: ImageVector = LumenIcons.Import, sizeShown: Boolean = false) {
+    fun PackRow(pack: ModelPack, title: String, removeTitle: String, removeMessage: String, iconColor: Color, icon: ImageVector = LumenIcons.Folder, sizeShown: Boolean = false) {
         val (status, action) = remember(state, refresh, changed, chosenId) { packStatus(context, pack, state, wifiOnly, sizeShown) }
         ActionRow(
             title = title,
@@ -363,7 +363,6 @@ internal fun SmartSearchGroup(
                 ModelPack.Faces, stringResource(R.string.smart_faces_model), stringResource(R.string.smart_faces_remove_title),
                 stringResource(R.string.smart_faces_remove_message),
                 Purple,
-                LumenIcons.Face,
             )
         }
         if (facesReady) {
@@ -391,11 +390,11 @@ internal fun SmartSearchGroup(
         footer = stringResource(R.string.smart_subtitles_footer),
     ) {
         Anchor("subtitle-quality", highlight) {
-            PickerRow(
+            // One tier so far: shown, not offered as a choice.
+            SettingsRow(
                 title = stringResource(R.string.smart_subtitles_quality),
-                options = SpeechModel.tiers.map { stringResource(R.string.smart_option_size, modelLabel(context, it.label), megabytes(SpeechModel.bytes)) },
-                selected = 0,
-                onSelect = {},
+                value = SpeechModel.tiers.first().let { stringResource(R.string.smart_option_size, modelLabel(context, it.label), megabytes(SpeechModel.bytes)) },
+                onClick = null,
                 icon = LumenIcons.Subtitles,
                 iconColor = Purple,
             )
