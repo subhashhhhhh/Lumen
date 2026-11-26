@@ -96,8 +96,9 @@ enum class SearchOrder(@StringRes val label: Int) {
 
     fun sorted(items: List<MediaItem>): List<MediaItem> = when (this) {
         Best -> items
-        Newest -> items.sortedByDescending { it.takenAt }
-        Oldest -> items.sortedBy { it.takenAt }
+        // Same moment (a burst): by id, as the Library orders them.
+        Newest -> items.sortedWith(compareByDescending<MediaItem> { it.takenAt }.thenByDescending { it.id })
+        Oldest -> items.sortedWith(compareBy<MediaItem> { it.takenAt }.thenBy { it.id })
     }
 
     companion object {
