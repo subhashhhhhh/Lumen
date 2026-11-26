@@ -95,4 +95,5 @@
         <item quantity="many">%1$,d видео</item>
         <item quantity="other">%1$,d видео</item>
     </plurals>
+    <string name="main_list_separator">", "</string>
 </resources>
