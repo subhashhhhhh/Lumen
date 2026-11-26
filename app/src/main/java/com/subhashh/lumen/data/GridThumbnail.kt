@@ -51,17 +51,24 @@ class GridThumbnailFetcher(
     override suspend fun fetch(): FetchResult = withContext(Dispatchers.IO) {
         // One entry per file version and size: a rotate or edit changes the version. Videos are
         // v2: first frames now, where v1 had Android's mid-video pick.
-        val key = "${if (data.item.isVideo) "v2" else "v1"}:${data.item.id}@${data.item.modified}:${data.sizePx}"
+        // Images that can be see-through are t1: squares behind them now (#27), where v1 was black.
+        val version = when {
+            data.item.isVideo -> "v2"
+            Checkerboard.mayBeTransparent(data.item) -> "t1"
+            else -> "v1"
+        }
+        val key = "$version:${data.item.id}@${data.item.modified}:${data.sizePx}"
         if (data.persist) cache.openSnapshot(key)?.use { snapshot ->
             BitmapFactory.decodeFile(snapshot.data.toFile().path)?.let { cached ->
                 return@withContext ImageFetchResult(cached.asImage(), isSampled = true, dataSource = DataSource.DISK)
             }
         }
-        val bitmap = if (data.item.mimeType in BundledDecoderTypes || com.subhashh.lumen.data.vault.Vault.isVault(data.item)) {
+        val decoded = if (data.item.mimeType in BundledDecoderTypes || com.subhashh.lumen.data.vault.Vault.isVault(data.item)) {
             decodeWithLoader(data.item, data.sizePx)
         } else {
             create(options.context, data.item, data.sizePx)
         }
+        val bitmap = if (Checkerboard.mayBeTransparent(data.item)) Checkerboard.under(decoded) else decoded
         if (data.persist) save(key, bitmap)
         ImageFetchResult(bitmap.asImage(), isSampled = true, dataSource = DataSource.DISK)
     }
@@ -125,6 +132,8 @@ class GridThumbnailFetcher(
                     else context.contentResolver.loadThumbnail(item.uri, size, null)
                 // Hidden files aren't in MediaStore: no system thumbnails.
                 isFile -> decodeOriginal(ImageDecoder.createSource(File(item.uri.path!!)), sizePx)
+                // Android's thumbnails are JPEG: see-through parts come out black. From the original.
+                Checkerboard.mayBeTransparent(item) -> decodeOriginal(ImageDecoder.createSource(context.contentResolver, item.uri), sizePx)
                 // Small cells don't need the original: Android's thumbnail cache is sharp enough.
                 sizePx <= SystemThumbnailMaxPx -> context.contentResolver.loadThumbnail(item.uri, size, null)
                 else -> decodeOriginal(ImageDecoder.createSource(context.contentResolver, item.uri), sizePx)

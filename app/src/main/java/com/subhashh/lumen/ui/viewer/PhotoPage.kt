@@ -14,6 +14,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -69,6 +71,15 @@ fun PhotoPage(
     var viewport by remember { mutableStateOf(IntSize.Zero) }
     val doubleClick = remember { FillOnDoubleClick { viewport } }
     Box(modifier.fillMaxSize().onSizeChanged { viewport = it }) {
+    // Squares behind see-through parts (#27), fixed to the screen while the picture moves over
+    // them. An opaque picture covers them completely.
+    if (com.subhashh.lumen.data.Checkerboard.mayBeTransparent(item)) {
+        val squares = rememberCheckerboardBrush()
+        androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
+            val bounds = state.zoomableState.transformedContentBounds
+            if (bounds.width > 0f && bounds.height > 0f) drawRect(squares, topLeft = bounds.topLeft, size = bounds.size)
+        }
+    }
     ZoomableAsyncImage(
         model = remember(item.version) {
             ImageRequest.Builder(context)
@@ -113,5 +124,28 @@ fun PhotoPage(
     if (outline != null && (state.zoomableState.zoomFraction ?: 0f) <= 0.01f) {
         OutlineSweep(outline, state.zoomableState.transformedContentBounds)
     }
+    }
+}
+
+/** Two by two squares, repeated across whatever it fills. */
+@Composable
+private fun rememberCheckerboardBrush(): androidx.compose.ui.graphics.Brush {
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    return remember(density) {
+        val cell = with(density) { 12.dp.roundToPx() }.coerceAtLeast(4)
+        val tile = android.graphics.Bitmap.createBitmap(cell * 2, cell * 2, android.graphics.Bitmap.Config.ARGB_8888).apply {
+            eraseColor(com.subhashh.lumen.data.Checkerboard.Light)
+            val canvas = android.graphics.Canvas(this)
+            val paint = android.graphics.Paint().apply { color = com.subhashh.lumen.data.Checkerboard.Dark }
+            canvas.drawRect(0f, 0f, cell.toFloat(), cell.toFloat(), paint)
+            canvas.drawRect(cell.toFloat(), cell.toFloat(), cell * 2f, cell * 2f, paint)
+        }
+        androidx.compose.ui.graphics.ShaderBrush(
+            androidx.compose.ui.graphics.ImageShader(
+                tile.asImageBitmap(),
+                androidx.compose.ui.graphics.TileMode.Repeated,
+                androidx.compose.ui.graphics.TileMode.Repeated,
+            ),
+        )
     }
 }
