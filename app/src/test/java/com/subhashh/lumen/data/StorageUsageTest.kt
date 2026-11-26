@@ -2,6 +2,7 @@ package com.subhashh.lumen.data
 
 import android.content.Context
 import com.subhashh.lumen.ai.AiModel
+import com.subhashh.lumen.ai.LumenAi
 import com.subhashh.lumen.ai.LumenAiEngine
 import com.subhashh.lumen.ai.ModelCatalog
 import kotlinx.coroutines.runBlocking
@@ -34,6 +35,8 @@ class StorageUsageTest {
 
     @Before
     fun clean() {
+        // As LumenApplication does: the chosen search model comes from the app's settings.
+        LumenAi.install(AiHost(context))
         context.noBackupFilesDir.deleteRecursively()
         context.noBackupFilesDir.mkdirs()
         search.mkdirs()
