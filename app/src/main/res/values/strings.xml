@@ -1174,8 +1174,8 @@
     <string name="onboarding_photos_videos">Photos and Videos</string>
     <string name="onboarding_photos_videos_detail">Needed to show your library</string>
     <string name="onboarding_optional">Optional</string>
-    <string name="onboarding_location">Where Photos Were Taken</string>
-    <string name="onboarding_location_detail">For maps and place names</string>
+    <string name="onboarding_location">Location in Photos</string>
+    <string name="onboarding_location_detail">Reads where each photo was taken, for maps. Not your phone’s location</string>
     <string name="onboarding_location_blocked">Off: Android won’t ask again</string>
     <string name="onboarding_all_files">All Files</string>
     <string name="onboarding_all_files_detail">Manage folders and hidden files, like Fossify</string>
@@ -1358,7 +1358,7 @@
     <string name="data_filter_favorites">Favorites</string>
     <string name="data_filter_screenshots">Screenshots</string>
     <string name="data_empty_all">No photos or videos</string>
-    <string name="data_empty_photos">No photos</string>
+    <string name="data_empty_photos">No camera photos</string>
     <string name="data_empty_videos">No videos</string>
     <string name="data_empty_favorites">No favorites</string>
     <string name="data_empty_screenshots">No screenshots</string>

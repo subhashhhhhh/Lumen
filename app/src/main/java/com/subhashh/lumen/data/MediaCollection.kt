@@ -79,6 +79,13 @@ val MediaItem.isRaw: Boolean
 internal val MediaItem.isScreenshot: Boolean
     get() = relativePath.contains("screenshot", ignoreCase = true)
 
+/**
+ * A photo taken with a camera: camera apps save under DCIM (DCIM/Camera, DCIM/OpenCamera…), where
+ * some phones also keep screenshots. By folder, as EXIF isn't read for the whole library.
+ */
+internal val MediaItem.isCameraPhoto: Boolean
+    get() = !isVideo && relativePath.startsWith("DCIM/", ignoreCase = true) && !isScreenshot
+
 @Immutable
 data class MediaCollection(
     val key: String,
