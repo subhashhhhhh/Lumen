@@ -104,6 +104,15 @@ internal fun fileMessage(context: Context, move: Boolean, result: FileResult, al
         result.failed == 0 && result.done == 0 -> context.getString(R.string.main_file_already_in, album)
         result.failed == 0 ->
             res.getQuantityString(if (move) R.plurals.main_file_moved else R.plurals.main_file_copied, result.done, result.done, album)
+        // Some went and the rest need All files access: say how many went, or repeating the move
+        // makes duplicates of those.
+        result.needsAllFilesAccess && result.done > 0 -> res.getQuantityString(
+            if (move) R.plurals.main_file_moved_some_need_access else R.plurals.main_file_copied_some_need_access,
+            result.done,
+            result.done,
+            album,
+            result.failed,
+        )
         result.needsAllFilesAccess ->
             context.getString(if (move) R.string.main_file_move_needs_access else R.string.main_file_copy_needs_access, album)
         result.done == 0 -> context.getString(if (move) R.string.main_file_move_failed else R.string.main_file_copy_failed, album)

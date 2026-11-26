@@ -381,6 +381,14 @@
     <string name="main_file_copy_needs_access">Couldn\'t copy into %1$s: that folder needs All files access (Settings → Permissions)</string>
     <string name="main_file_move_failed">Couldn\'t move to %1$s</string>
     <string name="main_file_copy_failed">Couldn\'t copy to %1$s</string>
+    <plurals name="main_file_moved_some_need_access">
+        <item quantity="one">Moved %1$d item to %2$s; %3$d need All files access (Settings → Permissions)</item>
+        <item quantity="other">Moved %1$d items to %2$s; %3$d need All files access (Settings → Permissions)</item>
+    </plurals>
+    <plurals name="main_file_copied_some_need_access">
+        <item quantity="one">Copied %1$d item to %2$s; %3$d need All files access (Settings → Permissions)</item>
+        <item quantity="other">Copied %1$d items to %2$s; %3$d need All files access (Settings → Permissions)</item>
+    </plurals>
     <plurals name="main_file_moved_some_failed">
         <item quantity="one">Moved %1$d item to %2$s; %3$d failed</item>
         <item quantity="other">Moved %1$d items to %2$s; %3$d failed</item>
