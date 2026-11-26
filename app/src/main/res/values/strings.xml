@@ -223,6 +223,9 @@
     <string name="main_delete_hidden_message">Hidden items can\'t go to Recently Deleted, so this is permanent.</string>
     <string name="main_deleted">Deleted</string>
     <string name="main_delete_failed">Couldn\'t delete %1$d of %2$d</string>
+    <string name="main_metadata_changed">Changed %1$s</string>
+    <string name="main_metadata_removed">Removed %1$s</string>
+    <string name="main_metadata_failed">Couldn\'t change %1$s</string>
     <string name="main_excluded_name">Excluded “%1$s”. Undo in Settings → Excluded folders</string>
     <plurals name="main_excluded_folders">
         <item quantity="one">Excluded %1$d folders. Undo in Settings → Excluded folders</item>
@@ -1040,6 +1043,7 @@
     <string name="viewer_export_srt">Export SRT</string>
     <string name="viewer_export_vtt">Export VTT</string>
     <string name="viewer_all_metadata">All Metadata</string>
+    <string name="viewer_metadata_edit_hint">Tap a field to change it. Leave it empty to remove it.</string>
     <string name="viewer_show">Show</string>
     <string name="viewer_nothing_readable">Nothing readable in this file</string>
     <!-- After the local time when the photo was taken in another time zone, e.g. "3:40 PM your time". -->

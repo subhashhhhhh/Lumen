@@ -8,6 +8,7 @@ import androidx.exifinterface.media.ExifInterface
 import com.subhashh.lumen.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlin.coroutines.resume
 
 /**
  * Every tag in a file, for Details → All Metadata: EXIF for photos; for videos, the container's
@@ -60,5 +61,34 @@ object AllMetadata {
                 }.orEmpty()
             }
         }.getOrDefault(emptyList())
+    }
+
+    /** Types ExifInterface can save: field edits are offered for these (#9). Not encrypted Hidden files. */
+    private val WritableTypes = setOf("image/jpeg", "image/png", "image/webp")
+
+    fun editable(item: MediaItem): Boolean =
+        !item.isVideo && item.mimeType in WritableTypes && !com.subhashh.lumen.data.vault.Vault.isVault(item)
+
+    /**
+     * Sets EXIF [tag] to [value], or removes it when [value] is null, in the file itself; then
+     * MediaStore reads the file again. The caller has write access. False when it couldn't.
+     */
+    suspend fun write(context: Context, item: MediaItem, tag: String, value: String?): Boolean = withContext(Dispatchers.IO) {
+        val saved = runCatching {
+            context.contentResolver.openFileDescriptor(item.uri, "rw")?.use { pfd ->
+                val exif = ExifInterface(pfd.fileDescriptor)
+                exif.setAttribute(tag, value)
+                exif.saveAttributes()
+                true
+            } ?: false
+        }.onFailure { android.util.Log.w("LumenMetadata", "Couldn't write $tag to ${item.name}", it) }.getOrDefault(false)
+        if (saved) {
+            MediaFiles.filePath(context, item)?.let { path ->
+                kotlinx.coroutines.suspendCancellableCoroutine<Unit> { cont ->
+                    android.media.MediaScannerConnection.scanFile(context, arrayOf(path), null) { _, _ -> if (cont.isActive) cont.resume(Unit) }
+                }
+            }
+        }
+        saved
     }
 }

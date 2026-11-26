@@ -192,6 +192,35 @@ internal fun BoxScope.MainDialogs(
             onDismiss = { enteringHfToken = false },
         )
 
+        // Details → All Metadata: change a field, or empty it to remove it (#9).
+        RenameDialog(
+            currentName = metadataEdit?.value,
+            title = metadataEdit?.tag.orEmpty(),
+            confirm = stringResource(R.string.common_save),
+            keepExtension = false,
+            freeText = true,
+            onRename = { text ->
+                val edit = metadataEdit
+                metadataEdit = null
+                if (edit != null) {
+                    val value = text.trim().ifEmpty { null }
+                    withWriteAccess(listOf(edit.item)) {
+                        scope.launch {
+                            val ok = com.subhashh.lumen.data.AllMetadata.write(context, edit.item, edit.tag, value)
+                            finish(
+                                when {
+                                    !ok -> context.getString(R.string.main_metadata_failed, edit.tag)
+                                    value == null -> context.getString(R.string.main_metadata_removed, edit.tag)
+                                    else -> context.getString(R.string.main_metadata_changed, edit.tag)
+                                },
+                            )
+                        }
+                    }
+                }
+            },
+            onDismiss = { metadataEdit = null },
+        )
+
         RenameDialog(
             currentName = renameName,
             onRename = { newName ->

@@ -22,6 +22,7 @@ import com.subhashh.lumen.ai.SearchSuggestions
 import com.subhashh.lumen.ai.ModelDownloads
 import com.subhashh.lumen.ai.Cue
 import com.subhashh.lumen.data.CaptionStore
+import androidx.compose.foundation.clickable
 import com.subhashh.lumen.data.AllMetadata
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
@@ -138,6 +139,8 @@ fun DetailsSheet(
     onOpenMap: (GeoPoint) -> Unit,
     onAllowLocation: () -> Unit,
     onRename: (MediaItem) -> Unit,
+    /** A field in All Metadata was tapped: change or remove it (tag, current value). */
+    onEditMetadata: (MediaItem, String, String) -> Unit = { _, _, _ -> },
     onAdjustDate: (MediaItem) -> Unit,
     /** Opens the caption editor with the current caption (null: none yet). */
     onEditCaption: (MediaItem, String?) -> Unit,
@@ -294,7 +297,7 @@ fun DetailsSheet(
         if (material) {
             // Material lays the rest out its own way: what Lumen sees first, then one list of details.
             WhatLumenSees(item, colors, onSearch, player)
-            MaterialDetails(item, d, colors, showMaps, onOpenMap, onAllowLocation, onRename)
+            MaterialDetails(item, d, colors, showMaps, onOpenMap, onAllowLocation, onRename, onEditMetadata)
             return@Column
         }
         d.camera?.let { camera ->
@@ -333,7 +336,7 @@ fun DetailsSheet(
         Group(colors) { FileGroup(item, d, colors, onRename) }
 
         Spacer(Modifier.height(10.dp))
-        Group(colors) { AllMetadataGroup(item, d.locationReadable, colors) }
+        Group(colors) { AllMetadataGroup(item, d.locationReadable, colors, onEditMetadata) }
     }
 }
 
@@ -533,10 +536,13 @@ private fun exportSubtitles(context: Context, item: MediaItem, body: String, ext
 
 /** Every tag in the file, folded away until asked for. */
 @Composable
-private fun AllMetadataGroup(item: MediaItem, canReadLocation: Boolean, colors: SheetColors) {
+private fun AllMetadataGroup(item: MediaItem, canReadLocation: Boolean, colors: SheetColors, onEditTag: (MediaItem, String, String) -> Unit) {
     val context = LocalContext.current
     var open by remember(item.id) { mutableStateOf(false) }
-    val tags by produceState(emptyList<Pair<String, String>>(), item.id, open) {
+    // Fields can be changed or removed in the types Android can write (#9).
+    val editable = remember(item.mimeType) { AllMetadata.editable(item) }
+    // Read again after a change (the file's modified time moves).
+    val tags by produceState(emptyList<Pair<String, String>>(), item.id, item.modified, open) {
         if (open) value = AllMetadata.read(context, item, canReadLocation)
     }
     Row(
@@ -564,9 +570,15 @@ private fun AllMetadataGroup(item: MediaItem, canReadLocation: Boolean, colors: 
     if (open) {
         Spacer(Modifier.height(8.dp))
         if (tags.isEmpty()) Line(stringResource(R.string.viewer_nothing_readable), colors, secondary = true)
+        else if (editable) Line(stringResource(R.string.viewer_metadata_edit_hint), colors, secondary = true)
         for ((key, value) in tags) {
             val size = if (Lumen.material) 13.sp else 12.sp
-            Row(Modifier.fillMaxWidth().padding(vertical = if (Lumen.material) 5.dp else 3.dp)) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .then(if (editable) Modifier.clickable { onEditTag(item, key, value) } else Modifier)
+                    .padding(vertical = if (Lumen.material) 5.dp else 3.dp),
+            ) {
                 Text(key, color = colors.secondary, fontSize = size, modifier = Modifier.weight(0.42f))
                 Text(value, color = colors.text, fontSize = size, modifier = Modifier.weight(0.58f))
             }
@@ -972,6 +984,7 @@ private fun MaterialDetails(
     onOpenMap: (GeoPoint) -> Unit,
     onAllowLocation: () -> Unit,
     onRename: (MediaItem) -> Unit,
+    onEditMetadata: (MediaItem, String, String) -> Unit,
 ) {
     val context = LocalContext.current
     SectionLabel(stringResource(R.string.common_details), colors)
@@ -1086,7 +1099,7 @@ private fun MaterialDetails(
 
         // Every tag in the file, folded away until asked for.
         Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).background(colors.group).padding(horizontal = 16.dp, vertical = 16.dp)) {
-            AllMetadataGroup(item, d.locationReadable, colors)
+            AllMetadataGroup(item, d.locationReadable, colors, onEditMetadata)
         }
     }
 }
