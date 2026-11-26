@@ -3,7 +3,7 @@ package com.subhashh.lumen.ui.library
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.subhashh.lumen.data.ExcludedFolders
+import com.subhashh.lumen.data.Exclusions
 import com.subhashh.lumen.data.HiddenIndex
 import com.subhashh.lumen.data.vault.Vault
 import com.subhashh.lumen.data.HiddenMedia
@@ -34,13 +34,13 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
     private val _allItems = MutableStateFlow<List<MediaItem>?>(null)
     val allItems: StateFlow<List<MediaItem>?> = _allItems.asStateFlow()
 
-    private val _excluded = MutableStateFlow(prefs.excludedFolders)
-    /** Folders (relative paths) Lumen ignores, each with its subfolders. */
-    val excluded: StateFlow<Set<String>> = _excluded.asStateFlow()
+    private val _excluded = MutableStateFlow(prefs.exclusions)
+    /** Folders (relative paths) Lumen ignores, each with its subfolders, and the exceptions. */
+    val excluded: StateFlow<Exclusions> = _excluded.asStateFlow()
 
     /** The library as every screen sees it: excluded folders removed. Null until first loaded. */
     val items: StateFlow<List<MediaItem>?> = combine(_allItems, _excluded) { all, excluded ->
-        all?.let { list -> if (excluded.isEmpty()) list else list.filterNot { ExcludedFolders.covers(excluded, it) } }
+        all?.let { list -> if (excluded.isEmpty) list else list.filterNot { excluded.covers(it) } }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     private val _trash = MutableStateFlow<List<MediaItem>>(emptyList())
@@ -106,7 +106,7 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
         if (vault == null) return@combine null
         all?.let { list ->
             val both = if (vault.isEmpty()) list else (list + vault).sortedWith(compareBy<MediaItem> { it.takenAt }.thenBy { it.id })
-            if (excluded.isEmpty()) both else both.filterNot { ExcludedFolders.covers(excluded, it) }
+            if (excluded.isEmpty) both else both.filterNot { excluded.covers(it) }
         }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
@@ -160,12 +160,26 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun exclude(folders: Collection<String>) = setExcluded(_excluded.value + folders)
+    /** Hides [folders] and everything in them (a folder shown anyway inside stays shown). */
+    fun exclude(folders: Collection<String>) = set(_excluded.value.let { it.copy(excluded = it.excluded + folders, shown = it.shown - folders.toSet()) })
 
-    fun include(folder: String) = setExcluded(_excluded.value - folder)
+    /** Drops [folder]'s exclusion, and the exceptions that only made sense inside it. */
+    fun include(folder: String) = set(
+        _excluded.value.let { now ->
+            val excluded = now.excluded - folder
+            now.copy(excluded = excluded, shown = now.shown.filterTo(HashSet()) { s -> excluded.any { s.startsWith(it) } })
+        },
+    )
 
-    private fun setExcluded(folders: Set<String>) {
-        prefs.excludedFolders = folders
-        _excluded.value = folders
+    /** Shows [folder] although a folder it's in is excluded (#45). */
+    fun showAnyway(folder: String) = set(_excluded.value.let { it.copy(shown = it.shown + folder) })
+
+    /** Hides [folder] again with the excluded folder it's in. */
+    fun stopShowing(folder: String) = set(_excluded.value.let { it.copy(shown = it.shown - folder) })
+
+    private fun set(exclusions: Exclusions) {
+        prefs.excludedFolders = exclusions.excluded
+        prefs.shownFolders = exclusions.shown
+        _excluded.value = exclusions
     }
 }

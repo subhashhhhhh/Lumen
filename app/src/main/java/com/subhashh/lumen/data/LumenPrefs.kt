@@ -67,6 +67,13 @@ class LumenPrefs(context: Context) {
         get() = prefs.getStringSet(KeyExcluded, emptySet()).orEmpty().toSet()
         set(value) = prefs.edit { putStringSet(KeyExcluded, value) }
 
+    /** Subfolders of excluded folders that Lumen shows anyway (#45). */
+    var shownFolders: Set<String>
+        get() = prefs.getStringSet(KeyShownFolders, emptySet()).orEmpty().toSet()
+        set(value) = prefs.edit { putStringSet(KeyShownFolders, value) }
+
+    val exclusions: Exclusions get() = Exclusions(excludedFolders, shownFolders)
+
     var appearance: Appearance
         get() = prefs.getString(KeyAppearance, null)
             ?.let { name -> Appearance.entries.firstOrNull { it.name == name } }
@@ -405,6 +412,7 @@ class LumenPrefs(context: Context) {
         const val KeyTextRateLong = "text_rate_long"
         const val KeyTextLongMaxFrames = "text_long_max_frames"
         const val KeyIndexOnBattery = "index_on_battery"
+        const val KeyShownFolders = "shown_folders"
         const val KeyIndexSearch = "index_search"
         const val KeyIndexText = "index_text"
         const val KeyIndexVideoText = "index_video_text"

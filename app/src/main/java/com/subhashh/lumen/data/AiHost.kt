@@ -24,8 +24,8 @@ class AiHost(context: Context) : LumenAiHost {
 
     /** The library as the user sees it: no excluded folders, no Hidden. */
     override suspend fun library(context: Context): List<MediaRef> {
-        val excluded = prefs.excludedFolders
-        return MediaRepository(context).loadLibrary().filterNot { ExcludedFolders.covers(excluded, it) }.map { it.toRef() }
+        val exclusions = prefs.exclusions
+        return MediaRepository(context).loadLibrary().filterNot { exclusions.covers(it) }.map { it.toRef() }
     }
 
     /** Encrypted Hidden videos, decrypted as they're read (a paused frame's Live Text). */

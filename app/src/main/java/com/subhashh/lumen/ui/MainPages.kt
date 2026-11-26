@@ -89,7 +89,7 @@ internal fun BoxScope.MainPages(
     pick: PickRequest?,
     library: List<MediaItem>?,
     allItems: List<MediaItem>?,
-    excluded: Set<String>,
+    excluded: com.subhashh.lumen.data.Exclusions,
     hidden: List<MediaItem>?,
     hiddenAll: List<MediaItem>?,
     hiddenFolderList: List<HiddenFolder>?,
@@ -256,7 +256,7 @@ internal fun BoxScope.MainPages(
                             toast(context.getString(R.string.main_biometrics_missing))
                         }
                     },
-                    excludedCount = excluded.size,
+                    excludedCount = excluded.excluded.size,
                     encryptHidden = encryptHidden,
                     onToggleEncryptHidden = toggle@{ on ->
                         if (!lockStore.isSet) {
@@ -316,17 +316,14 @@ internal fun BoxScope.MainPages(
                     // Hidden folders count too, once Hidden has been scanned.
                     val hiddenFiles = hiddenAll.orEmpty()
                     ExcludedFoldersScreen(
-                        excluded = remember(excluded, all, hiddenFiles) {
-                            excluded.sorted().map { folder ->
-                                folder to (all.count { it.relativePath.startsWith(folder) } +
-                                    hiddenFiles.count { it.relativePath.startsWith(folder) })
-                            }
-                        },
+                        exclusions = excluded,
+                        tree = remember(all, hiddenFiles) { com.subhashh.lumen.data.FolderTree.of(all + hiddenFiles) },
                         suggestions = remember(excluded, all) { ExcludedFolders.suggestions(all, excluded) },
                         contentPadding = PaddingValues(top = statusTop + 72.dp, bottom = navBottom + 96.dp),
-                        onInclude = viewModel::include,
                         onExclude = { viewModel.exclude(listOf(it)) },
-                        onChooseFolder = { excludePicker = true },
+                        onInclude = viewModel::include,
+                        onShowAnyway = viewModel::showAnyway,
+                        onStopShowing = viewModel::stopShowing,
                     )
                 }
                 nav.tab == LumenTab.Library -> com.subhashh.lumen.ui.library.IndexShelf(

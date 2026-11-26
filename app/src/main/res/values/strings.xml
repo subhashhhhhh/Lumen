@@ -724,7 +724,15 @@
     <string name="settings_show_developer_options">Show Developer Options</string>
 
     <!-- Settings: Excluded Folders -->
-    <string name="settings_excluded_intro">Lumen ignores these folders and everything inside them. The files stay where they are, and other apps still see them.</string>
+    <string name="settings_excluded_intro">Lumen ignores these folders and everything inside them, except folders you show anyway. The files stay where they are, and other apps still see them.</string>
+    <string name="settings_group_shown">Shown Anyway</string>
+    <string name="settings_all_folders">All Folders</string>
+    <string name="settings_show_anyway">Show</string>
+    <string name="settings_hide">Hide</string>
+    <string name="settings_folder_excluded">%1$s · Excluded</string>
+    <string name="settings_folder_shown">%1$s · Shown anyway</string>
+    <string name="settings_folder_excluded_with">%1$s · Excluded with %2$s</string>
+    <string name="settings_folder_up">Back to %1$s</string>
     <string name="settings_group_excluded">Excluded</string>
     <plurals name="settings_excluded_items">
         <item quantity="one">%d item</item>
