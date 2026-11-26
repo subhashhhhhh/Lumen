@@ -83,8 +83,9 @@ data class StorageUsage(
             )
 
             val known = modelParts.sumOf { it.bytes } + indexParts.sumOf { it.bytes } + cacheParts.sumOf { it.bytes }
-            // Everything Lumen keeps (Android's count when it gives one), less what's sorted above.
-            val data = stats?.let { it.dataBytes } ?: (size(context.dataDir) + size(context.externalCacheDir))
+            // Everything Lumen keeps, measured: its own folder (files, caches, no-backup) and its folder
+            // on shared storage (Android/data/…). Android's own count includes only part of the latter.
+            val data = size(context.dataDir) + size(context.getExternalFilesDir(null)?.parentFile)
             val other = (data - known).coerceAtLeast(0L)
             val free = runCatching { context.filesDir.usableSpace }.getOrDefault(0L)
             val totalSpace = runCatching { context.filesDir.totalSpace }.getOrDefault(0L)
