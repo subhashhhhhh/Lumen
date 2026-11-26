@@ -45,6 +45,14 @@ class GalleryActivity : ComponentActivity() {
         com.subhashh.lumen.ai.SmartIndex.appOpened(this)
     }
 
+    // Indexing holds its next photo while a finger is on the screen and just after: scrolling
+    // during a first index stays smooth (issue #39).
+    @OptIn(com.subhashh.lumen.ai.LumenAiEngine::class)
+    override fun dispatchTouchEvent(event: android.view.MotionEvent): Boolean {
+        com.subhashh.lumen.ai.SmartIndex.touched()
+        return super.dispatchTouchEvent(event)
+    }
+
     // A new app icon goes on once Lumen is out of sight (see LauncherIcon.applyPending).
     override fun onStop() {
         super.onStop()
