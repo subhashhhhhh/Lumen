@@ -23,6 +23,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.produceState
@@ -67,8 +68,11 @@ internal fun StoragePage(highlight: String?, onConfirm: (Confirmation) -> Unit, 
     }
     fun size(bytes: Long) = Formatter.formatShortFileSize(context, bytes)
 
+    val downloads by com.subhashh.lumen.ai.ModelDownloads.state.collectAsState()
+    // Not while a download runs: a search model switch is mid-way, and what's left over isn't settled.
+    val downloading = downloads is com.subhashh.lumen.ai.DownloadState.Running || downloads == com.subhashh.lumen.ai.DownloadState.Waiting
     val recommendations = buildList {
-        if (u.oldSearch > 0) add(
+        if (u.oldSearch > 0 && !downloading) add(
             Recommendation(
                 LumenIcons.Search, Indigo,
                 context.getString(R.string.storage_old_search),

@@ -55,6 +55,7 @@ data class StorageUsage(
             fun modelBytes(match: (String) -> Boolean) = models.filter { match(it.name) }.sumOf { size(it) }
             val current = runCatching { com.subhashh.lumen.ai.ModelDownloads.installed(context)?.id }.getOrNull()
             val searchIds = com.subhashh.lumen.ai.ModelCatalog.all.map { it.id }.toSet()
+            val keep = searchModelsInUse(context)
             val modelParts = listOf(
                 Part(R.string.storage_part_search, modelBytes { it in searchIds && it == current }),
                 Part(R.string.storage_part_faces, modelBytes { it.startsWith("faces") }),
@@ -67,7 +68,7 @@ data class StorageUsage(
             // Indexes: search (the model in use), text, faces. Another model's files are left over.
             val search = File(noBackup, "search").listFiles().orEmpty()
             fun ofModel(file: File, id: String) = file.name.startsWith("$id.") || file.name.endsWith("-$id.bin") || file.name.endsWith("-$id.json")
-            val oldIds = searchIds - setOfNotNull(current)
+            val oldIds = searchIds - keep
             val oldSearch = search.filter { f -> oldIds.any { ofModel(f, it) } }.sumOf { size(it) } +
                 models.filter { it.name in oldIds }.sumOf { size(it) }
             val indexParts = listOf(
@@ -117,13 +118,24 @@ data class StorageUsage(
          * and its model files if they're still there. The model in use is never touched.
          */
         suspend fun removeOldSearch(context: Context) = withContext(Dispatchers.IO) {
-            val current = com.subhashh.lumen.ai.ModelDownloads.installed(context)?.id ?: return@withContext
-            val old = com.subhashh.lumen.ai.ModelCatalog.all.map { it.id }.filter { it != current }
+            val keep = searchModelsInUse(context)
+            if (keep.isEmpty()) return@withContext
+            val old = com.subhashh.lumen.ai.ModelCatalog.all.map { it.id }.filter { it !in keep }
             for (file in File(context.noBackupFilesDir, "search").listFiles().orEmpty()) {
                 if (old.any { id -> file.name.startsWith("$id.") || file.name.endsWith("-$id.bin") || file.name.endsWith("-$id.json") }) file.delete()
             }
             for (id in old) File(context.noBackupFilesDir, "models/$id").deleteRecursively()
         }
+
+        /**
+         * Search models that aren't left over: the one chosen in Settings and the one installed.
+         * During a switch they differ (the chosen one still downloading, the installed one still
+         * answering searches), and both stay; only a model that is neither is old.
+         */
+        private fun searchModelsInUse(context: Context): Set<String> = setOfNotNull(
+            runCatching { com.subhashh.lumen.ai.ModelDownloads.model(context).id }.getOrNull(),
+            runCatching { com.subhashh.lumen.ai.ModelDownloads.installed(context)?.id }.getOrNull(),
+        )
 
         /** Space a file or folder takes on disk. */
         fun size(file: File?): Long {
