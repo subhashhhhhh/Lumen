@@ -41,7 +41,7 @@ class MediaRestoreTest {
     /** All files access, as Settings grants it: the MANAGE_EXTERNAL_STORAGE app op. */
     private fun allFilesAccess(on: Boolean) {
         shadowOf(context.getSystemService(AppOpsManager::class.java)).setMode(
-            AppOpsManager.OPSTR_MANAGE_EXTERNAL_STORAGE, Process.myUid(), context.packageName,
+            "android:manage_external_storage", Process.myUid(), context.packageName,
             if (on) AppOpsManager.MODE_ALLOWED else AppOpsManager.MODE_ERRORED,
         )
     }
