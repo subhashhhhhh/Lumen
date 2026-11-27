@@ -778,4 +778,16 @@
         <item quantity="many">%d элементов</item>
         <item quantity="other">%d элементов</item>
     </plurals>
+    <string name="settings_kw_language">Локализация: английский, французский, испанский</string>
+    <string name="settings_kw_translate">Язык перевода: английский, французский, испанский. Участвуйте в переводе на Weblate.</string>
+    <string name="settings_kw_report_bug">Сообщить о проблеме, оставить отзыв или сообщить о сбое на GitHub</string>
+    <string name="settings_kw_version">О приложении и версии</string>
+    <string name="settings_group_display">Отображение</string>
+    <string name="settings_theme">Тема</string>
+    <string name="settings_reduce_motion">Уменьшить анимацию</string>
+    <string name="settings_reduce_motion_subtitle">Без анимаций с перемещением фотографий, пружинящими и подпрыгивающими эффектами</string>
+    <string name="settings_group_style">Стиль оформления</string>
+    <string name="settings_style">Стиль</string>
+    <string name="settings_style_footer">Lumen — собственный стиль оформления приложения. Material 3 Expressive — стиль Android: собственные экраны, значки и анимации, ваши цвета и отображение новых фотографий в первую очередь. Liquid Glass относится к собственному оформлению Lumen.</string>
+    <string name="settings_group_colour">Цвет</string>
 </resources>
