@@ -608,13 +608,16 @@ fun Modifier.liquidPillDrag(
     }
     val onCancel = { if (enabled()) state.settle(startIndex) }
     val onDrag = { change: androidx.compose.ui.input.pointer.PointerInputChange, amount: Float ->
-        val step = stepPx()
-        if (enabled() && step > 0f) {
+        if (enabled()) {
+            // Consumed even before the bar is measured (no step yet), as before the vertical bar.
             change.consume()
-            val nearest = state.dragBy(amount / step, count)
-            if (nearest != lastNearest) {
-                lastNearest = nearest
-                onCross()
+            val step = stepPx()
+            if (step > 0f) {
+                val nearest = state.dragBy(amount / step, count)
+                if (nearest != lastNearest) {
+                    lastNearest = nearest
+                    onCross()
+                }
             }
         }
     }
