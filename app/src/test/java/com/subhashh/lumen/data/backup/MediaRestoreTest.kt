@@ -18,7 +18,9 @@ import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
-import org.robolectric.shadows.ShadowEnvironment
+import android.app.AppOpsManager
+import android.os.Process
+import org.robolectric.Shadows.shadowOf
 import java.io.File
 
 /**
@@ -36,9 +38,18 @@ class MediaRestoreTest {
     private val read: (String) -> ByteArray = { chunks.getValue(it) }
     private lateinit var vault: File
 
+    /** All files access, as Settings grants it: the MANAGE_EXTERNAL_STORAGE app op. */
+    private fun allFilesAccess(on: Boolean) {
+        shadowOf(context.getSystemService(AppOpsManager::class.java)).setMode(
+            AppOpsManager.OPSTR_MANAGE_EXTERNAL_STORAGE, Process.myUid(), context.packageName,
+            if (on) AppOpsManager.MODE_ALLOWED else AppOpsManager.MODE_ERRORED,
+        )
+    }
+
     @Before
     fun setUp() {
-        ShadowEnvironment.setIsExternalStorageManager(true)
+        allFilesAccess(true)
+        assertTrue("All files access didn't take", Environment.isExternalStorageManager())
         vault = temp.newFolder(".LumenVault")
         Vault.testDir = vault
     }
@@ -88,7 +99,8 @@ class MediaRestoreTest {
 
     @Test
     fun withoutAllFilesAccessTheVaultIsntTouched() = runBlocking {
-        ShadowEnvironment.setIsExternalStorageManager(false)
+        allFilesAccess(false)
+        assertFalse(Environment.isExternalStorageManager())
         assertEquals(0, MediaRestore.vault(context, vaultRows("lost" to "x".toByteArray()), read) { _, _ -> })
         assertFalse(File(vault, "lost").exists())
     }
