@@ -83,5 +83,16 @@ internal fun MainState.backupLaunchers(
             }
         }
     }
+    // After a Lumen Backup restore: its favorites, marked once the person agrees (Android asks).
+    val restoredFavoritesLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) {}
+    androidx.compose.runtime.LaunchedEffect(library != null) {
+        val pending = prefs.pendingFavorites
+        if (library == null || pending.isEmpty()) return@LaunchedEffect
+        prefs.pendingFavorites = emptySet()
+        val toFavorite = library.filter { !it.isFavorite && (it.relativePath + it.name) in pending }
+        if (toFavorite.isNotEmpty()) {
+            restoredFavoritesLauncher.launch(IntentSenderRequest.Builder(MediaActions.favoriteRequest(context, toFavorite, favorite = true)).build())
+        }
+    }
     return BackupLaunchers(favoritesLauncher, exportLauncher, importLauncher)
 }

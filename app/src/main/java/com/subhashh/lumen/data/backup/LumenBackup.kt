@@ -1,0 +1,442 @@
+package com.subhashh.lumen.data.backup
+
+import android.content.Context
+import android.database.sqlite.SQLiteDatabase
+import android.net.Uri
+import android.os.Build
+import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyProperties
+import androidx.annotation.StringRes
+import androidx.core.content.edit
+import com.subhashh.lumen.R
+import com.subhashh.lumen.data.MediaRepository
+import com.subhashh.lumen.data.SettingsBackup
+import com.subhashh.lumen.data.vault.VaultCrypto
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import org.json.JSONObject
+import java.io.DataInputStream
+import java.io.DataOutputStream
+import java.io.File
+import java.io.FileInputStream
+import java.security.KeyStore
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.UUID
+import javax.crypto.Cipher
+import javax.crypto.KeyGenerator
+import javax.crypto.SecretKey
+import javax.crypto.spec.GCMParameterSpec
+import kotlin.coroutines.coroutineContext
+
+/**
+ * Lumen Backup: Lumen's own data (stage 1; photos and videos come next) to a folder the person
+ * picked, encrypted or not, and back.
+ *
+ * Like Time Machine, the first backup copies everything and later ones only what changed: each
+ * file is cut into 4 MB chunks stored once under a fingerprint (`data/ab/<name>`), and each backup
+ * is a small list of the chunks it needs (`snapshots/<date>.snap`). A database that changed a
+ * little re-uploads only the chunks that changed. Every snapshot is still a complete backup.
+ *
+ * In the folder (all inside "Lumen Backup"):
+ * - `lumen-backup.json`: format, whether it's encrypted, and the backup key locked twice
+ *   ([BackupCrypto]); never anything secret in the clear.
+ * - `data/`: the chunks, encrypted with AES-GCM if the backup is (named by a keyed hash then).
+ * - `snapshots/`: one list per backup, encrypted the same way.
+ *
+ * On this phone the backup key is kept sealed by the Android Keystore, so backups run without
+ * asking for the password; restoring on another phone asks for the password or recovery key.
+ */
+object LumenBackup {
+    /** What can be backed up in stage 1. [key] is stored in snapshots: never rename it. */
+    enum class Item(val key: String, @StringRes val label: Int) {
+        Settings("settings", R.string.backup_item_settings),
+        Captions("captions", R.string.backup_item_captions),
+        People("people", R.string.backup_item_people),
+        SearchIndex("search", R.string.backup_item_search),
+        TextIndex("text", R.string.backup_item_text),
+    }
+
+    private const val Format = 1
+    private const val FolderName = "Lumen Backup"
+    private const val ConfigName = "lumen-backup.json"
+    private const val ChunkBytes = 4 * 1024 * 1024
+
+    // ---- Where, and with which key ----
+
+    class Config(
+        val id: String,
+        val encrypted: Boolean,
+        val passwordLock: BackupCrypto.PasswordLock?,
+        val recoveryLock: ByteArray?,
+    ) {
+        fun toJson(): String = JSONObject().apply {
+            put("format", Format)
+            put("id", id)
+            put("encrypted", encrypted)
+            passwordLock?.let {
+                put("password", JSONObject().put("kdf", "Argon2id").put("salt", BackupCrypto.b64(it.salt)).put("memoryKiB", it.memoryKiB).put("passes", it.passes).put("key", BackupCrypto.b64(it.sealed)))
+            }
+            recoveryLock?.let { put("recovery", JSONObject().put("key", BackupCrypto.b64(it))) }
+        }.toString(2)
+
+        companion object {
+            fun parse(text: String): Config {
+                val json = JSONObject(text)
+                require(json.getInt("format") <= Format) { "A newer Lumen made this backup" }
+                val password = json.optJSONObject("password")?.let {
+                    BackupCrypto.PasswordLock(BackupCrypto.unb64(it.getString("salt")), it.getInt("memoryKiB"), it.getInt("passes"), BackupCrypto.unb64(it.getString("key")))
+                }
+                val recovery = json.optJSONObject("recovery")?.let { BackupCrypto.unb64(it.getString("key")) }
+                return Config(json.getString("id"), json.getBoolean("encrypted"), password, recovery)
+            }
+        }
+    }
+
+    /** The backup set up on this phone: its folder and config, and the key (null if unencrypted). */
+    class Target(val folder: BackupFolder, val dirId: String, val config: Config, val keys: BackupCrypto.Keys?)
+
+    private fun prefs(context: Context) = context.getSharedPreferences("lumen-backup", Context.MODE_PRIVATE)
+
+    /** The folder backups go to, once one is set up. */
+    fun folderUri(context: Context): Uri? = prefs(context).getString("folder", null)?.let(Uri::parse)
+
+    /** A Lumen backup already in [tree] (to restore from, or to keep backing up into), or null. */
+    suspend fun existing(context: Context, tree: Uri): Config? = withContext(Dispatchers.IO) {
+        runCatching {
+            val folder = BackupFolder(context, tree)
+            val dir = folder.child(folder.rootId, FolderName) ?: return@runCatching null
+            val config = folder.child(dir, ConfigName) ?: return@runCatching null
+            Config.parse(String(folder.read(config)))
+        }.getOrNull()
+    }
+
+    /**
+     * Starts a new backup in [tree]: encrypted with [password] if given. Returns the recovery key
+     * to show the person once (null for an unencrypted backup).
+     */
+    suspend fun setUp(context: Context, tree: Uri, password: String?): String? = withContext(Dispatchers.IO) {
+        val folder = BackupFolder(context, tree)
+        val dir = folder.dir(folder.rootId, FolderName)
+        var recovery: String? = null
+        val config = if (password != null) {
+            val key = BackupCrypto.newBackupKey()
+            recovery = BackupCrypto.newRecoveryKey()
+            Config(UUID.randomUUID().toString(), true, BackupCrypto.lockWithPassword(key, password), BackupCrypto.lockWithRecoveryKey(key, recovery))
+                .also { keepKey(context, it.id, key) }
+        } else {
+            Config(UUID.randomUUID().toString(), false, null, null)
+        }
+        folder.write(dir, ConfigName, config.toJson().toByteArray())
+        use(context, tree, config)
+        recovery
+    }
+
+    /** Opens an existing backup in [tree] with its password or recovery key; false if neither fits. */
+    suspend fun connect(context: Context, tree: Uri, password: String?, recoveryKey: String?): Boolean = withContext(Dispatchers.IO) {
+        val config = existing(context, tree) ?: return@withContext false
+        if (config.encrypted) {
+            val key = password?.let { p -> config.passwordLock?.let { BackupCrypto.unlockWithPassword(it, p) } }
+                ?: recoveryKey?.let { r -> config.recoveryLock?.let { BackupCrypto.unlockWithRecoveryKey(it, r) } }
+                ?: return@withContext false
+            keepKey(context, config.id, key)
+        }
+        use(context, tree, config)
+        true
+    }
+
+    private fun use(context: Context, tree: Uri, config: Config) {
+        runCatching {
+            context.contentResolver.takePersistableUriPermission(
+                tree, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+            )
+        }
+        prefs(context).edit { putString("folder", tree.toString()).putString("id", config.id).putBoolean("encrypted", config.encrypted) }
+    }
+
+    /** Forgets the backup on this phone (the folder and its backups stay). */
+    fun disconnect(context: Context) {
+        folderUri(context)?.let { uri -> runCatching { context.contentResolver.releasePersistableUriPermission(uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION) } }
+        prefs(context).edit { clear() }
+    }
+
+    suspend fun target(context: Context): Target? = withContext(Dispatchers.IO) {
+        val tree = folderUri(context) ?: return@withContext null
+        val folder = BackupFolder(context, tree)
+        val dir = folder.child(folder.rootId, FolderName) ?: return@withContext null
+        val config = Config.parse(String(folder.read(folder.child(dir, ConfigName) ?: return@withContext null)))
+        val keys = if (config.encrypted) BackupCrypto.Keys(keptKey(context, config.id) ?: return@withContext null) else null
+        Target(folder, dir, config, keys)
+    }
+
+    /** Makes a new recovery key while the backup is open on this phone; the old one stops working. */
+    suspend fun newRecoveryKey(context: Context): String? = withContext(Dispatchers.IO) {
+        val target = target(context) ?: return@withContext null
+        val key = keptKey(context, target.config.id) ?: return@withContext null
+        val recovery = BackupCrypto.newRecoveryKey()
+        val config = Config(target.config.id, true, target.config.passwordLock, BackupCrypto.lockWithRecoveryKey(key, recovery))
+        target.folder.write(target.dirId, ConfigName, config.toJson().toByteArray())
+        recovery
+    }
+
+    /** Sets a new password (after a forgotten one was replaced through the recovery key, say). */
+    suspend fun changePassword(context: Context, password: String): Boolean = withContext(Dispatchers.IO) {
+        val target = target(context) ?: return@withContext false
+        val key = keptKey(context, target.config.id) ?: return@withContext false
+        val config = Config(target.config.id, true, BackupCrypto.lockWithPassword(key, password), target.config.recoveryLock)
+        target.folder.write(target.dirId, ConfigName, config.toJson().toByteArray())
+        true
+    }
+
+    // The backup key on this phone, sealed by a Keystore key that never leaves the hardware.
+    private const val KeystoreAlias = "lumen-backup"
+
+    private fun keystoreKey(): SecretKey {
+        val store = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+        (store.getKey(KeystoreAlias, null) as? SecretKey)?.let { return it }
+        return KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore").apply {
+            init(KeyGenParameterSpec.Builder(KeystoreAlias, KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
+                .setBlockModes(KeyProperties.BLOCK_MODE_GCM).setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE).setKeySize(256).build())
+        }.generateKey()
+    }
+
+    private fun keepKey(context: Context, id: String, key: ByteArray) {
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.ENCRYPT_MODE, keystoreKey()) }
+        val sealed = cipher.iv + cipher.doFinal(key)
+        prefs(context).edit { putString("key-$id", BackupCrypto.b64(sealed)) }
+    }
+
+    private fun keptKey(context: Context, id: String): ByteArray? = runCatching {
+        val sealed = BackupCrypto.unb64(prefs(context).getString("key-$id", null) ?: return null)
+        Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.DECRYPT_MODE, keystoreKey(), GCMParameterSpec(128, sealed, 0, 12)) }
+            .doFinal(sealed, 12, sealed.size - 12)
+    }.getOrNull()
+
+    // ---- Backing up ----
+
+    data class Progress(@StringRes val step: Int, val done: Long, val total: Long)
+
+    data class Done(val snapshot: String, val uploaded: Long, val total: Long)
+
+    /** Backs up [items] to the folder set up on this phone. Only chunks the folder lacks are written. */
+    suspend fun backUp(context: Context, items: Set<Item>, progress: (Progress) -> Unit): Done = withContext(Dispatchers.IO) {
+        val target = target(context) ?: error("No backup folder set up")
+        val work = File(context.cacheDir, "backup-work").apply { deleteRecursively(); mkdirs() }
+        try {
+            val library = MediaRepository(context).loadLibrary()
+            val sources = sources(context, items, library, work)
+            val total = sources.sumOf { it.second.length() }
+            var done = 0L
+            var uploaded = 0L
+            val store = ChunkStore(target)
+            val files = JSONObject()
+            for ((name, file) in sources) {
+                coroutineContext.ensureActive()
+                val chunks = JSONArray()
+                FileInputStream(file).use { input ->
+                    val buffer = ByteArray(ChunkBytes)
+                    while (true) {
+                        val n = readFully(input, buffer)
+                        if (n <= 0) break
+                        val chunk = if (n == ChunkBytes) buffer.copyOf() else buffer.copyOf(n)
+                        val (id, written) = store.put(chunk)
+                        chunks.put(id)
+                        uploaded += written
+                        done += n
+                        progress(Progress(R.string.backup_step_uploading, done, total))
+                    }
+                }
+                files.put(name, JSONObject().put("size", file.length()).put("chunks", chunks))
+            }
+            // Which photo each id was here, so a restore can find them again on another phone.
+            val media = JSONArray()
+            for (item in library) media.put(JSONArray().put(item.id).put(item.relativePath).put(item.name).put(item.size).put(item.takenAt))
+            val stamp = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date())
+            val snapshot = JSONObject()
+                .put("format", Format)
+                .put("created", System.currentTimeMillis())
+                .put("device", "${Build.MANUFACTURER} ${Build.MODEL}")
+                .put("items", JSONArray(items.map { it.key }))
+                .put("searchModel", runCatching { com.subhashh.lumen.ai.ModelDownloads.installed(context)?.id }.getOrNull())
+                .put("files", files)
+                .put("media", media)
+            val bytes = snapshot.toString().toByteArray()
+            val dir = target.folder.dir(target.dirId, "snapshots")
+            target.folder.write(dir, "$stamp.snap", target.keys?.let { VaultCrypto.seal(it.data, bytes) } ?: bytes)
+            prefs(context).edit { putLong("last", System.currentTimeMillis()).putLong("last-size", total) }
+            Done(stamp, uploaded, total)
+        } finally {
+            work.deleteRecursively()
+        }
+    }
+
+    fun lastBackup(context: Context): Long = prefs(context).getLong("last", 0L)
+
+    /** Fills [buffer] as far as the stream goes (readNBytes is Android 13+); the count read. */
+    private fun readFully(input: java.io.InputStream, buffer: ByteArray): Int {
+        var n = 0
+        while (n < buffer.size) {
+            val got = input.read(buffer, n, buffer.size - n)
+            if (got < 0) break
+            n += got
+        }
+        return n
+    }
+
+    /** The chunk folders, listed once each and remembered, so a chunk already there isn't written again. */
+    private class ChunkStore(private val target: Target) {
+        private val data = target.folder.dir(target.dirId, "data")
+        private val dirs = HashMap<String, String>()
+
+        /** Stores [plain] unless it's there; its name and the bytes written (0 if it was there). */
+        fun put(plain: ByteArray): Pair<String, Long> {
+            val name = target.keys?.name(plain) ?: BackupCrypto.plainName(plain)
+            val dir = dirs.getOrPut(name.take(2)) { target.folder.dir(data, name.take(2)) }
+            if (target.folder.child(dir, name) != null) return name to 0L
+            val bytes = target.keys?.let { VaultCrypto.seal(it.data, plain) } ?: plain
+            target.folder.write(dir, name, bytes)
+            return name to bytes.size.toLong()
+        }
+
+        fun get(name: String): ByteArray {
+            val dir = dirs.getOrPut(name.take(2)) { target.folder.dir(data, name.take(2)) }
+            val bytes = target.folder.read(target.folder.child(dir, name) ?: error("A backup chunk is missing"))
+            return target.keys?.let { VaultCrypto.open(it.data, bytes) } ?: bytes
+        }
+    }
+
+    /** Each item's files, as consistent copies in [work]: name in the snapshot → file. */
+    private suspend fun sources(context: Context, items: Set<Item>, library: List<com.subhashh.lumen.data.MediaItem>, work: File): List<Pair<String, File>> {
+        val out = ArrayList<Pair<String, File>>()
+        val noBackup = context.noBackupFilesDir
+        if (Item.Settings in items) {
+            val file = File(work, "settings.json")
+            SettingsBackup.export(context, library.filter { it.isFavorite }, Uri.fromFile(file))
+            out += "settings.json" to file
+        }
+        if (Item.Captions in items) databaseCopy(context.getDatabasePath("captions.db"), File(work, "captions.db"))?.let { out += "captions.db" to it }
+        if (Item.People in items) {
+            databaseCopy(File(noBackup, "search/faces.db"), File(work, "faces.db"))?.let { out += "faces.db" to it }
+            out += "faces.pack" to pack(File(noBackup, "faces"), File(work, "faces.pack"))
+        }
+        if (Item.SearchIndex in items) {
+            val id = runCatching { com.subhashh.lumen.ai.ModelDownloads.installed(context)?.id }.getOrNull()
+            if (id != null) databaseCopy(File(noBackup, "search/$id.db"), File(work, "search.db"))?.let { out += "search.db" to it }
+        }
+        if (Item.TextIndex in items) databaseCopy(File(noBackup, "search/text.db"), File(work, "text.db"))?.let { out += "text.db" to it }
+        return out
+    }
+
+    /**
+     * A consistent copy of a database Lumen may be writing to: its log is folded in, then writes
+     * are held back while the file is copied (a moment; indexing waits for it).
+     */
+    private fun databaseCopy(source: File, copy: File): File? {
+        if (!source.isFile) return null
+        val db = SQLiteDatabase.openDatabase(source.path, null, SQLiteDatabase.OPEN_READWRITE)
+        try {
+            db.rawQuery("PRAGMA wal_checkpoint(TRUNCATE)", null).use { it.moveToFirst() }
+            db.beginTransactionNonExclusive()
+            try {
+                source.copyTo(copy, overwrite = true)
+            } finally {
+                db.endTransaction()
+            }
+        } finally {
+            db.close()
+        }
+        return copy
+    }
+
+    /** A folder's files in one stream, sorted by name, so new files only add to the end (few new chunks). */
+    private fun pack(dir: File, out: File): File {
+        DataOutputStream(out.outputStream().buffered()).use { stream ->
+            for (file in dir.listFiles().orEmpty().filter { it.isFile }.sortedBy { it.name }) {
+                stream.writeUTF(file.name)
+                stream.writeLong(file.length())
+                file.inputStream().use { it.copyTo(stream) }
+            }
+        }
+        return out
+    }
+
+    internal fun unpack(pack: File, dir: File) {
+        dir.mkdirs()
+        DataInputStream(pack.inputStream().buffered()).use { stream ->
+            while (true) {
+                val name = try { stream.readUTF() } catch (end: java.io.EOFException) { break }
+                require(!name.contains('/') && !name.contains("..")) { "Bad name in a backup" }
+                val size = stream.readLong()
+                File(dir, name).outputStream().use { out ->
+                    var left = size
+                    val buffer = ByteArray(64 * 1024)
+                    while (left > 0) {
+                        val n = stream.read(buffer, 0, minOf(buffer.size.toLong(), left).toInt())
+                        if (n < 0) error("A backup file is cut short")
+                        out.write(buffer, 0, n)
+                        left -= n
+                    }
+                }
+            }
+        }
+    }
+
+    // ---- Snapshots and restoring ----
+
+    class Snapshot(val name: String, val created: Long, val device: String, val items: List<Item>, internal val json: JSONObject)
+
+    /** The backups in the folder, newest first. */
+    suspend fun snapshots(context: Context): List<Snapshot> = withContext(Dispatchers.IO) {
+        val target = target(context) ?: return@withContext emptyList()
+        val dir = target.folder.child(target.dirId, "snapshots") ?: return@withContext emptyList()
+        target.folder.list(dir).filterKeys { it.endsWith(".snap") }.mapNotNull { (name, id) ->
+            runCatching {
+                val raw = target.folder.read(id)
+                val json = JSONObject(String(target.keys?.let { VaultCrypto.open(it.data, raw) } ?: raw))
+                val items = json.getJSONArray("items").let { a -> (0 until a.length()).mapNotNull { i -> Item.entries.firstOrNull { it.key == a.getString(i) } } }
+                Snapshot(name.removeSuffix(".snap"), json.getLong("created"), json.optString("device"), items, json)
+            }.getOrNull()
+        }.sortedByDescending { it.created }
+    }
+
+    /**
+     * Gets [items] from [snapshot] ready to put in place: downloaded, and each photo's id in the
+     * databases changed to its id on this phone (found by folder, name and size; ids differ on
+     * another phone). Nothing in use is touched: [RestoreStaging] swaps the files in when Lumen
+     * next starts, before anything opens them.
+     */
+    suspend fun stageRestore(context: Context, snapshot: Snapshot, items: Set<Item>, progress: (Progress) -> Unit) = withContext(Dispatchers.IO) {
+        val target = target(context) ?: error("No backup folder set up")
+        val store = ChunkStore(target)
+        val staging = RestoreStaging.dir(context).apply { deleteRecursively(); mkdirs() }
+        val files = snapshot.json.getJSONObject("files")
+        val wanted = buildList {
+            if (Item.Settings in items) add("settings.json")
+            if (Item.Captions in items) add("captions.db")
+            if (Item.People in items) { add("faces.db"); add("faces.pack") }
+            if (Item.SearchIndex in items) add("search.db")
+            if (Item.TextIndex in items) add("text.db")
+        }.filter { files.has(it) }
+        val total = wanted.sumOf { files.getJSONObject(it).getLong("size") }
+        var done = 0L
+        for (name in wanted) {
+            val chunks = files.getJSONObject(name).getJSONArray("chunks")
+            File(staging, name).outputStream().use { out ->
+                for (i in 0 until chunks.length()) {
+                    coroutineContext.ensureActive()
+                    val chunk = store.get(chunks.getString(i))
+                    out.write(chunk)
+                    done += chunk.size
+                    progress(Progress(R.string.backup_step_downloading, done, total))
+                }
+            }
+        }
+        progress(Progress(R.string.backup_step_matching, 0, 0))
+        val map = RestoreStaging.matchMedia(snapshot.json.getJSONArray("media"), MediaRepository(context).loadLibrary().associateBy({ it.id }) { it })
+        RestoreStaging.remapAll(staging, map)
+        RestoreStaging.commit(context, staging, snapshot.json.optString("searchModel").takeIf { it.isNotEmpty() && it != "null" })
+    }
+}
