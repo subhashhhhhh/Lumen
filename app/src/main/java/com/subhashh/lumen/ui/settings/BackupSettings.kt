@@ -75,7 +75,7 @@ internal fun BackupGroup(highlight: String?, onConfirm: (Confirmation) -> Unit) 
     var asking by remember { mutableStateOf<Ask?>(null) }
     var recoveryShown by remember { mutableStateOf<String?>(null) }
     var progress by remember { mutableStateOf<LumenBackup.Progress?>(null) }
-    var message by remember { mutableStateOf<String?>(null) }
+    var message by remember { mutableStateOf(LumenBackup.takeNote(context)) }
     var restoring by remember { mutableStateOf<List<LumenBackup.Snapshot>?>(null) }
     var unlockError by remember { mutableStateOf<String?>(null) }
 

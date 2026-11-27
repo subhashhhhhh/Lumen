@@ -29,6 +29,15 @@ object Vault {
     const val Scheme = "lumenvault"
     private const val Extension = ".lumenvault"
 
+    /** Whether the vault is unlocked and [file] (a vault file) opens with its key: Lumen Backup's restore check. */
+    fun opens(file: File): Boolean = key?.let { k -> runCatching { VaultCrypto.readHeader(k, file) }.isSuccess } ?: false
+
+    /** Whether the vault is unlocked (its key in memory). */
+    val unlocked: Boolean get() = key != null
+
+    /** Whether a vault exists here (its key file), set up on this phone or restored. */
+    fun exists(): Boolean = File(dir(), "vault.key").isFile
+
     /** Settings → Storage: the vault's encrypted files and their total size, read without the key. */
     fun usage(): Pair<Int, Long> {
         val files = runCatching { dir().listFiles { f -> f.isFile && f.name.endsWith(Extension) }.orEmpty() }.getOrDefault(emptyArray())

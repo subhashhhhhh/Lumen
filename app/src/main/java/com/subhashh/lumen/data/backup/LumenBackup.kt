@@ -343,6 +343,9 @@ object LumenBackup {
 
     fun lastBackup(context: Context): Long = prefs(context).getLong("last", 0L)
 
+    /** A message from the last restore for Settings → Backup to show once, then forget. */
+    fun takeNote(context: Context): String? = prefs(context).getString("note", null)?.also { prefs(context).edit { remove("note") } }
+
     private fun vaultFiles(): List<File> =
         runCatching { com.subhashh.lumen.data.vault.Vault.dir().listFiles { f -> f.isFile }.orEmpty().toList() }.getOrDefault(emptyList())
 
@@ -556,7 +559,14 @@ object LumenBackup {
             MediaRestore.photos(context, rows, store::get) { d, t -> progress(Progress(R.string.backup_step_photos, d, t)) }
         }
         if (Item.Hidden in items) snapshot.json.optJSONArray("vault")?.let { rows ->
-            MediaRestore.vault(context, rows, store::get) { d, t -> progress(Progress(R.string.backup_step_hidden, d, t)) }
+            val result = MediaRestore.vault(context, rows, store::get) { d, t -> progress(Progress(R.string.backup_step_hidden, d, t)) }
+            // Said after the restart (Settings → Backup), where the person looks next.
+            val note = when {
+                result.locked -> context.getString(R.string.backup_restore_hidden_locked, result.wontOpen)
+                result.wontOpen > 0 -> context.resources.getQuantityString(R.plurals.backup_restore_hidden_other_key, result.wontOpen, result.wontOpen)
+                else -> null
+            }
+            prefs(context).edit { if (note != null) putString("note", note) else remove("note") }
         }
         progress(Progress(R.string.backup_step_matching, 0, 0))
         val map = RestoreStaging.matchMedia(snapshot.json.getJSONArray("media"), MediaRepository(context).loadLibrary().associateBy({ it.id }) { it })

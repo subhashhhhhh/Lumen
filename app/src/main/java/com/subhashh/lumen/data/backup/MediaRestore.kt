@@ -21,6 +21,8 @@ import kotlin.coroutines.resume
  */
 internal object MediaRestore {
 
+    private const val RestoreRoot = "Pictures/Lumen Restore/"
+
     /** Folders MediaStore lets an app create files in without All files access. */
     private val StandardRoots = listOf("DCIM/", "Pictures/", "Movies/", "Download/", "Documents/")
 
@@ -30,8 +32,18 @@ internal object MediaRestore {
      * folder if Android allows it there, else under Pictures/Lumen Restore.
      */
     suspend fun photos(context: Context, rows: JSONArray, read: (String) -> ByteArray, progress: (Long, Long) -> Unit): Int {
-        val here = MediaRepository(context).loadLibrary().mapTo(HashSet()) { "${it.relativePath}${it.name}|${it.size}" }
-        val missing = (0 until rows.length()).map { rows.getJSONArray(it) }.filter { "${it.getString(0)}${it.getString(1)}|${it.getLong(2)}" !in here }
+        val library = MediaRepository(context).loadLibrary()
+        val here = library.mapTo(HashSet()) { "${it.relativePath}${it.name}|${it.size}" }
+        // A photo restored before may sit under Pictures/Lumen Restore/ (no All files access), or
+        // have been renamed "IMG (2).jpg" beside a different file: same size and moment taken.
+        val sameMoment = library.filter { it.takenAt > 0 }.mapTo(HashSet()) { "${it.size}|${it.takenAt}" }
+        val missing = (0 until rows.length()).map { rows.getJSONArray(it) }.filter { row ->
+            val path = row.getString(0)
+            val name = row.getString(1)
+            val size = row.getLong(2)
+            val takenAt = row.getLong(3)
+            "$path$name|$size" !in here && "$RestoreRoot$path$name|$size" !in here && (takenAt <= 0 || "$size|$takenAt" !in sameMoment)
+        }
         val total = missing.sumOf { it.getLong(2) }
         var done = 0L
         val written = ArrayList<String>()
@@ -52,8 +64,8 @@ internal object MediaRestore {
                 }
             }
             runCatching {
+                require(!path.contains("..") && name != ".." && name != "." && !name.contains('/')) { "Bad path in a backup" }
                 if (allFiles) {
-                    require(!path.contains("..") && !name.contains('/')) { "Bad path in a backup" }
                     val target = uniqueFile(File(Environment.getExternalStorageDirectory(), path), name)
                     target.parentFile?.mkdirs()
                     target.outputStream().use(::copyTo)
@@ -62,7 +74,7 @@ internal object MediaRestore {
                 } else {
                     val video = mime.startsWith("video/")
                     val collection = if (video) MediaStore.Video.Media.EXTERNAL_CONTENT_URI else MediaStore.Images.Media.EXTERNAL_CONTENT_URI
-                    val folder = if (StandardRoots.any { path.startsWith(it) }) path else "Pictures/Lumen Restore/$path"
+                    val folder = if (StandardRoots.any { path.startsWith(it) }) path else "$RestoreRoot$path"
                     val values = ContentValues().apply {
                         put(MediaStore.MediaColumns.DISPLAY_NAME, name)
                         put(MediaStore.MediaColumns.MIME_TYPE, mime)
@@ -85,20 +97,39 @@ internal object MediaRestore {
         return missing.size
     }
 
-    /** Vault rows are [name, size, chunks]; files already there are left alone. Needs All files access. */
-    suspend fun vault(context: Context, rows: JSONArray, read: (String) -> ByteArray, progress: (Long, Long) -> Unit): Int {
-        if (!Environment.isExternalStorageManager()) return 0
-        val dir = com.subhashh.lumen.data.vault.Vault.dir().apply { mkdirs() }
+    /** What a vault restore did: files added, and files left out because they wouldn't open here. */
+    data class VaultResult(val restored: Int, val wontOpen: Int, val locked: Boolean)
+
+    /**
+     * Vault rows are [name, size, chunks]. A file already in the vault is never replaced: it may
+     * have changed since (re-encrypted, moved to a newer format), and the backup's copy might not
+     * open any more. With no vault here, everything goes back, its key file too, so the old Hidden
+     * password opens it. With a vault here, a missing file goes in only if it opens with that
+     * vault's key (Hidden must be unlocked to check); one that doesn't is left out and counted.
+     * Needs All files access.
+     */
+    suspend fun vault(context: Context, rows: JSONArray, read: (String) -> ByteArray, progress: (Long, Long) -> Unit): VaultResult {
+        if (!Environment.isExternalStorageManager()) return VaultResult(0, 0, locked = false)
+        val vault = com.subhashh.lumen.data.vault.Vault
+        val fresh = !vault.exists()
+        val dir = vault.dir().apply { mkdirs() }
         val missing = (0 until rows.length()).map { rows.getJSONArray(it) }.filter { row ->
-            val f = File(dir, row.getString(0))
-            !f.isFile || f.length() != row.getLong(1)
+            val name = row.getString(0)
+            !File(dir, name).exists() && (fresh || name != "vault.key")
+        }
+        if (missing.isEmpty()) return VaultResult(0, 0, locked = false)
+        // Into an existing vault only what opens with its key, which needs Hidden unlocked.
+        if (!fresh && !vault.unlocked) {
+            return VaultResult(0, missing.size, locked = true)
         }
         val total = missing.sumOf { it.getLong(1) }
         var done = 0L
+        var restored = 0
+        var wontOpen = 0
         for (row in missing) {
             coroutineContext.ensureActive()
             val name = row.getString(0)
-            require(!name.contains('/') && !name.contains("..")) { "Bad name in a backup" }
+            require(!name.contains('/') && name != ".." && name != ".") { "Bad name in a backup" }
             val chunks = row.getJSONArray(2)
             val tmp = File(dir, "$name.restoring")
             tmp.outputStream().use { out ->
@@ -109,10 +140,14 @@ internal object MediaRestore {
                     progress(done, total)
                 }
             }
-            File(dir, name).delete()
-            tmp.renameTo(File(dir, name))
+            if (!fresh && name.endsWith(".lumenvault") && !vault.opens(tmp)) {
+                tmp.delete()
+                wontOpen++
+                continue
+            }
+            if (!tmp.renameTo(File(dir, name))) tmp.delete() else restored++
         }
-        return missing.size
+        return VaultResult(restored, wontOpen, locked = false)
     }
 
     /** "IMG_1.jpg", or "IMG_1 (2).jpg" if a different file of that name is there. */

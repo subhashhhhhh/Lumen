@@ -459,6 +459,11 @@
     <string name="backup_item_hidden">Encrypted Hidden</string>
     <string name="backup_step_photos">Restoring photos and videos…</string>
     <string name="backup_step_hidden">Restoring Encrypted Hidden…</string>
+    <string name="backup_restore_hidden_locked">Encrypted Hidden wasn\'t restored (%1$d files): unlock Hidden first, then restore again, so Lumen can check they open with its password.</string>
+    <plurals name="backup_restore_hidden_other_key">
+        <item quantity="one">%d Encrypted Hidden file was left out: it belongs to a different vault and wouldn\'t open here.</item>
+        <item quantity="other">%d Encrypted Hidden files were left out: they belong to a different vault and wouldn\'t open here.</item>
+    </plurals>
     <string name="backup_now">Back Up Now</string>
     <string name="backup_last">Last backup %1$s</string>
     <string name="backup_never">Not backed up yet</string>
