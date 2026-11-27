@@ -805,4 +805,13 @@
     <string name="app_icon_dusk">Сумерки</string>
     <string name="app_icon_ocean">Океан</string>
     <string name="app_icon_forest">Лес</string>
+    <string name="app_icon_rose">Роза</string>
+    <string name="app_icon_graphite">Графит</string>
+    <string name="app_icon_bloom">Цветение</string>
+    <string name="app_icon_bloom_dark">Тёмное цветение</string>
+    <string name="app_icon_bloom_ocean">Океанское цветение</string>
+    <string name="app_icon_bloom_sunset">Закатное цветение</string>
+    <string name="settings_group_glass">Стекло</string>
+    <string name="settings_glass_footer">Liquid Glass: кнопки, панели, меню и переключатели с эффектом стекла, искажающего изображение под ними. При отключении они становятся непрозрачными. Параметр «Уменьшить размытие» сохраняет эффект стекла, но значительно снижает размытие: изображение становится чётче, а нагрузка на графический процессор уменьшается.</string>
+    <string name="settings_liquid_glass">Жидкое стекло</string>
 </resources>
