@@ -91,7 +91,7 @@ class MediaRestoreTest {
         val a = ByteArray(10_000) { it.toByte() }
         File(vault, "kept").writeBytes("same".toByteArray())
         val restored = MediaRestore.vault(context, vaultRows("kept" to "same".toByteArray(), "lost" to a), read) { _, _ -> }
-        assertEquals(1, restored)
+        assertEquals(MediaRestore.VaultResult(restored = 1, wontOpen = 0, locked = false), restored)
         assertArrayEquals(a, File(vault, "lost").readBytes())
         assertFalse(File(vault, "lost.restoring").exists())
     }
@@ -108,7 +108,7 @@ class MediaRestoreTest {
     fun withoutAllFilesAccessTheVaultIsntTouched() = runBlocking {
         allFilesAccess(false)
         assertFalse(Environment.isExternalStorageManager())
-        assertEquals(0, MediaRestore.vault(context, vaultRows("lost" to "x".toByteArray()), read) { _, _ -> })
+        assertEquals(0, MediaRestore.vault(context, vaultRows("lost" to "x".toByteArray()), read) { _, _ -> }.restored)
         assertFalse(File(vault, "lost").exists())
     }
 
