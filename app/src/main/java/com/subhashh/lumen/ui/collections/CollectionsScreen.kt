@@ -95,10 +95,13 @@ fun CollectionsScreen(
     modifier: Modifier = Modifier,
 ) {
     // Grid order: title, People header and row (if any), Utilities header, utilities block,
-    // Albums header, then the albums.
+    // Albums header, then the albums. A wide window puts People and Utilities side by side in
+    // one block (the dashboard), the albums below.
+    val wide = com.subhashh.lumen.ui.components.isWideWindow()
     val gestures = rememberAlbumGridGestures(
         gridState = gridState,
-        keys = { List<String?>(if (people.isEmpty()) 4 else 6) { null } + folders.map { it.key } },
+        // Wide: title, the People + Utilities dashboard, Albums header.
+        keys = { List<String?>(if (wide) 3 else if (people.isEmpty()) 4 else 6) { null } + folders.map { it.key } },
         columns = columns,
         onColumnsChange = onColumnsChange,
         selection = selection,
@@ -121,7 +124,17 @@ fun CollectionsScreen(
     ) {
         fullWidth { ScreenTitle(title) }
 
-        if (people.isNotEmpty()) {
+        if (wide) fullWidth {
+            WideDashboard(
+                people = people,
+                utilities = utilities,
+                hiddenLockSet = hiddenLockSet,
+                coverTransition = coverTransition,
+                onOpen = { if (selection == null) onOpen(it) },
+                modifier = Modifier.graphicsLayer { alpha = if (selection != null) 0.4f else 1f },
+            )
+        }
+        if (!wide && people.isNotEmpty()) {
             fullWidth { SectionHeader(stringResource(R.string.main_people), trailing = stringResource(R.string.common_open), onTrailingClick = { if (selection == null) onOpen(CollectionKeys.People) }) }
             fullWidth {
                 PeopleRow(
@@ -134,8 +147,8 @@ fun CollectionsScreen(
             }
         }
 
-        fullWidth { SectionHeader(stringResource(R.string.main_utilities)) }
-        fullWidth {
+        if (!wide) fullWidth { SectionHeader(stringResource(R.string.main_utilities)) }
+        if (!wide) fullWidth {
             // Not selectable: dimmed while selecting albums.
             UtilityGroup(
                 utilities,
@@ -473,4 +486,86 @@ internal fun Cover(item: MediaItem) {
         contentScale = ContentScale.Crop,
         modifier = Modifier.fillMaxSize(),
     )
+}
+
+/**
+ * Wide windows: People in a card (up to two rows of faces) beside Utilities as tiles with big
+ * counts, two across; the albums follow below. Everything at a glance, nothing sideways.
+ */
+@Composable
+private fun WideDashboard(
+    people: List<Pair<Person, MediaItem>>,
+    utilities: List<MediaCollection>,
+    hiddenLockSet: Boolean,
+    coverTransition: CoverTransition,
+    onOpen: (key: String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = groupColors()
+    Row(modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+        if (people.isNotEmpty()) {
+            Column(
+                Modifier
+                    .weight(1f)
+                    .clip(Lumen.shapes.card)
+                    .background(colors.card)
+                    .padding(horizontal = 18.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(stringResource(R.string.main_people), fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = colors.text, modifier = Modifier.weight(1f))
+                    Text(
+                        stringResource(R.string.common_open),
+                        fontSize = 15.sp,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.clickable { onOpen(CollectionKeys.People) }.padding(4.dp),
+                    )
+                }
+                val shown = people.take(PeopleShown * 2)
+                shown.chunked(PeopleShown).forEach { row ->
+                    PeopleRow(row, coverTransition = coverTransition, onOpen = onOpen, slots = PeopleShown)
+                }
+            }
+        }
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            utilities.chunked(2).forEach { pair ->
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    pair.forEach { collection ->
+                        Column(
+                            Modifier
+                                .weight(1f)
+                                .height(98.dp)
+                                .clip(Lumen.shapes.card)
+                                .background(colors.card)
+                                .clickable { onOpen(collection.key) }
+                                .padding(horizontal = 16.dp, vertical = 14.dp),
+                            verticalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    Modifier.size(32.dp).clip(RoundedCornerShape(8.dp)).background(utilityColor(collection.key)),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(utilityIcon(collection.key), contentDescription = null, tint = Color.White, modifier = Modifier.size(19.dp))
+                                }
+                                Spacer(Modifier.weight(1f))
+                                Text(
+                                    when {
+                                        collection.count != MediaCollections.LockedCount -> collection.count.toString()
+                                        hiddenLockSet -> stringResource(R.string.main_hidden_locked)
+                                        else -> stringResource(R.string.main_hidden_set_up)
+                                    },
+                                    fontSize = if (collection.count != MediaCollections.LockedCount) 22.sp else 15.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = colors.text,
+                                )
+                            }
+                            Text(collection.title, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = colors.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                    }
+                    if (pair.size == 1) Spacer(Modifier.weight(1f))
+                }
+            }
+        }
+    }
 }
