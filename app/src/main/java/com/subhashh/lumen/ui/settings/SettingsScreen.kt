@@ -233,11 +233,8 @@ fun SettingsScreen(
     val status = remember(refresh) { PermissionStatus.read(context) }
     val prefs = remember { LumenPrefs(context) }
 
-    // The main page's rows wear coloured badges; inside a category Material's are plain icons.
-    CompositionLocalProvider(LocalSettingsBadges provides (category == null)) {
-    SettingsPage(contentPadding, modifier) {
-        when (category) {
-            null -> {
+    // The list of categories (the main page, or a wide window's left pane).
+    val mainList: @Composable ColumnScope.() -> Unit = {
                 LargeTitle(stringResource(R.string.common_settings))
                 var query by rememberSaveable { mutableStateOf("") }
                 SearchBox(query, onQueryChange = { query = it })
@@ -312,8 +309,9 @@ fun SettingsScreen(
                         Group("") { CategoryRow(SettingsCategory.Developer, null, open) }
                     }
                 }
-            }
-            else -> {
+                }
+    // A category's page (pushed on a phone, the right pane in a wide window).
+    val categoryPage: @Composable ColumnScope.(SettingsCategory) -> Unit = { category ->
                 LargeTitle(stringResource(category.titleRes))
                 when (category) {
                     SettingsCategory.Appearance -> AppearancePage(highlight)
@@ -331,8 +329,33 @@ fun SettingsScreen(
                     SettingsCategory.About -> AboutPage(prefs, highlight, onOpenLicenses, onConfirm)
                     SettingsCategory.Developer -> DeveloperPage(prefs, highlight, onConfirm)
                 }
+    }
+    if (com.subhashh.lumen.ui.components.isWideWindow()) {
+        // Two panes, like iPad and Android tablet Settings: the list on the left, the page beside
+        // it (Appearance until one is chosen). Each scrolls on its own.
+        Row(modifier.fillMaxSize()) {
+            CompositionLocalProvider(LocalSettingsBadges provides true, LocalSettingsScroll provides null) {
+                SettingsPage(contentPadding, Modifier.width(380.dp)) {
+                    mainList()
+                    Spacer(Modifier.height(24.dp))
+                }
+            }
+            val shown = category ?: SettingsCategory.Appearance
+            CompositionLocalProvider(LocalSettingsBadges provides false, LocalSettingsScroll provides null) {
+                androidx.compose.runtime.key(shown) {
+                    SettingsPage(contentPadding, Modifier.weight(1f)) {
+                        categoryPage(shown)
+                        Spacer(Modifier.height(24.dp))
+                    }
+                }
             }
         }
+        return
+    }
+    // The main page's rows wear coloured badges; inside a category Material's are plain icons.
+    CompositionLocalProvider(LocalSettingsBadges provides (category == null)) {
+    SettingsPage(contentPadding, modifier) {
+        if (category == null) mainList() else categoryPage(category)
         Spacer(Modifier.height(24.dp))
     }
     }
