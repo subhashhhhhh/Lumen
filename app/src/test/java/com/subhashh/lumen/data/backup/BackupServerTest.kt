@@ -124,4 +124,41 @@ class BackupServerTest {
         assertTrue(s3(address = "").label().startsWith("Amazon S3"))
         assertEquals("s3.example.com › bucket/lumen", s3().label())
     }
+
+    // ---- SFTP with a key ----
+
+    private val pem = "-----BEGIN OPENSSH PRIVATE KEY-----\r\nb3Blbn'NzaC1r,ZXktdjE:AAAA\r\nQUJD\r\n-----END OPENSSH PRIVATE KEY-----\r\n\n"
+
+    @Test
+    fun aKeyGoesToRcloneOnOneLineWithNothingElseLoggingIn() {
+        val server = BackupServer(BackupServer.Kind.Sftp, "pi.lan", "me", "", "/srv/lumen", keyPem = pem)
+        val parsed = parse(server.remote())
+        // rclone wants the key's lines joined by a literal \n; quotes and commas in it stay inside.
+        assertEquals(
+            "-----BEGIN OPENSSH PRIVATE KEY-----\\nb3Blbn'NzaC1r,ZXktdjE:AAAA\\nQUJD\\n-----END OPENSSH PRIVATE KEY-----",
+            parsed.options["key_pem"],
+        )
+        assertFalse(parsed.options.values.any { it.contains('\n') || it.contains('\r') })
+        assertFalse("pass" in parsed.options)
+        assertFalse("key_file_pass" in parsed.options)
+        assertEquals(mapOf("host" to "pi.lan", "user" to "me", "key_pem" to parsed.options["key_pem"]), parsed.options)
+    }
+
+    @Test
+    fun aBlankKeyMeansPasswordLogin() {
+        val parsed = parse(BackupServer(BackupServer.Kind.Sftp, "pi.lan", "me", "", "x", keyPem = "  \n ").remote())
+        assertFalse("key_pem" in parsed.options)
+    }
+
+    @Test
+    fun aKeyIsStoredWithTheServerExactly() {
+        val server = BackupServer(BackupServer.Kind.Sftp, "pi.lan", "me", "passphrase", "/srv", port = 2222, hostKey = "pi.lan ssh-ed25519 AAAA", keyPem = pem)
+        assertEquals(server, BackupServer.parse(server.toJson()))
+    }
+
+    @Test
+    fun theLabelNeverShowsTheKey() {
+        val server = BackupServer(BackupServer.Kind.Sftp, "pi.lan", "me", "", "/srv", keyPem = pem)
+        assertFalse(server.label().contains("PRIVATE"))
+    }
 }
