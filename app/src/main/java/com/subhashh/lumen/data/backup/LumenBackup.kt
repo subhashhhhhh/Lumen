@@ -306,7 +306,7 @@ object LumenBackup {
                         runCatching { context.contentResolver.openInputStream(uri) }.getOrNull() ?: context.contentResolver.openInputStream(item.uri)
                     }
                 }.getOrNull() ?: continue // gone or unreadable since the library was listed: next time
-                photoRows.put(JSONArray().put(item.relativePath).put(item.name).put(item.size).put(item.takenAt).put(item.mimeType).put(chunks))
+                photoRows.put(JSONArray().put(item.relativePath).put(item.name).put(item.size).put(item.takenAt).put(item.mimeType).put(chunks).put(item.modified))
             }
             val vaultRows = JSONArray()
             for (file in vaultFiles) {

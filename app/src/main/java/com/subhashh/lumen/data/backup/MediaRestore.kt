@@ -27,8 +27,9 @@ internal object MediaRestore {
     private val StandardRoots = listOf("DCIM/", "Pictures/", "Movies/", "Download/", "Documents/")
 
     /**
-     * Photo rows are [relativePath, name, size, takenAt, mimeType, chunks]. With All files access
-     * each goes back to its own folder with its date; without it, through MediaStore, into its
+     * Photo rows are [relativePath, name, size, takenAt, mimeType, chunks, modified (seconds; not
+     * in the first stage-2 backups)]. With All files access each goes back to its own folder with
+     * its modified date; without it, through MediaStore, into its
      * folder if Android allows it there, else under Pictures/Lumen Restore.
      */
     suspend fun photos(context: Context, rows: JSONArray, read: (String) -> ByteArray, progress: (Long, Long) -> Unit): Int {
@@ -55,6 +56,7 @@ internal object MediaRestore {
             val takenAt = row.getLong(3)
             val mime = row.getString(4)
             val chunks = row.getJSONArray(5)
+            val modified = row.optLong(6, 0L).let { if (it > 0) it * 1000 else takenAt }
             fun copyTo(out: OutputStream) {
                 for (i in 0 until chunks.length()) {
                     val chunk = read(chunks.getString(i))
@@ -69,7 +71,7 @@ internal object MediaRestore {
                     val target = uniqueFile(File(Environment.getExternalStorageDirectory(), path), name)
                     target.parentFile?.mkdirs()
                     target.outputStream().use(::copyTo)
-                    if (takenAt > 0) target.setLastModified(takenAt)
+                    if (modified > 0) target.setLastModified(modified)
                     written += target.path
                 } else {
                     val video = mime.startsWith("video/")
