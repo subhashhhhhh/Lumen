@@ -84,6 +84,8 @@ internal fun BackupGroup(highlight: String?, onConfirm: (Confirmation) -> Unit) 
 
     var picked by remember { mutableStateOf<BackupLocation?>(null) }
     var choosingWhere by remember { mutableStateOf(false) }
+    // Opening or setting up a backup: a server takes a few seconds.
+    var settingUp by remember { mutableStateOf(false) }
     var askingServer by remember { mutableStateOf(false) }
     val running by BackupRunner.state.collectAsState()
     var setUpEncrypted by remember { mutableStateOf(true) }
@@ -98,7 +100,9 @@ internal fun BackupGroup(highlight: String?, onConfirm: (Confirmation) -> Unit) 
     // A place was chosen: open the backup there, or set up a new one.
     fun chosen(location: BackupLocation) {
         scope.launch {
+            settingUp = true
             val existing = runCatching { LumenBackup.existing(context, location) }
+                .also { settingUp = false }
                 .onFailure { message = context.getString(R.string.backup_failed, it.message ?: it.javaClass.simpleName) }
                 .getOrElse { return@launch }
             picked = location
@@ -106,7 +110,9 @@ internal fun BackupGroup(highlight: String?, onConfirm: (Confirmation) -> Unit) 
                 existing == null -> Ask.NewPassword
                 existing.encrypted -> Ask.Unlock
                 else -> {
+                    settingUp = true
                     LumenBackup.connect(context, location, null, null)
+                    settingUp = false
                     version++
                     null
                 }
@@ -130,7 +136,8 @@ internal fun BackupGroup(highlight: String?, onConfirm: (Confirmation) -> Unit) 
             Anchor("backup-set-up", highlight) {
                 SettingsRow(
                     title = stringResource(R.string.backup_set_up),
-                    onClick = { message = null; if (Rclone.available) choosingWhere = true else pick.launch(null) },
+                    subtitle = if (settingUp) stringResource(R.string.backup_setting_up) else null,
+                    onClick = if (settingUp) null else ({ message = null; if (Rclone.available) choosingWhere = true else pick.launch(null) }),
                     icon = LumenIcons.Export,
                     iconColor = Green,
                 )
@@ -257,17 +264,21 @@ internal fun BackupGroup(highlight: String?, onConfirm: (Confirmation) -> Unit) 
             onSkip = {
                 asking = null
                 scope.launch {
+                    settingUp = true
                     runCatching { LumenBackup.setUp(context, picked ?: return@launch, null) }
                         .onFailure { message = context.getString(R.string.backup_failed, it.message ?: it.javaClass.simpleName) }
+                    settingUp = false
                     version++
                 }
             },
         ) { password, _ ->
             asking = null
             scope.launch {
+                settingUp = true
                 recoveryShown = runCatching { LumenBackup.setUp(context, picked ?: return@launch, password) }
                     .onFailure { message = context.getString(R.string.backup_failed, it.message ?: it.javaClass.simpleName) }
                     .getOrNull()
+                settingUp = false
                 version++
             }
         }

@@ -506,6 +506,7 @@
     <string name="backup_server_port">Port (optional)</string>
     <string name="backup_server_share">Share/folder</string>
     <string name="backup_server_connect">Connect</string>
+    <string name="backup_setting_up">Setting up…</string>
     <string name="backup_server_checking">Connecting…</string>
     <string name="backup_server_failed">Couldn\'t connect: %1$s</string>
     <string name="backup_step_uploading">Backing up…</string>
