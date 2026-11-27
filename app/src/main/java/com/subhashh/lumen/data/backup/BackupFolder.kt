@@ -13,13 +13,14 @@ import java.io.IOException
  */
 class BackupFolder(private val context: Context, private val tree: Uri) : BackupStore {
     private val resolver = context.contentResolver
-    private val listings = HashMap<String, MutableMap<String, String>>()
+    // Read and added to from several uploads at once.
+    private val listings = java.util.concurrent.ConcurrentHashMap<String, MutableMap<String, String>>()
 
     override val rootId: String = DocumentsContract.getTreeDocumentId(tree)
 
     /** Name → document id of everything directly in [dirId]. */
     override fun list(dirId: String): Map<String, String> = listings.getOrPut(dirId) {
-        val out = HashMap<String, String>()
+        val out = java.util.concurrent.ConcurrentHashMap<String, String>()
         val children = DocumentsContract.buildChildDocumentsUriUsingTree(tree, dirId)
         resolver.query(children, arrayOf(DocumentsContract.Document.COLUMN_DOCUMENT_ID, DocumentsContract.Document.COLUMN_DISPLAY_NAME), null, null, null)?.use { c ->
             while (c.moveToNext()) out[c.getString(1)] = c.getString(0)
@@ -30,6 +31,9 @@ class BackupFolder(private val context: Context, private val tree: Uri) : Backup
     override fun child(dirId: String, name: String): String? = list(dirId)[name]
 
     /** The folder [name] in [dirId], made if it isn't there. */
+    // Locked: two uploads making the same folder at once would leave "ab" and "ab (1)" (two "ab"
+    // folders on Google Drive), and chunks in the second wouldn't be found again.
+    @Synchronized
     override fun dir(dirId: String, name: String): String = child(dirId, name) ?: create(dirId, name, DocumentsContract.Document.MIME_TYPE_DIR)
 
     override fun read(docId: String): ByteArray =
@@ -38,7 +42,7 @@ class BackupFolder(private val context: Context, private val tree: Uri) : Backup
 
     /** Writes [name] in [dirId], replacing it if it's there. */
     override fun write(dirId: String, name: String, bytes: ByteArray) {
-        val id = child(dirId, name) ?: create(dirId, name, "application/octet-stream")
+        val id = synchronized(this) { child(dirId, name) ?: create(dirId, name, "application/octet-stream") }
         resolver.openOutputStream(DocumentsContract.buildDocumentUriUsingTree(tree, id), "wt")?.use { it.write(bytes) }
             ?: throw IOException("Couldn't write to the backup folder")
     }

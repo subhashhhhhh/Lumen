@@ -611,6 +611,8 @@ private fun ServerDialog(onDismiss: () -> Unit, onConnected: (BackupServer) -> U
     var path by remember { mutableStateOf("") }
     var checking by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
+    // SFTP: the server's key (known_hosts line, fingerprint), shown to trust before connecting.
+    var hostKey by remember { mutableStateOf<Pair<String, String>?>(null) }
     val valid = when (kind) {
         BackupServer.Kind.WebDav -> address.startsWith("http://") || address.startsWith("https://")
         BackupServer.Kind.S3 -> user.isNotBlank() && password.isNotBlank() && path.isNotBlank()
@@ -642,7 +644,7 @@ private fun ServerDialog(onDismiss: () -> Unit, onConnected: (BackupServer) -> U
                             .weight(1f)
                             .clip(Lumen.shapes.field)
                             .background(if (on) Lumen.colors.accent else Lumen.colors.field)
-                            .clickable { kind = k; error = null }
+                            .clickable { kind = k; error = null; hostKey = null }
                             .padding(vertical = 8.dp),
                     )
                 }
@@ -661,7 +663,7 @@ private fun ServerDialog(onDismiss: () -> Unit, onConnected: (BackupServer) -> U
             Spacer(Modifier.height(10.dp))
             @Composable
             fun field(value: String, onChange: (String) -> Unit, hint: Int, secret: Boolean = false) {
-                Field(value, { onChange(it); error = null }, stringResource(hint), secret)
+                Field(value, { onChange(it); error = null; hostKey = null }, stringResource(hint), secret)
                 Spacer(Modifier.height(8.dp))
             }
             when (kind) {
@@ -692,6 +694,9 @@ private fun ServerDialog(onDismiss: () -> Unit, onConnected: (BackupServer) -> U
                     field(path, { path = it }, R.string.backup_server_share)
                 }
             }
+            hostKey?.let { (_, fingerprint) ->
+                DialogMessage(stringResource(R.string.backup_server_key, fingerprint), Modifier.padding(bottom = 6.dp))
+            }
             when {
                 error != null -> Text(error!!, color = Lumen.colors.destructive, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 20.dp))
                 checking -> Text(stringResource(R.string.backup_server_checking), color = Lumen.colors.secondary, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 20.dp))
@@ -700,18 +705,28 @@ private fun ServerDialog(onDismiss: () -> Unit, onConnected: (BackupServer) -> U
             DialogButtons(
                 cancel = stringResource(R.string.common_cancel),
                 onCancel = onDismiss,
-                confirm = stringResource(R.string.backup_server_connect),
+                confirm = stringResource(if (hostKey != null) R.string.backup_server_trust else R.string.backup_server_connect),
                 enabled = valid,
                 onConfirm = {
-                    val server = BackupServer(kind, address, user, password, path, port.toIntOrNull() ?: 0, region)
                     checking = true
                     error = null
                     scope.launch {
+                        val server = BackupServer(kind, address, user, password, path, port.toIntOrNull() ?: 0, region)
+                        // SFTP, first tap: read the server's key and show it. Second tap trusts
+                        // it; it's kept, and a different key later is refused.
+                        if (kind == BackupServer.Kind.Sftp && hostKey == null) {
+                            val read = withContext(Dispatchers.IO) { runCatching { ServerFolder.hostKey(address, server.port) } }
+                            checking = false
+                            read.onSuccess { hostKey = it }
+                                .onFailure { error = context.getString(R.string.backup_server_failed, it.message ?: it.javaClass.simpleName) }
+                            return@launch
+                        }
+                        val trusted = hostKey?.let { server.copy(hostKey = it.first) } ?: server
                         val problem = withContext(Dispatchers.IO) {
-                            runCatching { ServerFolder(context, server).check() }.exceptionOrNull()
+                            runCatching { ServerFolder(context, trusted).check() }.exceptionOrNull()
                         }
                         checking = false
-                        if (problem == null) onConnected(server)
+                        if (problem == null) onConnected(trusted)
                         else error = context.getString(R.string.backup_server_failed, problem.message ?: problem.javaClass.simpleName)
                     }
                 },

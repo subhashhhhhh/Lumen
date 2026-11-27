@@ -13,7 +13,11 @@ import com.subhashh.lumen.data.MediaRepository
 import com.subhashh.lumen.data.SettingsBackup
 import com.subhashh.lumen.data.vault.VaultCrypto
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
@@ -151,6 +155,9 @@ object LumenBackup {
     }
 
     private const val ConfigNew = "$ConfigName.new"
+
+    /** Chunks uploading at once (and files read at once while backing up). */
+    private const val Parallel = 4
 
     /**
      * Writes the config without a moment where neither copy is whole: both key locks live in it,
@@ -300,37 +307,63 @@ object LumenBackup {
             val photos = if (Item.Photos in items) library.filterNot { exclusions.covers(it) } else emptyList()
             val vaultFiles = if (Item.Hidden in items) vaultFiles() else emptyList()
             val total = sources.sumOf { it.second.length() } + photos.sumOf { it.size } + vaultFiles.sumOf { it.length() }
-            var done = 0L
-            var uploaded = 0L
+            val done = java.util.concurrent.atomic.AtomicLong()
+            val uploaded = java.util.concurrent.atomic.AtomicLong()
             val store = ChunkStore(target)
             val catalog = Catalog.load(context, target.config.id)
             val step = Progress(R.string.backup_step_uploading, 0, total)
-            suspend fun upload(open: () -> java.io.InputStream?): JSONArray? {
-                val chunks = JSONArray()
-                (open() ?: return null).use { input ->
+            // Up to [Parallel] chunks on their way at once, from one file or several: a server's
+            // round trip per chunk, not the network, was the limit (3 MB/s over Wi-Fi one by one).
+            val inFlight = kotlinx.coroutines.sync.Semaphore(Parallel)
+            suspend fun upload(open: () -> java.io.InputStream?): JSONArray? = kotlinx.coroutines.coroutineScope {
+                val parts = ArrayList<kotlinx.coroutines.Deferred<String>>()
+                (open() ?: return@coroutineScope null).use { input ->
                     val buffer = ByteArray(ChunkBytes)
                     while (true) {
                         gate()
                         coroutineContext.ensureActive()
                         val n = readFully(input, buffer)
                         if (n <= 0) break
-                        val (id, written) = store.put(if (n == ChunkBytes) buffer.copyOf() else buffer.copyOf(n))
-                        chunks.put(id)
-                        uploaded += written
-                        done += n
-                        progress(step.copy(done = done))
+                        inFlight.acquire()
+                        val plain = if (n == ChunkBytes) buffer.copyOf() else buffer.copyOf(n)
+                        parts += async {
+                            try {
+                                val (id, written) = store.put(plain)
+                                uploaded.addAndGet(written)
+                                progress(step.copy(done = done.addAndGet(n.toLong())))
+                                id
+                            } finally {
+                                inFlight.release()
+                            }
+                        }
                     }
                 }
-                return chunks
+                JSONArray(parts.awaitAll())
             }
             /** Like [upload], but a file unchanged since the last backup reuses its chunks unread (Time Machine). */
             suspend fun uploadKnown(key: String, size: Long, open: () -> java.io.InputStream?): JSONArray? {
                 catalog[key]?.takeIf { known -> known.all(store::has) }?.let { known ->
-                    done += size
-                    progress(step.copy(done = done))
+                    progress(step.copy(done = done.addAndGet(size)))
                     return JSONArray(known)
                 }
                 return upload(open)?.also { chunks -> catalog[key] = (0 until chunks.length()).map(chunks::getString) }
+            }
+            /** [work] on each of [list] by [Parallel] workers; results in [list]'s order, null where skipped. */
+            suspend fun <T, R : Any> eachInParallel(list: List<T>, work: suspend (T) -> R?): List<R?> = kotlinx.coroutines.coroutineScope {
+                val results = arrayOfNulls<Any>(list.size)
+                val next = java.util.concurrent.atomic.AtomicInteger()
+                List(Parallel) {
+                    launch {
+                        while (true) {
+                            val i = next.getAndIncrement()
+                            if (i >= list.size) break
+                            coroutineContext.ensureActive()
+                            results[i] = work(list[i])
+                        }
+                    }
+                }.joinAll()
+                @Suppress("UNCHECKED_CAST")
+                results.toList() as List<R?>
             }
             val files = JSONObject()
             for ((name, file) in sources) {
@@ -343,21 +376,26 @@ object LumenBackup {
             val vaultRows = JSONArray()
             // Saved even when the backup is stopped or fails: files already sent aren't sent again.
             try {
-            for (item in photos) {
-                coroutineContext.ensureActive()
-                val chunks = unlessUnreadable {
-                    uploadKnown("m|${item.id}|${item.size}|${item.modified}", item.size) {
-                        val uri = if (readOriginals && com.subhashh.lumen.data.ExternalMedia.isMediaStore(item.uri)) android.provider.MediaStore.setRequireOriginal(item.uri) else item.uri
-                        runCatching { context.contentResolver.openInputStream(uri) }.getOrNull() ?: context.contentResolver.openInputStream(item.uri)
+                val photoChunks = eachInParallel(photos) { item ->
+                    // Null: gone or unreadable since the library was listed; next time.
+                    unlessUnreadable {
+                        uploadKnown("m|${item.id}|${item.size}|${item.modified}", item.size) {
+                            val uri = if (readOriginals && com.subhashh.lumen.data.ExternalMedia.isMediaStore(item.uri)) android.provider.MediaStore.setRequireOriginal(item.uri) else item.uri
+                            runCatching { context.contentResolver.openInputStream(uri) }.getOrNull() ?: context.contentResolver.openInputStream(item.uri)
+                        }
                     }
-                } ?: continue // gone or unreadable since the library was listed: next time
-                photoRows.put(JSONArray().put(item.relativePath).put(item.name).put(item.size).put(item.takenAt).put(item.mimeType).put(chunks).put(item.modified))
-            }
-            for (file in vaultFiles) {
-                coroutineContext.ensureActive()
-                val chunks = unlessUnreadable { uploadKnown("v|${file.name}|${file.length()}|${file.lastModified()}", file.length()) { file.inputStream() } } ?: continue
-                vaultRows.put(JSONArray().put(file.name).put(file.length()).put(chunks))
-            }
+                }
+                photos.forEachIndexed { i, item ->
+                    val chunks = photoChunks[i] ?: return@forEachIndexed
+                    photoRows.put(JSONArray().put(item.relativePath).put(item.name).put(item.size).put(item.takenAt).put(item.mimeType).put(chunks).put(item.modified))
+                }
+                val vaultChunks = eachInParallel(vaultFiles) { file ->
+                    unlessUnreadable { uploadKnown("v|${file.name}|${file.length()}|${file.lastModified()}", file.length()) { file.inputStream() } }
+                }
+                vaultFiles.forEachIndexed { i, file ->
+                    val chunks = vaultChunks[i] ?: return@forEachIndexed
+                    vaultRows.put(JSONArray().put(file.name).put(file.length()).put(chunks))
+                }
             } finally {
                 catalog.save()
             }
@@ -381,7 +419,7 @@ object LumenBackup {
             val dir = target.folder.dir(target.dirId, "snapshots")
             target.folder.write(dir, "$stamp.snap", target.keys?.let { VaultCrypto.seal(it.data, bytes) } ?: bytes)
             prefs(context).edit { putLong("last", System.currentTimeMillis()).putLong("last-size", total) }
-            Done(stamp, uploaded, total)
+            Done(stamp, uploaded.get(), total)
         } finally {
             work.deleteRecursively()
         }
@@ -408,10 +446,10 @@ object LumenBackup {
      * read again, so a backup of 40,000 photos with 10 new ones reads 10.
      */
     private class Catalog(private val file: File, private val entries: HashMap<String, List<String>>) {
-        operator fun get(key: String) = entries[key]
-        operator fun set(key: String, chunks: List<String>) { entries[key] = chunks }
+        @Synchronized operator fun get(key: String) = entries[key]
+        @Synchronized operator fun set(key: String, chunks: List<String>) { entries[key] = chunks }
 
-        fun save() {
+        @Synchronized fun save() {
             val json = JSONObject()
             for ((k, v) in entries) json.put(k, JSONArray(v))
             val tmp = File(file.path + ".tmp")
@@ -465,20 +503,35 @@ object LumenBackup {
     private class ChunkStore(private val target: Target) {
         private val data = target.folder.dir(target.dirId, "data")
         private val dirs = HashMap<String, String>()
+        /** Chunks being written now: the same chunk twice at once is written once. */
+        private val writing = HashMap<String, Any>()
+
+        /** The prefix folder for [name], made once even with several uploads at once. */
+        private fun dirFor(name: String): String = synchronized(dirs) {
+            dirs.getOrPut(name.take(2)) { target.folder.dir(data, name.take(2)) }
+        }
 
         fun has(name: String): Boolean = storing {
-            val dir = dirs.getOrPut(name.take(2)) { target.folder.dir(data, name.take(2)) }
+            val dir = dirFor(name)
             target.folder.child(dir, name) != null
         }
 
         /** Stores [plain] unless it's there; its name and the bytes written (0 if it was there). */
         fun put(plain: ByteArray): Pair<String, Long> = storing {
             val name = target.keys?.name(plain) ?: BackupCrypto.plainName(plain)
-            val dir = dirs.getOrPut(name.take(2)) { target.folder.dir(data, name.take(2)) }
-            if (target.folder.child(dir, name) != null) return@storing name to 0L
-            val bytes = target.keys?.let { VaultCrypto.seal(it.data, plain) } ?: plain
-            target.folder.write(dir, name, bytes)
-            name to bytes.size.toLong()
+            val dir = dirFor(name)
+            // One writer per chunk name; a second upload of the same chunk waits, then finds it.
+            val lock = synchronized(writing) { writing.getOrPut(name) { Any() } }
+            try {
+                synchronized(lock) {
+                    if (target.folder.child(dir, name) != null) return@storing name to 0L
+                    val bytes = target.keys?.let { VaultCrypto.seal(it.data, plain) } ?: plain
+                    target.folder.write(dir, name, bytes)
+                    name to bytes.size.toLong()
+                }
+            } finally {
+                synchronized(writing) { writing.remove(name) }
+            }
         }
 
         /** A failure writing to the backup (server offline, folder gone) as [StoreFailed]. */
@@ -486,7 +539,7 @@ object LumenBackup {
             try { block() } catch (e: StoreFailed) { throw e } catch (e: Exception) { throw StoreFailed(e) }
 
         fun get(name: String): ByteArray {
-            val dir = dirs.getOrPut(name.take(2)) { target.folder.dir(data, name.take(2)) }
+            val dir = dirFor(name)
             val bytes = target.folder.read(target.folder.child(dir, name) ?: error("A backup chunk is missing"))
             val plain = target.keys?.let { VaultCrypto.open(it.data, bytes) } ?: bytes
             // A chunk is named by its content: a damaged file (a cloud provider, an SD card) or two

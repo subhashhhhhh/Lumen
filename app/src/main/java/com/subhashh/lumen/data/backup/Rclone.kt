@@ -19,8 +19,10 @@ object Rclone {
     /** Whether this build carries rclone (not on 32-bit x86, say). */
     val available: Boolean get() = ready
 
-    /** Runs rclone command [method] with [input]; its JSON answer, or an [IOException] with rclone's error. */
-    @Synchronized
+    /**
+     * Runs rclone command [method] with [input]; its JSON answer, or an [IOException] with
+     * rclone's error. Safe from several threads at once (rclone's RPC is).
+     */
     fun call(method: String, input: JSONObject = JSONObject()): JSONObject {
         if (!ready) throw IOException("rclone isn't in this build")
         val raw = try {

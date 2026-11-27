@@ -2,7 +2,10 @@ module lumen/rclone
 
 go 1.26.0
 
-require github.com/rclone/rclone v1.76.0
+require (
+	github.com/rclone/rclone v1.76.0
+	golang.org/x/crypto v0.58.0
+)
 
 require (
 	github.com/Azure/go-ntlmssp v0.1.1 // indirect
@@ -101,7 +104,6 @@ require (
 	github.com/zeebo/blake3 v0.2.4 // indirect
 	github.com/zeebo/xxh3 v1.1.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
-	golang.org/x/crypto v0.58.0 // indirect
 	golang.org/x/mod v0.42.0 // indirect
 	golang.org/x/net v0.62.0 // indirect
 	golang.org/x/sync v0.24.0 // indirect

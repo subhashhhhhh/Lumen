@@ -28,8 +28,16 @@ static jbyteArray newBytes(JNIEnv* env, const char* data, jsize len) {
 import "C"
 
 import (
+	"context"
+	"errors"
+	"net"
 	"strconv"
+	"time"
 	"unsafe"
+
+	"github.com/rclone/rclone/fs/rc"
+	"golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh/knownhosts"
 
 	"github.com/rclone/rclone/librclone/librclone"
 
@@ -64,6 +72,49 @@ func Java_com_subhashh_lumen_data_backup_Rclone_nativeRpc(env *C.JNIEnv, cls C.j
 	cs := C.CString(result)
 	defer C.free(unsafe.Pointer(cs))
 	return C.newBytes(env, cs, C.jsize(len(result)))
+}
+
+// lumen/hostkey {"host": "nas.local", "port": 22} → {"line": "<known_hosts line>", "fingerprint": "SHA256:…"}
+//
+// The SFTP server's key, read during the handshake (no login), so Lumen can keep it on first
+// connect and rclone (known_hosts_file) refuses a server whose key later changes.
+func init() {
+	rc.Add(rc.Call{
+		Path:  "lumen/hostkey",
+		Title: "Read an SSH server's host key",
+		Fn: func(ctx context.Context, in rc.Params) (rc.Params, error) {
+			host, err := in.GetString("host")
+			if err != nil {
+				return nil, err
+			}
+			port, err := in.GetInt64("port")
+			if err != nil || port <= 0 {
+				port = 22
+			}
+			addr := net.JoinHostPort(host, strconv.FormatInt(port, 10))
+			var key ssh.PublicKey
+			errGot := errors.New("got the key")
+			config := &ssh.ClientConfig{
+				User:    "lumen",
+				Timeout: 15 * time.Second,
+				HostKeyCallback: func(_ string, _ net.Addr, k ssh.PublicKey) error {
+					key = k
+					return errGot
+				},
+			}
+			client, err := ssh.Dial("tcp", addr, config)
+			if client != nil {
+				_ = client.Close()
+			}
+			if key == nil {
+				return nil, err
+			}
+			return rc.Params{
+				"line":        knownhosts.Line([]string{knownhosts.Normalize(addr)}, key),
+				"fingerprint": ssh.FingerprintSHA256(key),
+			}, nil
+		},
+	})
 }
 
 func main() {}
