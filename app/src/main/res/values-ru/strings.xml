@@ -790,4 +790,19 @@
     <string name="settings_style">Стиль</string>
     <string name="settings_style_footer">Lumen — собственный стиль оформления приложения. Material 3 Expressive — стиль Android: собственные экраны, значки и анимации, ваши цвета и отображение новых фотографий в первую очередь. Liquid Glass относится к собственному оформлению Lumen.</string>
     <string name="settings_group_colour">Цвет</string>
+    <string name="settings_colour_footer">Цвет — основа всей цветовой схемы Material. Можно использовать цвета из обоев, выбрать одну из готовых цветовых схем или создать собственную. Палитра определяет, насколько остальные цвета будут отличаться от основного. Режим «Чистый чёрный» делает фон тёмной темы полностью чёрным, что помогает экономить заряд на OLED-экранах.</string>
+    <string name="settings_accent">Цвет</string>
+    <string name="settings_accent_wallpaper">Обои</string>
+    <string name="settings_accent_default">Синий Lumen</string>
+    <string name="settings_accent_custom">Свой цвет</string>
+    <string name="settings_accent_hue">Цветовой тон</string>
+    <string name="settings_palette">Цветовая палитра</string>
+    <string name="settings_pure_black">Абсолютно чёрный</string>
+    <string name="settings_pure_black_subtitle">Чёрный фон в тёмной теме</string>
+    <string name="settings_app_icon">Значок приложения</string>
+    <string name="settings_app_icon_footer">Значок изменится после выхода из Lumen. Главному экрану может потребоваться несколько секунд, чтобы отобразить его. Некоторые лаунчеры удаляют ярлык Lumen с главного экрана при смене значка. В таком случае добавьте его заново из списка приложений.</string>
+    <string name="app_icon_first_light">Первый свет</string>
+    <string name="app_icon_dusk">Сумерки</string>
+    <string name="app_icon_ocean">Океан</string>
+    <string name="app_icon_forest">Лес</string>
 </resources>
