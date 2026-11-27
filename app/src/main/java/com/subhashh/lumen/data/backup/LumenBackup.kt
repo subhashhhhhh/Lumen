@@ -109,8 +109,7 @@ object LumenBackup {
         runCatching {
             val folder = BackupFolder(context, tree)
             val dir = folder.child(folder.rootId, FolderName) ?: return@runCatching null
-            val config = folder.child(dir, ConfigName) ?: return@runCatching null
-            Config.parse(String(folder.read(config)))
+            readConfig(folder, dir)
         }.getOrNull()
     }
 
@@ -130,9 +129,32 @@ object LumenBackup {
         } else {
             Config(UUID.randomUUID().toString(), false, null, null)
         }
-        folder.write(dir, ConfigName, config.toJson().toByteArray())
+        writeConfig(folder, dir, config)
         use(context, tree, config)
         recovery
+    }
+
+    private const val ConfigNew = "$ConfigName.new"
+
+    /**
+     * Writes the config without a moment where neither copy is whole: both key locks live in it,
+     * so a write cut short in place would leave a backup nobody can open. The new config goes to
+     * a side file first, then over the original; [readConfig] falls back to the side file.
+     */
+    private fun writeConfig(folder: BackupFolder, dir: String, config: Config) {
+        val bytes = config.toJson().toByteArray()
+        folder.write(dir, ConfigNew, bytes)
+        folder.write(dir, ConfigName, bytes)
+        folder.delete(dir, ConfigNew)
+    }
+
+    /** The config, or the side file if the config is missing or cut short (an interrupted [writeConfig]). */
+    private fun readConfig(folder: BackupFolder, dir: String): Config? {
+        for (name in listOf(ConfigName, ConfigNew)) {
+            val id = folder.child(dir, name) ?: continue
+            runCatching { return Config.parse(String(folder.read(id))) }
+        }
+        return null
     }
 
     /** Opens an existing backup in [tree] with its password or recovery key; false if neither fits. */
@@ -169,7 +191,7 @@ object LumenBackup {
         val tree = folderUri(context) ?: return@withContext null
         val folder = BackupFolder(context, tree)
         val dir = folder.child(folder.rootId, FolderName) ?: return@withContext null
-        val config = Config.parse(String(folder.read(folder.child(dir, ConfigName) ?: return@withContext null)))
+        val config = readConfig(folder, dir) ?: return@withContext null
         val keys = if (config.encrypted) BackupCrypto.Keys(keptKey(context, config.id) ?: return@withContext null) else null
         Target(folder, dir, config, keys)
     }
@@ -180,7 +202,7 @@ object LumenBackup {
         val key = keptKey(context, target.config.id) ?: return@withContext null
         val recovery = BackupCrypto.newRecoveryKey()
         val config = Config(target.config.id, true, target.config.passwordLock, BackupCrypto.lockWithRecoveryKey(key, recovery))
-        target.folder.write(target.dirId, ConfigName, config.toJson().toByteArray())
+        writeConfig(target.folder, target.dirId, config)
         recovery
     }
 
@@ -189,7 +211,7 @@ object LumenBackup {
         val target = target(context) ?: return@withContext false
         val key = keptKey(context, target.config.id) ?: return@withContext false
         val config = Config(target.config.id, true, BackupCrypto.lockWithPassword(key, password), target.config.recoveryLock)
-        target.folder.write(target.dirId, ConfigName, config.toJson().toByteArray())
+        writeConfig(target.folder, target.dirId, config)
         true
     }
 
@@ -307,7 +329,11 @@ object LumenBackup {
         fun get(name: String): ByteArray {
             val dir = dirs.getOrPut(name.take(2)) { target.folder.dir(data, name.take(2)) }
             val bytes = target.folder.read(target.folder.child(dir, name) ?: error("A backup chunk is missing"))
-            return target.keys?.let { VaultCrypto.open(it.data, bytes) } ?: bytes
+            val plain = target.keys?.let { VaultCrypto.open(it.data, bytes) } ?: bytes
+            // A chunk is named by its content: a damaged file (a cloud provider, an SD card) or two
+            // swapped ones don't match, and the restore stops rather than put wrong data in place.
+            check((target.keys?.name(plain) ?: BackupCrypto.plainName(plain)) == name) { "A backup chunk is damaged" }
+            return plain
         }
     }
 

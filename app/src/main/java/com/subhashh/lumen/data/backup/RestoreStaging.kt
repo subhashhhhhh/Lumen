@@ -39,16 +39,24 @@ object RestoreStaging {
         }
         val out = HashMap<Long, Pair<Long, Long>>()
         val taken = HashSet<Long>()
-        for (i in 0 until media.length()) {
-            val row = media.getJSONArray(i)
-            val old = row.getLong(0)
-            val path = row.getString(1)
-            val name = row.getString(2)
-            val size = row.getLong(3)
-            val found = byPathSize["$path$name|$size"] ?: byNameSize["$name|$size"] ?: byPath["$path$name"] ?: continue
-            // One photo here for one in the backup: a second match would make two rows one id.
-            if (!taken.add(found.id)) continue
-            out[old] = found.id to found.toRef().modified
+        val rows = (0 until media.length()).map { media.getJSONArray(it) }
+        // Pass by pass over every row: every exact match first, then the looser ones for rows still
+        // without a photo. Row by row, a copy elsewhere (Download/IMG_7.jpg, same size) could take
+        // the photo whose own row matches it exactly further down.
+        val passes = listOf<(String, String, Long) -> MediaItem?>(
+            { path, name, size -> byPathSize["$path$name|$size"] },
+            { _, name, size -> byNameSize["$name|$size"] },
+            { path, name, _ -> byPath["$path$name"] },
+        )
+        for (pass in passes) {
+            for (row in rows) {
+                val old = row.getLong(0)
+                if (old in out) continue
+                val found = pass(row.getString(1), row.getString(2), row.getLong(3)) ?: continue
+                // One photo here for one in the backup: a second match would make two rows one id.
+                if (!taken.add(found.id)) continue
+                out[old] = found.id to found.toRef().modified
+            }
         }
         return out
     }
@@ -141,8 +149,17 @@ object RestoreStaging {
             manifest.optString("searchModel").takeIf { it.isNotEmpty() && it != "null" }?.let { place("search.db", File(noBackup, "search/$it.db")) }
             File(staging, "faces.pack").takeIf { it.isFile }?.let { pack ->
                 val crops = File(noBackup, "faces")
-                crops.deleteRecursively()
-                LumenBackup.unpack(pack, crops)
+                val fresh = File(noBackup, "faces.new").apply { deleteRecursively() }
+                // Unpacked beside the old crops and swapped in only once complete: a failed unpack
+                // leaves the old ones.
+                LumenBackup.unpack(pack, fresh)
+                val old = File(noBackup, "faces.old").apply { deleteRecursively() }
+                if (crops.exists() && !crops.renameTo(old)) error("Couldn't move the old face crops aside")
+                if (!fresh.renameTo(crops)) {
+                    old.renameTo(crops)
+                    error("Couldn't put the restored face crops in place")
+                }
+                old.deleteRecursively()
             }
             File(staging, "settings.json").takeIf { it.isFile }?.let { file ->
                 favorites = kotlinx.coroutines.runBlocking { SettingsBackup.import(context, Uri.fromFile(file)) }?.favoritePaths.orEmpty()
