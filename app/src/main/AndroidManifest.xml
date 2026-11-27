@@ -233,6 +233,12 @@
             </intent-filter>
         </activity-alias>
 
+        <!-- Lumen Backup: a backup carries on while Lumen is closed; its notification pauses or stops it. -->
+        <service
+            android:name=".data.backup.BackupService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
         <receiver
             android:name=".data.UpdateReceiver"
             android:exported="false" />

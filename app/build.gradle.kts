@@ -1,3 +1,6 @@
+import javax.inject.Inject
+import org.gradle.process.ExecOperations
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -171,9 +174,66 @@ baselineProfile {
 // library folder, not from inside the APK. Only the Lab compiles models on the phone; everything
 // else uses models compiled ahead of time (lumen-npu-build), so the 85 MB compiler stays out, and
 // so do the Snapdragon 888's (v68) and older DSPs' libraries, which those models can't run on.
+/**
+ * rclone for Lumen Backup's servers (WebDAV, S3, SFTP, SMB): `app/rclone` (Go, rclone as a
+ * dependency, only those backends) built per ABI with the NDK's clang into `librclone.so`. Needs
+ * Go ([goBinary]); without it, builds other than release go on without rclone (Rclone.available
+ * is false and Backup offers only folders).
+ */
+abstract class BuildRclone @Inject constructor(private val exec: ExecOperations) : DefaultTask() {
+    @get:InputDirectory @get:PathSensitive(PathSensitivity.RELATIVE) abstract val source: DirectoryProperty
+    @get:Internal abstract val sdk: DirectoryProperty
+    @get:Input abstract val required: Property<Boolean>
+    @get:OutputDirectory abstract val outDir: DirectoryProperty
+
+    private fun goBinary(): String? {
+        val home = System.getProperty("user.home")
+        val onPath = System.getenv("PATH").orEmpty().split(File.pathSeparator).map { "$it/go" }
+        // An older Go fetches the version go.mod asks for by itself (GOTOOLCHAIN=auto).
+        return (listOfNotNull(System.getenv("LUMEN_GO"), "$home/rclone-build/go/bin/go", "/opt/homebrew/bin/go", "/usr/local/go/bin/go") + onPath)
+            .firstOrNull { File(it).canExecute() }
+    }
+
+    @TaskAction
+    fun build() {
+        val out = outDir.get().asFile.apply { deleteRecursively(); mkdirs() }
+        val go = goBinary()
+        val ndk = sdk.get().asFile.resolve("ndk").listFiles().orEmpty()
+            .filter { it.resolve("toolchains/llvm/prebuilt").isDirectory }.maxByOrNull { it.name }
+        val bin = ndk?.resolve("toolchains/llvm/prebuilt")?.listFiles()?.firstOrNull()?.resolve("bin")
+        if (go == null || bin == null) {
+            val why = if (go == null) "Go isn't installed" else "no NDK in ${sdk.get().asFile}"
+            if (required.get()) throw GradleException("rclone can't be built: $why")
+            logger.warn("Lumen: building without rclone ($why); Backup will offer folders only.")
+            return
+        }
+        for ((abi, target) in mapOf("arm64-v8a" to ("arm64" to "aarch64-linux-android30"), "x86_64" to ("amd64" to "x86_64-linux-android30"))) {
+            exec.exec {
+                workingDir = source.get().asFile
+                environment("CGO_ENABLED", "1")
+                environment("GOOS", "android")
+                environment("GOARCH", target.first)
+                environment("CC", bin.resolve("${target.second}-clang").path)
+                environment("GOFLAGS", "-trimpath -mod=readonly")
+                commandLine(go, "build", "-buildmode=c-shared", "-ldflags=-s -w -buildid= -extldflags=-Wl,-z,max-page-size=16384",
+                    "-o", out.resolve("$abi/librclone.so").path, ".")
+            }
+            out.resolve("$abi/librclone.h").delete()
+        }
+    }
+}
+
+val buildRclone = tasks.register<BuildRclone>("buildRclone") {
+    source.set(layout.projectDirectory.dir("rclone"))
+    sdk.set(androidComponents.sdkComponents.sdkDirectory)
+    required.set(gradle.startParameter.taskNames.any { it.contains("Release", ignoreCase = true) })
+    outDir.set(layout.buildDirectory.dir("rclone/jniLibs"))
+}
+
 androidComponents {
     onVariants { variant ->
         variant.packaging.jniLibs.useLegacyPackaging.set(true)
+        variant.sources.jniLibs?.addGeneratedSourceDirectory(buildRclone, BuildRclone::outDir)
         val lab = hasLab && variant.buildType in listOf("debug", "profile", "dev")
         if (!lab) {
             variant.packaging.jniLibs.excludes.addAll(

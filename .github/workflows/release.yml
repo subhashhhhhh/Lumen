@@ -45,6 +45,11 @@ jobs:
           sdkmanager=$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | sort -V | tail -1)
           yes | "$sdkmanager" --licenses > /dev/null || true
           "$sdkmanager" "platforms;android-37.0" "ndk;30.0.16248370" "cmake;4.1.2" > /dev/null
+      # Go builds rclone (app/rclone) for Lumen Backup's servers.
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+        with:
+          go-version-file: app/rclone/go.mod
+          cache-dependency-path: app/rclone/go.sum
       - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
       - name: Release key
         env:

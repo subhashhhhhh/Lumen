@@ -11,14 +11,14 @@ import java.io.IOException
  * reached through DocumentsContract. Lumen writes plain files into it and nothing else, which is
  * all any of those support. Lookups are cached per folder: some providers answer slowly.
  */
-class BackupFolder(private val context: Context, private val tree: Uri) {
+class BackupFolder(private val context: Context, private val tree: Uri) : BackupStore {
     private val resolver = context.contentResolver
     private val listings = HashMap<String, MutableMap<String, String>>()
 
-    val rootId: String = DocumentsContract.getTreeDocumentId(tree)
+    override val rootId: String = DocumentsContract.getTreeDocumentId(tree)
 
     /** Name → document id of everything directly in [dirId]. */
-    fun list(dirId: String): Map<String, String> = listings.getOrPut(dirId) {
+    override fun list(dirId: String): Map<String, String> = listings.getOrPut(dirId) {
         val out = HashMap<String, String>()
         val children = DocumentsContract.buildChildDocumentsUriUsingTree(tree, dirId)
         resolver.query(children, arrayOf(DocumentsContract.Document.COLUMN_DOCUMENT_ID, DocumentsContract.Document.COLUMN_DISPLAY_NAME), null, null, null)?.use { c ->
@@ -27,23 +27,23 @@ class BackupFolder(private val context: Context, private val tree: Uri) {
         out
     }
 
-    fun child(dirId: String, name: String): String? = list(dirId)[name]
+    override fun child(dirId: String, name: String): String? = list(dirId)[name]
 
     /** The folder [name] in [dirId], made if it isn't there. */
-    fun dir(dirId: String, name: String): String = child(dirId, name) ?: create(dirId, name, DocumentsContract.Document.MIME_TYPE_DIR)
+    override fun dir(dirId: String, name: String): String = child(dirId, name) ?: create(dirId, name, DocumentsContract.Document.MIME_TYPE_DIR)
 
-    fun read(docId: String): ByteArray =
+    override fun read(docId: String): ByteArray =
         resolver.openInputStream(DocumentsContract.buildDocumentUriUsingTree(tree, docId))?.use { it.readBytes() }
             ?: throw IOException("Couldn't read the backup folder")
 
     /** Writes [name] in [dirId], replacing it if it's there. */
-    fun write(dirId: String, name: String, bytes: ByteArray) {
+    override fun write(dirId: String, name: String, bytes: ByteArray) {
         val id = child(dirId, name) ?: create(dirId, name, "application/octet-stream")
         resolver.openOutputStream(DocumentsContract.buildDocumentUriUsingTree(tree, id), "wt")?.use { it.write(bytes) }
             ?: throw IOException("Couldn't write to the backup folder")
     }
 
-    fun delete(dirId: String, name: String) {
+    override fun delete(dirId: String, name: String) {
         val id = child(dirId, name) ?: return
         DocumentsContract.deleteDocument(resolver, DocumentsContract.buildDocumentUriUsingTree(tree, id))
         listings[dirId]?.remove(name)
@@ -59,7 +59,7 @@ class BackupFolder(private val context: Context, private val tree: Uri) {
     }
 
     /** A short, readable name for the picked folder ("Lumen Backups", "Google Drive › Backups"). */
-    fun label(): String = runCatching {
+    override fun label(): String = runCatching {
         resolver.query(DocumentsContract.buildDocumentUriUsingTree(tree, rootId), arrayOf(DocumentsContract.Document.COLUMN_DISPLAY_NAME), null, null, null)
             ?.use { c -> if (c.moveToFirst()) c.getString(0) else null }
     }.getOrNull() ?: tree.lastPathSegment.orEmpty()

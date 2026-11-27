@@ -101,29 +101,41 @@ object LumenBackup {
     }
 
     /** The backup set up on this phone: its folder and config, and the key (null if unencrypted). */
-    class Target(val folder: BackupFolder, val dirId: String, val config: Config, val keys: BackupCrypto.Keys?)
+    class Target(val folder: BackupStore, val dirId: String, val config: Config, val keys: BackupCrypto.Keys?)
 
     private fun prefs(context: Context) = context.getSharedPreferences("lumen-backup", Context.MODE_PRIVATE)
 
-    /** The folder backups go to, once one is set up. */
-    fun folderUri(context: Context): Uri? = prefs(context).getString("folder", null)?.let(Uri::parse)
-
-    /** A Lumen backup already in [tree] (to restore from, or to keep backing up into), or null. */
-    suspend fun existing(context: Context, tree: Uri): Config? = withContext(Dispatchers.IO) {
-        runCatching {
-            val folder = BackupFolder(context, tree)
-            val dir = folder.child(folder.rootId, FolderName) ?: return@runCatching null
-            readConfig(folder, dir)
-        }.getOrNull()
+    /** The folder backups go to, once one is set up (a picked folder, or a server). */
+    fun location(context: Context): BackupLocation? {
+        val prefs = prefs(context)
+        prefs.getString("folder", null)?.let { return BackupLocation.Folder(Uri.parse(it)) }
+        val sealed = prefs.getString("server", null) ?: return null
+        return runCatching { BackupLocation.Server(BackupServer.parse(JSONObject(String(unseal(sealed))))) }.getOrNull()
     }
 
     /**
-     * Starts a new backup in [tree]: encrypted with [password] if given. Returns the recovery key
+     * A Lumen backup already in [location] (to restore from, or to keep backing up into), or null
+     * if there's none. Throws if the place can't be read, or holds a config that won't parse:
+     * "none" would lead to setting up a new backup over it.
+     */
+    suspend fun existing(context: Context, location: BackupLocation): Config? = withContext(Dispatchers.IO) {
+        val folder = location.open(context)
+        val dir = folder.child(folder.rootId, FolderName) ?: return@withContext null
+        if (folder.child(dir, ConfigName) == null && folder.child(dir, ConfigNew) == null) return@withContext null
+        readConfig(folder, dir) ?: throw java.io.IOException(context.getString(R.string.backup_config_unreadable))
+    }
+
+    /**
+     * Starts a new backup in [location]: encrypted with [password] if given. Returns the recovery key
      * to show the person once (null for an unencrypted backup).
      */
-    suspend fun setUp(context: Context, tree: Uri, password: String?): String? = withContext(Dispatchers.IO) {
-        val folder = BackupFolder(context, tree)
+    suspend fun setUp(context: Context, location: BackupLocation, password: String?): String? = withContext(Dispatchers.IO) {
+        val folder = location.open(context)
         val dir = folder.dir(folder.rootId, FolderName)
+        // Never over another backup's config: its key locks are the only way into it.
+        if (folder.child(dir, ConfigName) != null || folder.child(dir, ConfigNew) != null) {
+            throw java.io.IOException(context.getString(R.string.backup_already_here))
+        }
         var recovery: String? = null
         val config = if (password != null) {
             val key = BackupCrypto.newBackupKey()
@@ -134,7 +146,7 @@ object LumenBackup {
             Config(UUID.randomUUID().toString(), false, null, null)
         }
         writeConfig(folder, dir, config)
-        use(context, tree, config)
+        use(context, location, config)
         recovery
     }
 
@@ -145,7 +157,7 @@ object LumenBackup {
      * so a write cut short in place would leave a backup nobody can open. The new config goes to
      * a side file first, then over the original; [readConfig] falls back to the side file.
      */
-    private fun writeConfig(folder: BackupFolder, dir: String, config: Config) {
+    private fun writeConfig(folder: BackupStore, dir: String, config: Config) {
         val bytes = config.toJson().toByteArray()
         folder.write(dir, ConfigNew, bytes)
         folder.write(dir, ConfigName, bytes)
@@ -153,7 +165,7 @@ object LumenBackup {
     }
 
     /** The config, or the side file if the config is missing or cut short (an interrupted [writeConfig]). */
-    private fun readConfig(folder: BackupFolder, dir: String): Config? {
+    private fun readConfig(folder: BackupStore, dir: String): Config? {
         for (name in listOf(ConfigName, ConfigNew)) {
             val id = folder.child(dir, name) ?: continue
             runCatching { return Config.parse(String(folder.read(id))) }
@@ -161,39 +173,53 @@ object LumenBackup {
         return null
     }
 
-    /** Opens an existing backup in [tree] with its password or recovery key; false if neither fits. */
-    suspend fun connect(context: Context, tree: Uri, password: String?, recoveryKey: String?): Boolean = withContext(Dispatchers.IO) {
-        val config = existing(context, tree) ?: return@withContext false
+    /** Opens an existing backup in [location] with its password or recovery key; false if neither fits. */
+    suspend fun connect(context: Context, location: BackupLocation, password: String?, recoveryKey: String?): Boolean = withContext(Dispatchers.IO) {
+        val config = runCatching { existing(context, location) }.getOrNull() ?: return@withContext false
         if (config.encrypted) {
             val key = password?.let { p -> config.passwordLock?.let { BackupCrypto.unlockWithPassword(it, p) } }
                 ?: recoveryKey?.let { r -> config.recoveryLock?.let { BackupCrypto.unlockWithRecoveryKey(it, r) } }
                 ?: return@withContext false
             keepKey(context, config.id, key)
         }
-        use(context, tree, config)
+        use(context, location, config)
         // "Last backup" from the folder's newest one, not from this phone's memory.
         snapshots(context).firstOrNull()?.let { prefs(context).edit { putLong("last", it.created) } }
         true
     }
 
-    private fun use(context: Context, tree: Uri, config: Config) {
-        runCatching {
-            context.contentResolver.takePersistableUriPermission(
-                tree, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
-            )
+    private fun use(context: Context, location: BackupLocation, config: Config) {
+        releaseFolder(context)
+        prefs(context).edit {
+            remove("folder").remove("server")
+            when (location) {
+                is BackupLocation.Folder -> {
+                    runCatching {
+                        context.contentResolver.takePersistableUriPermission(
+                            location.tree, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+                        )
+                    }
+                    putString("folder", location.tree.toString())
+                }
+                is BackupLocation.Server -> putString("server", seal(location.server.toJson().toString().toByteArray()))
+            }
+            putString("id", config.id).putBoolean("encrypted", config.encrypted)
         }
-        prefs(context).edit { putString("folder", tree.toString()).putString("id", config.id).putBoolean("encrypted", config.encrypted) }
+    }
+
+    private fun releaseFolder(context: Context) {
+        val uri = (location(context) as? BackupLocation.Folder)?.tree ?: return
+        runCatching { context.contentResolver.releasePersistableUriPermission(uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION) }
     }
 
     /** Forgets the backup on this phone (the folder and its backups stay). */
     fun disconnect(context: Context) {
-        folderUri(context)?.let { uri -> runCatching { context.contentResolver.releasePersistableUriPermission(uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION) } }
+        releaseFolder(context)
         prefs(context).edit { clear() }
     }
 
     suspend fun target(context: Context): Target? = withContext(Dispatchers.IO) {
-        val tree = folderUri(context) ?: return@withContext null
-        val folder = BackupFolder(context, tree)
+        val folder = location(context)?.open(context) ?: return@withContext null
         val dir = folder.child(folder.rootId, FolderName) ?: return@withContext null
         val config = readConfig(folder, dir) ?: return@withContext null
         val keys = if (config.encrypted) BackupCrypto.Keys(keptKey(context, config.id) ?: return@withContext null) else null
@@ -231,16 +257,24 @@ object LumenBackup {
         }.generateKey()
     }
 
-    private fun keepKey(context: Context, id: String, key: ByteArray) {
+    /** [bytes] sealed by the Keystore key, as text for prefs: the backup key, a server's login. */
+    private fun seal(bytes: ByteArray): String {
         val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.ENCRYPT_MODE, keystoreKey()) }
-        val sealed = cipher.iv + cipher.doFinal(key)
-        prefs(context).edit { putString("key-$id", BackupCrypto.b64(sealed)) }
+        return BackupCrypto.b64(cipher.iv + cipher.doFinal(bytes))
+    }
+
+    private fun unseal(text: String): ByteArray {
+        val sealed = BackupCrypto.unb64(text)
+        return Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.DECRYPT_MODE, keystoreKey(), GCMParameterSpec(128, sealed, 0, 12)) }
+            .doFinal(sealed, 12, sealed.size - 12)
+    }
+
+    private fun keepKey(context: Context, id: String, key: ByteArray) {
+        prefs(context).edit { putString("key-$id", seal(key)) }
     }
 
     private fun keptKey(context: Context, id: String): ByteArray? = runCatching {
-        val sealed = BackupCrypto.unb64(prefs(context).getString("key-$id", null) ?: return null)
-        Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.DECRYPT_MODE, keystoreKey(), GCMParameterSpec(128, sealed, 0, 12)) }
-            .doFinal(sealed, 12, sealed.size - 12)
+        unseal(prefs(context).getString("key-$id", null) ?: return null)
     }.getOrNull()
 
     // ---- Backing up ----
@@ -250,7 +284,13 @@ object LumenBackup {
     data class Done(val snapshot: String, val uploaded: Long, val total: Long)
 
     /** Backs up [items] to the folder set up on this phone. Only chunks the folder lacks are written. */
-    suspend fun backUp(context: Context, items: Set<Item>, progress: (Progress) -> Unit): Done = withContext(Dispatchers.IO) {
+    suspend fun backUp(
+        context: Context,
+        items: Set<Item>,
+        /** Called between chunks; suspends while the backup is paused. */
+        gate: suspend () -> Unit = {},
+        progress: (Progress) -> Unit,
+    ): Done = withContext(Dispatchers.IO) {
         val target = target(context) ?: error("No backup folder set up")
         val work = File(context.cacheDir, "backup-work").apply { deleteRecursively(); mkdirs() }
         try {
@@ -265,11 +305,13 @@ object LumenBackup {
             val store = ChunkStore(target)
             val catalog = Catalog.load(context, target.config.id)
             val step = Progress(R.string.backup_step_uploading, 0, total)
-            fun upload(open: () -> java.io.InputStream?): JSONArray? {
+            suspend fun upload(open: () -> java.io.InputStream?): JSONArray? {
                 val chunks = JSONArray()
                 (open() ?: return null).use { input ->
                     val buffer = ByteArray(ChunkBytes)
                     while (true) {
+                        gate()
+                        coroutineContext.ensureActive()
                         val n = readFully(input, buffer)
                         if (n <= 0) break
                         val (id, written) = store.put(if (n == ChunkBytes) buffer.copyOf() else buffer.copyOf(n))
@@ -282,7 +324,7 @@ object LumenBackup {
                 return chunks
             }
             /** Like [upload], but a file unchanged since the last backup reuses its chunks unread (Time Machine). */
-            fun uploadKnown(key: String, size: Long, open: () -> java.io.InputStream?): JSONArray? {
+            suspend fun uploadKnown(key: String, size: Long, open: () -> java.io.InputStream?): JSONArray? {
                 catalog[key]?.takeIf { known -> known.all(store::has) }?.let { known ->
                     done += size
                     progress(step.copy(done = done))
@@ -298,23 +340,27 @@ object LumenBackup {
             // Photos and videos, read as originals (with their location, where Lumen may read it).
             val readOriginals = context.checkSelfPermission(android.Manifest.permission.ACCESS_MEDIA_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED
             val photoRows = JSONArray()
+            val vaultRows = JSONArray()
+            // Saved even when the backup is stopped or fails: files already sent aren't sent again.
+            try {
             for (item in photos) {
                 coroutineContext.ensureActive()
-                val chunks = runCatching {
+                val chunks = unlessUnreadable {
                     uploadKnown("m|${item.id}|${item.size}|${item.modified}", item.size) {
                         val uri = if (readOriginals && com.subhashh.lumen.data.ExternalMedia.isMediaStore(item.uri)) android.provider.MediaStore.setRequireOriginal(item.uri) else item.uri
                         runCatching { context.contentResolver.openInputStream(uri) }.getOrNull() ?: context.contentResolver.openInputStream(item.uri)
                     }
-                }.getOrNull() ?: continue // gone or unreadable since the library was listed: next time
+                } ?: continue // gone or unreadable since the library was listed: next time
                 photoRows.put(JSONArray().put(item.relativePath).put(item.name).put(item.size).put(item.takenAt).put(item.mimeType).put(chunks).put(item.modified))
             }
-            val vaultRows = JSONArray()
             for (file in vaultFiles) {
                 coroutineContext.ensureActive()
-                val chunks = runCatching { uploadKnown("v|${file.name}|${file.length()}|${file.lastModified()}", file.length()) { file.inputStream() } }.getOrNull() ?: continue
+                val chunks = unlessUnreadable { uploadKnown("v|${file.name}|${file.length()}|${file.lastModified()}", file.length()) { file.inputStream() } } ?: continue
                 vaultRows.put(JSONArray().put(file.name).put(file.length()).put(chunks))
             }
-            catalog.save()
+            } finally {
+                catalog.save()
+            }
             // Which photo each id was here, so a restore can find them again on another phone.
             val media = JSONArray()
             for (item in library) media.put(JSONArray().put(item.id).put(item.relativePath).put(item.name).put(item.size).put(item.takenAt))
@@ -398,24 +444,46 @@ object LumenBackup {
     }
 
     /** The chunk folders, listed once each and remembered, so a chunk already there isn't written again. */
+    /** The backup's folder or server failed: the whole backup stops, unlike one unreadable photo. */
+    class StoreFailed(cause: Throwable) : java.io.IOException(cause.message, cause)
+
+    /**
+     * [block]'s result, or null if a photo or vault file couldn't be read (deleted since the
+     * library was listed, say): it's skipped this time. Stopping and store failures still end
+     * the backup.
+     */
+    private inline fun <T> unlessUnreadable(block: () -> T): T? = try {
+        block()
+    } catch (e: kotlinx.coroutines.CancellationException) {
+        throw e
+    } catch (e: StoreFailed) {
+        throw e
+    } catch (e: Exception) {
+        null
+    }
+
     private class ChunkStore(private val target: Target) {
         private val data = target.folder.dir(target.dirId, "data")
         private val dirs = HashMap<String, String>()
 
-        fun has(name: String): Boolean {
+        fun has(name: String): Boolean = storing {
             val dir = dirs.getOrPut(name.take(2)) { target.folder.dir(data, name.take(2)) }
-            return target.folder.child(dir, name) != null
+            target.folder.child(dir, name) != null
         }
 
         /** Stores [plain] unless it's there; its name and the bytes written (0 if it was there). */
-        fun put(plain: ByteArray): Pair<String, Long> {
+        fun put(plain: ByteArray): Pair<String, Long> = storing {
             val name = target.keys?.name(plain) ?: BackupCrypto.plainName(plain)
             val dir = dirs.getOrPut(name.take(2)) { target.folder.dir(data, name.take(2)) }
-            if (target.folder.child(dir, name) != null) return name to 0L
+            if (target.folder.child(dir, name) != null) return@storing name to 0L
             val bytes = target.keys?.let { VaultCrypto.seal(it.data, plain) } ?: plain
             target.folder.write(dir, name, bytes)
-            return name to bytes.size.toLong()
+            name to bytes.size.toLong()
         }
+
+        /** A failure writing to the backup (server offline, folder gone) as [StoreFailed]. */
+        private inline fun <T> storing(block: () -> T): T =
+            try { block() } catch (e: StoreFailed) { throw e } catch (e: Exception) { throw StoreFailed(e) }
 
         fun get(name: String): ByteArray {
             val dir = dirs.getOrPut(name.take(2)) { target.folder.dir(data, name.take(2)) }

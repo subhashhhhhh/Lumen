@@ -46,7 +46,19 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.edit
 import com.subhashh.lumen.R
+import com.subhashh.lumen.data.backup.BackupLocation
+import com.subhashh.lumen.data.backup.BackupRunner
+import com.subhashh.lumen.data.backup.BackupServer
 import com.subhashh.lumen.data.backup.LumenBackup
+import com.subhashh.lumen.data.backup.Rclone
+import com.subhashh.lumen.data.backup.ServerFolder
+import androidx.compose.runtime.collectAsState
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import com.subhashh.lumen.ui.components.Confirmation
 import com.subhashh.lumen.ui.components.DialogButtons
 import com.subhashh.lumen.ui.components.DialogMessage
@@ -66,29 +78,35 @@ internal fun BackupGroup(highlight: String?, onConfirm: (Confirmation) -> Unit) 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var version by remember { mutableIntStateOf(0) }
-    val folder = remember(version) { LumenBackup.folderUri(context) }
+    val folder = remember(version) { LumenBackup.location(context) }
     val encrypted = remember(version) { context.getSharedPreferences("lumen-backup", 0).getBoolean("encrypted", false) }
     val prefs = remember { context.getSharedPreferences("lumen-backup-choices", 0) }
 
-    var picked by remember { mutableStateOf<Uri?>(null) }
+    var picked by remember { mutableStateOf<BackupLocation?>(null) }
+    var choosingWhere by remember { mutableStateOf(false) }
+    var askingServer by remember { mutableStateOf(false) }
+    val running by BackupRunner.state.collectAsState()
     var setUpEncrypted by remember { mutableStateOf(true) }
     var asking by remember { mutableStateOf<Ask?>(null) }
     var recoveryShown by remember { mutableStateOf<String?>(null) }
-    var progress by remember { mutableStateOf<LumenBackup.Progress?>(null) }
+    // A restore's progress; a backup's comes from BackupRunner (it runs in BackupService).
+    var restoreProgress by remember { mutableStateOf<LumenBackup.Progress?>(null) }
     var message by remember { mutableStateOf(LumenBackup.takeNote(context)) }
     var restoring by remember { mutableStateOf<List<LumenBackup.Snapshot>?>(null) }
     var unlockError by remember { mutableStateOf<String?>(null) }
 
-    val pick = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
-        if (uri == null) return@rememberLauncherForActivityResult
+    // A place was chosen: open the backup there, or set up a new one.
+    fun chosen(location: BackupLocation) {
         scope.launch {
-            val existing = LumenBackup.existing(context, uri)
-            picked = uri
+            val existing = runCatching { LumenBackup.existing(context, location) }
+                .onFailure { message = context.getString(R.string.backup_failed, it.message ?: it.javaClass.simpleName) }
+                .getOrElse { return@launch }
+            picked = location
             asking = when {
                 existing == null -> Ask.NewPassword
                 existing.encrypted -> Ask.Unlock
                 else -> {
-                    LumenBackup.connect(context, uri, null, null)
+                    LumenBackup.connect(context, location, null, null)
                     version++
                     null
                 }
@@ -96,16 +114,30 @@ internal fun BackupGroup(highlight: String?, onConfirm: (Confirmation) -> Unit) 
         }
     }
 
+    val pick = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+        if (uri != null) chosen(BackupLocation.Folder(uri))
+    }
+
+    // A backup that finished while Settings was open: its result, and the new "Last backup".
+    LaunchedEffect(running.result) {
+        running.result?.let { message = it; version++ }
+    }
+
     fun size(bytes: Long) = Formatter.formatShortFileSize(context, bytes)
 
     Group(stringResource(R.string.backup_title), footer = stringResource(R.string.backup_footer), note = message) {
         if (folder == null) {
             Anchor("backup-set-up", highlight) {
-                SettingsRow(title = stringResource(R.string.backup_set_up), onClick = { message = null; pick.launch(null) }, icon = LumenIcons.Export, iconColor = Green)
+                SettingsRow(
+                    title = stringResource(R.string.backup_set_up),
+                    onClick = { message = null; if (Rclone.available) choosingWhere = true else pick.launch(null) },
+                    icon = LumenIcons.Export,
+                    iconColor = Green,
+                )
             }
             return@Group
         }
-        val label = remember(folder) { runCatching { com.subhashh.lumen.data.backup.BackupFolder(context, folder).label() }.getOrDefault("") }
+        val label = remember(folder) { runCatching { folder.open(context).label() }.getOrDefault("") }
         SettingsRow(
             title = stringResource(R.string.backup_folder),
             value = label,
@@ -120,7 +152,7 @@ internal fun BackupGroup(highlight: String?, onConfirm: (Confirmation) -> Unit) 
                     ) { LumenBackup.disconnect(context); version++ },
                 )
             },
-            icon = LumenIcons.Folder,
+            icon = if (folder is BackupLocation.Server) LumenIcons.Globe else LumenIcons.Folder,
             iconColor = Blue,
         )
         for (item in LumenBackup.Item.entries) {
@@ -148,37 +180,45 @@ internal fun BackupGroup(highlight: String?, onConfirm: (Confirmation) -> Unit) 
             )
         }
         Divider()
-        val p = progress
+        val p = restoreProgress ?: running.progress
+        val busy = p != null
         val last = remember(version) { LumenBackup.lastBackup(context) }
         SettingsRow(
             title = stringResource(R.string.backup_now),
             subtitle = when {
+                running.paused && p != null && p.total > 0 -> context.getString(R.string.backup_paused_at, (p.done * 100 / p.total).toInt())
                 p != null && p.total > 0 -> "${context.getString(p.step)} ${(p.done * 100 / p.total).toInt()}%"
                 p != null -> context.getString(p.step)
                 last > 0 -> context.getString(R.string.backup_last, DateUtils.getRelativeTimeSpanString(last).toString())
                 else -> context.getString(R.string.backup_never)
             },
-            onClick = if (p != null) null else ({
+            onClick = if (busy) null else ({
                 message = null
-                scope.launch {
-                    val items = LumenBackup.Item.entries.filter { prefs.getBoolean(it.key, it.defaultOn) }.toSet()
-                    progress = LumenBackup.Progress(R.string.backup_step_preparing, 0, 0)
-                    message = runCatching { LumenBackup.backUp(context, items) { progress = it } }
-                        .fold(
-                            { context.getString(R.string.backup_done, size(it.total), size(it.uploaded)) },
-                            { context.getString(R.string.backup_failed, it.message ?: it.javaClass.simpleName) },
-                        )
-                    progress = null
-                    version++
-                }
+                BackupRunner.start(context)
             }),
             icon = LumenIcons.Import,
             iconColor = Green,
         )
+        if (running.running) {
+            Divider()
+            SettingsRow(
+                title = stringResource(if (running.paused) R.string.backup_resume else R.string.backup_pause),
+                onClick = { if (running.paused) BackupRunner.resume() else BackupRunner.pause() },
+                icon = if (running.paused) LumenIcons.Play else LumenIcons.Pause,
+                iconColor = Orange,
+            )
+            Divider()
+            SettingsRow(
+                title = stringResource(R.string.backup_stop),
+                onClick = { BackupRunner.stop(context) },
+                icon = LumenIcons.Close,
+                iconColor = Red,
+            )
+        }
         Divider()
         SettingsRow(
             title = stringResource(R.string.backup_restore),
-            onClick = if (progress != null) null else ({
+            onClick = if (busy) null else ({
                 scope.launch { restoring = LumenBackup.snapshots(context) }
             }),
             icon = LumenIcons.Restore,
@@ -255,6 +295,20 @@ internal fun BackupGroup(highlight: String?, onConfirm: (Confirmation) -> Unit) 
 
     recoveryShown?.let { key -> RecoveryKeyDialog(key) { recoveryShown = null } }
 
+    if (choosingWhere) {
+        WhereDialog(
+            onDismiss = { choosingWhere = false },
+            onFolder = { choosingWhere = false; pick.launch(null) },
+            onServer = { choosingWhere = false; askingServer = true },
+        )
+    }
+    if (askingServer) {
+        ServerDialog(onDismiss = { askingServer = false }) { server ->
+            askingServer = false
+            chosen(BackupLocation.Server(server))
+        }
+    }
+
     restoring?.let { snapshots ->
         RestoreDialog(snapshots, onDismiss = { restoring = null }) { snapshot ->
             restoring = null
@@ -273,8 +327,8 @@ internal fun BackupGroup(highlight: String?, onConfirm: (Confirmation) -> Unit) 
                     destructive = true,
                 ) {
                     scope.launch {
-                        val ok = runCatching { LumenBackup.stageRestore(context, snapshot, snapshot.items.toSet()) { progress = it } }
-                        progress = null
+                        val ok = runCatching { LumenBackup.stageRestore(context, snapshot, snapshot.items.toSet()) { restoreProgress = it } }
+                        restoreProgress = null
                         ok.onSuccess {
                             // Lumen starts again; the restore goes in before anything opens a database.
                             val intent = Intent.makeRestartActivityTask(android.content.ComponentName(context, com.subhashh.lumen.GalleryActivity::class.java))
@@ -457,7 +511,7 @@ private fun RecoveryKeyDialog(key: String, onDone: () -> Unit) {
 
 /** Whether a file the person picked is inside the backup folder (same provider, under its tree). */
 private fun insideBackupFolder(context: android.content.Context, file: Uri): Boolean {
-    val folder = LumenBackup.folderUri(context) ?: return false
+    val folder = (LumenBackup.location(context) as? BackupLocation.Folder)?.tree ?: return false
     if (folder.authority != file.authority) return false
     val root = runCatching { android.provider.DocumentsContract.getTreeDocumentId(folder) }.getOrNull() ?: return false
     val id = runCatching { android.provider.DocumentsContract.getDocumentId(file) }.getOrNull() ?: return false
@@ -495,6 +549,155 @@ private fun RestoreDialog(snapshots: List<LumenBackup.Snapshot>, onDismiss: () -
                 color = Lumen.colors.accent,
                 fontSize = 16.sp,
                 modifier = Modifier.clickable(onClick = onDismiss).padding(horizontal = 20.dp, vertical = 14.dp),
+            )
+        }
+    }
+}
+
+/** Where backups go: a folder (phone, SD card, USB drive, apps that offer folders) or a server. */
+@Composable
+private fun WhereDialog(onDismiss: () -> Unit, onFolder: () -> Unit, onServer: () -> Unit) {
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Column(Modifier.width(320.dp).dialogCard().padding(top = 22.dp), horizontalAlignment = dialogAlignment) {
+            DialogTitle(stringResource(R.string.backup_where_title))
+            Spacer(Modifier.height(10.dp))
+            for ((title, detail, action) in listOf(
+                Triple(R.string.backup_where_folder, R.string.backup_where_folder_detail, onFolder),
+                Triple(R.string.backup_where_server, R.string.backup_where_server_detail, onServer),
+            )) {
+                Column(Modifier.fillMaxWidth().clickable(onClick = action).padding(horizontal = 20.dp, vertical = 10.dp)) {
+                    Text(stringResource(title), color = Lumen.colors.accent, fontSize = 16.sp)
+                    Text(stringResource(detail), color = Lumen.colors.secondary, fontSize = 13.sp)
+                }
+            }
+            Text(
+                stringResource(R.string.common_cancel),
+                color = Lumen.colors.accent,
+                fontSize = 16.sp,
+                modifier = Modifier.clickable(onClick = onDismiss).padding(horizontal = 20.dp, vertical = 14.dp),
+            )
+        }
+    }
+}
+
+/** A server's address and login; Connect checks it reaches the server (and makes the folder). */
+@Composable
+private fun ServerDialog(onDismiss: () -> Unit, onConnected: (BackupServer) -> Unit) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var kind by remember { mutableStateOf(BackupServer.Kind.WebDav) }
+    var address by remember { mutableStateOf("") }
+    var region by remember { mutableStateOf("") }
+    var port by remember { mutableStateOf("") }
+    var user by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var path by remember { mutableStateOf("") }
+    var checking by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    val valid = when (kind) {
+        BackupServer.Kind.WebDav -> address.startsWith("http://") || address.startsWith("https://")
+        BackupServer.Kind.S3 -> user.isNotBlank() && password.isNotBlank() && path.isNotBlank()
+        BackupServer.Kind.Sftp -> address.isNotBlank() && user.isNotBlank()
+        BackupServer.Kind.Smb -> address.isNotBlank() && path.isNotBlank()
+    } && !checking
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Column(
+            Modifier.width(340.dp).heightIn(max = 640.dp).dialogCard().verticalScroll(rememberScrollState()).padding(top = 22.dp),
+            horizontalAlignment = dialogAlignment,
+        ) {
+            DialogTitle(stringResource(R.string.backup_server_title))
+            Spacer(Modifier.height(12.dp))
+            Row(Modifier.padding(horizontal = 20.dp).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                for (k in BackupServer.Kind.entries) {
+                    val on = k == kind
+                    Text(
+                        when (k) {
+                            BackupServer.Kind.WebDav -> "WebDAV"
+                            BackupServer.Kind.S3 -> "S3"
+                            BackupServer.Kind.Sftp -> "SFTP"
+                            BackupServer.Kind.Smb -> "SMB"
+                        },
+                        color = if (on) Lumen.colors.onAccent else Lumen.colors.text,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(Lumen.shapes.field)
+                            .background(if (on) Lumen.colors.accent else Lumen.colors.field)
+                            .clickable { kind = k; error = null }
+                            .padding(vertical = 8.dp),
+                    )
+                }
+            }
+            Spacer(Modifier.height(6.dp))
+            DialogMessage(
+                stringResource(
+                    when (kind) {
+                        BackupServer.Kind.WebDav -> R.string.backup_server_webdav_about
+                        BackupServer.Kind.S3 -> R.string.backup_server_s3_about
+                        BackupServer.Kind.Sftp -> R.string.backup_server_sftp_about
+                        BackupServer.Kind.Smb -> R.string.backup_server_smb_about
+                    },
+                ),
+            )
+            Spacer(Modifier.height(10.dp))
+            @Composable
+            fun field(value: String, onChange: (String) -> Unit, hint: Int, secret: Boolean = false) {
+                Field(value, { onChange(it); error = null }, stringResource(hint), secret)
+                Spacer(Modifier.height(8.dp))
+            }
+            when (kind) {
+                BackupServer.Kind.WebDav -> {
+                    field(address, { address = it.trim() }, R.string.backup_server_url)
+                    field(user, { user = it }, R.string.backup_server_user)
+                    field(password, { password = it }, R.string.backup_password, secret = true)
+                    field(path, { path = it }, R.string.backup_server_folder)
+                }
+                BackupServer.Kind.S3 -> {
+                    field(address, { address = it.trim() }, R.string.backup_server_endpoint)
+                    field(region, { region = it.trim() }, R.string.backup_server_region)
+                    field(user, { user = it.trim() }, R.string.backup_server_access_key)
+                    field(password, { password = it.trim() }, R.string.backup_server_secret_key, secret = true)
+                    field(path, { path = it.trim() }, R.string.backup_server_bucket)
+                }
+                BackupServer.Kind.Sftp -> {
+                    field(address, { address = it.trim() }, R.string.backup_server_host)
+                    field(port, { port = it.filter(Char::isDigit) }, R.string.backup_server_port)
+                    field(user, { user = it }, R.string.backup_server_user)
+                    field(password, { password = it }, R.string.backup_password, secret = true)
+                    field(path, { path = it }, R.string.backup_server_folder)
+                }
+                BackupServer.Kind.Smb -> {
+                    field(address, { address = it.trim() }, R.string.backup_server_host)
+                    field(user, { user = it }, R.string.backup_server_user_guest)
+                    field(password, { password = it }, R.string.backup_password, secret = true)
+                    field(path, { path = it }, R.string.backup_server_share)
+                }
+            }
+            when {
+                error != null -> Text(error!!, color = Lumen.colors.destructive, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 20.dp))
+                checking -> Text(stringResource(R.string.backup_server_checking), color = Lumen.colors.secondary, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 20.dp))
+            }
+            Spacer(Modifier.height(12.dp))
+            DialogButtons(
+                cancel = stringResource(R.string.common_cancel),
+                onCancel = onDismiss,
+                confirm = stringResource(R.string.backup_server_connect),
+                enabled = valid,
+                onConfirm = {
+                    val server = BackupServer(kind, address, user, password, path, port.toIntOrNull() ?: 0, region)
+                    checking = true
+                    error = null
+                    scope.launch {
+                        val problem = withContext(Dispatchers.IO) {
+                            runCatching { ServerFolder(context, server).check() }.exceptionOrNull()
+                        }
+                        checking = false
+                        if (problem == null) onConnected(server)
+                        else error = context.getString(R.string.backup_server_failed, problem.message ?: problem.javaClass.simpleName)
+                    }
+                },
             )
         }
     }
