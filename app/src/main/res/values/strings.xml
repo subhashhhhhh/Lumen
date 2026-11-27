@@ -511,6 +511,17 @@
     <string name="backup_server_port">Port (optional)</string>
     <string name="backup_server_share">Share/folder</string>
     <string name="backup_server_connect">Connect</string>
+    <string name="backup_folders">Folders</string>
+    <string name="backup_folders_all">All</string>
+    <string name="backup_folders_some">%1$d of %2$d</string>
+    <string name="backup_folders_loading">Reading your folders…</string>
+    <string name="backup_folders_all_on">Turn All On</string>
+    <string name="backup_folders_all_off">Turn All Off</string>
+    <string name="backup_folders_footer">Photos and videos in folders that are on are backed up. New folders are on. Folders left out in Settings → Library aren\'t listed.</string>
+    <plurals name="backup_folder_items">
+        <item quantity="one">%d item</item>
+        <item quantity="other">%d items</item>
+    </plurals>
     <string name="backup_server_key">Server key: %1$s. If you can, check it matches the server\'s before trusting it.</string>
     <string name="backup_server_trust">Trust and Connect</string>
     <string name="backup_server_key_changed">The server\'s identity key changed since Lumen first connected. If you didn\'t reinstall or replace the server, someone else may be answering at its address. To trust the new key, stop backing up here and connect again.</string>

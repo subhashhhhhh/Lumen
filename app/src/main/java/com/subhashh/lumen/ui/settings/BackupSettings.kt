@@ -54,6 +54,10 @@ import com.subhashh.lumen.data.backup.Rclone
 import com.subhashh.lumen.data.backup.ServerFolder
 import androidx.compose.runtime.collectAsState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -84,6 +88,13 @@ internal fun BackupGroup(highlight: String?, onConfirm: (Confirmation) -> Unit) 
 
     var picked by remember { mutableStateOf<BackupLocation?>(null) }
     var choosingWhere by remember { mutableStateOf(false) }
+    var choosingFolders by remember { mutableStateOf(false) }
+    var foldersVersion by remember { mutableIntStateOf(0) }
+    var photosOn by remember { mutableStateOf(false) }
+    // How many folders have photos (for "12 of 38"), read once the folder row shows.
+    val folderCount by produceState<Int?>(null, photosOn, foldersVersion) {
+        if (photosOn) value = LumenBackup.photoFolders(context).size
+    }
     // Opening or setting up a backup: a server takes a few seconds.
     var settingUp by remember { mutableStateOf(false) }
     var askingServer by remember { mutableStateOf(false) }
@@ -163,6 +174,7 @@ internal fun BackupGroup(highlight: String?, onConfirm: (Confirmation) -> Unit) 
         for (item in LumenBackup.Item.entries) {
             Divider()
             var on by remember { mutableStateOf(prefs.getBoolean(item.key, item.defaultOn)) }
+            if (item == LumenBackup.Item.Photos) photosOn = on
             ToggleRow(
                 title = stringResource(item.label),
                 checked = on,
@@ -183,6 +195,20 @@ internal fun BackupGroup(highlight: String?, onConfirm: (Confirmation) -> Unit) 
                     else -> Indigo
                 },
             )
+            // Which folders, right under Photos and Videos while it's on.
+            if (item == LumenBackup.Item.Photos && on) {
+                Divider()
+                val off = remember(foldersVersion) { LumenBackup.foldersOff(context) }
+                SettingsRow(
+                    title = stringResource(R.string.backup_folders),
+                    value = if (off.isEmpty()) stringResource(R.string.backup_folders_all) else folderCount?.let { total ->
+                        stringResource(R.string.backup_folders_some, (total - off.size).coerceAtLeast(0), total)
+                    },
+                    onClick = { choosingFolders = true },
+                    icon = LumenIcons.Folder,
+                    iconColor = Orange,
+                )
+            }
         }
         Divider()
         val p = running.progress?.takeIf { !running.restoring }
@@ -323,6 +349,9 @@ internal fun BackupGroup(highlight: String?, onConfirm: (Confirmation) -> Unit) 
             onFolder = { choosingWhere = false; pick.launch(null) },
             onServer = { choosingWhere = false; askingServer = true },
         )
+    }
+    if (choosingFolders) {
+        FoldersPanel(onDismiss = { choosingFolders = false; foldersVersion++ })
     }
     if (askingServer) {
         ServerDialog(onDismiss = { askingServer = false }) { server ->
@@ -729,6 +758,77 @@ private fun ServerDialog(onDismiss: () -> Unit, onConnected: (BackupServer) -> U
                     }
                 },
             )
+        }
+    }
+}
+
+/** Settings → Backup → Folders: which folders' photos and videos are backed up. */
+@Composable
+private fun FoldersPanel(onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    val folders by produceState<List<LumenBackup.PhotoFolder>?>(null) { value = LumenBackup.photoFolders(context) }
+    var off by remember { mutableStateOf(LumenBackup.foldersOff(context)) }
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
+    ) {
+        androidx.compose.runtime.CompositionLocalProvider(LocalSettingsScroll provides null, LocalSettingsBadges provides false) {
+            // The status bar's height stays outside the scrolling list, so rows don't slide under the clock.
+            SettingsPage(
+                androidx.compose.foundation.layout.WindowInsets.navigationBars.asPaddingValues(),
+                Modifier.fillMaxSize().background(Lumen.colors.groupedPage).statusBarsPadding(),
+            ) {
+                Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        stringResource(R.string.backup_folders),
+                        color = Lumen.colors.text,
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Text(
+                        stringResource(R.string.common_done),
+                        color = Lumen.colors.accent,
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.clickable(onClick = onDismiss).padding(8.dp),
+                    )
+                }
+                val list = folders
+                if (list == null) {
+                    Text(stringResource(R.string.backup_folders_loading), color = Lumen.colors.secondary, modifier = Modifier.padding(16.dp))
+                    return@SettingsPage
+                }
+                Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    for ((label, on) in listOf(R.string.backup_folders_all_on to true, R.string.backup_folders_all_off to false)) {
+                        Text(
+                            stringResource(label),
+                            color = Lumen.colors.accent,
+                            fontSize = 15.sp,
+                            modifier = Modifier.clickable {
+                                for (f in list) LumenBackup.setFolderOn(context, f.path, on)
+                                off = LumenBackup.foldersOff(context)
+                            }.padding(vertical = 6.dp),
+                        )
+                    }
+                }
+                Group(title = "", footer = stringResource(R.string.backup_folders_footer)) {
+                    list.forEachIndexed { i, folder ->
+                        if (i > 0) Divider()
+                        ToggleRow(
+                            title = folder.name,
+                            subtitle = context.resources.getQuantityString(R.plurals.backup_folder_items, folder.count, folder.count) +
+                                " · " + Formatter.formatShortFileSize(context, folder.bytes) + " · " + folder.path.trimEnd('/'),
+                            checked = folder.path !in off,
+                            onCheckedChange = { on ->
+                                LumenBackup.setFolderOn(context, folder.path, on)
+                                off = LumenBackup.foldersOff(context)
+                            },
+                        )
+                    }
+                }
+                Spacer(Modifier.height(24.dp))
+            }
         }
     }
 }

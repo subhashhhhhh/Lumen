@@ -304,7 +304,8 @@ object LumenBackup {
             val library = MediaRepository(context).loadLibrary()
             val sources = sources(context, items, library, work)
             val exclusions = com.subhashh.lumen.data.LumenPrefs(context).exclusions
-            val photos = if (Item.Photos in items) library.filterNot { exclusions.covers(it) } else emptyList()
+            val foldersOff = foldersOff(context)
+            val photos = if (Item.Photos in items) library.filterNot { exclusions.covers(it) || it.relativePath in foldersOff } else emptyList()
             val vaultFiles = if (Item.Hidden in items) vaultFiles() else emptyList()
             val total = sources.sumOf { it.second.length() } + photos.sumOf { it.size } + vaultFiles.sumOf { it.length() }
             val done = java.util.concurrent.atomic.AtomicLong()
@@ -423,6 +424,35 @@ object LumenBackup {
         } finally {
             work.deleteRecursively()
         }
+    }
+
+    // ---- Which folders' photos go in (Settings → Backup → Folders) ----
+
+    private fun choices(context: Context) = context.getSharedPreferences("lumen-backup-choices", Context.MODE_PRIVATE)
+
+    /**
+     * Folders (relative paths, "DCIM/Camera/") whose photos and videos aren't backed up. Every
+     * folder is in unless turned off, new ones too, so nothing is missed by default.
+     */
+    fun foldersOff(context: Context): Set<String> = choices(context).getStringSet("photo-folders-off", emptySet()).orEmpty()
+
+    fun setFolderOn(context: Context, folder: String, on: Boolean) {
+        val off = foldersOff(context).toMutableSet()
+        if (on) off -= folder else off += folder
+        choices(context).edit { putStringSet("photo-folders-off", off) }
+    }
+
+    /** A folder with photos or videos, as the folder list shows it. */
+    data class PhotoFolder(val path: String, val name: String, val count: Int, val bytes: Long)
+
+    /** The library's folders, biggest first, without folders Lumen is told to leave out (Settings → Library). */
+    suspend fun photoFolders(context: Context): List<PhotoFolder> = withContext(Dispatchers.IO) {
+        val exclusions = com.subhashh.lumen.data.LumenPrefs(context).exclusions
+        MediaRepository(context).loadLibrary()
+            .filterNot { exclusions.covers(it) }
+            .groupBy { it.relativePath }
+            .map { (path, items) -> PhotoFolder(path, items.first().bucketName.ifEmpty { path.trimEnd('/') }, items.size, items.sumOf { it.size }) }
+            .sortedByDescending { it.bytes }
     }
 
     fun lastBackup(context: Context): Long = prefs(context).getLong("last", 0L)
