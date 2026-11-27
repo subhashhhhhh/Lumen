@@ -114,7 +114,7 @@ fun MaterialCollectionsScreen(
     val dim = Modifier.graphicsLayer { alpha = if (selection != null) 0.4f else 1f }
     val open = { key: String -> if (selection == null) onOpen(key) }
     LazyVerticalGrid(
-        columns = GridCells.Fixed(columns),
+        columns = GridCells.Fixed(com.subhashh.lumen.ui.components.scaledColumns(columns)),
         state = gridState,
         contentPadding = contentPadding,
         horizontalArrangement = Arrangement.spacedBy(8.dp),

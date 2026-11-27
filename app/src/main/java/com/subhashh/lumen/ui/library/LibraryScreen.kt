@@ -130,9 +130,11 @@ fun LibraryScreen(
     val entries = grid.entries
     val haptics = LocalHapticFeedback.current
     // Decode thumbnails for the cell size actually shown, so fewer, bigger cells stay sharp.
-    val cellPx = with(LocalDensity.current) { LocalConfiguration.current.screenWidthDp.dp.roundToPx() } / columns
+    // Columns for this window: more on a tablet or desktop window, the same cell size as a phone's.
+    val shown = com.subhashh.lumen.ui.components.scaledColumns(columns)
+    val cellPx = with(LocalDensity.current) { LocalConfiguration.current.screenWidthDp.dp.roundToPx() } / shown
     val thumbBucket = ImageKeys.thumbBucket(cellPx)
-    val mosaic = if (gridStyle == GridStyle.Mosaic) remember(entries, columns) { mosaicLayout(entries, columns) } else null
+    val mosaic = if (gridStyle == GridStyle.Mosaic) remember(entries, shown) { mosaicLayout(entries, shown) } else null
     val gridWidth = LocalConfiguration.current.screenWidthDp.dp
 
     // iOS Photos opens at the newest photo, which sits at the bottom of the grid. Only on first
@@ -179,7 +181,7 @@ fun LibraryScreen(
         LazyVerticalGrid(
             // A mosaic is cut into many narrow columns, each photo spanning its share; its gaps
             // are the cells' own padding (spacing here would come between every column).
-            columns = GridCells.Fixed(if (mosaic != null) MosaicUnits else columns),
+            columns = GridCells.Fixed(if (mosaic != null) MosaicUnits else shown),
             state = gridState,
             contentPadding = contentPadding,
             horizontalArrangement = Arrangement.spacedBy(if (mosaic != null) 0.dp else 2.dp),

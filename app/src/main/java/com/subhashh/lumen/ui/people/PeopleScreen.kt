@@ -59,18 +59,20 @@ fun PeopleScreen(
     modifier: Modifier = Modifier,
 ) {
     val onBackground = MaterialTheme.colorScheme.onBackground
+    // Three across on a phone, more in a wide window.
+    val across = com.subhashh.lumen.ui.components.scaledColumns(3)
     // Long-press and drag to select, as for albums; three across, so no pinch.
     val gestures = rememberAlbumGridGestures(
         gridState = gridState,
         keys = { listOf<String?>(null) + people.map { CollectionKeys.person(it.first.id) } },
-        columns = 3,
+        columns = across,
         onColumnsChange = {},
         selection = selection,
         onSelectionChange = onSelectionChange,
         contentPadding = contentPadding,
     )
     LazyVerticalGrid(
-        columns = GridCells.Fixed(3),
+        columns = GridCells.Fixed(across),
         state = gridState,
         contentPadding = contentPadding,
         horizontalArrangement = Arrangement.spacedBy(14.dp),

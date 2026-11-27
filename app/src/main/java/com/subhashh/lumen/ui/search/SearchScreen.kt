@@ -220,6 +220,9 @@ fun SearchScreen(
             }
         }
     }
+    // Pinch steps through the phone value; the grid shows this window's share of columns.
+    val phoneColumns = columns
+    @Suppress("NAME_SHADOWING") val columns = com.subhashh.lumen.ui.components.scaledColumns(phoneColumns)
     val cellPx = with(LocalDensity.current) { LocalConfiguration.current.screenWidthDp.dp.roundToPx() } / columns
     val bucket = ImageKeys.thumbBucket(cellPx)
 
@@ -277,7 +280,7 @@ fun SearchScreen(
         modifier = modifier
             .fillMaxSize()
             .nestedScroll(hideKeyboard)
-            .pinchColumns(ColumnSteps, columns, onColumnsChange)
+            .pinchColumns(ColumnSteps, phoneColumns, onColumnsChange)
             .then(selectable),
     ) {
         if (people.isNotEmpty() || unnamed != null) {

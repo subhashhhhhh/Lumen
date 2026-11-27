@@ -50,6 +50,7 @@ internal data class ViewerReturn(
 
 /** Share of the screen's height an album's or person's cover takes at the top of its page. */
 internal const val HeroShare = 0.46f
+internal const val HeroShareWide = 0.32f
 
 /** Naming an album: renaming [album], or a brand-new one when it's null. */
 internal data class AlbumNameRequest(val album: MediaCollection?)

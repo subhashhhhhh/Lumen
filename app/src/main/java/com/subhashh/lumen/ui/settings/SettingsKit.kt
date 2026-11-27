@@ -55,6 +55,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
@@ -131,8 +132,11 @@ internal fun SettingsPage(
                 .verticalScroll(LocalSettingsScroll.current ?: rememberScrollState())
                 .padding(contentPadding)
                 .padding(horizontal = 16.dp),
-            content = content,
-        )
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            // A readable width in a wide window (tablet, desktop mode), centred.
+            Column(Modifier.widthIn(max = com.subhashh.lumen.ui.components.ReadableWidth).fillMaxWidth(), content = content)
+        }
     }
 }
 

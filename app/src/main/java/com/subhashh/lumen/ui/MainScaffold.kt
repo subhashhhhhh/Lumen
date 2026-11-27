@@ -321,9 +321,11 @@ private fun MainState.Scaffold(
             cover.copy(title = name, subtitle = heroSubtitle(context, if (key == openCollection) openItems.orEmpty() else itemsOf(key!!)))
         }
     }
-    // An album's or person's cover: the top 46% of the screen.
-    val heroHeight = with(LocalDensity.current) { (screenSize.height * HeroShare).toDp() }
-    val heroRect = { androidx.compose.ui.geometry.Rect(0f, 0f, screenSize.width.toFloat(), screenSize.height * HeroShare) }
+    // An album's or person's cover: the top 46% of the screen; a third in a wide window
+    // (landscape, desktop mode), where 46% of the height is a wall of photo.
+    val heroShare = if (screenSize.width > screenSize.height * 1.3f) HeroShareWide else HeroShare
+    val heroHeight = with(LocalDensity.current) { (screenSize.height * heroShare).toDp() }
+    val heroRect = { androidx.compose.ui.geometry.Rect(0f, 0f, screenSize.width.toFloat(), screenSize.height * heroShare) }
     /** Opens [key], growing its cover out of its card when it has one on screen. */
     val openCollectionFromCard: (key: String) -> Unit = open@{ key ->
         if (coverTransition.flying || coverOpening) return@open

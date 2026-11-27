@@ -48,6 +48,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
@@ -104,8 +105,10 @@ fun CollectionsScreen(
         onSelectionChange = onSelectionChange,
         contentPadding = contentPadding,
     )
+    // More faces in a wider window (tablet, desktop mode), each the size it is on a phone.
+    val peopleShown = com.subhashh.lumen.ui.components.scaledColumns(PeopleShown)
     LazyVerticalGrid(
-        columns = GridCells.Fixed(columns),
+        columns = GridCells.Fixed(com.subhashh.lumen.ui.components.scaledColumns(columns)),
         state = gridState,
         contentPadding = contentPadding,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -122,7 +125,8 @@ fun CollectionsScreen(
             fullWidth { SectionHeader(stringResource(R.string.main_people), trailing = stringResource(R.string.common_open), onTrailingClick = { if (selection == null) onOpen(CollectionKeys.People) }) }
             fullWidth {
                 PeopleRow(
-                    people.take(PeopleShown),
+                    people.take(peopleShown),
+                    slots = peopleShown,
                     coverTransition = coverTransition,
                     onOpen = { if (selection == null) onOpen(it) },
                     modifier = Modifier.graphicsLayer { alpha = if (selection != null) 0.4f else 1f },
@@ -137,7 +141,8 @@ fun CollectionsScreen(
                 utilities,
                 hiddenLockSet,
                 onOpen = { if (selection == null) onOpen(it) },
-                modifier = Modifier.graphicsLayer { alpha = if (selection != null) 0.4f else 1f },
+                // A readable width in a wide window, not a list across the whole screen.
+                modifier = Modifier.widthIn(max = com.subhashh.lumen.ui.components.ReadableWidth).graphicsLayer { alpha = if (selection != null) 0.4f else 1f },
             )
         }
 
@@ -332,6 +337,8 @@ private fun PeopleRow(
     coverTransition: CoverTransition,
     onOpen: (key: String) -> Unit,
     modifier: Modifier = Modifier,
+    /** Faces across: [PeopleShown] on a phone, more in a wide window. */
+    slots: Int = PeopleShown,
 ) {
     val onBackground = MaterialTheme.colorScheme.onBackground
     Row(horizontalArrangement = Arrangement.spacedBy(14.dp), modifier = modifier.fillMaxWidth()) {
@@ -355,7 +362,7 @@ private fun PeopleRow(
             }
         }
         // A short row keeps its faces the same size as a full one.
-        repeat(PeopleShown - people.size) { Spacer(Modifier.weight(1f)) }
+        repeat(slots - people.size) { Spacer(Modifier.weight(1f)) }
     }
 }
 

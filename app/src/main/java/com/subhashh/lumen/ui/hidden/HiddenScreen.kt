@@ -121,7 +121,7 @@ fun HiddenScreen(
             )
         }
         else -> LazyVerticalGrid(
-            columns = GridCells.Fixed(columns),
+            columns = GridCells.Fixed(com.subhashh.lumen.ui.components.scaledColumns(columns)),
             state = gridState,
             contentPadding = contentPadding,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
