@@ -16,6 +16,7 @@ import com.subhashh.lumen.ui.theme.LocalMotion
 import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
@@ -451,13 +452,17 @@ class LiquidPillGeometry(
     val liftedSize: Size,
     val center: (Float) -> Offset,
     val stepPx: Float,
+    /** Items stacked top to bottom (the side bar in wide windows): it travels and squashes vertically. */
+    val vertical: Boolean = false,
 )
 
 /** Size this frame: the two lift springs between rest and lifted, then the squash. */
 private fun LiquidPillState.liveSize(geometry: LiquidPillGeometry): Size {
     val w = geometry.restSize.width + (geometry.liftedSize.width - geometry.restSize.width) * liftX
     val h = geometry.restSize.height + (geometry.liftedSize.height - geometry.restSize.height) * liftY
-    return Size(w * (1f + deviation), h * (1f - deviation))
+    // Stretched along the way it travels, thinner across.
+    return if (geometry.vertical) Size(w * (1f - deviation), h * (1f + deviation))
+    else Size(w * (1f + deviation), h * (1f - deviation))
 }
 
 /** Lays the pill out at its live size and position inside a box it matches the size of. */
@@ -582,35 +587,42 @@ fun Modifier.liquidPillDrag(
     enabled: () -> Boolean,
     onCross: () -> Unit,
     onSelect: (Int) -> Unit,
-): Modifier = pointerInput(state, count) {
+    /** Items stacked top to bottom: vertical drags carry the pill. */
+    vertical: Boolean = false,
+): Modifier = pointerInput(state, count, vertical) {
     var lastNearest = 0
     var startIndex = 0
-    detectHorizontalDragGestures(
-        onDragStart = {
-            if (!enabled()) return@detectHorizontalDragGestures
+    val onStart = { _: Offset ->
+        if (enabled()) {
             startIndex = state.target
             lastNearest = startIndex
             state.startDrag()
-        },
-        onDragEnd = {
-            if (!enabled()) return@detectHorizontalDragGestures
+        }
+    }
+    val onEnd = {
+        if (enabled()) {
             val chosen = state.endDrag(count)
             // Dropped back where it started: not a re-tap of that item.
             if (chosen != startIndex) onSelect(chosen)
-        },
-        onDragCancel = { if (enabled()) state.settle(startIndex) },
-        onHorizontalDrag = { change, amount ->
-            if (!enabled()) return@detectHorizontalDragGestures
+        }
+    }
+    val onCancel = { if (enabled()) state.settle(startIndex) }
+    val onDrag = { change: androidx.compose.ui.input.pointer.PointerInputChange, amount: Float ->
+        val step = stepPx()
+        if (enabled() && step > 0f) {
             change.consume()
-            val step = stepPx()
-            if (step <= 0f) return@detectHorizontalDragGestures
             val nearest = state.dragBy(amount / step, count)
             if (nearest != lastNearest) {
                 lastNearest = nearest
                 onCross()
             }
-        },
-    )
+        }
+    }
+    if (vertical) {
+        detectVerticalDragGestures(onStart, onEnd, onCancel, onDrag)
+    } else {
+        detectHorizontalDragGestures(onStart, onEnd, onCancel, onDrag)
+    }
 }
 
 private val LensHeight = 12.dp

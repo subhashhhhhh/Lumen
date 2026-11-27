@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -52,26 +54,30 @@ internal fun MaterialTabBar(
     onSearch: () -> Unit,
     modifier: Modifier,
     enabled: Boolean,
+    /** Wide windows: a rail standing on the right edge, tabs stacked, search below. */
+    vertical: Boolean = false,
 ) {
     val scheme = MaterialTheme.colorScheme
     val haptics = LocalHapticFeedback.current
-    Row(
-        modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
-        verticalAlignment = Alignment.CenterVertically,
+    Stack(
+        vertical,
+        if (vertical) modifier else modifier.fillMaxWidth(),
+        spacing = 12.dp,
     ) {
-        Row(
+        Stack(
+            vertical,
             Modifier
-                .height(BarHeight)
-                .materialSurface(scheme.surfaceContainerHigh, CircleShape)
-                .clip(CircleShape)
+                .then(if (vertical) Modifier.width(BarHeight + 40.dp) else Modifier.height(BarHeight))
+                .materialSurface(scheme.surfaceContainerHigh, if (vertical) RoundedCornerShape(32.dp) else CircleShape)
+                .clip(if (vertical) RoundedCornerShape(32.dp) else CircleShape)
                 .animateContentSize(expressiveSpatialDefault())
                 .padding(8.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            spacing = 4.dp,
         ) {
             LumenTab.entries.forEach { tab ->
                 val current = tab == selected
                 TabPill(
+                    vertical = vertical,
                     icon = if (current) tab.selectedIcon else tab.icon,
                     // Material calls the first tab what Android galleries do.
                     label = stringResource(if (tab == LumenTab.Library) R.string.main_photos else tab.label),
@@ -107,12 +113,48 @@ internal fun MaterialTabBar(
     }
 }
 
+/** A row, or (wide windows) a column, centred, with [spacing] between items. */
+@Composable
+private fun Stack(vertical: Boolean, modifier: Modifier, spacing: androidx.compose.ui.unit.Dp, content: @Composable () -> Unit) {
+    if (vertical) {
+        androidx.compose.foundation.layout.Column(
+            modifier,
+            verticalArrangement = Arrangement.spacedBy(spacing, Alignment.CenterVertically),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) { content() }
+    } else {
+        Row(
+            modifier,
+            horizontalArrangement = Arrangement.spacedBy(spacing, Alignment.CenterHorizontally),
+            verticalAlignment = Alignment.CenterVertically,
+        ) { content() }
+    }
+}
+
 /** One tab: its name, on a tonal pill with its icon while it's the current one. */
 @Composable
-private fun TabPill(icon: ImageVector, label: String, selected: Boolean, enabled: Boolean, onClick: () -> Unit) {
+private fun TabPill(icon: ImageVector, label: String, selected: Boolean, enabled: Boolean, onClick: () -> Unit, vertical: Boolean = false) {
     val scheme = MaterialTheme.colorScheme
     val container by animateColorAsState(if (selected) scheme.secondaryContainer else scheme.secondaryContainer.copy(alpha = 0f), label = "tabContainer")
     val content by animateColorAsState(if (selected) scheme.onSecondaryContainer else scheme.onSurfaceVariant, label = "tabContent")
+    if (vertical) {
+        // A rail item: icon over its name, the pill behind the icon, as Android's rails have it.
+        androidx.compose.foundation.layout.Column(
+            Modifier
+                .clip(RoundedCornerShape(16.dp))
+                .clickable(enabled = enabled, role = Role.Tab, onClick = onClick)
+                .semantics { this.selected = selected }
+                .padding(vertical = 6.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Box(Modifier.size(width = 56.dp, height = 32.dp).clip(CircleShape).background(container), contentAlignment = Alignment.Center) {
+                Icon(icon, contentDescription = null, tint = content, modifier = Modifier.size(24.dp))
+            }
+            Spacer(Modifier.height(4.dp))
+            Text(label, color = content, fontSize = 12.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+        }
+        return
+    }
     Row(
         Modifier
             .height(48.dp)

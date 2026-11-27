@@ -679,7 +679,32 @@ private fun MainState.Scaffold(
             animationSpec = if (tabBarHidden) snap() else tween(durationMillis = 220),
             label = "tabBarAlpha",
         )
-        run {
+        // Wide windows: the bar stands on the right edge, low, where a thumb rests.
+        if (com.subhashh.lumen.ui.components.isWideWindow()) {
+            com.subhashh.lumen.ui.components.GlassSideBar(
+                backdrop = backdrop,
+                enabled = !tabBarHidden,
+                selected = tab.takeUnless { searching },
+                onSelect = { selected ->
+                    if (selected == tab && !searching) openCollection = null
+                    settingsPage = null
+                    tab = selected
+                    searching = false
+                },
+                searchSelected = searching,
+                onSearch = {
+                    if (!searching) focusSearch = true
+                    searching = true
+                },
+                zoomLevel = zoomLevel.takeIf { tab == LumenTab.Library && !searching },
+                onZoomLevel = { zoomLevel = it },
+                showZoom = zoomable && (zoomBar || zoomLevel != ZoomLevel.All),
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .graphicsLayer { alpha = tabBarAlpha }
+                    .padding(end = 16.dp, bottom = navBottom + 16.dp),
+            )
+        } else run {
             GlassTabBar(
                 backdrop = backdrop,
                 enabled = !tabBarHidden,

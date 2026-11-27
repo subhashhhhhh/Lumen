@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -399,3 +400,169 @@ private val TabSpacing = 2.dp
 private val PillInset = 4.dp
 /** How much taller than the bar the pill stands while lifted. */
 private val PillLift = 12.dp
+
+/**
+ * Wide windows (tablet, desktop mode, an unfolded phone): the bar stands on the right edge, low,
+ * where a thumb rests holding the device. Years / Months / All (while shown) above the tabs,
+ * search below them; the same glass and liquid pill as [GlassTabBar], moving up and down.
+ */
+@Composable
+fun GlassSideBar(
+    backdrop: Backdrop,
+    selected: LumenTab?,
+    onSelect: (LumenTab) -> Unit,
+    searchSelected: Boolean,
+    onSearch: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    zoomLevel: ZoomLevel? = null,
+    onZoomLevel: (ZoomLevel) -> Unit = {},
+    showZoom: Boolean = false,
+) {
+    if (com.subhashh.lumen.ui.theme.Lumen.material) {
+        if (enabled) MaterialTabBar(selected, onSelect, searchSelected, onSearch, modifier, enabled, vertical = true)
+        return
+    }
+    val haptics = LocalHapticFeedback.current
+    val colors = LocalGlassColors.current
+    Column(
+        modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(Gap),
+    ) {
+        androidx.compose.animation.AnimatedVisibility(
+            visible = showZoom && zoomLevel != null,
+            enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.expandVertically(expandFrom = Alignment.Bottom),
+            exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.shrinkVertically(shrinkTowards = Alignment.Bottom),
+        ) {
+            VerticalPillGroup(
+                backdrop = backdrop,
+                count = ZoomLevel.entries.size,
+                selected = zoomLevel?.ordinal,
+                enabled = enabled,
+                itemHeight = SideZoomItem,
+                onSelect = { i ->
+                    val level = ZoomLevel.entries[i]
+                    if (level != zoomLevel) haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                    onZoomLevel(level)
+                },
+            ) { i, onClick ->
+                val level = ZoomLevel.entries[i]
+                val tint by animateColorAsState(if (level == zoomLevel) colors.content else colors.contentSecondary, label = "sideZoomTint")
+                Box(Modifier.fillMaxSize().pressable(onClick, enabled, pressedScale = 0.9f), contentAlignment = Alignment.Center) {
+                    Text(stringResource(level.label), color = tint, fontSize = 13.sp, fontWeight = if (level == zoomLevel) FontWeight.SemiBold else FontWeight.Medium, maxLines = 1)
+                }
+            }
+        }
+        VerticalPillGroup(
+            backdrop = backdrop,
+            count = LumenTab.entries.size,
+            selected = selected?.ordinal,
+            enabled = enabled,
+            itemHeight = SideTabItem,
+            onSelect = { i ->
+                val tab = LumenTab.entries[i]
+                if (tab != selected) haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                onSelect(tab)
+            },
+        ) { i, onClick ->
+            val tab = LumenTab.entries[i]
+            Column(
+                Modifier.fillMaxSize().pressable(onClick, enabled, pressedScale = 0.9f),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                Icon(if (tab == selected) tab.selectedIcon else tab.icon, contentDescription = null, tint = colors.content, modifier = Modifier.size(24.dp))
+                Spacer(Modifier.height(2.dp))
+                Text(stringResource(tab.label), color = colors.content, fontSize = 10.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+            }
+        }
+        Box(
+            modifier = Modifier
+                .size(Bar)
+                .pressable(
+                    onClick = {
+                        if (!searchSelected) haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                        onSearch()
+                    },
+                    enabled = enabled,
+                )
+                .glass(backdrop),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                if (searchSelected) LumenIcons.SearchFilled else LumenIcons.Search,
+                contentDescription = stringResource(R.string.common_search),
+                tint = colors.content,
+            )
+        }
+    }
+}
+
+/** A tall glass capsule of [count] items, one [Bar] wide, with the liquid pill on [selected]. */
+@Composable
+private fun VerticalPillGroup(
+    backdrop: Backdrop,
+    count: Int,
+    selected: Int?,
+    enabled: Boolean,
+    itemHeight: Dp,
+    onSelect: (Int) -> Unit,
+    item: @Composable (index: Int, onClick: () -> Unit) -> Unit,
+) {
+    val colors = LocalGlassColors.current
+    val haptics = LocalHapticFeedback.current
+    val density = LocalDensity.current
+    val pill = rememberLiquidPillState(selected ?: 0)
+    LaunchedEffect(selected) { selected?.let { pill.moveTo(it) } }
+    val pillVisible by animateFloatAsState(if (selected == null) 0f else 1f, label = "sidePillVisible")
+    val geometry = remember(itemHeight, density) {
+        with(density) {
+            val itemWidth = (Bar - PillInset * 2).toPx()
+            val rest = Size(itemWidth, itemHeight.toPx())
+            val liftedWidth = (Bar + PillLift).toPx()
+            val step = (itemHeight + TabSpacing).toPx()
+            LiquidPillGeometry(
+                restSize = rest,
+                liftedSize = Size(liftedWidth, rest.height * liftedWidth / rest.width),
+                center = { position -> Offset(rest.width / 2f, position * step + rest.height / 2f) },
+                stepPx = step,
+                vertical = true,
+            )
+        }
+    }
+    val barGlass = rememberLayerBackdrop()
+    val items = rememberLayerBackdrop()
+    val inset = with(density) { Offset(PillInset.toPx(), PillInset.toPx()) }
+    val shape = RoundedCornerShape(50)
+    val height = itemHeight * count + TabSpacing * (count - 1) + PillInset * 2
+    Box(Modifier.width(Bar).height(height)) {
+        Box(Modifier.matchParentSize().glass(backdrop, shape = shape, exportedBackdrop = barGlass).clip(shape)) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .padding(PillInset)
+                    .liquidPillDrag(
+                        state = pill,
+                        count = count,
+                        stepPx = { geometry.stepPx },
+                        enabled = { enabled && selected != null },
+                        onCross = { haptics.performHapticFeedback(HapticFeedbackType.SegmentTick) },
+                        onSelect = onSelect,
+                        vertical = true,
+                    ),
+            ) {
+                LiquidPillFill(pill, geometry, colors.selection, visible = { pillVisible }, Modifier.matchParentSize())
+                Column(verticalArrangement = Arrangement.spacedBy(TabSpacing), modifier = Modifier.layerBackdrop(items)) {
+                    repeat(count) { i ->
+                        Box(Modifier.width(Bar - PillInset * 2).height(itemHeight)) { item(i) { onSelect(i) } }
+                    }
+                }
+            }
+        }
+        LiquidPillLens(pill, geometry, page = backdrop, bar = barGlass, items = items, fillColor = colors.selection, offset = inset, modifier = Modifier.matchParentSize())
+    }
+}
+
+private val SideTabItem = 62.dp
+private val SideZoomItem = 48.dp

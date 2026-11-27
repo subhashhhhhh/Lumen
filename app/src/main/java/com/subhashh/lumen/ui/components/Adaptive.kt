@@ -38,3 +38,12 @@ fun scaledColumns(phoneColumns: Int): Int {
 
 /** Centres the content at most [ReadableWidth] wide (fills the width on a phone). */
 fun Modifier.readableWidth(): Modifier = fillMaxWidth().wrapContentWidth().widthIn(max = ReadableWidth).fillMaxWidth()
+
+/**
+ * A wide window (tablet, desktop mode, an unfolded phone): the tab bar stands on the right edge,
+ * its page buttons stack down the top of that edge, and the viewer's actions sit there too.
+ */
+@Composable
+fun isWideWindow(): Boolean = windowWidth() >= WideWidth
+
+val WideWidth: Dp = 600.dp

@@ -193,8 +193,7 @@ internal fun BoxScope.MainTopControls(
             com.subhashh.lumen.ui.library.IndexStatus(open = indexOpen, onToggle = { indexOpen = !indexOpen })
         }
         if (tab == LumenTab.Library && !searching && selection == null && !viewerOpen && settingsPage == null && pick == null) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            TopEndButtons(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .statusBarsPadding()
@@ -228,8 +227,7 @@ internal fun BoxScope.MainTopControls(
                 scaleX = 1f - 0.3f * c
                 scaleY = 1f - 0.3f * c
             }
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            TopEndButtons(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .statusBarsPadding()
@@ -332,8 +330,7 @@ internal fun BoxScope.MainTopControls(
             )
         } else if (openPerson != null) {
             // Show and Sort, as in the Library (blue while a filter is on), then ⋯ for the person.
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            TopEndButtons(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .statusBarsPadding()
@@ -447,5 +444,18 @@ internal fun BoxScope.MainTopControls(
                     },
             )
         }
+    }
+}
+
+/**
+ * A page's buttons at the top right: side by side on a phone; in a wide window stacked down the
+ * right edge, above the side bar, so the edge holds every control and the page keeps its width.
+ */
+@Composable
+private fun TopEndButtons(modifier: Modifier, content: @Composable () -> Unit) {
+    if (com.subhashh.lumen.ui.components.isWideWindow()) {
+        androidx.compose.foundation.layout.Column(modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) { content() }
+    } else {
+        Row(modifier, horizontalArrangement = Arrangement.spacedBy(10.dp)) { content() }
     }
 }
