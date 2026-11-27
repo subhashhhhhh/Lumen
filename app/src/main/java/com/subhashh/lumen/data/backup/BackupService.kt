@@ -73,9 +73,40 @@ object BackupRunner {
     fun pause() = _state.update { if (it.running) it.copy(paused = true) else it }
     fun resume() = _state.update { it.copy(paused = false) }
 
-    fun stop(context: Context) {
-        if (!_state.value.running) return
-        context.startService(Intent(context, BackupService::class.java).setAction(BackupService.Stop))
+    /** The running backup or restore, whoever started it (Settings, or the schedule): Stop cancels it. */
+    @Volatile internal var current: Job? = null
+
+    fun stop(@Suppress("UNUSED_PARAMETER") context: Context? = null) {
+        current?.cancel()
+    }
+
+    /** Marks a scheduled backup as running; false if one already is. */
+    @Synchronized
+    internal fun claim(): Boolean {
+        if (_state.value.running) return false
+        _state.value = State(LumenBackup.Progress(R.string.backup_step_preparing, 0, 0))
+        return true
+    }
+
+    /**
+     * Backs up what's chosen in Settings, then clears out old backups (Keep), and says what
+     * happened ("Backed up 20 GB; 15 kB of it new", "Backup stopped…").
+     */
+    internal suspend fun runBackup(context: Context): String {
+        val choices = context.getSharedPreferences("lumen-backup-choices", 0)
+        val items = LumenBackup.Item.entries.filter { choices.getBoolean(it.key, it.defaultOn) }.toSet()
+        return try {
+            val done = LumenBackup.backUp(context, items, gate = ::gate, progress = ::progress)
+            progress(LumenBackup.Progress(R.string.backup_step_cleaning, 0, 0))
+            // A failed clean-up never fails the backup: it's tried again next time.
+            runCatching { LumenBackup.prune(context, BackupSchedule.keep(context)) }
+                .onFailure { android.util.Log.w("LumenBackup", "Couldn't clear out old backups", it) }
+            context.getString(R.string.backup_done, Formatter.formatShortFileSize(context, done.total), Formatter.formatShortFileSize(context, done.uploaded))
+        } catch (e: CancellationException) {
+            context.getString(R.string.backup_stopped)
+        } catch (e: Exception) {
+            context.getString(R.string.backup_failed, e.message ?: e.javaClass.simpleName)
+        }
     }
 
     /** Waits here while the backup is paused; between chunks, so a pause takes effect within one. */
@@ -101,12 +132,6 @@ class BackupService : Service() {
         when (intent?.action) {
             Start -> begin()
             Restore -> beginRestore()
-            Pause -> BackupRunner.pause()
-            Resume -> BackupRunner.resume()
-            Stop -> {
-                if (job == null) BackupRunner.finished(null).also { stopSelf() }
-                job?.cancel()
-            }
         }
         return START_NOT_STICKY
     }
@@ -114,29 +139,20 @@ class BackupService : Service() {
     private fun begin() {
         if (!startWatching()) return
         job = scope.launch {
-            val choices = getSharedPreferences("lumen-backup-choices", 0)
-            val items = LumenBackup.Item.entries.filter { choices.getBoolean(it.key, it.defaultOn) }.toSet()
-            val result = try {
-                val done = LumenBackup.backUp(this@BackupService, items, gate = BackupRunner::gate, progress = BackupRunner::progress)
-                getString(R.string.backup_done, size(done.total), size(done.uploaded))
-            } catch (e: CancellationException) {
-                getString(R.string.backup_stopped)
-            } catch (e: Exception) {
-                getString(R.string.backup_failed, e.message ?: e.javaClass.simpleName)
-            }
+            val result = BackupRunner.runBackup(this@BackupService)
             watcher?.cancel()
             BackupRunner.finished(result)
             stopForeground(STOP_FOREGROUND_REMOVE)
             // A short "done" note when nobody is watching Settings; dismissed by a tap.
-            getSystemService(NotificationManager::class.java).notify(DoneId, finishedNotification(result))
+            getSystemService(NotificationManager::class.java).notify(BackupNotifications.DoneId, BackupNotifications.finished(this@BackupService, result))
             job = null
             stopSelf()
-        }
+        }.also { BackupRunner.current = it }
     }
 
     /** Goes foreground with the notification, which then follows progress; false if a job is running already. */
     private fun startWatching(): Boolean {
-        startForeground(Id, notification(BackupRunner.state.value), ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+        startForeground(BackupNotifications.Id, BackupNotifications.progress(this, BackupRunner.state.value), ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
         if (job != null) return false
         // The notification follows progress and pause, at most twice a second.
         watcher = scope.launch {
@@ -146,7 +162,7 @@ class BackupService : Service() {
                 val now = SystemClock.elapsedRealtime()
                 if (now - shown < 500 && !state.paused) return@collect
                 shown = now
-                getSystemService(NotificationManager::class.java).notify(Id, notification(state))
+                getSystemService(NotificationManager::class.java).notify(BackupNotifications.Id, BackupNotifications.progress(this@BackupService, state))
             }
         }
         return true
@@ -169,7 +185,7 @@ class BackupService : Service() {
             if (failure != null) {
                 // Nothing was put in place; a staged part is cleared at the next start.
                 BackupRunner.finished(failure)
-                getSystemService(NotificationManager::class.java).notify(DoneId, finishedNotification(failure))
+                getSystemService(NotificationManager::class.java).notify(BackupNotifications.DoneId, BackupNotifications.finished(this@BackupService, failure))
                 job = null
                 stopSelf()
                 return@launch
@@ -178,10 +194,10 @@ class BackupService : Service() {
             if (onScreen()) {
                 startActivity(Intent.makeRestartActivityTask(android.content.ComponentName(this@BackupService, GalleryActivity::class.java)))
             } else {
-                getSystemService(NotificationManager::class.java).notify(DoneId, finishedNotification(getString(R.string.backup_restore_ready)))
+                getSystemService(NotificationManager::class.java).notify(BackupNotifications.DoneId, BackupNotifications.finished(this@BackupService, getString(R.string.backup_restore_ready)))
             }
             Runtime.getRuntime().exit(0)
-        }
+        }.also { BackupRunner.current = it }
     }
 
     private fun onScreen(): Boolean {
@@ -201,35 +217,47 @@ class BackupService : Service() {
         super.onDestroy()
     }
 
-    private fun size(bytes: Long) = Formatter.formatShortFileSize(this, bytes)
+    companion object {
+        const val Start = "start"
+        const val Restore = "restore"
+    }
+}
 
-    private fun channel() {
-        val manager = getSystemService(NotificationManager::class.java)
+/** Backup's notifications, for [BackupService] and [BackupWorker] alike. */
+internal object BackupNotifications {
+    const val Id = 4301
+    const val DoneId = 4302
+    private const val Channel = "backup"
+
+    private fun channel(context: Context) {
+        val manager = context.getSystemService(NotificationManager::class.java)
         if (manager.getNotificationChannel(Channel) == null) {
             manager.createNotificationChannel(
-                NotificationChannel(Channel, getString(R.string.backup_notification_channel), NotificationManager.IMPORTANCE_LOW),
+                NotificationChannel(Channel, context.getString(R.string.backup_notification_channel), NotificationManager.IMPORTANCE_LOW),
             )
         }
     }
 
-    private fun action(action: String, code: Int) =
-        PendingIntent.getService(this, code, Intent(this, BackupService::class.java).setAction(action), PendingIntent.FLAG_IMMUTABLE)
+    private fun action(context: Context, action: String, code: Int) = PendingIntent.getBroadcast(
+        context, code, Intent(context, BackupActionReceiver::class.java).setAction(action), PendingIntent.FLAG_IMMUTABLE,
+    )
 
-    private fun open() = PendingIntent.getActivity(this, 0, Intent(this, GalleryActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
+    private fun open(context: Context) =
+        PendingIntent.getActivity(context, 0, Intent(context, GalleryActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
 
-    private fun notification(state: BackupRunner.State): Notification {
-        channel()
+    fun progress(context: Context, state: BackupRunner.State): Notification {
+        channel(context)
         val p = state.progress
         val percent = if (p != null && p.total > 0) (p.done * 100 / p.total).toInt() else 0
         val text = when {
             p == null -> ""
-            p.total > 0 -> getString(R.string.backup_notification_progress, size(p.done), size(p.total))
-            else -> getString(p.step)
+            p.total > 0 -> context.getString(R.string.backup_notification_progress, Formatter.formatShortFileSize(context, p.done), Formatter.formatShortFileSize(context, p.total))
+            else -> context.getString(p.step)
         }
-        return NotificationCompat.Builder(this, Channel)
+        return NotificationCompat.Builder(context, Channel)
             .setSmallIcon(R.drawable.ic_launcher_monochrome)
             .setContentTitle(
-                getString(
+                context.getString(
                     when {
                         state.restoring && state.paused -> R.string.backup_notification_restore_paused
                         state.restoring -> R.string.backup_notification_restoring
@@ -243,35 +271,41 @@ class BackupService : Service() {
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setSilent(true)
-            .setContentIntent(open())
+            .setContentIntent(open(context))
             .apply {
-                if (state.paused) addAction(0, getString(R.string.backup_resume), action(Resume, 2))
-                else addAction(0, getString(R.string.backup_pause), action(Pause, 1))
+                if (state.paused) addAction(0, context.getString(R.string.backup_resume), action(context, BackupActionReceiver.Resume, 2))
+                else addAction(0, context.getString(R.string.backup_pause), action(context, BackupActionReceiver.Pause, 1))
             }
-            .addAction(0, getString(R.string.backup_stop), action(Stop, 3))
+            .addAction(0, context.getString(R.string.backup_stop), action(context, BackupActionReceiver.Stop, 3))
             .build()
     }
 
-    private fun finishedNotification(result: String): Notification {
-        channel()
-        return NotificationCompat.Builder(this, Channel)
+    fun finished(context: Context, result: String): Notification {
+        channel(context)
+        return NotificationCompat.Builder(context, Channel)
             .setSmallIcon(R.drawable.ic_launcher_monochrome)
-            .setContentTitle(getString(R.string.backup_notification_done))
+            .setContentTitle(context.getString(R.string.backup_notification_done))
             .setContentText(result)
             .setSilent(true)
             .setAutoCancel(true)
-            .setContentIntent(open())
+            .setContentIntent(open(context))
             .build()
+    }
+}
+
+/** The notification's Pause, Resume and Stop, for a backup or restore however it was started. */
+class BackupActionReceiver : android.content.BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+        when (intent.action) {
+            Pause -> BackupRunner.pause()
+            Resume -> BackupRunner.resume()
+            Stop -> BackupRunner.stop()
+        }
     }
 
     companion object {
-        const val Start = "start"
-        const val Restore = "restore"
-        const val Pause = "pause"
-        const val Resume = "resume"
-        const val Stop = "stop"
-        private const val Id = 4301
-        private const val DoneId = 4302
-        private const val Channel = "backup"
+        const val Pause = "com.subhashh.lumen.backup.PAUSE"
+        const val Resume = "com.subhashh.lumen.backup.RESUME"
+        const val Stop = "com.subhashh.lumen.backup.STOP"
     }
 }

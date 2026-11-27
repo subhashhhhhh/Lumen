@@ -49,6 +49,7 @@ import androidx.core.content.edit
 import com.subhashh.lumen.R
 import com.subhashh.lumen.data.backup.BackupLocation
 import com.subhashh.lumen.data.backup.BackupRunner
+import com.subhashh.lumen.data.backup.BackupSchedule
 import com.subhashh.lumen.data.backup.BackupServer
 import com.subhashh.lumen.data.backup.LumenBackup
 import com.subhashh.lumen.data.backup.Rclone
@@ -213,6 +214,48 @@ internal fun BackupGroup(highlight: String?, onConfirm: (Confirmation) -> Unit) 
                 },
             )
         }
+        // When: automatic backups, their conditions, and how many to keep.
+        Divider()
+        var every by remember { mutableStateOf(BackupSchedule.every(context)) }
+        PickerRow(
+            title = stringResource(R.string.backup_auto),
+            options = BackupSchedule.Every.entries.map { stringResource(it.label()) },
+            selected = every.ordinal,
+            onSelect = { every = BackupSchedule.Every.entries[it]; BackupSchedule.set(context, every = every) },
+            icon = LumenIcons.Timer,
+            iconColor = Blue,
+        )
+        if (every != BackupSchedule.Every.Off) {
+            Divider()
+            var charging by remember { mutableStateOf(BackupSchedule.charging(context)) }
+            ToggleRow(
+                title = stringResource(R.string.backup_auto_charging),
+                checked = charging,
+                onCheckedChange = { charging = it; BackupSchedule.set(context, charging = it) },
+                icon = LumenIcons.Timer,
+                iconColor = Green,
+            )
+            Divider()
+            var wifi by remember { mutableStateOf(BackupSchedule.wifi(context)) }
+            ToggleRow(
+                title = stringResource(R.string.backup_auto_wifi),
+                checked = wifi,
+                onCheckedChange = { wifi = it; BackupSchedule.set(context, wifi = it) },
+                icon = LumenIcons.Globe,
+                iconColor = Blue,
+            )
+        }
+        Divider()
+        val keepOptions = listOf(7, 30, 90, 0)
+        var keep by remember { mutableStateOf(BackupSchedule.keep(context)) }
+        PickerRow(
+            title = stringResource(R.string.backup_keep),
+            options = keepOptions.map { if (it == 0) stringResource(R.string.backup_keep_all) else context.resources.getQuantityString(R.plurals.backup_keep_last, it, it) },
+            selected = keepOptions.indexOf(keep).coerceAtLeast(0),
+            onSelect = { keep = keepOptions[it]; BackupSchedule.set(context, keep = keep) },
+            icon = LumenIcons.History,
+            iconColor = Gray,
+        )
         Divider()
         val p = running.progress?.takeIf { !running.restoring }
         val busy = running.running
@@ -857,4 +900,10 @@ private fun FolderCover(cover: com.subhashh.lumen.data.MediaItem) {
             modifier = Modifier.fillMaxSize(),
         )
     }
+}
+
+private fun BackupSchedule.Every.label() = when (this) {
+    BackupSchedule.Every.Off -> R.string.backup_auto_off
+    BackupSchedule.Every.Daily -> R.string.backup_auto_daily
+    BackupSchedule.Every.Weekly -> R.string.backup_auto_weekly
 }

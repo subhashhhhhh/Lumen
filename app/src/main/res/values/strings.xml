@@ -512,6 +512,19 @@
     <string name="backup_server_share">Share/folder</string>
     <string name="backup_server_connect">Connect</string>
     <string name="backup_folders">Folders</string>
+    <string name="backup_auto">Back Up Automatically</string>
+    <string name="backup_auto_off">Off</string>
+    <string name="backup_auto_daily">Daily</string>
+    <string name="backup_auto_weekly">Weekly</string>
+    <string name="backup_auto_charging">Only While Charging</string>
+    <string name="backup_auto_wifi">Only on Wi-Fi</string>
+    <string name="backup_keep">Keep</string>
+    <string name="backup_keep_all">All Backups</string>
+    <plurals name="backup_keep_last">
+        <item quantity="one">Last %d Backup</item>
+        <item quantity="other">Last %d Backups</item>
+    </plurals>
+    <string name="backup_step_cleaning">Clearing out old backups…</string>
     <string name="backup_folders_all_toggle">All Folders</string>
     <string name="backup_folders_loading">Reading your folders…</string>
     <string name="backup_folders_footer">Photos and videos in folders that are on are backed up. New folders are on. Folders left out in Settings → Library aren\'t listed.</string>

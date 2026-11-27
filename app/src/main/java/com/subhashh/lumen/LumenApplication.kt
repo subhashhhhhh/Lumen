@@ -48,6 +48,8 @@ class LumenApplication : Application(), SingletonImageLoader.Factory {
             // Keeps Smart Search's background indexing queued (no-op until a model is downloaded).
             SmartIndex.schedule(this)
         }
+        // Automatic backups stay queued as Settings has them (none until a backup is set up).
+        com.subhashh.lumen.data.backup.BackupSchedule.apply(this)
     }
 
     override fun newImageLoader(context: PlatformContext): ImageLoader =

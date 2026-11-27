@@ -238,6 +238,9 @@
             android:name=".data.backup.BackupService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
+        <receiver
+            android:name=".data.backup.BackupActionReceiver"
+            android:exported="false" />
 
         <receiver
             android:name=".data.UpdateReceiver"

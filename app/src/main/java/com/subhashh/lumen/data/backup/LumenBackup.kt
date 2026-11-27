@@ -212,6 +212,7 @@ object LumenBackup {
             }
             putString("id", config.id).putBoolean("encrypted", config.encrypted)
         }
+        BackupSchedule.apply(context)
     }
 
     private fun releaseFolder(context: Context) {
@@ -223,6 +224,7 @@ object LumenBackup {
     fun disconnect(context: Context) {
         releaseFolder(context)
         prefs(context).edit { clear() }
+        BackupSchedule.apply(context)
     }
 
     suspend fun target(context: Context): Target? = withContext(Dispatchers.IO) {
@@ -669,18 +671,58 @@ object LumenBackup {
 
     class Snapshot(val name: String, val created: Long, val device: String, val items: List<Item>, internal val json: JSONObject)
 
+    private fun readSnapshot(target: Target, name: String, id: String): Snapshot {
+        val raw = target.folder.read(id)
+        val json = JSONObject(String(ungzip(target.keys?.let { VaultCrypto.open(it.data, raw) } ?: raw)))
+        val items = json.getJSONArray("items").let { a -> (0 until a.length()).mapNotNull { i -> Item.entries.firstOrNull { it.key == a.getString(i) } } }
+        return Snapshot(name.removeSuffix(".snap"), json.getLong("created"), json.optString("device"), items, json)
+    }
+
     /** The backups in the folder, newest first. */
     suspend fun snapshots(context: Context): List<Snapshot> = withContext(Dispatchers.IO) {
         val target = target(context) ?: return@withContext emptyList()
         val dir = target.folder.child(target.dirId, "snapshots") ?: return@withContext emptyList()
         target.folder.list(dir).filterKeys { it.endsWith(".snap") }.mapNotNull { (name, id) ->
-            runCatching {
-                val raw = target.folder.read(id)
-                val json = JSONObject(String(ungzip(target.keys?.let { VaultCrypto.open(it.data, raw) } ?: raw)))
-                val items = json.getJSONArray("items").let { a -> (0 until a.length()).mapNotNull { i -> Item.entries.firstOrNull { it.key == a.getString(i) } } }
-                Snapshot(name.removeSuffix(".snap"), json.getLong("created"), json.optString("device"), items, json)
-            }.getOrNull()
+            runCatching { readSnapshot(target, name, id) }.getOrNull()
         }.sortedByDescending { it.created }
+    }
+
+    /** Every chunk [json] (a snapshot) needs: its files', photos' and vault files'. */
+    private fun chunksOf(json: JSONObject): Set<String> {
+        val out = HashSet<String>()
+        fun add(chunks: JSONArray?) { if (chunks != null) for (i in 0 until chunks.length()) out += chunks.getString(i) }
+        json.optJSONObject("files")?.let { files -> for (k in files.keys()) add(files.getJSONObject(k).optJSONArray("chunks")) }
+        json.optJSONArray("photos")?.let { rows -> for (i in 0 until rows.length()) add(rows.getJSONArray(i).optJSONArray(5)) }
+        json.optJSONArray("vault")?.let { rows -> for (i in 0 until rows.length()) add(rows.getJSONArray(i).optJSONArray(2)) }
+        return out
+    }
+
+    /**
+     * Clears out old backups: all but the newest [keep] snapshots (0 keeps them all), then chunks
+     * no snapshot left needs (old backups', and a stopped run's). Two rules keep it safe:
+     * - if any snapshot in the folder can't be read, nothing is deleted (it might need them);
+     * - a chunk goes only when it was unneeded at the last clean-up too, so a backup another
+     *   phone is still writing into the same folder (its chunks not in a snapshot yet) keeps them.
+     */
+    suspend fun prune(context: Context, keep: Int) = withContext(Dispatchers.IO) {
+        val target = target(context) ?: return@withContext
+        val dir = target.folder.child(target.dirId, "snapshots") ?: return@withContext
+        val snapshots = target.folder.list(dir).filterKeys { it.endsWith(".snap") }.map { (name, id) ->
+            runCatching { readSnapshot(target, name, id) }.getOrNull() ?: return@withContext
+        }.sortedByDescending { it.created }
+        val (kept, dropped) = if (keep > 0) snapshots.take(keep) to snapshots.drop(keep) else snapshots to emptyList()
+        for (old in dropped) target.folder.delete(dir, "${old.name}.snap")
+        val needed = HashSet<String>().apply { for (s in kept) addAll(chunksOf(s.json)) }
+        val data = target.folder.child(target.dirId, "data") ?: return@withContext
+        val unneeded = HashSet<String>()
+        val earlier = prefs(context).getStringSet("unneeded-${target.config.id}", emptySet()).orEmpty()
+        for ((_, prefixId) in target.folder.list(data).toList()) {
+            for (name in target.folder.list(prefixId).keys.toList()) {
+                if (name in needed) continue
+                if (name in earlier) target.folder.delete(prefixId, name) else unneeded += name
+            }
+        }
+        prefs(context).edit { putStringSet("unneeded-${target.config.id}", unneeded) }
     }
 
     /**
