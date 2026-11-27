@@ -258,7 +258,8 @@ object LumenBackup {
             val snapshot = JSONObject()
                 .put("format", Format)
                 .put("created", System.currentTimeMillis())
-                .put("device", "${Build.MANUFACTURER} ${Build.MODEL}")
+                // "motorola edge 50", not "motorola motorola edge 50": many models already start with the maker.
+                .put("device", if (Build.MODEL.startsWith(Build.MANUFACTURER, ignoreCase = true)) Build.MODEL else "${Build.MANUFACTURER} ${Build.MODEL}")
                 .put("items", JSONArray(items.map { it.key }))
                 .put("searchModel", runCatching { com.subhashh.lumen.ai.ModelDownloads.installed(context)?.id }.getOrNull())
                 .put("files", files)

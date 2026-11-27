@@ -770,7 +770,7 @@
     <string name="settings_location_in_photos_subtitle">Show where photos were taken</string>
 
     <!-- Settings: Backup & Import -->
-    <string name="settings_group_lumen_backup">Lumen Backup</string>
+    <string name="settings_group_lumen_backup">Settings File</string>
     <string name="settings_backup_footer">The Hidden lock is never included, so a backup can\'t unlock Hidden.</string>
     <string name="settings_export_row">Export Settings…</string>
     <string name="settings_export_subtitle">Settings, album arrangement and favorites</string>
