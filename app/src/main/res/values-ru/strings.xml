@@ -725,4 +725,19 @@
     <string name="settings_kw_face_model">Люди и лица: скачать, удалить, обновить</string>
     <string name="settings_kw_faces">Ход группировки людей и лиц</string>
     <string name="settings_kw_text_model">Распознавание текста на фото и скриншотах (OCR): скачать, удалить, обновить</string>
+    <string name="settings_kw_text_read">Ход распознавания текста на фото и скриншотах</string>
+    <string name="settings_kw_wifi_only">Мобильный интернет: скачивание</string>
+    <string name="settings_kw_pretend_slow">Проверка оборудования, предупреждение о медленной работе телефона, тестирование для разработчиков</string>
+    <string name="settings_kw_search_details">Отладка поиска: разделы и оценки для разработчиков</string>
+    <string name="settings_kw_hf_token">Токен Hugging Face и скорость скачивания</string>
+    <string name="settings_kw_media_management">Удаление избранного: корзина, разрешение, подтверждение</string>
+    <string name="settings_kw_all_files">Хранилище: скрытые папки, разрешения, переименование</string>
+    <string name="settings_kw_location">GPS, карты, места и разрешения</string>
+    <string name="settings_kw_export">Резервное копирование и сохранение</string>
+    <string name="settings_kw_import">Восстановить резервную копию</string>
+    <string name="settings_kw_import_favorites">Избранное (отметки сердечком) в Fossify и Aves</string>
+    <string name="settings_kw_licenses">Благодарности и открытый исходный код</string>
+    <string name="settings_kw_software_update">Обновление до новой версии: скачать и установить</string>
+    <string name="settings_kw_auto_update">Автоматическое ежедневное обновление</string>
+    <string name="settings_kw_github">Репозиторий исходного кода и проект с открытым исходным кодом</string>
 </resources>
