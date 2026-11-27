@@ -659,9 +659,33 @@ object LumenBackup {
      * another phone). Nothing in use is touched: [RestoreStaging] swaps the files in when Lumen
      * next starts, before anything opens them.
      */
-    suspend fun stageRestore(context: Context, snapshot: Snapshot, items: Set<Item>, progress: (Progress) -> Unit) = withContext(Dispatchers.IO) {
+    /**
+     * Fetches [chunks] in order into [sink], up to [Parallel] ahead: one at a time, a server's
+     * round trip per chunk set the pace. [gate] waits while paused.
+     */
+    private suspend fun fetchInOrder(store: ChunkStore, chunks: JSONArray, gate: suspend () -> Unit, sink: (ByteArray) -> Unit) =
+        kotlinx.coroutines.coroutineScope {
+            val ahead = ArrayDeque<kotlinx.coroutines.Deferred<ByteArray>>()
+            for (i in 0 until chunks.length()) {
+                gate()
+                coroutineContext.ensureActive()
+                val id = chunks.getString(i)
+                ahead.addLast(async { store.get(id) })
+                if (ahead.size >= Parallel) sink(ahead.removeFirst().await())
+            }
+            while (ahead.isNotEmpty()) sink(ahead.removeFirst().await())
+        }
+
+    suspend fun stageRestore(
+        context: Context,
+        snapshot: Snapshot,
+        items: Set<Item>,
+        gate: suspend () -> Unit = {},
+        progress: (Progress) -> Unit,
+    ) = withContext(Dispatchers.IO) {
         val target = target(context) ?: error("No backup folder set up")
         val store = ChunkStore(target)
+        val fetch: suspend (JSONArray, (ByteArray) -> Unit) -> Unit = { chunks, sink -> fetchInOrder(store, chunks, gate, sink) }
         val staging = RestoreStaging.dir(context).apply { deleteRecursively(); mkdirs() }
         val files = snapshot.json.getJSONObject("files")
         val wanted = buildList {
@@ -676,9 +700,7 @@ object LumenBackup {
         for (name in wanted) {
             val chunks = files.getJSONObject(name).getJSONArray("chunks")
             File(staging, name).outputStream().use { out ->
-                for (i in 0 until chunks.length()) {
-                    coroutineContext.ensureActive()
-                    val chunk = store.get(chunks.getString(i))
+                fetch(chunks) { chunk ->
                     out.write(chunk)
                     done += chunk.size
                     progress(Progress(R.string.backup_step_downloading, done, total))
@@ -687,10 +709,10 @@ object LumenBackup {
         }
         // Photos, videos and vault files first, so restored photos are found when ids are matched.
         if (Item.Photos in items) snapshot.json.optJSONArray("photos")?.let { rows ->
-            MediaRestore.photos(context, rows, store::get) { d, t -> progress(Progress(R.string.backup_step_photos, d, t)) }
+            MediaRestore.photos(context, rows, fetch) { d, t -> progress(Progress(R.string.backup_step_photos, d, t)) }
         }
         if (Item.Hidden in items) snapshot.json.optJSONArray("vault")?.let { rows ->
-            val result = MediaRestore.vault(context, rows, store::get) { d, t -> progress(Progress(R.string.backup_step_hidden, d, t)) }
+            val result = MediaRestore.vault(context, rows, fetch) { d, t -> progress(Progress(R.string.backup_step_hidden, d, t)) }
             // Said after the restart (Settings → Backup), where the person looks next.
             val note = when {
                 result.locked -> context.getString(R.string.backup_restore_hidden_locked, result.wontOpen)

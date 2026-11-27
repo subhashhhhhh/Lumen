@@ -32,7 +32,7 @@ internal object MediaRestore {
      * its modified date; without it, through MediaStore, into its
      * folder if Android allows it there, else under Pictures/Lumen Restore.
      */
-    suspend fun photos(context: Context, rows: JSONArray, read: (String) -> ByteArray, progress: (Long, Long) -> Unit): Int {
+    suspend fun photos(context: Context, rows: JSONArray, fetch: suspend (JSONArray, (ByteArray) -> Unit) -> Unit, progress: (Long, Long) -> Unit): Int {
         val library = MediaRepository(context).loadLibrary()
         val here = library.mapTo(HashSet()) { "${it.relativePath}${it.name}|${it.size}" }
         // A photo restored before may sit under Pictures/Lumen Restore/ (no All files access), or
@@ -57,20 +57,17 @@ internal object MediaRestore {
             val mime = row.getString(4)
             val chunks = row.getJSONArray(5)
             val modified = row.optLong(6, 0L).let { if (it > 0) it * 1000 else takenAt }
-            fun copyTo(out: OutputStream) {
-                for (i in 0 until chunks.length()) {
-                    val chunk = read(chunks.getString(i))
-                    out.write(chunk)
-                    done += chunk.size
-                    progress(done, total)
-                }
+            suspend fun copyTo(out: OutputStream) = fetch(chunks) { chunk ->
+                out.write(chunk)
+                done += chunk.size
+                progress(done, total)
             }
             runCatching {
                 require(!path.contains("..") && name != ".." && name != "." && !name.contains('/')) { "Bad path in a backup" }
                 if (allFiles) {
                     val target = uniqueFile(File(Environment.getExternalStorageDirectory(), path), name)
                     target.parentFile?.mkdirs()
-                    target.outputStream().use(::copyTo)
+                    target.outputStream().use { copyTo(it) }
                     if (modified > 0) target.setLastModified(modified)
                     written += target.path
                 } else {
@@ -86,7 +83,7 @@ internal object MediaRestore {
                     }
                     val uri = context.contentResolver.insert(collection, values) ?: error("Couldn't add $name")
                     try {
-                        context.contentResolver.openOutputStream(uri)?.use(::copyTo) ?: error("Couldn't write $name")
+                        context.contentResolver.openOutputStream(uri)?.use { copyTo(it) } ?: error("Couldn't write $name")
                         context.contentResolver.update(uri, ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) }, null, null)
                     } catch (e: Exception) {
                         context.contentResolver.delete(uri, null, null)
@@ -110,7 +107,7 @@ internal object MediaRestore {
      * vault's key (Hidden needn't be unlocked, except after a reinstall); one that doesn't is left out and counted.
      * Needs All files access.
      */
-    suspend fun vault(context: Context, rows: JSONArray, read: (String) -> ByteArray, progress: (Long, Long) -> Unit): VaultResult {
+    suspend fun vault(context: Context, rows: JSONArray, fetch: suspend (JSONArray, (ByteArray) -> Unit) -> Unit, progress: (Long, Long) -> Unit): VaultResult {
         if (!Environment.isExternalStorageManager()) return VaultResult(0, 0, locked = false)
         val vault = com.subhashh.lumen.data.vault.Vault
         val fresh = !vault.exists()
@@ -136,8 +133,7 @@ internal object MediaRestore {
             val chunks = row.getJSONArray(2)
             val tmp = File(dir, "$name.restoring")
             tmp.outputStream().use { out ->
-                for (i in 0 until chunks.length()) {
-                    val chunk = read(chunks.getString(i))
+                fetch(chunks) { chunk ->
                     out.write(chunk)
                     done += chunk.size
                     progress(done, total)
@@ -152,6 +148,19 @@ internal object MediaRestore {
         }
         return VaultResult(restored, wontOpen, locked = false)
     }
+
+    /** One chunk at a time through [read] (tests). */
+    private fun sequential(read: (String) -> ByteArray): suspend (JSONArray, (ByteArray) -> Unit) -> Unit = { chunks, sink ->
+        for (i in 0 until chunks.length()) sink(read(chunks.getString(i)))
+    }
+
+    @JvmName("photosReading")
+    internal suspend fun photos(context: Context, rows: JSONArray, read: (String) -> ByteArray, progress: (Long, Long) -> Unit) =
+        photos(context, rows, sequential(read), progress)
+
+    @JvmName("vaultReading")
+    internal suspend fun vault(context: Context, rows: JSONArray, read: (String) -> ByteArray, progress: (Long, Long) -> Unit) =
+        vault(context, rows, sequential(read), progress)
 
     /** "IMG_1.jpg", or "IMG_1 (2).jpg" if a different file of that name is there. */
     private fun uniqueFile(dir: File, name: String): File {
