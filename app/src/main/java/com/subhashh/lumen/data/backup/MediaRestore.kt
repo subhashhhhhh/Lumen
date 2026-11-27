@@ -115,7 +115,9 @@ internal object MediaRestore {
         val dir = vault.dir().apply { mkdirs() }
         val missing = (0 until rows.length()).map { rows.getJSONArray(it) }.filter { row ->
             val name = row.getString(0)
-            !File(dir, name).exists() && (fresh || name != "vault.key")
+            // Into an existing vault only hidden files, each checked below; its key and anything
+            // else (a leftover .tmp or .part) belong to the vault that made the backup.
+            !File(dir, name).exists() && (fresh || name.endsWith(".lumenvault"))
         }
         if (missing.isEmpty()) return VaultResult(0, 0, locked = false)
         // Into an existing vault only what opens with its key, which needs Hidden unlocked.
@@ -140,7 +142,7 @@ internal object MediaRestore {
                     progress(done, total)
                 }
             }
-            if (!fresh && name.endsWith(".lumenvault") && !vault.opens(tmp)) {
+            if (!fresh && !vault.opens(tmp)) {
                 tmp.delete()
                 wontOpen++
                 continue
