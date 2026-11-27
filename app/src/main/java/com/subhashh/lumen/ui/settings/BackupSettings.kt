@@ -261,7 +261,14 @@ internal fun BackupGroup(highlight: String?, onConfirm: (Confirmation) -> Unit) 
             onConfirm(
                 Confirmation(
                     title = context.getString(R.string.backup_restore_title),
-                    message = context.getString(R.string.backup_restore_message, snapshot.items.joinToString(", ") { context.getString(it.label) }),
+                    message = run {
+                        // Data is replaced; photos, videos and hidden files are only added.
+                        val (files, data) = snapshot.items.partition { it == LumenBackup.Item.Photos || it == LumenBackup.Item.Hidden }
+                        listOfNotNull(
+                            data.takeIf { it.isNotEmpty() }?.let { d -> context.getString(R.string.backup_restore_message, d.joinToString(", ") { context.getString(it.label) }) },
+                            files.takeIf { it.isNotEmpty() }?.let { context.getString(R.string.backup_restore_message_files) },
+                        ).joinToString("\n\n")
+                    },
                     confirm = context.getString(R.string.backup_restore_go),
                     destructive = true,
                 ) {

@@ -478,6 +478,7 @@
     <string name="backup_restore_none">No backups in this folder yet.</string>
     <string name="backup_restore_title">Restore This Backup?</string>
     <string name="backup_restore_message">%1$s on this phone are replaced with the backup\'s. Lumen restarts to finish.</string>
+    <string name="backup_restore_message_files">Photos, videos and hidden files missing from this phone come back. Files already here aren\'t changed.</string>
     <string name="backup_restore_go">Restore</string>
     <string name="backup_change_password">Change Password</string>
     <string name="backup_change_password_message">The new password opens this backup from now on. The recovery key stays the same.</string>
