@@ -511,6 +511,13 @@
     <string name="backup_server_port">Port (optional)</string>
     <string name="backup_server_share">Share/folder</string>
     <string name="backup_server_connect">Connect</string>
+    <string name="backup_location_title">Backup Location</string>
+    <string name="backup_stop_here">Stop Backing Up Here</string>
+    <string name="backup_location_name_hint">Name (e.g. Home NAS)</string>
+    <string name="backup_server_use_key">Use a Key File…</string>
+    <string name="backup_server_key_chosen">Key: %1$s (tap to use a password)</string>
+    <string name="backup_server_key_passphrase">Key passphrase (if it has one)</string>
+    <string name="backup_server_key_bad">That file isn\'t a private key. Pick the one without .pub.</string>
     <string name="backup_folders">Folders</string>
     <string name="backup_auto">Back Up Automatically</string>
     <string name="backup_auto_off">Off</string>

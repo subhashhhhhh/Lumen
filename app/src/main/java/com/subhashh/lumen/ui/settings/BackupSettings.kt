@@ -92,6 +92,7 @@ internal fun BackupGroup(highlight: String?, onConfirm: (Confirmation) -> Unit) 
     var picked by remember { mutableStateOf<BackupLocation?>(null) }
     var choosingWhere by remember { mutableStateOf(false) }
     var choosingFolders by remember { mutableStateOf(false) }
+    var editingLocation by remember { mutableStateOf(false) }
     // Opening or setting up a backup: a server takes a few seconds.
     var settingUp by remember { mutableStateOf(false) }
     var askingServer by remember { mutableStateOf(false) }
@@ -150,23 +151,13 @@ internal fun BackupGroup(highlight: String?, onConfirm: (Confirmation) -> Unit) 
             }
             return@Group
         }
-        val label = remember(folder) { runCatching { folder.open(context).label() }.getOrDefault("") }
+        val name = remember(folder, version) { LumenBackup.locationName(context) }
         SettingsRow(
-            title = stringResource(R.string.backup_folder),
-            value = label,
-            subtitle = stringResource(if (encrypted) R.string.backup_encrypted else R.string.backup_not_encrypted),
-            onClick = {
-                onConfirm(
-                    Confirmation(
-                        title = context.getString(R.string.backup_disconnect_title),
-                        message = context.getString(R.string.backup_disconnect_message),
-                        confirm = context.getString(R.string.backup_disconnect),
-                        destructive = true,
-                    ) { LumenBackup.disconnect(context); version++ },
-                )
-            },
+            title = name.ifEmpty { stringResource(R.string.backup_folder) },
+            onClick = { editingLocation = true },
             icon = if (folder is BackupLocation.Server) LumenIcons.Globe else LumenIcons.Folder,
             iconColor = Blue,
+            badge = { EncryptionLock(encrypted) },
         )
         for (item in LumenBackup.Item.entries) {
             Divider()
@@ -396,13 +387,31 @@ internal fun BackupGroup(highlight: String?, onConfirm: (Confirmation) -> Unit) 
             onServer = { choosingWhere = false; askingServer = true },
         )
     }
+    if (editingLocation) {
+        LocationDialog(
+            name = LumenBackup.locationName(context),
+            onDismiss = { editingLocation = false },
+            onRename = { LumenBackup.rename(context, it); editingLocation = false; version++ },
+            onStop = {
+                editingLocation = false
+                onConfirm(
+                    Confirmation(
+                        title = context.getString(R.string.backup_disconnect_title),
+                        message = context.getString(R.string.backup_disconnect_message),
+                        confirm = context.getString(R.string.backup_disconnect),
+                        destructive = true,
+                    ) { LumenBackup.disconnect(context); version++ },
+                )
+            },
+        )
+    }
     if (choosingFolders) {
         FoldersPanel(onDismiss = { choosingFolders = false })
     }
     if (askingServer) {
-        ServerDialog(onDismiss = { askingServer = false }) { server ->
+        ServerDialog(onDismiss = { askingServer = false }) { server, name ->
             askingServer = false
-            chosen(BackupLocation.Server(server))
+            chosen(BackupLocation.Server(server, name))
         }
     }
 
@@ -672,10 +681,31 @@ private fun WhereDialog(onDismiss: () -> Unit, onFolder: () -> Unit, onServer: (
 
 /** A server's address and login; Connect checks it reaches the server (and makes the folder). */
 @Composable
-private fun ServerDialog(onDismiss: () -> Unit, onConnected: (BackupServer) -> Unit) {
+private fun ServerDialog(onDismiss: () -> Unit, onConnected: (BackupServer, name: String?) -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var kind by remember { mutableStateOf(BackupServer.Kind.WebDav) }
+    var name by remember { mutableStateOf("") }
+    // SFTP: a private key picked from files, and its file name to show.
+    var key by remember { mutableStateOf<Pair<String, String>?>(null) }
+    var keyProblem by remember { mutableStateOf(false) }
+    val pickKey = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        val text = runCatching {
+            context.contentResolver.openInputStream(uri)?.use { it.readNBytesCompat(64 * 1024) }?.toString(Charsets.UTF_8)
+        }.getOrNull()
+        // A private key, not a public one or something else picked by mistake.
+        if (text != null && text.contains("PRIVATE KEY-----")) {
+            val fileName = runCatching {
+                context.contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)
+                    ?.use { c -> if (c.moveToFirst()) c.getString(0) else null }
+            }.getOrNull() ?: "key"
+            key = fileName to text
+            keyProblem = false
+        } else {
+            keyProblem = true
+        }
+    }
     var address by remember { mutableStateOf("") }
     var region by remember { mutableStateOf("") }
     var port by remember { mutableStateOf("") }
@@ -739,6 +769,9 @@ private fun ServerDialog(onDismiss: () -> Unit, onConnected: (BackupServer) -> U
                 Field(value, { onChange(it); error = null; hostKey = null }, stringResource(hint), secret)
                 Spacer(Modifier.height(8.dp))
             }
+            // What Settings will call it; empty = the server's name.
+            Field(name, { name = it }, stringResource(R.string.backup_location_name_hint), secret = false)
+            Spacer(Modifier.height(8.dp))
             when (kind) {
                 BackupServer.Kind.WebDav -> {
                     field(address, { address = it.trim() }, R.string.backup_server_url)
@@ -757,8 +790,17 @@ private fun ServerDialog(onDismiss: () -> Unit, onConnected: (BackupServer) -> U
                     field(address, { address = it.trim() }, R.string.backup_server_host)
                     field(port, { port = it.filter(Char::isDigit) }, R.string.backup_server_port)
                     field(user, { user = it }, R.string.backup_server_user)
-                    field(password, { password = it }, R.string.backup_password, secret = true)
+                    field(password, { password = it }, if (key != null) R.string.backup_server_key_passphrase else R.string.backup_password, secret = true)
                     field(path, { path = it }, R.string.backup_server_folder)
+                    Text(
+                        key?.let { stringResource(R.string.backup_server_key_chosen, it.first) } ?: stringResource(R.string.backup_server_use_key),
+                        color = Lumen.colors.accent,
+                        fontSize = 15.sp,
+                        modifier = Modifier
+                            .clickable { if (key != null) key = null else pickKey.launch(arrayOf("*/*")) }
+                            .padding(horizontal = 20.dp, vertical = 6.dp),
+                    )
+                    if (keyProblem) Text(stringResource(R.string.backup_server_key_bad), color = Lumen.colors.destructive, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 20.dp))
                 }
                 BackupServer.Kind.Smb -> {
                     field(address, { address = it.trim() }, R.string.backup_server_host)
@@ -784,7 +826,10 @@ private fun ServerDialog(onDismiss: () -> Unit, onConnected: (BackupServer) -> U
                     checking = true
                     error = null
                     scope.launch {
-                        val server = BackupServer(kind, address, user, password, path, port.toIntOrNull() ?: 0, region)
+                        val server = BackupServer(
+                            kind, address, user, password, path, port.toIntOrNull() ?: 0, region,
+                            keyPem = if (kind == BackupServer.Kind.Sftp) key?.second.orEmpty() else "",
+                        )
                         // SFTP, first tap: read the server's key and show it. Second tap trusts
                         // it; it's kept, and a different key later is refused.
                         if (kind == BackupServer.Kind.Sftp && hostKey == null) {
@@ -799,7 +844,7 @@ private fun ServerDialog(onDismiss: () -> Unit, onConnected: (BackupServer) -> U
                             runCatching { ServerFolder(context, trusted).check() }.exceptionOrNull()
                         }
                         checking = false
-                        if (problem == null) onConnected(trusted)
+                        if (problem == null) onConnected(trusted, name.trim().takeIf { it.isNotEmpty() })
                         else error = context.getString(R.string.backup_server_failed, problem.message ?: problem.javaClass.simpleName)
                     }
                 },
@@ -906,4 +951,61 @@ private fun BackupSchedule.Every.label() = when (this) {
     BackupSchedule.Every.Off -> R.string.backup_auto_off
     BackupSchedule.Every.Daily -> R.string.backup_auto_daily
     BackupSchedule.Every.Weekly -> R.string.backup_auto_weekly
+}
+
+/** Encrypted: a locked padlock (green; the theme's colour in Material). Not: an open one, red. */
+@Composable
+private fun EncryptionLock(encrypted: Boolean) {
+    androidx.compose.material3.Icon(
+        if (encrypted) LumenIcons.Lock else LumenIcons.Unlock,
+        contentDescription = stringResource(if (encrypted) R.string.backup_encrypted else R.string.backup_not_encrypted),
+        tint = when {
+            !encrypted -> Red
+            Lumen.material -> androidx.compose.material3.MaterialTheme.colorScheme.primary
+            else -> Green
+        },
+        modifier = Modifier.padding(start = 8.dp).size(20.dp),
+    )
+}
+
+/** The backup place: rename it, or stop backing up there. */
+@Composable
+private fun LocationDialog(name: String, onDismiss: () -> Unit, onRename: (String) -> Unit, onStop: () -> Unit) {
+    var text by remember { mutableStateOf(name) }
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Column(Modifier.width(320.dp).dialogCard().padding(top = 22.dp), horizontalAlignment = dialogAlignment) {
+            DialogTitle(stringResource(R.string.backup_location_title))
+            Spacer(Modifier.height(14.dp))
+            Field(text, { text = it }, stringResource(R.string.backup_location_name_hint), secret = false)
+            Text(
+                stringResource(R.string.backup_stop_here),
+                color = Lumen.colors.destructive,
+                fontSize = 15.sp,
+                modifier = Modifier
+                    .padding(top = 12.dp)
+                    .clickable(onClick = onStop)
+                    .padding(horizontal = 20.dp, vertical = 6.dp),
+            )
+            Spacer(Modifier.height(12.dp))
+            DialogButtons(
+                cancel = stringResource(R.string.common_cancel),
+                onCancel = onDismiss,
+                confirm = stringResource(R.string.common_done),
+                onConfirm = { if (text.isNotBlank()) onRename(text) },
+                enabled = text.isNotBlank(),
+            )
+        }
+    }
+}
+
+/** Up to [max] bytes (InputStream.readNBytes is Android 13+). */
+private fun java.io.InputStream.readNBytesCompat(max: Int): ByteArray {
+    val out = java.io.ByteArrayOutputStream()
+    val buffer = ByteArray(8192)
+    while (out.size() < max) {
+        val n = read(buffer, 0, minOf(buffer.size, max - out.size()))
+        if (n < 0) break
+        out.write(buffer, 0, n)
+    }
+    return out.toByteArray()
 }

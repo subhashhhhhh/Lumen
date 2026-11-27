@@ -388,16 +388,19 @@ internal fun SettingsRow(
     onClick: (() -> Unit)?,
     icon: ImageVector? = null,
     iconColor: Color = Gray,
+    /** A small mark at the row's end (Backup's lock), before the chevron. */
+    badge: (@Composable () -> Unit)? = null,
 ) {
     val colors = groupColors()
     if (Lumen.material && onClick != null) {
         // Material: what it's set to reads as the row's second line, not at its far end. A row
         // that only shows something (onClick null) keeps its value at the end, so it doesn't look
         // like one that opens a choice.
-        RowShell(title, listOfNotNull(subtitle, value).joinToString("\n").ifEmpty { null }, icon, iconColor, onClick) {}
+        RowShell(title, listOfNotNull(subtitle, value).joinToString("\n").ifEmpty { null }, icon, iconColor, onClick) { badge?.invoke() }
         return
     }
     RowShell(title, subtitle, icon, iconColor, onClick) {
+        badge?.invoke()
         if (value != null) {
             Spacer(Modifier.width(8.dp))
             Text(value, fontSize = 16.sp, color = colors.secondary, maxLines = 1)

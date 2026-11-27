@@ -38,13 +38,16 @@ interface BackupStore {
 sealed interface BackupLocation {
     fun open(context: Context): BackupStore
 
+    /** What Settings calls it ("Home NAS"); null = from the place itself. */
+    val name: String?
+
     /** A folder from Android's picker: phone storage, SD card, USB drive, or an app that offers folders. */
-    data class Folder(val tree: Uri) : BackupLocation {
+    data class Folder(val tree: Uri, override val name: String? = null) : BackupLocation {
         override fun open(context: Context): BackupStore = BackupFolder(context, tree)
     }
 
     /** A server reached through rclone. */
-    data class Server(val server: BackupServer) : BackupLocation {
+    data class Server(val server: BackupServer, override val name: String? = null) : BackupLocation {
         override fun open(context: Context): BackupStore = ServerFolder(context, server)
     }
 }
@@ -73,11 +76,13 @@ data class BackupServer(
      * refuses a server whose key changed (someone else answering at that address).
      */
     val hostKey: String = "",
+    /** SFTP only: a private key (PEM/OpenSSH text) to sign in with; [password] is then its passphrase. */
+    val keyPem: String = "",
 ) {
     enum class Kind(val key: String) { WebDav("webdav"), S3("s3"), Sftp("sftp"), Smb("smb") }
 
     fun toJson(): JSONObject = JSONObject().put("kind", kind.key).put("address", address).put("user", user)
-        .put("password", password).put("path", path).put("port", port).put("region", region).put("hostKey", hostKey)
+        .put("password", password).put("path", path).put("port", port).put("region", region).put("hostKey", hostKey).put("keyPem", keyPem)
 
     /**
      * rclone's on-the-fly remote for it (`:webdav,url='…',…:path`), with the password obscured.
@@ -110,7 +115,13 @@ data class BackupServer(
                 opts["host"] = address
                 if (port > 0) opts["port"] = port.toString()
                 opts["user"] = user
-                if (password.isNotEmpty()) opts["pass"] = Rclone.obscure(password)
+                if (keyPem.isNotBlank()) {
+                    // rclone wants the key on one line, its line breaks written as \n.
+                    opts["key_pem"] = keyPem.trim().replace("\r", "").replace("\n", "\\n")
+                    if (password.isNotEmpty()) opts["key_file_pass"] = Rclone.obscure(password)
+                } else if (password.isNotEmpty()) {
+                    opts["pass"] = Rclone.obscure(password)
+                }
                 if (knownHosts != null && hostKey.isNotEmpty()) opts["known_hosts_file"] = knownHosts
             }
             Kind.Smb -> {
@@ -138,7 +149,7 @@ data class BackupServer(
         fun parse(json: JSONObject) = BackupServer(
             Kind.entries.first { it.key == json.getString("kind") },
             json.getString("address"), json.getString("user"), json.getString("password"),
-            json.getString("path"), json.optInt("port"), json.optString("region"), json.optString("hostKey"),
+            json.getString("path"), json.optInt("port"), json.optString("region"), json.optString("hostKey"), json.optString("keyPem"),
         )
     }
 }

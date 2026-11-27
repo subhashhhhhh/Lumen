@@ -46,6 +46,7 @@ object LumenIcons {
     val Add: ImageVector get() = if (material) MaterialIcons.Add else FluentIcons.Add
     val NewAlbum: ImageVector get() = if (material) MaterialIcons.NewAlbum else FluentIcons.NewAlbum
     val Lock: ImageVector get() = if (material) MaterialIcons.Lock else FluentIcons.Lock
+    val Unlock: ImageVector get() = if (material) MaterialIcons.Unlock else FluentIcons.Unlock
     val Unhide: ImageVector get() = if (material) MaterialIcons.Unhide else FluentIcons.Unhide
     val Pin: ImageVector get() = if (material) MaterialIcons.Pin else FluentIcons.Pin
     val Sound: ImageVector get() = if (material) MaterialIcons.Sound else FluentIcons.Sound

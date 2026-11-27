@@ -200,8 +200,11 @@ object LumenBackup {
 
     private fun use(context: Context, location: BackupLocation, config: Config) {
         releaseFolder(context)
+        val name = location.name?.trim()?.takeIf { it.isNotEmpty() }
+            ?: runCatching { location.open(context).label() }.getOrNull().orEmpty()
         prefs(context).edit {
             remove("folder").remove("server")
+            putString("name", name)
             when (location) {
                 is BackupLocation.Folder -> {
                     runCatching {
@@ -221,6 +224,15 @@ object LumenBackup {
     private fun releaseFolder(context: Context) {
         val uri = (location(context) as? BackupLocation.Folder)?.tree ?: return
         runCatching { context.contentResolver.releasePersistableUriPermission(uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION) }
+    }
+
+    /** What Settings calls the backup place ("Home NAS"); its folder or server name if not named. */
+    fun locationName(context: Context): String =
+        prefs(context).getString("name", null)?.takeIf { it.isNotBlank() }
+            ?: runCatching { location(context)?.open(context)?.label() }.getOrNull().orEmpty()
+
+    fun rename(context: Context, name: String) {
+        prefs(context).edit { putString("name", name.trim()) }
     }
 
     /** Forgets the backup on this phone (the folder and its backups stay). */
