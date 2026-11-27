@@ -363,6 +363,13 @@ private fun Field(value: String, onChange: (String) -> Unit, hint: String, secre
 private fun RecoveryKeyDialog(key: String, onDone: () -> Unit) {
     val context = LocalContext.current
     var copied by remember { mutableStateOf(false) }
+    var saved by remember { mutableStateOf(false) }
+    // A small text file, wherever the person chooses (a USB stick, a cloud folder, printed later).
+    val save = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        val text = context.getString(R.string.backup_recovery_file, key)
+        saved = runCatching { context.contentResolver.openOutputStream(uri, "wt")?.use { it.write(text.toByteArray()) } != null }.getOrDefault(false)
+    }
     Dialog(onDismissRequest = {}, properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnBackPress = false, dismissOnClickOutside = false)) {
         Column(Modifier.width(320.dp).dialogCard().padding(top = 22.dp), horizontalAlignment = dialogAlignment) {
             DialogTitle(stringResource(R.string.backup_recovery_title))
@@ -383,8 +390,19 @@ private fun RecoveryKeyDialog(key: String, onDone: () -> Unit) {
                     .background(Lumen.colors.field)
                     .padding(12.dp),
             )
-            Spacer(Modifier.height(12.dp))
-            if (copied) DialogMessage(stringResource(R.string.backup_recovery_copied), Modifier.padding(top = 8.dp))
+            Text(
+                stringResource(R.string.backup_recovery_save_file),
+                color = Lumen.colors.accent,
+                fontSize = 15.sp,
+                modifier = Modifier
+                    .padding(top = 10.dp)
+                    .clickable { save.launch(context.getString(R.string.backup_recovery_file_name)) }
+                    .padding(horizontal = 20.dp, vertical = 6.dp),
+            )
+            when {
+                saved -> DialogMessage(stringResource(R.string.backup_recovery_file_saved), Modifier.padding(top = 4.dp))
+                copied -> DialogMessage(stringResource(R.string.backup_recovery_copied), Modifier.padding(top = 4.dp))
+            }
             Spacer(Modifier.height(12.dp))
             DialogButtons(
                 cancel = stringResource(R.string.common_copy),
@@ -399,7 +417,7 @@ private fun RecoveryKeyDialog(key: String, onDone: () -> Unit) {
                 },
                 confirm = stringResource(R.string.backup_recovery_saved),
                 onConfirm = onDone,
-                enabled = copied,
+                enabled = copied || saved,
             )
         }
     }
