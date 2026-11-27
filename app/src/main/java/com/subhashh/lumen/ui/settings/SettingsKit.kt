@@ -291,6 +291,8 @@ private fun RowShell(
     onClick: (() -> Unit)?,
     modifier: Modifier = Modifier,
     interactionSource: MutableInteractionSource? = null,
+    /** Drawn instead of [icon]: a picture (a folder's cover), say. */
+    leading: (@Composable () -> Unit)? = null,
     trailing: @Composable () -> Unit,
 ) {
     val colors = groupColors()
@@ -313,7 +315,10 @@ private fun RowShell(
             .padding(horizontal = if (material) 16.dp else 14.dp, vertical = if (material) 12.dp else 9.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (icon != null && material && !LocalSettingsBadges.current) {
+        if (leading != null) {
+            leading()
+            Spacer(Modifier.width(if (material) 16.dp else 14.dp))
+        } else if (icon != null && material && !LocalSettingsBadges.current) {
             // Inside a category: the icon alone, as Android's settings lists have it.
             Icon(icon, contentDescription = null, tint = colors.secondary, modifier = Modifier.padding(horizontal = 4.dp).size(24.dp))
             Spacer(Modifier.width(20.dp))
@@ -464,6 +469,10 @@ internal fun ToggleRow(
     subtitle: String? = null,
     icon: ImageVector? = null,
     iconColor: Color = Gray,
+    /** Drawn instead of [icon]. */
+    leading: (@Composable () -> Unit)? = null,
+    /** Its own button just before the switch (Backup's photo folders, say). */
+    accessory: (@Composable () -> Unit)? = null,
 ) {
     val haptics = LocalHapticFeedback.current
     val press = remember { MutableInteractionSource() }
@@ -471,7 +480,8 @@ internal fun ToggleRow(
         haptics.performHapticFeedback(if (checked) HapticFeedbackType.ToggleOff else HapticFeedbackType.ToggleOn)
         onCheckedChange(!checked)
     }
-    RowShell(title, subtitle, icon, iconColor, onClick = toggle, interactionSource = press) {
+    RowShell(title, subtitle, icon, iconColor, onClick = toggle, interactionSource = press, leading = leading) {
+        accessory?.invoke()
         Spacer(Modifier.width(10.dp))
         if (Lumen.material) MaterialSwitch(checked, press)
         else LiquidSwitch(checked, pressed = press.collectIsPressedAsState().value)

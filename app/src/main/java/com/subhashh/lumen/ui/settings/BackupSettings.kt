@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Text
@@ -70,6 +71,7 @@ import com.subhashh.lumen.ui.components.DialogTitle
 import com.subhashh.lumen.ui.components.dialogAlignment
 import com.subhashh.lumen.ui.components.dialogCard
 import com.subhashh.lumen.ui.icons.LumenIcons
+import com.subhashh.lumen.ui.images.version
 import com.subhashh.lumen.ui.theme.Lumen
 import kotlinx.coroutines.launch
 
@@ -89,12 +91,6 @@ internal fun BackupGroup(highlight: String?, onConfirm: (Confirmation) -> Unit) 
     var picked by remember { mutableStateOf<BackupLocation?>(null) }
     var choosingWhere by remember { mutableStateOf(false) }
     var choosingFolders by remember { mutableStateOf(false) }
-    var foldersVersion by remember { mutableIntStateOf(0) }
-    var photosOn by remember { mutableStateOf(false) }
-    // How many folders have photos (for "12 of 38"), read once the folder row shows.
-    val folderCount by produceState<Int?>(null, photosOn, foldersVersion) {
-        if (photosOn) value = LumenBackup.photoFolders(context).size
-    }
     // Opening or setting up a backup: a server takes a few seconds.
     var settingUp by remember { mutableStateOf(false) }
     var askingServer by remember { mutableStateOf(false) }
@@ -174,7 +170,6 @@ internal fun BackupGroup(highlight: String?, onConfirm: (Confirmation) -> Unit) 
         for (item in LumenBackup.Item.entries) {
             Divider()
             var on by remember { mutableStateOf(prefs.getBoolean(item.key, item.defaultOn)) }
-            if (item == LumenBackup.Item.Photos) photosOn = on
             ToggleRow(
                 title = stringResource(item.label),
                 checked = on,
@@ -194,21 +189,29 @@ internal fun BackupGroup(highlight: String?, onConfirm: (Confirmation) -> Unit) 
                     LumenBackup.Item.People -> Purple
                     else -> Indigo
                 },
+                // Photos and Videos, while on: which folders (the viewer's edit icon).
+                accessory = if (item == LumenBackup.Item.Photos && on) {
+                    {
+                        // 36 dp, so the row keeps the others' height (a 48 dp button made it taller).
+                        Box(
+                            Modifier
+                                .size(36.dp)
+                                .clip(androidx.compose.foundation.shape.CircleShape)
+                                .clickable { choosingFolders = true },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            androidx.compose.material3.Icon(
+                                LumenIcons.Adjust,
+                                contentDescription = stringResource(R.string.backup_folders),
+                                tint = Lumen.colors.accent,
+                                modifier = Modifier.size(22.dp),
+                            )
+                        }
+                    }
+                } else {
+                    null
+                },
             )
-            // Which folders, right under Photos and Videos while it's on.
-            if (item == LumenBackup.Item.Photos && on) {
-                Divider()
-                val off = remember(foldersVersion) { LumenBackup.foldersOff(context) }
-                SettingsRow(
-                    title = stringResource(R.string.backup_folders),
-                    value = if (off.isEmpty()) stringResource(R.string.backup_folders_all) else folderCount?.let { total ->
-                        stringResource(R.string.backup_folders_some, (total - off.size).coerceAtLeast(0), total)
-                    },
-                    onClick = { choosingFolders = true },
-                    icon = LumenIcons.Folder,
-                    iconColor = Orange,
-                )
-            }
         }
         Divider()
         val p = running.progress?.takeIf { !running.restoring }
@@ -351,7 +354,7 @@ internal fun BackupGroup(highlight: String?, onConfirm: (Confirmation) -> Unit) 
         )
     }
     if (choosingFolders) {
-        FoldersPanel(onDismiss = { choosingFolders = false; foldersVersion++ })
+        FoldersPanel(onDismiss = { choosingFolders = false })
     }
     if (askingServer) {
         ServerDialog(onDismiss = { askingServer = false }) { server ->
@@ -799,18 +802,15 @@ private fun FoldersPanel(onDismiss: () -> Unit) {
                     Text(stringResource(R.string.backup_folders_loading), color = Lumen.colors.secondary, modifier = Modifier.padding(16.dp))
                     return@SettingsPage
                 }
-                Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    for ((label, on) in listOf(R.string.backup_folders_all_on to true, R.string.backup_folders_all_off to false)) {
-                        Text(
-                            stringResource(label),
-                            color = Lumen.colors.accent,
-                            fontSize = 15.sp,
-                            modifier = Modifier.clickable {
-                                for (f in list) LumenBackup.setFolderOn(context, f.path, on)
-                                off = LumenBackup.foldersOff(context)
-                            }.padding(vertical = 6.dp),
-                        )
-                    }
+                Group(title = "") {
+                    ToggleRow(
+                        title = stringResource(R.string.backup_folders_all_toggle),
+                        checked = off.isEmpty(),
+                        onCheckedChange = { on ->
+                            for (f in list) LumenBackup.setFolderOn(context, f.path, on)
+                            off = LumenBackup.foldersOff(context)
+                        },
+                    )
                 }
                 Group(title = "", footer = stringResource(R.string.backup_folders_footer)) {
                     list.forEachIndexed { i, folder ->
@@ -818,17 +818,43 @@ private fun FoldersPanel(onDismiss: () -> Unit) {
                         ToggleRow(
                             title = folder.name,
                             subtitle = context.resources.getQuantityString(R.plurals.backup_folder_items, folder.count, folder.count) +
-                                " · " + Formatter.formatShortFileSize(context, folder.bytes) + " · " + folder.path.trimEnd('/'),
+                                " · " + Formatter.formatShortFileSize(context, folder.bytes),
                             checked = folder.path !in off,
                             onCheckedChange = { on ->
                                 LumenBackup.setFolderOn(context, folder.path, on)
                                 off = LumenBackup.foldersOff(context)
                             },
+                            leading = { FolderCover(folder.cover) },
                         )
                     }
                 }
                 Spacer(Modifier.height(24.dp))
             }
         }
+    }
+}
+
+/** A folder's newest photo, small and rounded, like the album picker's. */
+@Composable
+private fun FolderCover(cover: com.subhashh.lumen.data.MediaItem) {
+    val context = LocalContext.current
+    Box(
+        Modifier
+            .size(48.dp)
+            .clip(androidx.compose.foundation.shape.RoundedCornerShape(10.dp))
+            .background(Lumen.colors.secondary.copy(alpha = 0.15f)),
+    ) {
+        coil3.compose.AsyncImage(
+            model = remember(cover.version) {
+                coil3.request.ImageRequest.Builder(context)
+                    .data(com.subhashh.lumen.data.MediaThumbnail(cover.uri))
+                    .size(com.subhashh.lumen.ui.images.ImageKeys.ThumbBuckets.first(), com.subhashh.lumen.ui.images.ImageKeys.ThumbBuckets.first())
+                    .memoryCacheKey(com.subhashh.lumen.ui.images.ImageKeys.thumb(cover, com.subhashh.lumen.ui.images.ImageKeys.ThumbBuckets.first()))
+                    .build()
+            },
+            contentDescription = null,
+            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+            modifier = Modifier.fillMaxSize(),
+        )
     }
 }

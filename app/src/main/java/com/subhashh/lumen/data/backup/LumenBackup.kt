@@ -443,7 +443,7 @@ object LumenBackup {
     }
 
     /** A folder with photos or videos, as the folder list shows it. */
-    data class PhotoFolder(val path: String, val name: String, val count: Int, val bytes: Long)
+    data class PhotoFolder(val path: String, val name: String, val count: Int, val bytes: Long, val cover: com.subhashh.lumen.data.MediaItem)
 
     /** The library's folders, biggest first, without folders Lumen is told to leave out (Settings → Library). */
     suspend fun photoFolders(context: Context): List<PhotoFolder> = withContext(Dispatchers.IO) {
@@ -451,7 +451,7 @@ object LumenBackup {
         MediaRepository(context).loadLibrary()
             .filterNot { exclusions.covers(it) }
             .groupBy { it.relativePath }
-            .map { (path, items) -> PhotoFolder(path, items.first().bucketName.ifEmpty { path.trimEnd('/') }, items.size, items.sumOf { it.size }) }
+            .map { (path, items) -> PhotoFolder(path, items.first().bucketName.ifEmpty { path.trimEnd('/') }, items.size, items.sumOf { it.size }, items.maxBy { it.takenAt }) }
             .sortedByDescending { it.bytes }
     }
 

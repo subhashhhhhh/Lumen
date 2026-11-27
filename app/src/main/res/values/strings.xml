@@ -512,11 +512,8 @@
     <string name="backup_server_share">Share/folder</string>
     <string name="backup_server_connect">Connect</string>
     <string name="backup_folders">Folders</string>
-    <string name="backup_folders_all">All</string>
-    <string name="backup_folders_some">%1$d of %2$d</string>
+    <string name="backup_folders_all_toggle">All Folders</string>
     <string name="backup_folders_loading">Reading your folders…</string>
-    <string name="backup_folders_all_on">Turn All On</string>
-    <string name="backup_folders_all_off">Turn All Off</string>
     <string name="backup_folders_footer">Photos and videos in folders that are on are backed up. New folders are on. Folders left out in Settings → Library aren\'t listed.</string>
     <plurals name="backup_folder_items">
         <item quantity="one">%d item</item>
