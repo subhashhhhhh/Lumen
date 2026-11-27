@@ -1162,6 +1162,23 @@ private fun ColumnScope.DeveloperPage(prefs: LumenPrefs, highlight: String?, onC
         }
     }
     PhotoRemindersGroup(highlight, onConfirm)
+    // Lumen Lab (debug and profile builds with the Lab beside the app): no launcher icon of its
+    // own, so the app opens unambiguously by its package; it opens from here instead.
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val lab = remember {
+        android.content.ComponentName(context, "com.subhashh.lumen.lab.LabActivity")
+            .takeIf { runCatching { context.packageManager.getActivityInfo(it, 0) }.isSuccess }
+    }
+    if (lab != null) {
+        Group("Lumen Lab") {
+            SettingsRow(
+                title = "Open Lumen Lab",
+                onClick = { context.startActivity(android.content.Intent().setComponent(lab).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) },
+                icon = LumenIcons.Bug,
+                iconColor = Purple,
+            )
+        }
+    }
     Group(stringResource(R.string.settings_group_onboarding), footer = stringResource(R.string.settings_onboarding_footer)) {
         Anchor("pretend-slow", highlight) {
             var slow by remember { mutableStateOf(prefs.pretendSlowPhone) }
