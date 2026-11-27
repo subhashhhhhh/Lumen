@@ -740,4 +740,24 @@
     <string name="settings_kw_software_update">Обновление до новой версии: скачать и установить</string>
     <string name="settings_kw_auto_update">Автоматическое ежедневное обновление</string>
     <string name="settings_kw_github">Репозиторий исходного кода и проект с открытым исходным кодом</string>
+    <string name="backup_notification_restoring">Восстановление</string>
+    <string name="backup_notification_restore_paused">Восстановление приостановлено</string>
+    <string name="backup_restore_stopped">Восстановление остановлено. Данные Lumen не были заменены. Фото, которые уже удалось восстановить, останутся на месте.</string>
+    <string name="backup_restore_failed">Не удалось восстановить: %1$s</string>
+    <string name="backup_restore_ready">Восстановление завершено. Откройте Lumen, чтобы завершить процесс.</string>
+    <string name="backup_location_title">Место хранения резервной копии</string>
+    <string name="backup_stop_here">Остановить резервное копирование в этой папке</string>
+    <string name="backup_location_name_hint">Название (например, «Домашний NAS»)</string>
+    <string name="backup_server_use_key">Использовать файл ключа…</string>
+    <string name="backup_server_key_chosen">Ключ: %1$s (нажмите, чтобы использовать пароль)</string>
+    <string name="backup_server_key_passphrase">Парольная фраза ключа (если задана)</string>
+    <string name="backup_server_key_bad">Этот файл не содержит закрытый ключ. Выберите файл без расширения .pub.</string>
+    <string name="backup_folders">Папки</string>
+    <string name="backup_auto">Автоматическое резервное копирование</string>
+    <string name="backup_auto_off">Выкл.</string>
+    <string name="backup_auto_daily">Ежедневно</string>
+    <string name="backup_auto_weekly">Еженедельно</string>
+    <string name="backup_auto_charging">Только во время зарядки</string>
+    <string name="backup_auto_wifi">Только по Wi-Fi</string>
+    <string name="backup_keep">Сохранить</string>
 </resources>
