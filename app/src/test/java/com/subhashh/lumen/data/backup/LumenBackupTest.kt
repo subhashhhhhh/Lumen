@@ -45,6 +45,10 @@ class LumenBackupTest {
     @Before
     fun host() {
         LumenAi.install(AiHost(context))
+        // On the phone, Android's start-up library sets WorkManager up before Application.onCreate
+        // (where a restore is applied); Robolectric doesn't run it.
+        runCatching { androidx.work.WorkManager.getInstance(context) }
+            .onFailure { androidx.work.WorkManager.initialize(context, androidx.work.Configuration.Builder().build()) }
     }
 
     // ---- Keys ----
