@@ -67,13 +67,14 @@ internal fun SmartSearchGroup(
 ) {
     val context = LocalContext.current
     val state by ModelDownloads.state.collectAsState()
+    val fileChanges by ModelDownloads.fileChanges.collectAsState()
     var chosenId by remember { mutableStateOf(prefs.searchModel) }
     val chosen = ModelCatalog.byId(chosenId)
     /** Bumped after every download, cancel and remove: re-read what's on the phone. */
     var changed by remember { mutableIntStateOf(0) }
-    val installed = remember(refresh, state, changed, chosenId) { ModelDownloads.installed(context) }
-    val readerReady = remember(refresh, state, changed) { OcrModel.installed(context) }
-    val facesReady = remember(refresh, state, changed) { FaceModel.installed(context) }
+    val installed = remember(refresh, state, changed, fileChanges, chosenId) { ModelDownloads.installed(context) }
+    val readerReady = remember(refresh, state, changed, fileChanges) { OcrModel.installed(context) }
+    val facesReady = remember(refresh, state, changed, fileChanges) { FaceModel.installed(context) }
     var tokenRemoved by remember { mutableIntStateOf(0) }
     val hasToken = remember(refresh, tokenRemoved) { HfTokenStore(context).token != null }
     var wifiOnly by remember { mutableStateOf(prefs.modelWifiOnly) }
@@ -133,7 +134,7 @@ internal fun SmartSearchGroup(
      */
     @Composable
     fun PackRow(pack: ModelPack, title: String, removeTitle: String, removeMessage: String, iconColor: Color, icon: ImageVector = LumenIcons.Folder, sizeShown: Boolean = false) {
-        val (status, action) = remember(state, refresh, changed, chosenId) { packStatus(context, pack, state, wifiOnly, sizeShown) }
+        val (status, action) = remember(state, refresh, changed, fileChanges, chosenId) { packStatus(context, pack, state, wifiOnly, sizeShown) }
         ActionRow(
             title = title,
             subtitle = status,
@@ -330,8 +331,8 @@ internal fun SmartSearchGroup(
         footer = stringResource(R.string.smart_faces_footer),
     ) {
         // Accurate runs only on a supported NPU: elsewhere it shows, faded, and says why.
-        val accurate = remember(refresh) { com.subhashh.lumen.ai.FaceModel.accurate(context) }
-        val faceRecognizer = remember(refresh, changed) { com.subhashh.lumen.ai.FaceModel.recognizer(context) }
+        val accurate = remember(refresh, fileChanges) { com.subhashh.lumen.ai.FaceModel.accurate(context) }
+        val faceRecognizer = remember(refresh, changed, fileChanges) { com.subhashh.lumen.ai.FaceModel.recognizer(context) }
         Anchor("face-quality", highlight) {
             PickerRow(
                 title = stringResource(R.string.smart_faces_quality),
@@ -549,6 +550,8 @@ internal fun SmartSearchGroup(
             )
         }
         Divider()
+        OfflineModelImportRow()
+        Divider()
         Anchor("wifi-only", highlight) {
             ToggleRow(
                 title = stringResource(R.string.smart_wifi_only),
@@ -692,7 +695,7 @@ private fun packStatus(context: Context, pack: ModelPack, state: DownloadState, 
 
 /** A pack's name; the AI library's own labels are English only. */
 @StringRes
-private fun packLabel(pack: ModelPack): Int = when (pack) {
+internal fun packLabel(pack: ModelPack): Int = when (pack) {
     ModelPack.Search -> R.string.smart_pack_search
     ModelPack.Text -> R.string.smart_pack_text
     ModelPack.Faces -> R.string.smart_pack_faces
