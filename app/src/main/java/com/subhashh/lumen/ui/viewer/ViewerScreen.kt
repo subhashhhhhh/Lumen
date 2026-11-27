@@ -667,57 +667,35 @@ fun ViewerScreen(
                         },
                         modifier = Modifier.align(Alignment.TopCenter),
                     )
-                    Column(
-                        Modifier
-                            .align(Alignment.BottomCenter)
-                            .graphicsLayer { alpha = 1f - infoFraction() }
-                            .navigationBarsPadding()
-                            .onSizeChanged { bottomChromeHeight = it.height }
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                    // Wide windows: the actions stand in a column on the right edge, not across the bottom.
+                    val wideViewer = com.subhashh.lumen.ui.components.isWideWindow()
+                    // Material 3 Expressive: one floating toolbar of plain icon buttons, not a row of circles.
+                    val material = Lumen.material
+                    @Composable
+                    fun GlassIconButton(
+                        backdrop: Backdrop,
+                        icon: androidx.compose.ui.graphics.vector.ImageVector,
+                        contentDescription: String,
+                        onClick: () -> Unit,
+                        tint: Color = LocalGlassColors.current.content,
                     ) {
-                        if (current.isVideo) {
-                            if (speechReady) {
-                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                                    CaptionsButton(backdrop, on = captions, onClick = { captions = !captions })
-                                }
-                                Spacer(Modifier.height(8.dp))
+                        // Material: the icon with its name under it, straight on the page.
+                        if (material) {
+                            Column(
+                                // Four across, on a narrow phone too.
+                                Modifier.width(minOf(84.dp, (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp.dp - 32.dp) / 4)).pressable(onClick, shape = RoundedCornerShape(16.dp)).padding(vertical = 8.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                            ) {
+                                Icon(icon, contentDescription = null, tint = tint)
+                                Spacer(Modifier.height(6.dp))
+                                Text(contentDescription, color = tint, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                             }
-                            if (player != null) VideoControls(backdrop, player)
-                            Spacer(Modifier.height(12.dp))
+                        } else {
+                            com.subhashh.lumen.ui.components.GlassIconButton(backdrop, icon, contentDescription, onClick, tint = tint)
                         }
-                        if (items.size > 1 && !external && filmStrip != FilmStripSize.Off) {
-                            FilmStrip(items, pager, filmStrip.heightDp.dp)
-                            Spacer(Modifier.height(12.dp))
-                        }
-                        // Material 3 Expressive: one floating toolbar of plain icon buttons, not a row of circles.
-                        val material = Lumen.material
-                        @Composable
-                        fun GlassIconButton(
-                            backdrop: Backdrop,
-                            icon: androidx.compose.ui.graphics.vector.ImageVector,
-                            contentDescription: String,
-                            onClick: () -> Unit,
-                            tint: Color = LocalGlassColors.current.content,
-                        ) {
-                            // Material: the icon with its name under it, straight on the page.
-                            if (material) {
-                                Column(
-                                    // Four across, on a narrow phone too.
-                                    Modifier.width(minOf(84.dp, (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp.dp - 32.dp) / 4)).pressable(onClick, shape = RoundedCornerShape(16.dp)).padding(vertical = 8.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                ) {
-                                    Icon(icon, contentDescription = null, tint = tint)
-                                    Spacer(Modifier.height(6.dp))
-                                    Text(contentDescription, color = tint, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                                }
-                            } else {
-                                com.subhashh.lumen.ui.components.GlassIconButton(backdrop, icon, contentDescription, onClick, tint = tint)
-                            }
-                        }
-                        Row(
-                            Modifier.fillMaxWidth(),
-                            horizontalArrangement = if (material) Arrangement.SpaceEvenly else Arrangement.SpaceBetween,
-                        ) {
+                    }
+                    val actionButtons: @Composable () -> Unit = {
+
                             if (external) {
                                 GlassIconButton(
                                     backdrop = backdrop,
@@ -817,8 +795,43 @@ fun ViewerScreen(
                                     onClick = { onConfirmDelete(current, false) { launch(MediaActions.trashRequest(context, current)) } },
                                 )
                             }
-                        }
                     }
+                    Column(
+                        Modifier
+                            .align(Alignment.BottomCenter)
+                            .graphicsLayer { alpha = 1f - infoFraction() }
+                            .navigationBarsPadding()
+                            .onSizeChanged { bottomChromeHeight = it.height }
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                    ) {
+                        if (current.isVideo) {
+                            if (speechReady) {
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                                    CaptionsButton(backdrop, on = captions, onClick = { captions = !captions })
+                                }
+                                Spacer(Modifier.height(8.dp))
+                            }
+                            if (player != null) VideoControls(backdrop, player)
+                            Spacer(Modifier.height(12.dp))
+                        }
+                        if (items.size > 1 && !external && filmStrip != FilmStripSize.Off) {
+                            FilmStrip(items, pager, filmStrip.heightDp.dp)
+                            Spacer(Modifier.height(12.dp))
+                        }
+                        if (!wideViewer) Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = if (material) Arrangement.SpaceEvenly else Arrangement.SpaceBetween,
+                        ) { actionButtons() }
+                    }
+                    if (wideViewer) Column(
+                        Modifier
+                            .align(Alignment.CenterEnd)
+                            .graphicsLayer { alpha = 1f - infoFraction() }
+                            .navigationBarsPadding()
+                            .padding(end = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) { actionButtons() }
                 }
             }
         }
