@@ -499,20 +499,19 @@ fun ViewerScreen(
             val index = pager.currentPage
             val item = items.getOrNull(index)
             val rect = item?.let {
-                val fitted = fittedHeight(it, width, height)
+                val fitted = fullScreenRect(it, width, height)
                 val scale = 1f - progress() * 0.4f
                 // Same transform the page's graphicsLayer applies: scale about the pivot, then move.
                 val origin = pageOrigin()
                 val px = origin.pivotFractionX * width
                 val py = origin.pivotFractionY * height
-                val top = (height - fitted) / 2f
                 val tx = motion.dismissX
                 val ty = motion.dismissY
                 Rect(
-                    left = px + (0f - px) * scale + tx,
-                    top = py + (top - py) * scale + ty,
-                    right = px + (width - px) * scale + tx,
-                    bottom = py + (top + fitted - py) * scale + ty,
+                    left = px + (fitted.left - px) * scale + tx,
+                    top = py + (fitted.top - py) * scale + ty,
+                    right = px + (fitted.right - px) * scale + tx,
+                    bottom = py + (fitted.bottom - py) * scale + ty,
                 )
             }
             onClose(
@@ -1021,15 +1020,16 @@ data class ViewerExit(
 
 /** Where [item] sits when shown full screen in a width × height box (fitted, centered). */
 fun fullScreenRect(item: MediaItem, width: Float, height: Float): Rect {
-    val h = fittedHeight(item, width, height)
+    // Fit inside the window both ways, centred. Only a photo wider than the window's shape spans
+    // its full width: in a wide window (tablet, desktop mode) a tall photo is narrower, and a
+    // full-width target made the open flight fill the window, then snap to the photo's real size.
+    if (item.width <= 0 || item.height <= 0) return Rect(0f, 0f, width, height)
+    val scale = minOf(width / item.width, height / item.height)
+    val w = item.width * scale
+    val h = item.height * scale
+    val left = (width - w) / 2f
     val top = (height - h) / 2f
-    return Rect(0f, top, width, top + h)
-}
-
-/** On-screen height of [item] when fit inside a width × height box; the box height if unknown. */
-private fun fittedHeight(item: MediaItem, boxWidth: Float, boxHeight: Float): Float {
-    if (item.width <= 0 || item.height <= 0) return boxHeight
-    return (boxWidth * item.height / item.width).coerceAtMost(boxHeight)
+    return Rect(left, top, left + w, top + h)
 }
 
 
