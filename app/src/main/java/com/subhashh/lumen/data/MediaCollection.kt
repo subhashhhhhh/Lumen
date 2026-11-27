@@ -27,6 +27,9 @@ object CollectionKeys {
     /** Every person found in photos (Collections → People → Open). */
     const val People = "people"
 
+    /** Lumen style: the kinds of paper Smart Search found (Utilities → Documents), each a card. */
+    const val Documents = "documents"
+
     /** A kind of document Smart Search finds ("receipt", "ticket"): its own page in the Material style. */
     private const val DocumentPrefix = "docs:"
     fun documents(query: String) = "$DocumentPrefix$query"

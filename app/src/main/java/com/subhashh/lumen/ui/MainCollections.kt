@@ -29,6 +29,8 @@ import kotlinx.coroutines.launch
 internal class CollectionPages(
     val peoplePage: @Composable (Modifier) -> Unit,
     val collectionsPage: @Composable (Modifier) -> Unit,
+    /** Lumen style: Utilities → Documents, the kinds of paper found. */
+    val documentsPage: @Composable (Modifier) -> Unit,
 )
 
 /**
@@ -139,6 +141,23 @@ internal fun MainState.collectionPages(
             com.subhashh.lumen.ui.collections.DocumentKind(label, query, cover)
         }
     }
+    // Lumen style: Documents is one of Utilities (before Recently Deleted and Hidden), its newest
+    // match the thumbnail; it opens a page of the kinds found.
+    val lumenUtilities = androidx.compose.runtime.remember(utilities, documents, found) {
+        if (documents.isEmpty()) utilities else {
+            val all = found.values.flatten().distinctBy { it.id }
+            val tile = com.subhashh.lumen.data.MediaCollection(
+                com.subhashh.lumen.data.CollectionKeys.Documents,
+                context.getString(R.string.collections_documents),
+                // The first kind's cover (Documents, when it has matches): one of its strongest
+                // matches, not the newest of every weak one.
+                cover = documents.first().cover ?: all.maxByOrNull { it.takenAt },
+                count = all.size,
+            )
+            val at = utilities.indexOfFirst { it.key == com.subhashh.lumen.data.CollectionKeys.RecentlyDeleted }.takeIf { it >= 0 } ?: utilities.size
+            utilities.take(at) + tile + utilities.drop(at)
+        }
+    }
     val collectionsPage: @Composable (Modifier) -> Unit = { pageModifier ->
         if (material) com.subhashh.lumen.ui.collections.MaterialCollectionsScreen(
             columns = albumColumns,
@@ -159,16 +178,15 @@ internal fun MainState.collectionPages(
                 if (key == CollectionKeys.Hidden) openHidden() else openCollectionFromCard(key)
             },
         ) else CollectionsScreen(
+            utilities = lumenUtilities,
             title = albumSelection?.let { albumSelectionTitle(it.size, folders = false) } ?: stringResource(R.string.main_collections),
             columns = albumColumns,
             onColumnsChange = onAlbumColumns,
             selection = albumSelection,
             onSelectionChange = { if (pick == null) albumSelection = it },
-            utilities = utilities,
             hiddenLockSet = lockSet,
             folders = folders,
             people = people,
-            documents = documents,
             gridState = collectionsGrid,
             contentPadding = PaddingValues(top = statusTop + 16.dp, bottom = navBottom + 96.dp),
             coverTransition = coverTransition,
@@ -180,5 +198,14 @@ internal fun MainState.collectionPages(
         )
     }
 
-    return CollectionPages(peoplePage, collectionsPage)
+    val documentsPage: @Composable (Modifier) -> Unit = { pageModifier ->
+        com.subhashh.lumen.ui.collections.DocumentsScreen(
+            documents = documents,
+            counts = found.mapValues { it.value.size },
+            contentPadding = PaddingValues(top = statusTop + 72.dp, bottom = navBottom + 96.dp),
+            onOpen = { openCollection = it },
+            modifier = pageModifier,
+        )
+    }
+    return CollectionPages(peoplePage, collectionsPage, documentsPage)
 }

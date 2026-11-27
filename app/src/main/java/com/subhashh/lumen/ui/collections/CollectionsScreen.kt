@@ -48,6 +48,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.horizontalScroll
@@ -84,8 +85,6 @@ fun CollectionsScreen(
     folders: List<MediaCollection>,
     /** People found in photos (Settings → Smart Search), each with the photo for their face. */
     people: List<Pair<Person, MediaItem>>,
-    /** Kinds of paper Smart Search found (Documents, Receipts, Tickets…), as in the Material style. */
-    documents: List<DocumentKind> = emptyList(),
     gridState: LazyGridState,
     contentPadding: PaddingValues,
     onOpen: (key: String) -> Unit,
@@ -106,10 +105,7 @@ fun CollectionsScreen(
     val gestures = rememberAlbumGridGestures(
         gridState = gridState,
         // Wide: title, the People + Utilities dashboard, Albums header.
-        keys = {
-            val docs = if (documents.isEmpty()) 0 else 2
-            List<String?>((if (wide) 3 else if (people.isEmpty()) 4 else 6) + docs) { null } + folders.map { it.key }
-        },
+        keys = { List<String?>(if (wide) 3 else if (people.isEmpty()) 4 else 6) { null } + folders.map { it.key } },
         columns = columns,
         onColumnsChange = onColumnsChange,
         selection = selection,
@@ -167,16 +163,6 @@ fun CollectionsScreen(
             )
         }
 
-        if (documents.isNotEmpty()) {
-            fullWidth { SectionHeader(stringResource(R.string.collections_documents)) }
-            fullWidth {
-                DocumentsRow(
-                    documents,
-                    onOpen = { if (selection == null) onOpen(it) },
-                    modifier = Modifier.graphicsLayer { alpha = if (selection != null) 0.4f else 1f },
-                )
-            }
-        }
         fullWidth { SectionHeader(stringResource(R.string.main_albums), trailing = folders.size.toString()) }
         items(folders, key = { it.key }) { collection ->
             AlbumCard(
@@ -315,7 +301,11 @@ private fun UtilityGroup(
                     .padding(horizontal = if (material) 16.dp else 14.dp, vertical = if (material) 12.dp else 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                if (material) {
+                val thumb = utilityThumbnail(collection)
+                if (thumb != null) {
+                    // The newest photo in it, where the badge would be.
+                    Box(Modifier.size(if (material) 40.dp else 32.dp).clip(RoundedCornerShape(8.dp))) { Cover(thumb) }
+                } else if (material) {
                     com.subhashh.lumen.ui.settings.IconBadge(utilityIcon(collection.key), utilityColor(collection.key))
                 } else Box(
                     Modifier
@@ -406,6 +396,7 @@ private fun utilityColor(key: String): Color = when (key) {
     CollectionKeys.Screenshots -> Color(0xFF30B0C7)
     CollectionKeys.RecentlyDeleted -> Color(0xFF8E8E93)
     CollectionKeys.Hidden -> Color(0xFF5E5CE6)
+    CollectionKeys.Documents -> Color(0xFFFF9F0A)
     else -> Color(0xFF8E8E93)
 }
 
@@ -415,6 +406,7 @@ internal fun utilityIcon(key: String): ImageVector = when (key) {
     CollectionKeys.Screenshots -> LumenIcons.Screenshot
     CollectionKeys.RecentlyDeleted -> LumenIcons.Delete
     CollectionKeys.Hidden -> LumenIcons.Lock
+    CollectionKeys.Documents -> LumenIcons.Document
     else -> LumenIcons.Folder
 }
 
@@ -561,8 +553,20 @@ private fun WideDashboard(
                                 .padding(horizontal = 16.dp, vertical = 14.dp),
                             verticalArrangement = Arrangement.SpaceBetween,
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(
+                            Row(verticalAlignment = Alignment.Top) {
+                                val thumb = utilityThumbnail(collection)
+                                if (thumb != null) {
+                                    // The newest photo in it, with its badge on the corner.
+                                    Box(Modifier.size(56.dp)) {
+                                        Box(Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp))) { Cover(thumb) }
+                                        Box(
+                                            Modifier.align(Alignment.BottomEnd).offset(x = 6.dp, y = 6.dp).size(24.dp).clip(RoundedCornerShape(7.dp)).background(utilityColor(collection.key)),
+                                            contentAlignment = Alignment.Center,
+                                        ) {
+                                            Icon(utilityIcon(collection.key), contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
+                                        }
+                                    }
+                                } else Box(
                                     Modifier.size(32.dp).clip(RoundedCornerShape(8.dp)).background(utilityColor(collection.key)),
                                     contentAlignment = Alignment.Center,
                                 ) {
@@ -591,27 +595,45 @@ private fun WideDashboard(
 }
 
 /**
- * Documents: kinds of paper Smart Search found (Documents, Receipts, Tickets…), each a card with
- * the newest of its strongest matches; scrolls sideways. Opens the same pages as the Material style.
+ * A utility's thumbnail: its newest photo. Never Hidden's (a hidden photo on the main page would
+ * undo hiding it) nor Recently Deleted's (deleted photos shouldn't greet you every day).
+ */
+private fun utilityThumbnail(collection: MediaCollection): MediaItem? =
+    collection.cover.takeIf { collection.key != CollectionKeys.Hidden && collection.key != CollectionKeys.RecentlyDeleted }
+
+/**
+ * Utilities → Documents (Lumen style): the kinds of paper Smart Search found (Documents,
+ * Receipts, Tickets…), each a card with the newest of its strongest matches and how many.
  */
 @Composable
-private fun DocumentsRow(documents: List<DocumentKind>, onOpen: (String) -> Unit, modifier: Modifier = Modifier) {
+internal fun DocumentsScreen(
+    documents: List<DocumentKind>,
+    counts: Map<String, Int>,
+    contentPadding: androidx.compose.foundation.layout.PaddingValues,
+    onOpen: (key: String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val colors = groupColors()
-    Row(
-        modifier.fillMaxWidth().horizontalScroll(androidx.compose.foundation.rememberScrollState()),
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(com.subhashh.lumen.ui.components.scaledColumns(2)),
+        contentPadding = contentPadding,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        modifier = modifier.fillMaxSize().padding(horizontal = 16.dp),
     ) {
-        documents.forEach { kind ->
-            Column(Modifier.width(132.dp).pressable({ onOpen(CollectionKeys.documents(kind.query)) }, pressedScale = 0.96f)) {
+        fullWidth { ScreenTitle(stringResource(R.string.collections_documents)) }
+        items(documents, key = { it.query }) { kind ->
+            Column(Modifier.pressable({ onOpen(CollectionKeys.documents(kind.query)) }, pressedScale = 0.96f)) {
                 Box(
-                    Modifier.size(132.dp).clip(RoundedCornerShape(14.dp)).background(colors.card),
+                    Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(14.dp)).background(colors.card),
                     contentAlignment = Alignment.Center,
                 ) {
                     if (kind.cover != null) Cover(kind.cover)
                     else Icon(LumenIcons.Document, contentDescription = null, tint = colors.secondary)
                 }
                 Spacer(Modifier.height(6.dp))
-                Text(stringResource(kind.label), fontSize = 14.sp, fontWeight = FontWeight.Medium, color = colors.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(stringResource(kind.label), fontSize = 15.sp, fontWeight = FontWeight.Medium, color = colors.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                counts[kind.query]?.let { Text(it.toString(), fontSize = 13.sp, color = colors.secondary) }
             }
         }
     }

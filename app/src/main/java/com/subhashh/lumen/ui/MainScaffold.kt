@@ -455,6 +455,8 @@ private fun MainState.Scaffold(
         when {
             CollectionKeys.hiddenFolderId(key.orEmpty()) != null -> CollectionKeys.Hidden
             CollectionKeys.personId(key) != null && personFromPeople -> CollectionKeys.People
+            // Lumen style: a kind of document was opened from the Documents page.
+            CollectionKeys.documentQuery(key) != null && !material -> CollectionKeys.Documents
             else -> null
         }
     }
@@ -623,6 +625,7 @@ private fun MainState.Scaffold(
     val collectionPages = collectionPages(pick, library, utilities, folders, people, allPeople, statusTop, navBottom, collectionsGrid, peopleGrid, coverTransition, personOf, onAlbumColumns, openHidden, openCollectionFromCard)
     val peoplePage = collectionPages.peoplePage
     val collectionsPage = collectionPages.collectionsPage
+    val documentsPage = collectionPages.documentsPage
     Box(Modifier.fillMaxSize().onSizeChanged { screenSize = it }) {
         // Everything the glass controls refract lives inside this layer.
         Box(
@@ -667,7 +670,7 @@ private fun MainState.Scaffold(
                     }
                 },
             ) {
-            MainPages(this@Scaffold, pick, library, allItems, excluded, hidden, hiddenAll, hiddenFolderList, utilities, folders, libraryItems, librarySections, openItems, collectionSections, months, years, selectedItems, searchSections, searchAlbums, personMatches, unnamedSubject, smartPending, smartSuggestions, searchSuggestions, chronological, scrollLabel, statusTop, navBottom, gridPadding, heroHeight, libraryGrid, collectionGrid, hiddenGrid, searchGrid, monthsList, yearsList, zoomBarScroll, transition, coverTransition, activity, exportLauncher, favoritesLauncher, importLauncher, itemsOf, personOf, heroWithLabel, setPicked, onGridColumns, onAlbumColumns, rememberSearch, toast, needsAllFiles, openHidden, openViewer, collectionsPage, peoplePage, people, previousNav, navTrail, coverOpen && !searching && settingsPage == null, backGesture)
+            MainPages(this@Scaffold, pick, library, allItems, excluded, hidden, hiddenAll, hiddenFolderList, utilities, folders, libraryItems, librarySections, openItems, collectionSections, months, years, selectedItems, searchSections, searchAlbums, personMatches, unnamedSubject, smartPending, smartSuggestions, searchSuggestions, chronological, scrollLabel, statusTop, navBottom, gridPadding, heroHeight, libraryGrid, collectionGrid, hiddenGrid, searchGrid, monthsList, yearsList, zoomBarScroll, transition, coverTransition, activity, exportLauncher, favoritesLauncher, importLauncher, itemsOf, personOf, heroWithLabel, setPicked, onGridColumns, onAlbumColumns, rememberSearch, toast, needsAllFiles, openHidden, openViewer, collectionsPage, peoplePage, people, previousNav, navTrail, coverOpen && !searching && settingsPage == null, backGesture, documentsPage)
             }
             if (!coverTransition.overViewer) CoverTransitionOverlay(coverTransition)
         }

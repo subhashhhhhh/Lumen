@@ -147,6 +147,7 @@ internal fun BoxScope.MainPages(
     trail: List<PageNav>,
     keepBeneath: Boolean,
     back: com.subhashh.lumen.ui.components.BackGesture,
+    documentsPage: @Composable (Modifier) -> Unit,
 ) {
     with(s) {
         // Its own lambda, as it was inside MainScaffold: a page's own changes rebuild only the page.
@@ -421,7 +422,8 @@ internal fun BoxScope.MainPages(
                     if (key == CollectionKeys.People || (coverPage && fromPeople)) {
                         peoplePage(if (key == CollectionKeys.People) Modifier else Modifier.coverUnderlay(coverTransition))
                     }
-                    if (key != null && key != CollectionKeys.People) {
+                    if (key == CollectionKeys.Documents) documentsPage(Modifier)
+                    if (key != null && key != CollectionKeys.People && key != CollectionKeys.Documents) {
                         val cover = heroWithLabel(key)
                         // Material: a kind of document has a page of its own design (a plain
                         // title, how many, and the other kinds a tap away), not an album's.
