@@ -67,6 +67,11 @@ class LumenPrefs(context: Context) {
         get() = prefs.getStringSet(KeyExcluded, emptySet()).orEmpty().toSet()
         set(value) = prefs.edit { putStringSet(KeyExcluded, value) }
 
+    /** Favorites from a restored backup, to mark once the person agrees (Android asks). Paths. */
+    var pendingFavorites: Set<String>
+        get() = prefs.getStringSet(KeyPendingFavorites, emptySet()).orEmpty().toSet()
+        set(value) = prefs.edit { putStringSet(KeyPendingFavorites, value) }
+
     /** Settings → Smart Features → Download From: hf-mirror.com instead of Hugging Face (blocked in China). */
     var modelMirror: Boolean
         get() = prefs.getBoolean(KeyModelMirror, false)
@@ -430,6 +435,7 @@ class LumenPrefs(context: Context) {
         const val KeyShownFolders = "shown_folders"
         const val KeyModelMirror = "model_mirror"
         const val KeyDiscordAsked = "discord_asked"
+        const val KeyPendingFavorites = "pending_favorites"
         const val KeyIndexSearch = "index_search"
         const val KeyIndexText = "index_text"
         const val KeyIndexVideoText = "index_video_text"

@@ -32,8 +32,11 @@ class LumenApplication : Application(), SingletonImageLoader.Factory {
         LumenAi.install(AiHost(this))
         // Smart Search's GPU check runs in its own process; it needs none of the app's setup.
         if (getProcessName() != packageName) return
+        // A restore staged before the restart goes in now, before any database is opened.
+        val restoredFavorites = com.subhashh.lumen.data.backup.RestoreStaging.apply(this)
         AppLock.install(this)
         val prefs = LumenPrefs(this)
+        if (restoredFavorites.isNotEmpty()) prefs.pendingFavorites = restoredFavorites
         if (!prefs.aiMoved) {
             // The download queue and video-text version used to live in Lumen's own settings.
             LumenAi.adoptState(this, prefs.legacyModelQueue, prefs.legacyTextVideoVersion)

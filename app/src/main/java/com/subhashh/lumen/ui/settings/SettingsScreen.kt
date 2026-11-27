@@ -327,7 +327,7 @@ fun SettingsScreen(
                         SmartSearchGroup(prefs, refresh + hfTokenVersion, onConfirm, onEnterHfToken, highlight)
                     SettingsCategory.Storage -> StoragePage(highlight, onConfirm) { onOpenCategory(SettingsCategory.SmartSearch, null) }
                     SettingsCategory.Permissions -> PermissionsPage(status, highlight)
-                    SettingsCategory.Backup -> BackupPage(highlight, onExport, onImport, onImportFavorites)
+                    SettingsCategory.Backup -> BackupPage(highlight, onExport, onImport, onImportFavorites, onConfirm)
                     SettingsCategory.About -> AboutPage(prefs, highlight, onOpenLicenses, onConfirm)
                     SettingsCategory.Developer -> DeveloperPage(prefs, highlight, onConfirm)
                 }
@@ -940,7 +940,14 @@ private fun ColumnScope.PermissionsPage(status: PermissionStatus, highlight: Str
 }
 
 @Composable
-private fun ColumnScope.BackupPage(highlight: String?, onExport: () -> Unit, onImport: () -> Unit, onImportFavorites: () -> Unit) {
+private fun ColumnScope.BackupPage(
+    highlight: String?,
+    onExport: () -> Unit,
+    onImport: () -> Unit,
+    onImportFavorites: () -> Unit,
+    onConfirm: (com.subhashh.lumen.ui.components.Confirmation) -> Unit,
+) {
+    BackupGroup(highlight, onConfirm)
     Group(stringResource(R.string.settings_group_lumen_backup), footer = stringResource(R.string.settings_backup_footer)) {
         Anchor("export", highlight) {
             SettingsRow(
