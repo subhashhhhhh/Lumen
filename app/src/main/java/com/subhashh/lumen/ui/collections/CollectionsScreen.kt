@@ -598,7 +598,7 @@ private fun WideDashboard(
  * A utility's thumbnail: its newest photo. Never Hidden's (a hidden photo on the main page would
  * undo hiding it) nor Recently Deleted's (deleted photos shouldn't greet you every day).
  */
-private fun utilityThumbnail(collection: MediaCollection): MediaItem? =
+internal fun utilityThumbnail(collection: MediaCollection): MediaItem? =
     collection.cover.takeIf { collection.key != CollectionKeys.Hidden && collection.key != CollectionKeys.RecentlyDeleted }
 
 /**
