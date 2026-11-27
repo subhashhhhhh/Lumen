@@ -68,14 +68,22 @@ data class BackupServer(
     val port: Int = 0,
     /** S3 only; empty = rclone's default. */
     val region: String = "",
+    /**
+     * SFTP only: the server's key as a known_hosts line, kept on first connect. rclone then
+     * refuses a server whose key changed (someone else answering at that address).
+     */
+    val hostKey: String = "",
 ) {
     enum class Kind(val key: String) { WebDav("webdav"), S3("s3"), Sftp("sftp"), Smb("smb") }
 
     fun toJson(): JSONObject = JSONObject().put("kind", kind.key).put("address", address).put("user", user)
-        .put("password", password).put("path", path).put("port", port).put("region", region)
+        .put("password", password).put("path", path).put("port", port).put("region", region).put("hostKey", hostKey)
 
-    /** rclone's on-the-fly remote for it (`:webdav,url='…',…:path`), with the password obscured. */
-    fun remote(): String {
+    /**
+     * rclone's on-the-fly remote for it (`:webdav,url='…',…:path`), with the password obscured.
+     * [knownHosts]: a file holding [hostKey], for SFTP.
+     */
+    fun remote(knownHosts: String? = null): String {
         val opts = LinkedHashMap<String, String>()
         when (kind) {
             Kind.WebDav -> {
@@ -103,6 +111,7 @@ data class BackupServer(
                 if (port > 0) opts["port"] = port.toString()
                 opts["user"] = user
                 if (password.isNotEmpty()) opts["pass"] = Rclone.obscure(password)
+                if (knownHosts != null && hostKey.isNotEmpty()) opts["known_hosts_file"] = knownHosts
             }
             Kind.Smb -> {
                 opts["host"] = address
@@ -129,7 +138,7 @@ data class BackupServer(
         fun parse(json: JSONObject) = BackupServer(
             Kind.entries.first { it.key == json.getString("kind") },
             json.getString("address"), json.getString("user"), json.getString("password"),
-            json.getString("path"), json.optInt("port"), json.optString("region"),
+            json.getString("path"), json.optInt("port"), json.optString("region"), json.optString("hostKey"),
         )
     }
 }
@@ -139,19 +148,32 @@ data class BackupServer(
  * Files go up and come down through a scratch folder in Lumen's cache (rclone copies files, not
  * bytes). Listings are cached, like [BackupFolder]'s.
  */
-class ServerFolder(context: Context, private val server: BackupServer) : BackupStore {
-    private val fs = server.remote()
+class ServerFolder(private val context: Context, private val server: BackupServer) : BackupStore {
+    private val fs = server.remote(
+        server.hostKey.takeIf { it.isNotEmpty() }?.let { line ->
+            File(context.noBackupFilesDir, "backup-known-hosts").apply { writeText(line + "\n") }.path
+        },
+    )
+
+    /** [Rclone.call], with a changed SFTP server key said plainly. */
+    private fun call(method: String, input: JSONObject): JSONObject = try {
+        Rclone.call(method, input)
+    } catch (e: IOException) {
+        if (e.message.orEmpty().contains("key mismatch")) throw IOException(context.getString(com.subhashh.lumen.R.string.backup_server_key_changed), e)
+        throw e
+    }
     private val scratch = File(context.cacheDir, "rclone-io").apply { mkdirs() }
-    private val listings = HashMap<String, MutableMap<String, String>>()
+    // Read and added to from several uploads at once.
+    private val listings = java.util.concurrent.ConcurrentHashMap<String, MutableMap<String, String>>()
 
     override val rootId = ""
 
     private fun path(dirId: String, name: String) = if (dirId.isEmpty()) name else "$dirId/$name"
 
     override fun list(dirId: String): Map<String, String> = listings.getOrPut(dirId) {
-        val out = HashMap<String, String>()
+        val out = java.util.concurrent.ConcurrentHashMap<String, String>()
         val answer = try {
-            Rclone.call("operations/list", JSONObject().put("fs", fs).put("remote", dirId))
+            call("operations/list", JSONObject().put("fs", fs).put("remote", dirId))
         } catch (e: IOException) {
             // A folder not made yet (S3 has no empty folders at all) lists as empty.
             if (e.message.orEmpty().contains("not found", ignoreCase = true)) return@getOrPut out
@@ -166,16 +188,16 @@ class ServerFolder(context: Context, private val server: BackupServer) : BackupS
     }
 
     override fun dir(dirId: String, name: String): String = child(dirId, name) ?: path(dirId, name).also { p ->
-        Rclone.call("operations/mkdir", JSONObject().put("fs", fs).put("remote", p))
+        call("operations/mkdir", JSONObject().put("fs", fs).put("remote", p))
         list(dirId)
         listings[dirId]?.put(name, p)
-        listings[p] = HashMap()
+        listings[p] = java.util.concurrent.ConcurrentHashMap()
     }
 
     override fun read(id: String): ByteArray {
         val local = File.createTempFile("download", null, scratch)
         try {
-            Rclone.call(
+            call(
                 "operations/copyfile",
                 JSONObject().put("srcFs", fs).put("srcRemote", id).put("dstFs", scratch.path).put("dstRemote", local.name),
             )
@@ -190,7 +212,7 @@ class ServerFolder(context: Context, private val server: BackupServer) : BackupS
         try {
             local.writeBytes(bytes)
             val p = path(dirId, name)
-            Rclone.call(
+            call(
                 "operations/copyfile",
                 JSONObject().put("srcFs", scratch.path).put("srcRemote", local.name).put("dstFs", fs).put("dstRemote", p),
             )
@@ -203,15 +225,23 @@ class ServerFolder(context: Context, private val server: BackupServer) : BackupS
 
     override fun delete(dirId: String, name: String) {
         val p = child(dirId, name) ?: return
-        Rclone.call("operations/deletefile", JSONObject().put("fs", fs).put("remote", p))
+        call("operations/deletefile", JSONObject().put("fs", fs).put("remote", p))
         listings[dirId]?.remove(name)
     }
 
     override fun label() = server.label()
 
+    companion object {
+        /** An SFTP server's key as (known_hosts line, SHA-256 fingerprint), read without logging in. */
+        fun hostKey(host: String, port: Int): Pair<String, String> {
+            val answer = Rclone.call("lumen/hostkey", JSONObject().put("host", host).put("port", if (port > 0) port else 22))
+            return answer.getString("line") to answer.getString("fingerprint")
+        }
+    }
+
     /** Reaches the server and its folder (made if missing); rclone's error otherwise. */
     fun check() {
-        if (server.path.isNotBlank()) Rclone.call("operations/mkdir", JSONObject().put("fs", fs).put("remote", ""))
-        Rclone.call("operations/list", JSONObject().put("fs", fs).put("remote", ""))
+        if (server.path.isNotBlank()) call("operations/mkdir", JSONObject().put("fs", fs).put("remote", ""))
+        call("operations/list", JSONObject().put("fs", fs).put("remote", ""))
     }
 }

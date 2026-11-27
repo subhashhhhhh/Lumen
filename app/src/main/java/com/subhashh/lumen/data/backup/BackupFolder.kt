@@ -13,13 +13,14 @@ import java.io.IOException
  */
 class BackupFolder(private val context: Context, private val tree: Uri) : BackupStore {
     private val resolver = context.contentResolver
-    private val listings = HashMap<String, MutableMap<String, String>>()
+    // Read and added to from several uploads at once.
+    private val listings = java.util.concurrent.ConcurrentHashMap<String, MutableMap<String, String>>()
 
     override val rootId: String = DocumentsContract.getTreeDocumentId(tree)
 
     /** Name → document id of everything directly in [dirId]. */
     override fun list(dirId: String): Map<String, String> = listings.getOrPut(dirId) {
-        val out = HashMap<String, String>()
+        val out = java.util.concurrent.ConcurrentHashMap<String, String>()
         val children = DocumentsContract.buildChildDocumentsUriUsingTree(tree, dirId)
         resolver.query(children, arrayOf(DocumentsContract.Document.COLUMN_DOCUMENT_ID, DocumentsContract.Document.COLUMN_DISPLAY_NAME), null, null, null)?.use { c ->
             while (c.moveToNext()) out[c.getString(1)] = c.getString(0)

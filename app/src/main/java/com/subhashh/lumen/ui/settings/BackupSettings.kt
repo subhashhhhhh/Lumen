@@ -703,12 +703,16 @@ private fun ServerDialog(onDismiss: () -> Unit, onConnected: (BackupServer) -> U
                 confirm = stringResource(R.string.backup_server_connect),
                 enabled = valid,
                 onConfirm = {
-                    val server = BackupServer(kind, address, user, password, path, port.toIntOrNull() ?: 0, region)
                     checking = true
                     error = null
                     scope.launch {
+                        var server = BackupServer(kind, address, user, password, path, port.toIntOrNull() ?: 0, region)
                         val problem = withContext(Dispatchers.IO) {
-                            runCatching { ServerFolder(context, server).check() }.exceptionOrNull()
+                            runCatching {
+                                // SFTP: keep the server's key now; a different one later is refused.
+                                if (kind == BackupServer.Kind.Sftp) server = server.copy(hostKey = ServerFolder.hostKey(address, server.port).first)
+                                ServerFolder(context, server).check()
+                            }.exceptionOrNull()
                         }
                         checking = false
                         if (problem == null) onConnected(server)
