@@ -173,7 +173,7 @@ class ServerFolder(context: Context, private val server: BackupServer) : BackupS
     }
 
     override fun read(id: String): ByteArray {
-        val local = File.createTempFile("down", null, scratch)
+        val local = File.createTempFile("download", null, scratch)
         try {
             Rclone.call(
                 "operations/copyfile",
@@ -186,7 +186,7 @@ class ServerFolder(context: Context, private val server: BackupServer) : BackupS
     }
 
     override fun write(dirId: String, name: String, bytes: ByteArray) {
-        val local = File.createTempFile("up", null, scratch)
+        val local = File.createTempFile("upload", null, scratch)
         try {
             local.writeBytes(bytes)
             val p = path(dirId, name)
