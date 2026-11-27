@@ -517,17 +517,27 @@ object LumenBackup {
         }
 
         /** Stores [plain] unless it's there; its name and the bytes written (0 if it was there). */
-        fun put(plain: ByteArray): Pair<String, Long> = storing {
+        fun put(plain: ByteArray): Pair<String, Long> {
             val name = target.keys?.name(plain) ?: BackupCrypto.plainName(plain)
+            val written = storing { writeOnce(name, plain) }
+            return name to written
+        }
+
+        // No early returns inside the locks: a return from a synchronized block inside an inline
+        // lambda made bytecode ART's verifier rejects (VerifyError on the whole class).
+        private fun writeOnce(name: String, plain: ByteArray): Long {
             val dir = dirFor(name)
             // One writer per chunk name; a second upload of the same chunk waits, then finds it.
             val lock = synchronized(writing) { writing.getOrPut(name) { Any() } }
             try {
                 synchronized(lock) {
-                    if (target.folder.child(dir, name) != null) return@storing name to 0L
-                    val bytes = target.keys?.let { VaultCrypto.seal(it.data, plain) } ?: plain
-                    target.folder.write(dir, name, bytes)
-                    name to bytes.size.toLong()
+                    var written = 0L
+                    if (target.folder.child(dir, name) == null) {
+                        val bytes = target.keys?.let { VaultCrypto.seal(it.data, plain) } ?: plain
+                        target.folder.write(dir, name, bytes)
+                        written = bytes.size.toLong()
+                    }
+                    return written
                 }
             } finally {
                 synchronized(writing) { writing.remove(name) }
