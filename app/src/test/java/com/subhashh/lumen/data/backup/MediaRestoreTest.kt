@@ -19,7 +19,6 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import android.app.AppOpsManager
-import android.os.Process
 import org.robolectric.Shadows.shadowOf
 import java.io.File
 
@@ -41,9 +40,9 @@ class MediaRestoreTest {
     /** All files access, as Settings grants it: the MANAGE_EXTERNAL_STORAGE app op. */
     private fun allFilesAccess(on: Boolean) {
         // Android finds the app by its uid first; Robolectric knows no packages for it until told.
-        shadowOf(context.packageManager).setPackagesForUid(Process.myUid(), context.packageName)
+        shadowOf(context.packageManager).setPackagesForUid(context.applicationInfo.uid, context.packageName)
         shadowOf(context.getSystemService(AppOpsManager::class.java)).setMode(
-            "android:manage_external_storage", Process.myUid(), context.packageName,
+            "android:manage_external_storage", context.applicationInfo.uid, context.packageName,
             if (on) AppOpsManager.MODE_ALLOWED else AppOpsManager.MODE_ERRORED,
         )
     }
