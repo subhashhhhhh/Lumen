@@ -156,6 +156,9 @@ object LumenBackup {
 
     private const val ConfigNew = "$ConfigName.new"
 
+    /** How long a chunk must stay unneeded before a clean-up deletes it. */
+    private const val UnneededFor = 48L * 60 * 60 * 1000
+
     /** Chunks uploading at once (and files read at once while backing up). */
     private const val Parallel = 4
 
@@ -701,8 +704,9 @@ object LumenBackup {
      * Clears out old backups: all but the newest [keep] snapshots (0 keeps them all), then chunks
      * no snapshot left needs (old backups', and a stopped run's). Two rules keep it safe:
      * - if any snapshot in the folder can't be read, nothing is deleted (it might need them);
-     * - a chunk goes only when it was unneeded at the last clean-up too, so a backup another
-     *   phone is still writing into the same folder (its chunks not in a snapshot yet) keeps them.
+     * - a chunk goes only once it's been unneeded for 48 hours (seen by earlier clean-ups), so a
+     *   backup another phone is still writing into the same folder keeps its chunks;
+     * - if any snapshot comes from a newer Lumen (a higher format), nothing is deleted.
      */
     suspend fun prune(context: Context, keep: Int) = withContext(Dispatchers.IO) {
         val target = target(context) ?: return@withContext
@@ -710,19 +714,31 @@ object LumenBackup {
         val snapshots = target.folder.list(dir).filterKeys { it.endsWith(".snap") }.map { (name, id) ->
             runCatching { readSnapshot(target, name, id) }.getOrNull() ?: return@withContext
         }.sortedByDescending { it.created }
+        // A snapshot from a newer Lumen (another phone on the same folder, or before a downgrade)
+        // may keep chunks where this version doesn't look: delete nothing rather than guess.
+        if (snapshots.any { it.json.optInt("format", Format) > Format }) return@withContext
         val (kept, dropped) = if (keep > 0) snapshots.take(keep) to snapshots.drop(keep) else snapshots to emptyList()
         for (old in dropped) target.folder.delete(dir, "${old.name}.snap")
         val needed = HashSet<String>().apply { for (s in kept) addAll(chunksOf(s.json)) }
         val data = target.folder.child(target.dirId, "data") ?: return@withContext
-        val unneeded = HashSet<String>()
-        val earlier = prefs(context).getStringSet("unneeded-${target.config.id}", emptySet()).orEmpty()
+        // name|first seen unneeded (ms). A chunk goes once it's been unneeded for UnneededFor.
+        val key = "unneeded-${target.config.id}"
+        val now = System.currentTimeMillis()
+        val firstSeen = prefs(context).getStringSet(key, emptySet()).orEmpty().mapNotNull { entry ->
+            val cut = entry.lastIndexOf('|')
+            if (cut < 0) null else entry.substring(0, cut) to (entry.substring(cut + 1).toLongOrNull() ?: now)
+        }.toMap()
+        val stillUnneeded = HashSet<String>()
         for ((_, prefixId) in target.folder.list(data).toList()) {
             for (name in target.folder.list(prefixId).keys.toList()) {
                 if (name in needed) continue
-                if (name in earlier) target.folder.delete(prefixId, name) else unneeded += name
+                val since = firstSeen[name] ?: now
+                // A clock set back makes "since" later than now: count it as just seen.
+                if (since in 0..(now - UnneededFor)) target.folder.delete(prefixId, name)
+                else stillUnneeded += "$name|${since.coerceAtMost(now)}"
             }
         }
-        prefs(context).edit { putStringSet("unneeded-${target.config.id}", unneeded) }
+        prefs(context).edit { putStringSet(key, stillUnneeded) }
     }
 
     /**
@@ -756,6 +772,8 @@ object LumenBackup {
         progress: (Progress) -> Unit,
     ) = withContext(Dispatchers.IO) {
         val target = target(context) ?: error("No backup folder set up")
+        // Made by a newer Lumen: it may hold things this version would put back wrongly.
+        if (snapshot.json.optInt("format", Format) > Format) throw java.io.IOException(context.getString(R.string.backup_newer_format))
         val store = ChunkStore(target)
         val fetch: suspend (JSONArray, (ByteArray) -> Unit) -> Unit = { chunks, sink -> fetchInOrder(store, chunks, gate, sink) }
         val staging = RestoreStaging.dir(context).apply { deleteRecursively(); mkdirs() }

@@ -71,8 +71,10 @@ object BackupSchedule {
     /** Whether a scheduled run should back up now: the last backup is older than most of the interval. */
     internal fun due(context: Context): Boolean {
         val days = every(context).days.takeIf { it > 0 } ?: return false
-        val last = LumenBackup.lastBackup(context)
-        return System.currentTimeMillis() - last > TimeUnit.DAYS.toMillis(days) * 9 / 10
+        val age = System.currentTimeMillis() - LumenBackup.lastBackup(context)
+        // A last backup "in the future" (the clock was wrong then, or was set back since) is due:
+        // waiting for the clock to catch up could mean no backups for days.
+        return age < 0 || age > TimeUnit.DAYS.toMillis(days) * 9 / 10
     }
 }
 
@@ -101,9 +103,15 @@ class BackupWorker(context: Context, params: WorkerParameters) : CoroutineWorker
                 run.await().also { watcher.cancel() }
             }
             BackupRunner.finished(result)
-            context.getSystemService(android.app.NotificationManager::class.java)
-                .notify(BackupNotifications.DoneId, BackupNotifications.finished(context, result))
+            // Stopped by Android (unplugged, off Wi-Fi): no note; the next run carries on.
+            if (!isStopped) {
+                context.getSystemService(android.app.NotificationManager::class.java)
+                    .notify(BackupNotifications.DoneId, BackupNotifications.finished(context, result))
+            }
             Result.success()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            BackupRunner.finished(null)
+            throw e
         } catch (e: Exception) {
             BackupRunner.finished(context.getString(com.subhashh.lumen.R.string.backup_failed, e.message ?: e.javaClass.simpleName))
             Result.success() // tried again at the next interval, not in a retry loop

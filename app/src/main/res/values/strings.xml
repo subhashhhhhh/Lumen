@@ -525,6 +525,7 @@
         <item quantity="other">Last %d Backups</item>
     </plurals>
     <string name="backup_step_cleaning">Clearing out old backups…</string>
+    <string name="backup_newer_format">This backup was made by a newer version of Lumen. Update Lumen to restore it.</string>
     <string name="backup_folders_all_toggle">All Folders</string>
     <string name="backup_folders_loading">Reading your folders…</string>
     <string name="backup_folders_footer">Photos and videos in folders that are on are backed up. New folders are on. Folders left out in Settings → Library aren\'t listed.</string>
