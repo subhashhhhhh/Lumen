@@ -494,10 +494,12 @@
     <string name="backup_password_short">At least 8 characters</string>
     <string name="backup_recovery_key">Recovery key</string>
     <string name="backup_recovery_title">Your Recovery Key</string>
-    <string name="backup_recovery_message">If you forget the password, this key opens your backups. Keep it somewhere safe: Lumen doesn\'t keep it, and without the password or this key nobody can open them.</string>
+    <string name="backup_recovery_message">If you forget the password, this key opens your backups. Keep it somewhere safe, not in the backup folder: Lumen doesn\'t keep it, and without the password or this key nobody can open them.</string>
     <string name="backup_recovery_copied">Copied</string>
     <string name="backup_recovery_save_file">Save as File…</string>
     <string name="backup_recovery_file_saved">Saved</string>
+    <string name="backup_recovery_file_failed">Couldn\'t save the file</string>
+    <string name="backup_recovery_file_in_backup">That\'s your backup folder: anyone with it could open your backups. Save the key somewhere else.</string>
     <string name="backup_recovery_file_name">Lumen recovery key.txt</string>
     <string name="backup_recovery_file">Lumen Backup recovery key\n\n%1$s\n\nThis key opens your Lumen backups if you forget the password. Keep it somewhere safe and private: anyone with it and your backup folder can open them.</string>
     <string name="backup_recovery_saved">I\'ve Kept It</string>

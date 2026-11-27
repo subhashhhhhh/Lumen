@@ -130,6 +130,21 @@ internal fun BackupGroup(highlight: String?, onConfirm: (Confirmation) -> Unit) 
                 title = stringResource(item.label),
                 checked = on,
                 onCheckedChange = { on = it; prefs.edit { putBoolean(item.key, it) } },
+                icon = when (item) {
+                    LumenBackup.Item.Settings -> LumenIcons.Settings
+                    LumenBackup.Item.Captions -> LumenIcons.Edit
+                    LumenBackup.Item.People -> LumenIcons.Face
+                    LumenBackup.Item.SearchIndex -> LumenIcons.Search
+                    LumenBackup.Item.TextIndex -> LumenIcons.LiveText
+                    LumenBackup.Item.Photos -> LumenIcons.Image
+                    LumenBackup.Item.Hidden -> LumenIcons.Lock
+                },
+                iconColor = when (item) {
+                    LumenBackup.Item.Photos -> Orange
+                    LumenBackup.Item.Hidden -> Blue
+                    LumenBackup.Item.People -> Purple
+                    else -> Indigo
+                },
             )
         }
         Divider()
@@ -364,11 +379,20 @@ private fun RecoveryKeyDialog(key: String, onDone: () -> Unit) {
     val context = LocalContext.current
     var copied by remember { mutableStateOf(false) }
     var saved by remember { mutableStateOf(false) }
-    // A small text file, wherever the person chooses (a USB stick, a cloud folder, printed later).
+    var saveProblem by remember { mutableStateOf<Int?>(null) }
+    // A small text file, wherever the person chooses (a USB stick, a cloud folder, printed later),
+    // but not in the backup folder: anyone with that folder could then open the backups.
     val save = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
+        if (insideBackupFolder(context, uri)) {
+            runCatching { android.provider.DocumentsContract.deleteDocument(context.contentResolver, uri) }
+            saved = false
+            saveProblem = R.string.backup_recovery_file_in_backup
+            return@rememberLauncherForActivityResult
+        }
         val text = context.getString(R.string.backup_recovery_file, key)
         saved = runCatching { context.contentResolver.openOutputStream(uri, "wt")?.use { it.write(text.toByteArray()) } != null }.getOrDefault(false)
+        saveProblem = if (saved) null else R.string.backup_recovery_file_failed
     }
     Dialog(onDismissRequest = {}, properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnBackPress = false, dismissOnClickOutside = false)) {
         Column(Modifier.width(320.dp).dialogCard().padding(top = 22.dp), horizontalAlignment = dialogAlignment) {
@@ -400,6 +424,7 @@ private fun RecoveryKeyDialog(key: String, onDone: () -> Unit) {
                     .padding(horizontal = 20.dp, vertical = 6.dp),
             )
             when {
+                saveProblem != null -> DialogMessage(stringResource(saveProblem!!), Modifier.padding(top = 4.dp), color = Lumen.colors.destructive)
                 saved -> DialogMessage(stringResource(R.string.backup_recovery_file_saved), Modifier.padding(top = 4.dp))
                 copied -> DialogMessage(stringResource(R.string.backup_recovery_copied), Modifier.padding(top = 4.dp))
             }
@@ -421,6 +446,15 @@ private fun RecoveryKeyDialog(key: String, onDone: () -> Unit) {
             )
         }
     }
+}
+
+/** Whether a file the person picked is inside the backup folder (same provider, under its tree). */
+private fun insideBackupFolder(context: android.content.Context, file: Uri): Boolean {
+    val folder = LumenBackup.folderUri(context) ?: return false
+    if (folder.authority != file.authority) return false
+    val root = runCatching { android.provider.DocumentsContract.getTreeDocumentId(folder) }.getOrNull() ?: return false
+    val id = runCatching { android.provider.DocumentsContract.getDocumentId(file) }.getOrNull() ?: return false
+    return id == root || id.startsWith("$root/")
 }
 
 /** The backups in the folder, newest first: pick one to restore. */
