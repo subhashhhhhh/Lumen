@@ -760,4 +760,22 @@
     <string name="backup_auto_charging">Только во время зарядки</string>
     <string name="backup_auto_wifi">Только по Wi-Fi</string>
     <string name="backup_keep">Сохранить</string>
+    <string name="backup_keep_all">Все резервные копии</string>
+    <plurals name="backup_keep_last">
+        <item quantity="one">Последняя резервная копия (%d)</item>
+        <item quantity="few">Последние %d резервные копии</item>
+        <item quantity="many">Последние %d резервных копий</item>
+        <item quantity="other">Последние %d резервных копий</item>
+    </plurals>
+    <string name="backup_step_cleaning">Удаление старых резервных копий…</string>
+    <string name="backup_newer_format">Эта резервная копия создана в более новой версии Lumen. Обновите Lumen, чтобы восстановить её.</string>
+    <string name="backup_folders_all_toggle">Все папки</string>
+    <string name="backup_folders_loading">Чтение содержимого папок…</string>
+    <string name="backup_folders_footer">Резервные копии создаются для фото и видео из включённых папок. Новые папки включены. Папки, исключённые в разделе «Настройки → Библиотека», не отображаются в списке.</string>
+    <plurals name="backup_folder_items">
+        <item quantity="one">%d элемент</item>
+        <item quantity="few">%d элемента</item>
+        <item quantity="many">%d элементов</item>
+        <item quantity="other">%d элементов</item>
+    </plurals>
 </resources>
