@@ -502,21 +502,36 @@ object LumenBackup {
 
     private class ChunkStore(private val target: Target) {
         private val data = target.folder.dir(target.dirId, "data")
-        private val dirs = java.util.concurrent.ConcurrentHashMap<String, String>()
+        private val dirs = HashMap<String, String>()
+        /** Chunks being written now: the same chunk twice at once is written once. */
+        private val writing = HashMap<String, Any>()
+
+        /** The prefix folder for [name], made once even with several uploads at once. */
+        private fun dirFor(name: String): String = synchronized(dirs) {
+            dirs.getOrPut(name.take(2)) { target.folder.dir(data, name.take(2)) }
+        }
 
         fun has(name: String): Boolean = storing {
-            val dir = dirs.getOrPut(name.take(2)) { target.folder.dir(data, name.take(2)) }
+            val dir = dirFor(name)
             target.folder.child(dir, name) != null
         }
 
         /** Stores [plain] unless it's there; its name and the bytes written (0 if it was there). */
         fun put(plain: ByteArray): Pair<String, Long> = storing {
             val name = target.keys?.name(plain) ?: BackupCrypto.plainName(plain)
-            val dir = dirs.getOrPut(name.take(2)) { target.folder.dir(data, name.take(2)) }
-            if (target.folder.child(dir, name) != null) return@storing name to 0L
-            val bytes = target.keys?.let { VaultCrypto.seal(it.data, plain) } ?: plain
-            target.folder.write(dir, name, bytes)
-            name to bytes.size.toLong()
+            val dir = dirFor(name)
+            // One writer per chunk name; a second upload of the same chunk waits, then finds it.
+            val lock = synchronized(writing) { writing.getOrPut(name) { Any() } }
+            try {
+                synchronized(lock) {
+                    if (target.folder.child(dir, name) != null) return@storing name to 0L
+                    val bytes = target.keys?.let { VaultCrypto.seal(it.data, plain) } ?: plain
+                    target.folder.write(dir, name, bytes)
+                    name to bytes.size.toLong()
+                }
+            } finally {
+                synchronized(writing) { writing.remove(name) }
+            }
         }
 
         /** A failure writing to the backup (server offline, folder gone) as [StoreFailed]. */
@@ -524,7 +539,7 @@ object LumenBackup {
             try { block() } catch (e: StoreFailed) { throw e } catch (e: Exception) { throw StoreFailed(e) }
 
         fun get(name: String): ByteArray {
-            val dir = dirs.getOrPut(name.take(2)) { target.folder.dir(data, name.take(2)) }
+            val dir = dirFor(name)
             val bytes = target.folder.read(target.folder.child(dir, name) ?: error("A backup chunk is missing"))
             val plain = target.keys?.let { VaultCrypto.open(it.data, bytes) } ?: bytes
             // A chunk is named by its content: a damaged file (a cloud provider, an SD card) or two

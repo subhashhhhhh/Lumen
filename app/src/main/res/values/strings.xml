@@ -506,6 +506,8 @@
     <string name="backup_server_port">Port (optional)</string>
     <string name="backup_server_share">Share/folder</string>
     <string name="backup_server_connect">Connect</string>
+    <string name="backup_server_key">Server key: %1$s. If you can, check it matches the server\'s before trusting it.</string>
+    <string name="backup_server_trust">Trust and Connect</string>
     <string name="backup_server_key_changed">The server\'s identity key changed since Lumen first connected. If you didn\'t reinstall or replace the server, someone else may be answering at its address. To trust the new key, stop backing up here and connect again.</string>
     <string name="backup_setting_up">Setting up…</string>
     <string name="backup_server_checking">Connecting…</string>

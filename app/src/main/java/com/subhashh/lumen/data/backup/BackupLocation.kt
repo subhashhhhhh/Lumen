@@ -187,11 +187,12 @@ class ServerFolder(private val context: Context, private val server: BackupServe
         out
     }
 
+    @Synchronized
     override fun dir(dirId: String, name: String): String = child(dirId, name) ?: path(dirId, name).also { p ->
         call("operations/mkdir", JSONObject().put("fs", fs).put("remote", p))
         list(dirId)
         listings[dirId]?.put(name, p)
-        listings[p] = java.util.concurrent.ConcurrentHashMap()
+        listings.putIfAbsent(p, java.util.concurrent.ConcurrentHashMap())
     }
 
     override fun read(id: String): ByteArray {
