@@ -107,7 +107,7 @@ internal object MediaRestore {
      * have changed since (re-encrypted, moved to a newer format), and the backup's copy might not
      * open any more. With no vault here, everything goes back, its key file too, so the old Hidden
      * password opens it. With a vault here, a missing file goes in only if it opens with that
-     * vault's key (Hidden must be unlocked to check); one that doesn't is left out and counted.
+     * vault's key (Hidden needn't be unlocked, except after a reinstall); one that doesn't is left out and counted.
      * Needs All files access.
      */
     suspend fun vault(context: Context, rows: JSONArray, read: (String) -> ByteArray, progress: (Long, Long) -> Unit): VaultResult {
@@ -122,10 +122,9 @@ internal object MediaRestore {
             !File(dir, name).exists() && (fresh || name.endsWith(".lumenvault"))
         }
         if (missing.isEmpty()) return VaultResult(0, 0, locked = false)
-        // Into an existing vault only what opens with its key, which needs Hidden unlocked.
-        if (!fresh && !vault.unlocked) {
-            return VaultResult(0, missing.size, locked = true)
-        }
+        // Into an existing vault only what opens with its key (this install's Keystore copy, or
+        // Hidden unlocked after a reinstall).
+        val opens = if (fresh) null else vault.opener(context) ?: return VaultResult(0, missing.size, locked = true)
         val total = missing.sumOf { it.getLong(1) }
         var done = 0L
         var restored = 0
@@ -144,7 +143,7 @@ internal object MediaRestore {
                     progress(done, total)
                 }
             }
-            if (!fresh && !vault.opens(tmp)) {
+            if (opens != null && !opens(tmp)) {
                 tmp.delete()
                 wontOpen++
                 continue

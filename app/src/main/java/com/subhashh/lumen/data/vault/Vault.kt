@@ -29,8 +29,15 @@ object Vault {
     const val Scheme = "lumenvault"
     private const val Extension = ".lumenvault"
 
-    /** Whether the vault is unlocked and [file] (a vault file) opens with its key: Lumen Backup's restore check. */
-    fun opens(file: File): Boolean = key?.let { k -> runCatching { VaultCrypto.readHeader(k, file) }.isSuccess } ?: false
+    /**
+     * Lumen Backup's restore check: whether a vault file opens with this vault's key. Uses the key
+     * in memory, else the Keystore copy on this install (only to read a header; Hidden stays
+     * locked). Null if neither is there (a reinstall before Hidden's first unlock).
+     */
+    fun opener(context: Context): ((File) -> Boolean)? {
+        val k = key ?: keys(context).unlockOnDevice() ?: return null
+        return { file -> runCatching { VaultCrypto.readHeader(k, file) }.isSuccess }
+    }
 
     /** Whether the vault is unlocked (its key in memory). */
     val unlocked: Boolean get() = key != null
