@@ -256,12 +256,18 @@ internal fun BackupGroup(highlight: String?, onConfirm: (Confirmation) -> Unit) 
             onDismiss = { asking = null },
             onSkip = {
                 asking = null
-                scope.launch { LumenBackup.setUp(context, picked ?: return@launch, null); version++ }
+                scope.launch {
+                    runCatching { LumenBackup.setUp(context, picked ?: return@launch, null) }
+                        .onFailure { message = context.getString(R.string.backup_failed, it.message ?: it.javaClass.simpleName) }
+                    version++
+                }
             },
         ) { password, _ ->
             asking = null
             scope.launch {
-                recoveryShown = LumenBackup.setUp(context, picked ?: return@launch, password)
+                recoveryShown = runCatching { LumenBackup.setUp(context, picked ?: return@launch, password) }
+                    .onFailure { message = context.getString(R.string.backup_failed, it.message ?: it.javaClass.simpleName) }
+                    .getOrNull()
                 version++
             }
         }
