@@ -31,7 +31,8 @@ fun windowWidth(): Dp = LocalConfiguration.current.screenWidthDp.dp
  */
 @Composable
 fun scaledColumns(phoneColumns: Int): Int {
-    val width = windowWidth()
+    // The page's own width: in a wide window the right edge is the side bar's column.
+    val width = windowWidth() - (if (windowWidth() >= WideWidth) SideRail else 0.dp)
     if (width <= PhoneWidth * 1.2f) return phoneColumns
     return maxOf(phoneColumns, (phoneColumns * (width / PhoneWidth)).roundToInt())
 }
@@ -47,3 +48,6 @@ fun Modifier.readableWidth(): Modifier = fillMaxWidth().wrapContentWidth().width
 fun isWideWindow(): Boolean = windowWidth() >= WideWidth
 
 val WideWidth: Dp = 600.dp
+
+/** A wide window's right-hand column (page buttons, side bar): pages stop short of it. */
+val SideRail: Dp = 108.dp

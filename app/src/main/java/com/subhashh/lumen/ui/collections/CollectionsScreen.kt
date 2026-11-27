@@ -48,6 +48,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -81,6 +84,8 @@ fun CollectionsScreen(
     folders: List<MediaCollection>,
     /** People found in photos (Settings → Smart Search), each with the photo for their face. */
     people: List<Pair<Person, MediaItem>>,
+    /** Kinds of paper Smart Search found (Documents, Receipts, Tickets…), as in the Material style. */
+    documents: List<DocumentKind> = emptyList(),
     gridState: LazyGridState,
     contentPadding: PaddingValues,
     onOpen: (key: String) -> Unit,
@@ -101,7 +106,10 @@ fun CollectionsScreen(
     val gestures = rememberAlbumGridGestures(
         gridState = gridState,
         // Wide: title, the People + Utilities dashboard, Albums header.
-        keys = { List<String?>(if (wide) 3 else if (people.isEmpty()) 4 else 6) { null } + folders.map { it.key } },
+        keys = {
+            val docs = if (documents.isEmpty()) 0 else 2
+            List<String?>((if (wide) 3 else if (people.isEmpty()) 4 else 6) + docs) { null } + folders.map { it.key }
+        },
         columns = columns,
         onColumnsChange = onColumnsChange,
         selection = selection,
@@ -159,6 +167,16 @@ fun CollectionsScreen(
             )
         }
 
+        if (documents.isNotEmpty()) {
+            fullWidth { SectionHeader(stringResource(R.string.collections_documents)) }
+            fullWidth {
+                DocumentsRow(
+                    documents,
+                    onOpen = { if (selection == null) onOpen(it) },
+                    modifier = Modifier.graphicsLayer { alpha = if (selection != null) 0.4f else 1f },
+                )
+            }
+        }
         fullWidth { SectionHeader(stringResource(R.string.main_albums), trailing = folders.size.toString()) }
         items(folders, key = { it.key }) { collection ->
             AlbumCard(
@@ -502,7 +520,8 @@ private fun WideDashboard(
     modifier: Modifier = Modifier,
 ) {
     val colors = groupColors()
-    Row(modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+    // As tall as the People card: the tiles stretch to fill it, no gap under them.
+    Row(modifier.fillMaxWidth().height(androidx.compose.foundation.layout.IntrinsicSize.Min).padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
         if (people.isNotEmpty()) {
             Column(
                 Modifier
@@ -527,14 +546,15 @@ private fun WideDashboard(
                 }
             }
         }
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             utilities.chunked(2).forEach { pair ->
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     pair.forEach { collection ->
                         Column(
                             Modifier
                                 .weight(1f)
-                                .height(98.dp)
+                                .fillMaxHeight()
+                                .heightIn(min = 98.dp)
                                 .clip(Lumen.shapes.card)
                                 .background(colors.card)
                                 .clickable { onOpen(collection.key) }
@@ -565,6 +585,33 @@ private fun WideDashboard(
                     }
                     if (pair.size == 1) Spacer(Modifier.weight(1f))
                 }
+            }
+        }
+    }
+}
+
+/**
+ * Documents: kinds of paper Smart Search found (Documents, Receipts, Tickets…), each a card with
+ * the newest of its strongest matches; scrolls sideways. Opens the same pages as the Material style.
+ */
+@Composable
+private fun DocumentsRow(documents: List<DocumentKind>, onOpen: (String) -> Unit, modifier: Modifier = Modifier) {
+    val colors = groupColors()
+    Row(
+        modifier.fillMaxWidth().horizontalScroll(androidx.compose.foundation.rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        documents.forEach { kind ->
+            Column(Modifier.width(132.dp).pressable({ onOpen(CollectionKeys.documents(kind.query)) }, pressedScale = 0.96f)) {
+                Box(
+                    Modifier.size(132.dp).clip(RoundedCornerShape(14.dp)).background(colors.card),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (kind.cover != null) Cover(kind.cover)
+                    else Icon(LumenIcons.Document, contentDescription = null, tint = colors.secondary)
+                }
+                Spacer(Modifier.height(6.dp))
+                Text(stringResource(kind.label), fontSize = 14.sp, fontWeight = FontWeight.Medium, color = colors.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
     }

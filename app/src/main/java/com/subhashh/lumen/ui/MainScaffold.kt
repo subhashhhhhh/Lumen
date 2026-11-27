@@ -163,13 +163,21 @@ private fun MainState.Scaffold(
     LaunchedEffect(material) { sortDescending = prefs.sortDescending }
     /** Years and Months: for Lumen's own style, oldest first by date. The Material style has neither. */
     val zoomable = chronological && !material
+    // A wide window (tablet, desktop mode) and the phone keep their own column choices; the
+    // grids switch to the right set when the window crosses the line.
+    val wideWindow = com.subhashh.lumen.ui.components.isWideWindow()
+    LaunchedEffect(wideWindow) {
+        gridColumns = if (wideWindow) prefs.gridColumnsWide else prefs.gridColumns
+        albumColumns = if (wideWindow) prefs.albumColumnsWide else prefs.albumColumns
+        searchColumns = if (wideWindow) prefs.searchColumnsWide else prefs.searchColumns
+    }
     val onGridColumns = { columns: Int ->
         gridColumns = columns
-        prefs.gridColumns = columns
+        if (wideWindow) prefs.gridColumnsWide = columns else prefs.gridColumns = columns
     }
     val onAlbumColumns = { columns: Int ->
         albumColumns = columns
-        prefs.albumColumns = columns
+        if (wideWindow) prefs.albumColumnsWide = columns else prefs.albumColumns = columns
     }
     val switchDistance = with(LocalDensity.current) { ZoomBarSwitchDistance.toPx() }
     val zoomBarScroll = remember(switchDistance) {
@@ -325,7 +333,8 @@ private fun MainState.Scaffold(
     // (landscape, desktop mode), where 46% of the height is a wall of photo.
     val heroShare = if (screenSize.width > screenSize.height * 1.3f) HeroShareWide else HeroShare
     val heroHeight = with(LocalDensity.current) { (screenSize.height * heroShare).toDp() }
-    val heroRect = { androidx.compose.ui.geometry.Rect(0f, 0f, screenSize.width.toFloat(), screenSize.height * heroShare) }
+    val railPx = with(LocalDensity.current) { if (wideWindow) com.subhashh.lumen.ui.components.SideRail.toPx() else 0f }
+    val heroRect = { androidx.compose.ui.geometry.Rect(0f, 0f, screenSize.width - railPx, screenSize.height * heroShare) }
     /** Opens [key], growing its cover out of its card when it has one on screen. */
     val openCollectionFromCard: (key: String) -> Unit = open@{ key ->
         if (coverTransition.flying || coverOpening) return@open
@@ -648,7 +657,9 @@ private fun MainState.Scaffold(
                 }
             }
             Box(
-                Modifier.fillMaxSize().graphicsLayer {
+                // Wide windows: the right edge is a column of its own (page buttons, side bar),
+                // so nothing on the page sits under them.
+                Modifier.fillMaxSize().padding(end = if (wideWindow) com.subhashh.lumen.ui.components.SideRail else 0.dp).graphicsLayer {
                     val a = arrival.value
                     if (a != 1f) {
                         alpha = a.coerceIn(0f, 1f)

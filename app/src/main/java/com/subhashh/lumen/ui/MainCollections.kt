@@ -112,10 +112,10 @@ internal fun MainState.collectionPages(
     // Searched again when photos come or go (or the model does), not when one is merely changed
     // (a favourite, an edit): the ids are the same set then.
     val ids: Set<Long> = byId.keys
-    val hits by produceState(emptyMap<String, List<Pair<Long, Float>>>(), material, downloads, ids) {
+    val hits by produceState(emptyMap<String, List<Pair<Long, Float>>>(), downloads, ids) {
         // Nothing to show until found again (and nothing at all once the model is gone).
         value = emptyMap()
-        if (!material || ids.isEmpty() || com.subhashh.lumen.ai.ModelDownloads.installed(context) == null) return@produceState
+        if (ids.isEmpty() || com.subhashh.lumen.ai.ModelDownloads.installed(context) == null) return@produceState
         val found = LinkedHashMap<String, List<Pair<Long, Float>>>()
         for ((_, query) in com.subhashh.lumen.ui.collections.DocumentKinds) {
             val matches = com.subhashh.lumen.ai.SmartSearch.search(context, query)?.hits.orEmpty().filter { it.mediaId in ids }
@@ -168,6 +168,7 @@ internal fun MainState.collectionPages(
             hiddenLockSet = lockSet,
             folders = folders,
             people = people,
+            documents = documents,
             gridState = collectionsGrid,
             contentPadding = PaddingValues(top = statusTop + 16.dp, bottom = navBottom + 96.dp),
             coverTransition = coverTransition,

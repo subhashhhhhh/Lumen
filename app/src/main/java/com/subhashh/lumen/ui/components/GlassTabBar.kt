@@ -518,9 +518,9 @@ private fun VerticalPillGroup(
     val pillVisible by animateFloatAsState(if (selected == null) 0f else 1f, label = "sidePillVisible")
     val geometry = remember(itemHeight, density) {
         with(density) {
-            val itemWidth = (Bar - PillInset * 2).toPx()
+            val itemWidth = (SideWidth - PillInset * 2).toPx()
             val rest = Size(itemWidth, itemHeight.toPx())
-            val liftedWidth = (Bar + PillLift).toPx()
+            val liftedWidth = (SideWidth + PillLift).toPx()
             val step = (itemHeight + TabSpacing).toPx()
             LiquidPillGeometry(
                 restSize = rest,
@@ -536,7 +536,7 @@ private fun VerticalPillGroup(
     val inset = with(density) { Offset(PillInset.toPx(), PillInset.toPx()) }
     val shape = RoundedCornerShape(50)
     val height = itemHeight * count + TabSpacing * (count - 1) + PillInset * 2
-    Box(Modifier.width(Bar).height(height)) {
+    Box(Modifier.width(SideWidth).height(height)) {
         Box(Modifier.matchParentSize().glass(backdrop, shape = shape, exportedBackdrop = barGlass).clip(shape)) {
             Box(
                 Modifier
@@ -555,7 +555,7 @@ private fun VerticalPillGroup(
                 LiquidPillFill(pill, geometry, colors.selection, visible = { pillVisible }, Modifier.matchParentSize())
                 Column(verticalArrangement = Arrangement.spacedBy(TabSpacing), modifier = Modifier.layerBackdrop(items)) {
                     repeat(count) { i ->
-                        Box(Modifier.width(Bar - PillInset * 2).height(itemHeight)) { item(i) { onSelect(i) } }
+                        Box(Modifier.width(SideWidth - PillInset * 2).height(itemHeight)) { item(i) { onSelect(i) } }
                     }
                 }
             }
@@ -564,5 +564,7 @@ private fun VerticalPillGroup(
     }
 }
 
+/** The side bar's width: "Collections" fits on one line under its icon. */
+private val SideWidth = 84.dp
 private val SideTabItem = 62.dp
 private val SideZoomItem = 48.dp

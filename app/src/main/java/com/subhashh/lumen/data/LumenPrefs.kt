@@ -53,6 +53,19 @@ class LumenPrefs(context: Context) {
     }
 
     /** Search results' columns, separate from the Library's. */
+    // Wide windows (tablet, desktop mode) keep their own column choices: zooming the grid there
+    // mustn't change the phone's. Phone-equivalent values (see scaledColumns); a little larger
+    // photos by default, as a big screen is seen from further away.
+    var gridColumnsWide: Int
+        get() = prefs.getInt(KeyColumnsWide, 3)
+        set(value) = prefs.edit { putInt(KeyColumnsWide, value) }
+    var searchColumnsWide: Int
+        get() = prefs.getInt(KeySearchColumnsWide, 3)
+        set(value) = prefs.edit { putInt(KeySearchColumnsWide, value) }
+    var albumColumnsWide: Int
+        get() = prefs.getInt(KeyAlbumColumnsWide, 2)
+        set(value) = prefs.edit { putInt(KeyAlbumColumnsWide, value) }
+
     var searchColumns: Int
         get() = prefs.getInt(KeySearchColumns, 4)
         set(value) = prefs.edit { putInt(KeySearchColumns, value) }
@@ -499,6 +512,9 @@ class LumenPrefs(context: Context) {
         const val KeyColumns = "grid_columns"
         const val KeyAlbumColumns = "album_columns"
         const val KeySearchColumns = "search_columns"
+        const val KeyColumnsWide = "grid_columns_wide"
+        const val KeyAlbumColumnsWide = "album_columns_wide"
+        const val KeySearchColumnsWide = "search_columns_wide"
         const val KeyRecentSearches = "recent_searches"
         const val MaxRecentSearches = 8
         const val KeyFilter = "library_filter"

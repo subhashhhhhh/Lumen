@@ -153,6 +153,7 @@ internal fun BoxScope.MainPages(
         // A page is drawn for a [PageNav], not for "where the app is now": in the Material style
         // the page to go back to is drawn too, under the one on top.
         val material = com.subhashh.lumen.ui.theme.Lumen.material
+        val wideWindow = com.subhashh.lumen.ui.components.isWideWindow()
         val page: @Composable (PageNav) -> Unit = { nav ->
             when {
                 nav.searching -> SearchScreen(
@@ -212,7 +213,7 @@ internal fun BoxScope.MainPages(
                     columns = searchColumns,
                     onColumnsChange = {
                         searchColumns = it
-                        prefs.searchColumns = it
+                        if (wideWindow) prefs.searchColumnsWide = it else prefs.searchColumns = it
                     },
                 )
                 library == null -> Unit
