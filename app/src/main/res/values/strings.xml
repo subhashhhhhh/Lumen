@@ -455,6 +455,10 @@
     <string name="backup_item_people">People</string>
     <string name="backup_item_search">Search Index</string>
     <string name="backup_item_text">Text Index</string>
+    <string name="backup_item_photos">Photos and Videos</string>
+    <string name="backup_item_hidden">Encrypted Hidden</string>
+    <string name="backup_step_photos">Restoring photos and videos…</string>
+    <string name="backup_step_hidden">Restoring Encrypted Hidden…</string>
     <string name="backup_now">Back Up Now</string>
     <string name="backup_last">Last backup %1$s</string>
     <string name="backup_never">Not backed up yet</string>

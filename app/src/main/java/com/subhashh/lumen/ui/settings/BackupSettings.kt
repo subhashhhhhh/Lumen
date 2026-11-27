@@ -125,7 +125,7 @@ internal fun BackupGroup(highlight: String?, onConfirm: (Confirmation) -> Unit) 
         )
         for (item in LumenBackup.Item.entries) {
             Divider()
-            var on by remember { mutableStateOf(prefs.getBoolean(item.key, true)) }
+            var on by remember { mutableStateOf(prefs.getBoolean(item.key, item.defaultOn)) }
             ToggleRow(
                 title = stringResource(item.label),
                 checked = on,
@@ -146,7 +146,7 @@ internal fun BackupGroup(highlight: String?, onConfirm: (Confirmation) -> Unit) 
             onClick = if (p != null) null else ({
                 message = null
                 scope.launch {
-                    val items = LumenBackup.Item.entries.filter { prefs.getBoolean(it.key, true) }.toSet()
+                    val items = LumenBackup.Item.entries.filter { prefs.getBoolean(it.key, it.defaultOn) }.toSet()
                     progress = LumenBackup.Progress(R.string.backup_step_preparing, 0, 0)
                     message = runCatching { LumenBackup.backUp(context, items) { progress = it } }
                         .fold(

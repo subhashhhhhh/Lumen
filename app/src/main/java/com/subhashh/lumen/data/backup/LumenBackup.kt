@@ -52,12 +52,16 @@ import kotlin.coroutines.coroutineContext
  */
 object LumenBackup {
     /** What can be backed up in stage 1. [key] is stored in snapshots: never rename it. */
-    enum class Item(val key: String, @StringRes val label: Int) {
+    enum class Item(val key: String, @StringRes val label: Int, val defaultOn: Boolean = true) {
         Settings("settings", R.string.backup_item_settings),
         Captions("captions", R.string.backup_item_captions),
         People("people", R.string.backup_item_people),
         SearchIndex("search", R.string.backup_item_search),
         TextIndex("text", R.string.backup_item_text),
+        /** The library's photos and videos (excluded folders left out). Big, so off until chosen. */
+        Photos("photos", R.string.backup_item_photos, defaultOn = false),
+        /** Encrypted Hidden: the vault's files as they are (already encrypted with its password). */
+        Hidden("vault", R.string.backup_item_hidden, defaultOn = false),
     }
 
     private const val Format = 1
@@ -252,29 +256,65 @@ object LumenBackup {
         try {
             val library = MediaRepository(context).loadLibrary()
             val sources = sources(context, items, library, work)
-            val total = sources.sumOf { it.second.length() }
+            val exclusions = com.subhashh.lumen.data.LumenPrefs(context).exclusions
+            val photos = if (Item.Photos in items) library.filterNot { exclusions.covers(it) } else emptyList()
+            val vaultFiles = if (Item.Hidden in items) vaultFiles() else emptyList()
+            val total = sources.sumOf { it.second.length() } + photos.sumOf { it.size } + vaultFiles.sumOf { it.length() }
             var done = 0L
             var uploaded = 0L
             val store = ChunkStore(target)
-            val files = JSONObject()
-            for ((name, file) in sources) {
-                coroutineContext.ensureActive()
+            val catalog = Catalog.load(context, target.config.id)
+            val step = Progress(R.string.backup_step_uploading, 0, total)
+            fun upload(open: () -> java.io.InputStream?): JSONArray? {
                 val chunks = JSONArray()
-                FileInputStream(file).use { input ->
+                (open() ?: return null).use { input ->
                     val buffer = ByteArray(ChunkBytes)
                     while (true) {
                         val n = readFully(input, buffer)
                         if (n <= 0) break
-                        val chunk = if (n == ChunkBytes) buffer.copyOf() else buffer.copyOf(n)
-                        val (id, written) = store.put(chunk)
+                        val (id, written) = store.put(if (n == ChunkBytes) buffer.copyOf() else buffer.copyOf(n))
                         chunks.put(id)
                         uploaded += written
                         done += n
-                        progress(Progress(R.string.backup_step_uploading, done, total))
+                        progress(step.copy(done = done))
                     }
                 }
-                files.put(name, JSONObject().put("size", file.length()).put("chunks", chunks))
+                return chunks
             }
+            /** Like [upload], but a file unchanged since the last backup reuses its chunks unread (Time Machine). */
+            fun uploadKnown(key: String, size: Long, open: () -> java.io.InputStream?): JSONArray? {
+                catalog[key]?.takeIf { known -> known.all(store::has) }?.let { known ->
+                    done += size
+                    progress(step.copy(done = done))
+                    return JSONArray(known)
+                }
+                return upload(open)?.also { chunks -> catalog[key] = (0 until chunks.length()).map(chunks::getString) }
+            }
+            val files = JSONObject()
+            for ((name, file) in sources) {
+                coroutineContext.ensureActive()
+                files.put(name, JSONObject().put("size", file.length()).put("chunks", upload { FileInputStream(file) }))
+            }
+            // Photos and videos, read as originals (with their location, where Lumen may read it).
+            val readOriginals = context.checkSelfPermission(android.Manifest.permission.ACCESS_MEDIA_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED
+            val photoRows = JSONArray()
+            for (item in photos) {
+                coroutineContext.ensureActive()
+                val chunks = runCatching {
+                    uploadKnown("m|${item.id}|${item.size}|${item.modified}", item.size) {
+                        val uri = if (readOriginals && com.subhashh.lumen.data.ExternalMedia.isMediaStore(item.uri)) android.provider.MediaStore.setRequireOriginal(item.uri) else item.uri
+                        runCatching { context.contentResolver.openInputStream(uri) }.getOrNull() ?: context.contentResolver.openInputStream(item.uri)
+                    }
+                }.getOrNull() ?: continue // gone or unreadable since the library was listed: next time
+                photoRows.put(JSONArray().put(item.relativePath).put(item.name).put(item.size).put(item.takenAt).put(item.mimeType).put(chunks))
+            }
+            val vaultRows = JSONArray()
+            for (file in vaultFiles) {
+                coroutineContext.ensureActive()
+                val chunks = runCatching { uploadKnown("v|${file.name}|${file.length()}|${file.lastModified()}", file.length()) { file.inputStream() } }.getOrNull() ?: continue
+                vaultRows.put(JSONArray().put(file.name).put(file.length()).put(chunks))
+            }
+            catalog.save()
             // Which photo each id was here, so a restore can find them again on another phone.
             val media = JSONArray()
             for (item in library) media.put(JSONArray().put(item.id).put(item.relativePath).put(item.name).put(item.size).put(item.takenAt))
@@ -288,7 +328,10 @@ object LumenBackup {
                 .put("searchModel", runCatching { com.subhashh.lumen.ai.ModelDownloads.installed(context)?.id }.getOrNull())
                 .put("files", files)
                 .put("media", media)
-            val bytes = snapshot.toString().toByteArray()
+            if (Item.Photos in items) snapshot.put("photos", photoRows)
+            if (Item.Hidden in items) snapshot.put("vault", vaultRows)
+            // Compressed: with tens of thousands of photos the list runs to megabytes.
+            val bytes = gzip(snapshot.toString().toByteArray())
             val dir = target.folder.dir(target.dirId, "snapshots")
             target.folder.write(dir, "$stamp.snap", target.keys?.let { VaultCrypto.seal(it.data, bytes) } ?: bytes)
             prefs(context).edit { putLong("last", System.currentTimeMillis()).putLong("last-size", total) }
@@ -299,6 +342,46 @@ object LumenBackup {
     }
 
     fun lastBackup(context: Context): Long = prefs(context).getLong("last", 0L)
+
+    private fun vaultFiles(): List<File> =
+        runCatching { com.subhashh.lumen.data.vault.Vault.dir().listFiles { f -> f.isFile }.orEmpty().toList() }.getOrDefault(emptyList())
+
+    private fun gzip(bytes: ByteArray): ByteArray =
+        java.io.ByteArrayOutputStream().also { out -> java.util.zip.GZIPOutputStream(out).use { it.write(bytes) } }.toByteArray()
+
+    /** A snapshot's text: compressed since stage 2, plain before. */
+    private fun ungzip(bytes: ByteArray): ByteArray =
+        if (bytes.size > 2 && bytes[0] == 0x1f.toByte() && bytes[1] == 0x8b.toByte()) java.util.zip.GZIPInputStream(bytes.inputStream()).use { it.readBytes() } else bytes
+
+    /**
+     * What each photo, video and vault file became in the last backups to this folder: its id,
+     * size and modified date → its chunks. A file that hasn't changed reuses them without being
+     * read again, so a backup of 40,000 photos with 10 new ones reads 10.
+     */
+    private class Catalog(private val file: File, private val entries: HashMap<String, List<String>>) {
+        operator fun get(key: String) = entries[key]
+        operator fun set(key: String, chunks: List<String>) { entries[key] = chunks }
+
+        fun save() {
+            val json = JSONObject()
+            for ((k, v) in entries) json.put(k, JSONArray(v))
+            val tmp = File(file.path + ".tmp")
+            tmp.writeBytes(gzip(json.toString().toByteArray()))
+            tmp.renameTo(file)
+        }
+
+        companion object {
+            fun load(context: Context, backupId: String): Catalog {
+                val file = File(context.noBackupFilesDir, "backup-catalog-$backupId.json.gz")
+                val entries = HashMap<String, List<String>>()
+                runCatching {
+                    val json = JSONObject(String(ungzip(file.readBytes())))
+                    for (k in json.keys()) json.getJSONArray(k).let { a -> entries[k] = (0 until a.length()).map(a::getString) }
+                }
+                return Catalog(file, entries)
+            }
+        }
+    }
 
     /** Fills [buffer] as far as the stream goes (readNBytes is Android 13+); the count read. */
     private fun readFully(input: java.io.InputStream, buffer: ByteArray): Int {
@@ -315,6 +398,11 @@ object LumenBackup {
     private class ChunkStore(private val target: Target) {
         private val data = target.folder.dir(target.dirId, "data")
         private val dirs = HashMap<String, String>()
+
+        fun has(name: String): Boolean {
+            val dir = dirs.getOrPut(name.take(2)) { target.folder.dir(data, name.take(2)) }
+            return target.folder.child(dir, name) != null
+        }
 
         /** Stores [plain] unless it's there; its name and the bytes written (0 if it was there). */
         fun put(plain: ByteArray): Pair<String, Long> {
@@ -424,7 +512,7 @@ object LumenBackup {
         target.folder.list(dir).filterKeys { it.endsWith(".snap") }.mapNotNull { (name, id) ->
             runCatching {
                 val raw = target.folder.read(id)
-                val json = JSONObject(String(target.keys?.let { VaultCrypto.open(it.data, raw) } ?: raw))
+                val json = JSONObject(String(ungzip(target.keys?.let { VaultCrypto.open(it.data, raw) } ?: raw)))
                 val items = json.getJSONArray("items").let { a -> (0 until a.length()).mapNotNull { i -> Item.entries.firstOrNull { it.key == a.getString(i) } } }
                 Snapshot(name.removeSuffix(".snap"), json.getLong("created"), json.optString("device"), items, json)
             }.getOrNull()
@@ -462,6 +550,13 @@ object LumenBackup {
                     progress(Progress(R.string.backup_step_downloading, done, total))
                 }
             }
+        }
+        // Photos, videos and vault files first, so restored photos are found when ids are matched.
+        if (Item.Photos in items) snapshot.json.optJSONArray("photos")?.let { rows ->
+            MediaRestore.photos(context, rows, store::get) { d, t -> progress(Progress(R.string.backup_step_photos, d, t)) }
+        }
+        if (Item.Hidden in items) snapshot.json.optJSONArray("vault")?.let { rows ->
+            MediaRestore.vault(context, rows, store::get) { d, t -> progress(Progress(R.string.backup_step_hidden, d, t)) }
         }
         progress(Progress(R.string.backup_step_matching, 0, 0))
         val map = RestoreStaging.matchMedia(snapshot.json.getJSONArray("media"), MediaRepository(context).loadLibrary().associateBy({ it.id }) { it })
