@@ -40,6 +40,8 @@ object BackupRunner {
         val paused: Boolean = false,
         /** What the last backup did, for Settings ("Backed up 20 GB; 15 kB of it new"). */
         val result: String? = null,
+        /** A restore, not a backup. */
+        val restoring: Boolean = false,
     ) {
         val running: Boolean get() = progress != null
     }
@@ -52,6 +54,21 @@ object BackupRunner {
         _state.value = State(LumenBackup.Progress(R.string.backup_step_preparing, 0, 0))
         context.startForegroundService(Intent(context, BackupService::class.java).setAction(BackupService.Start))
     }
+
+    private var pendingRestore: Pair<LumenBackup.Snapshot, Set<LumenBackup.Item>>? = null
+
+    /**
+     * Restores [snapshot] in [BackupService], so it carries on if Settings closes. When it's
+     * staged, Lumen restarts to put it in place (or, if Lumen isn't on screen, at its next start).
+     */
+    fun restore(context: Context, snapshot: LumenBackup.Snapshot, items: Set<LumenBackup.Item>) {
+        if (_state.value.running) return
+        pendingRestore = snapshot to items
+        _state.value = State(LumenBackup.Progress(R.string.backup_step_preparing, 0, 0), restoring = true)
+        context.startForegroundService(Intent(context, BackupService::class.java).setAction(BackupService.Restore))
+    }
+
+    internal fun takeRestore() = pendingRestore.also { pendingRestore = null }
 
     fun pause() = _state.update { if (it.running) it.copy(paused = true) else it }
     fun resume() = _state.update { it.copy(paused = false) }
@@ -83,6 +100,7 @@ class BackupService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             Start -> begin()
+            Restore -> beginRestore()
             Pause -> BackupRunner.pause()
             Resume -> BackupRunner.resume()
             Stop -> {
@@ -94,19 +112,7 @@ class BackupService : Service() {
     }
 
     private fun begin() {
-        startForeground(Id, notification(BackupRunner.state.value), ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
-        if (job != null) return
-        // The notification follows progress and pause, at most twice a second.
-        watcher = scope.launch {
-            var shown = 0L
-            BackupRunner.state.collect { state ->
-                if (!state.running) return@collect
-                val now = SystemClock.elapsedRealtime()
-                if (now - shown < 500 && !state.paused) return@collect
-                shown = now
-                getSystemService(NotificationManager::class.java).notify(Id, notification(state))
-            }
-        }
+        if (!startWatching()) return
         job = scope.launch {
             val choices = getSharedPreferences("lumen-backup-choices", 0)
             val items = LumenBackup.Item.entries.filter { choices.getBoolean(it.key, it.defaultOn) }.toSet()
@@ -126,6 +132,62 @@ class BackupService : Service() {
             job = null
             stopSelf()
         }
+    }
+
+    /** Goes foreground with the notification, which then follows progress; false if a job is running already. */
+    private fun startWatching(): Boolean {
+        startForeground(Id, notification(BackupRunner.state.value), ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+        if (job != null) return false
+        // The notification follows progress and pause, at most twice a second.
+        watcher = scope.launch {
+            var shown = 0L
+            BackupRunner.state.collect { state ->
+                if (!state.running) return@collect
+                val now = SystemClock.elapsedRealtime()
+                if (now - shown < 500 && !state.paused) return@collect
+                shown = now
+                getSystemService(NotificationManager::class.java).notify(Id, notification(state))
+            }
+        }
+        return true
+    }
+
+    private fun beginRestore() {
+        val (snapshot, items) = BackupRunner.takeRestore() ?: run { if (job == null) stopSelf(); return }
+        if (!startWatching()) return
+        job = scope.launch {
+            val failure = try {
+                LumenBackup.stageRestore(this@BackupService, snapshot, items, gate = BackupRunner::gate, progress = BackupRunner::progress)
+                null
+            } catch (e: CancellationException) {
+                getString(R.string.backup_restore_stopped)
+            } catch (e: Exception) {
+                getString(R.string.backup_restore_failed, e.message ?: e.javaClass.simpleName)
+            }
+            watcher?.cancel()
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            if (failure != null) {
+                // Nothing was put in place; a staged part is cleared at the next start.
+                BackupRunner.finished(failure)
+                getSystemService(NotificationManager::class.java).notify(DoneId, finishedNotification(failure))
+                job = null
+                stopSelf()
+                return@launch
+            }
+            // Staged: Lumen restarts and puts it in place before anything opens a database.
+            if (onScreen()) {
+                startActivity(Intent.makeRestartActivityTask(android.content.ComponentName(this@BackupService, GalleryActivity::class.java)))
+            } else {
+                getSystemService(NotificationManager::class.java).notify(DoneId, finishedNotification(getString(R.string.backup_restore_ready)))
+            }
+            Runtime.getRuntime().exit(0)
+        }
+    }
+
+    private fun onScreen(): Boolean {
+        val info = android.app.ActivityManager.RunningAppProcessInfo()
+        android.app.ActivityManager.getMyMemoryState(info)
+        return info.importance <= android.app.ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND
     }
 
     override fun onTimeout(startId: Int, fgsType: Int) {
@@ -166,7 +228,16 @@ class BackupService : Service() {
         }
         return NotificationCompat.Builder(this, Channel)
             .setSmallIcon(R.drawable.ic_launcher_monochrome)
-            .setContentTitle(getString(if (state.paused) R.string.backup_notification_paused else R.string.backup_notification_title))
+            .setContentTitle(
+                getString(
+                    when {
+                        state.restoring && state.paused -> R.string.backup_notification_restore_paused
+                        state.restoring -> R.string.backup_notification_restoring
+                        state.paused -> R.string.backup_notification_paused
+                        else -> R.string.backup_notification_title
+                    },
+                ),
+            )
             .setContentText(text)
             .setProgress(100, percent, p == null || p.total == 0L)
             .setOngoing(true)
@@ -195,6 +266,7 @@ class BackupService : Service() {
 
     companion object {
         const val Start = "start"
+        const val Restore = "restore"
         const val Pause = "pause"
         const val Resume = "resume"
         const val Stop = "stop"

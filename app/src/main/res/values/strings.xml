@@ -481,6 +481,11 @@
     <string name="backup_notification_paused">Backup paused</string>
     <string name="backup_notification_progress">%1$s of %2$s</string>
     <string name="backup_notification_done">Backup</string>
+    <string name="backup_notification_restoring">Restoring</string>
+    <string name="backup_notification_restore_paused">Restore paused</string>
+    <string name="backup_restore_stopped">Restore stopped. Lumen\'s data wasn\'t replaced; photos already put back stay.</string>
+    <string name="backup_restore_failed">Restore failed: %1$s</string>
+    <string name="backup_restore_ready">Restore ready. Open Lumen to finish.</string>
     <string name="backup_config_unreadable">There\'s a Lumen backup here, but its settings file can\'t be read.</string>
     <string name="backup_already_here">There\'s already a Lumen backup here.</string>
     <string name="backup_where_title">Back Up To</string>

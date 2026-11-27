@@ -91,8 +91,6 @@ internal fun BackupGroup(highlight: String?, onConfirm: (Confirmation) -> Unit) 
     var setUpEncrypted by remember { mutableStateOf(true) }
     var asking by remember { mutableStateOf<Ask?>(null) }
     var recoveryShown by remember { mutableStateOf<String?>(null) }
-    // A restore's progress; a backup's comes from BackupRunner (it runs in BackupService).
-    var restoreProgress by remember { mutableStateOf<LumenBackup.Progress?>(null) }
     var message by remember { mutableStateOf(LumenBackup.takeNote(context)) }
     var restoring by remember { mutableStateOf<List<LumenBackup.Snapshot>?>(null) }
     var unlockError by remember { mutableStateOf<String?>(null) }
@@ -187,8 +185,8 @@ internal fun BackupGroup(highlight: String?, onConfirm: (Confirmation) -> Unit) 
             )
         }
         Divider()
-        val p = restoreProgress ?: running.progress
-        val busy = p != null
+        val p = running.progress?.takeIf { !running.restoring }
+        val busy = running.running
         val last = remember(version) { LumenBackup.lastBackup(context) }
         SettingsRow(
             title = stringResource(R.string.backup_now),
@@ -223,8 +221,15 @@ internal fun BackupGroup(highlight: String?, onConfirm: (Confirmation) -> Unit) 
             )
         }
         Divider()
+        val r = running.progress?.takeIf { running.restoring }
         SettingsRow(
             title = stringResource(R.string.backup_restore),
+            subtitle = when {
+                r == null -> null
+                running.paused && r.total > 0 -> context.getString(R.string.backup_paused_at, (r.done * 100 / r.total).toInt())
+                r.total > 0 -> "${context.getString(r.step)} ${(r.done * 100 / r.total).toInt()}%"
+                else -> context.getString(r.step)
+            },
             onClick = if (busy) null else ({
                 scope.launch { restoring = LumenBackup.snapshots(context) }
             }),
@@ -343,16 +348,9 @@ internal fun BackupGroup(highlight: String?, onConfirm: (Confirmation) -> Unit) 
                     confirm = context.getString(R.string.backup_restore_go),
                     destructive = true,
                 ) {
-                    scope.launch {
-                        val ok = runCatching { LumenBackup.stageRestore(context, snapshot, snapshot.items.toSet()) { restoreProgress = it } }
-                        restoreProgress = null
-                        ok.onSuccess {
-                            // Lumen starts again; the restore goes in before anything opens a database.
-                            val intent = Intent.makeRestartActivityTask(android.content.ComponentName(context, com.subhashh.lumen.GalleryActivity::class.java))
-                            context.startActivity(intent)
-                            Runtime.getRuntime().exit(0)
-                        }.onFailure { message = context.getString(R.string.backup_failed, it.message ?: it.javaClass.simpleName) }
-                    }
+                    message = null
+                    // In BackupService: it carries on if Settings closes, then Lumen restarts.
+                    BackupRunner.restore(context, snapshot, snapshot.items.toSet())
                 },
             )
         }
