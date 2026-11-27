@@ -77,6 +77,7 @@ internal fun BackupGroup(highlight: String?, onConfirm: (Confirmation) -> Unit) 
     var progress by remember { mutableStateOf<LumenBackup.Progress?>(null) }
     var message by remember { mutableStateOf<String?>(null) }
     var restoring by remember { mutableStateOf<List<LumenBackup.Snapshot>?>(null) }
+    var unlockError by remember { mutableStateOf<String?>(null) }
 
     val pick = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
@@ -214,11 +215,13 @@ internal fun BackupGroup(highlight: String?, onConfirm: (Confirmation) -> Unit) 
             message = stringResource(R.string.backup_unlock_message),
             confirmField = false,
             allowRecovery = true,
-            onDismiss = { asking = null },
+            error = unlockError,
+            onDismiss = { asking = null; unlockError = null },
         ) { password, recovery ->
+            unlockError = null
             scope.launch {
                 val ok = LumenBackup.connect(context, picked ?: return@launch, password, recovery)
-                if (ok) { asking = null; version++ } else message = context.getString(R.string.backup_unlock_wrong)
+                if (ok) { asking = null; message = null; version++ } else unlockError = context.getString(R.string.backup_unlock_wrong)
             }
         }
         Ask.ChangePassword -> PasswordDialog(
@@ -274,6 +277,7 @@ private fun PasswordDialog(
     onDismiss: () -> Unit,
     allowSkip: Boolean = false,
     allowRecovery: Boolean = false,
+    error: String? = null,
     onSkip: () -> Unit = {},
     onDone: (password: String?, recoveryKey: String?) -> Unit,
 ) {
@@ -291,6 +295,9 @@ private fun PasswordDialog(
             if (confirmField && !recovery) {
                 Spacer(Modifier.height(8.dp))
                 Field(second, { second = it }, stringResource(R.string.backup_password_again), secret = true)
+            }
+            if (error != null) {
+                Text(error, color = Lumen.colors.destructive, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp, start = 20.dp, end = 20.dp))
             }
             if (!recovery && confirmField && first.isNotEmpty() && first.length < 8) {
                 Text(stringResource(R.string.backup_password_short), color = Lumen.colors.destructive, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp, start = 20.dp, end = 20.dp))

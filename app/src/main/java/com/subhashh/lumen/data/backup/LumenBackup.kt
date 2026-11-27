@@ -145,6 +145,8 @@ object LumenBackup {
             keepKey(context, config.id, key)
         }
         use(context, tree, config)
+        // "Last backup" from the folder's newest one, not from this phone's memory.
+        snapshots(context).firstOrNull()?.let { prefs(context).edit { putLong("last", it.created) } }
         true
     }
 
