@@ -343,4 +343,35 @@ class LumenBackupTest {
         assertFalse("the old log would be applied to the restored database", wal.exists())
         assertFalse(staging.exists())
     }
+
+    private fun stageCrops(pack: (File) -> Unit) {
+        val staging = RestoreStaging.dir(context).apply { deleteRecursively(); mkdirs() }
+        pack(File(staging, "faces.pack"))
+        File(staging, "manifest.json").writeText(JSONObject().put("searchModel", JSONObject.NULL).toString())
+    }
+
+    @Test
+    fun aDamagedCropsPackLeavesTheOldCropsAlone() {
+        val crops = File(context.noBackupFilesDir, "faces").apply { deleteRecursively(); mkdirs() }
+        File(crops, "1.jpg").writeText("old crop")
+        stageCrops { pack(it, "2.jpg" to ByteArray(500), cutLast = 100) }
+        RestoreStaging.apply(context)
+        assertEquals("old crop", File(crops, "1.jpg").readText())
+        assertFalse(File(crops, "2.jpg").exists())
+        assertFalse(RestoreStaging.dir(context).exists())
+    }
+
+    @Test
+    fun aGoodCropsPackReplacesTheOldCropsEntirely() {
+        val crops = File(context.noBackupFilesDir, "faces").apply { deleteRecursively(); mkdirs() }
+        File(crops, "1.jpg").writeText("old crop")
+        val restored = Random(3).nextBytes(3000)
+        stageCrops { pack(it, "2.jpg" to restored) }
+        RestoreStaging.apply(context)
+        assertArrayEquals(restored, File(crops, "2.jpg").readBytes())
+        // The restore is the crops as they were then: one only here isn't kept.
+        assertFalse(File(crops, "1.jpg").exists())
+        assertFalse(File(context.noBackupFilesDir, "faces.new").exists())
+        assertFalse(File(context.noBackupFilesDir, "faces.old").exists())
+    }
 }
