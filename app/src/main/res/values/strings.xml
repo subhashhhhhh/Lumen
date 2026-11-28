@@ -1068,6 +1068,8 @@
     <string name="smart_import_duplicate">The selection contains duplicate model files</string>
     <string name="smart_import_io">Could not read or save the selection</string>
     <string name="smart_import_rollback">Could not restore all model files after the import failed.</string>
+    <string name="smart_import_cancelled">Model import was cancelled. Check the model status before trying again.</string>
+    <string name="smart_import_activation_failed">The verified files were installed, but Lumen could not finish checking or activating the models.</string>
     <string name="smart_index_on_battery">Index on Battery</string>
     <string name="smart_pause_title">Pause Indexing</string>
     <string name="smart_pause_until">Until %1$s</string>

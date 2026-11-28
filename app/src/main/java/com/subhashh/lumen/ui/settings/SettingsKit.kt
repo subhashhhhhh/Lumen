@@ -434,7 +434,7 @@ internal fun ActionRow(
     title: String,
     action: ImageVector,
     actionLabel: String,
-    onAction: () -> Unit,
+    onAction: (() -> Unit)?,
     subtitle: String? = null,
     destructive: Boolean = false,
     icon: ImageVector? = null,
