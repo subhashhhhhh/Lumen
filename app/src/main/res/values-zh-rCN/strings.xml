@@ -1042,4 +1042,26 @@
     <string name="settings_reminder_no_note">无描述</string>
     <string name="settings_reminder_cancel_title">取消此提醒？</string>
     <string name="settings_reminder_cancel">取消提醒</string>
+    <string name="smart_import_files">导入模型</string>
+    <string name="smart_import_help">从设备中选择模型文件或 ZIP 压缩包。</string>
+    <string name="smart_import_working">正在校验模型文件…</string>
+    <string name="smart_import_busy">模型文件正在使用中。请等待当前操作完成后重试。</string>
+    <string name="smart_import_result">模型导入结果</string>
+    <plurals name="smart_import_count">
+        <item quantity="other">已校验并导入 %d 个文件。</item>
+    </plurals>
+    <string name="smart_import_ready">已就绪的模型：%1$s</string>
+    <string name="smart_import_incomplete">请导入剩余文件以补全模型。</string>
+    <string name="smart_import_failed">未导入任何文件。</string>
+    <string name="smart_import_error">%1$s · %2$s</string>
+    <string name="smart_import_unknown">无法识别的模型文件</string>
+    <string name="smart_import_size">文件大小不符</string>
+    <string name="smart_import_checksum">SHA-256 校验不匹配</string>
+    <string name="smart_import_archive">ZIP 压缩包无效或不受支持</string>
+    <string name="smart_import_duplicate">选中的文件中包含重复的模型文件</string>
+    <string name="smart_import_io">无法读取或保存选中的文件</string>
+    <string name="smart_import_rollback">导入失败后，部分模型文件无法恢复。</string>
+    <string name="smart_import_cancelled">模型导入已取消。请检查模型状态后再试。</string>
+    <string name="smart_import_unexpected">模型导入意外停止。请检查模型状态后再试。</string>
+    <string name="smart_import_activation_failed">已安装通过校验的文件，但未能完成模型检查或激活。</string>
 </resources>
