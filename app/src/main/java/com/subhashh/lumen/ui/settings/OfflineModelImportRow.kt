@@ -45,7 +45,8 @@ internal fun OfflineModelImportRow(
         val message = when (val outcome = finished.outcome) {
             is ModelImportSession.Outcome.Imported -> importMessage(context, outcome.result)
             ModelImportSession.Outcome.Busy -> stringResource(R.string.smart_import_busy)
-            ModelImportSession.Outcome.Failed -> stringResource(R.string.smart_import_io)
+            ModelImportSession.Outcome.AccessFailed -> stringResource(R.string.smart_import_io)
+            ModelImportSession.Outcome.UnexpectedFailure -> stringResource(R.string.smart_import_unexpected)
             ModelImportSession.Outcome.Cancelled -> stringResource(R.string.smart_import_cancelled)
         }
         val dismiss = { session.dismiss(finished) }

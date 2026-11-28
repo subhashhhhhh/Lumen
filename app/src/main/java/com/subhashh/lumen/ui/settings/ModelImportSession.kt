@@ -2,6 +2,7 @@ package com.subhashh.lumen.ui.settings
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import com.subhashh.lumen.ai.ModelImports
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -10,6 +11,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.io.IOException
 import java.util.concurrent.atomic.AtomicLong
 
 /** Owns one import for the app process. Document grants and jobs are not restored after process death. */
@@ -28,7 +30,8 @@ internal class ModelImportSession(
     sealed interface Outcome {
         data class Imported(val result: ModelImports.Result) : Outcome
         data object Busy : Outcome
-        data object Failed : Outcome
+        data object AccessFailed : Outcome
+        data object UnexpectedFailure : Outcome
         data object Cancelled : Outcome
     }
 
@@ -50,13 +53,21 @@ internal class ModelImportSession(
                 importFiles(app, selection)?.let { Outcome.Imported(it) } ?: Outcome.Busy
             } catch (cancelled: CancellationException) {
                 throw cancelled
-            } catch (_: Exception) {
-                Outcome.Failed
+            } catch (failure: Exception) {
+                when (failure) {
+                    is IOException, is SecurityException, is IllegalArgumentException -> Outcome.AccessFailed
+                    else -> {
+                        // Provider exception messages and cause chains can contain document URIs.
+                        Log.w(Tag, "Unexpected import failure: ${failure.javaClass.name}")
+                        Outcome.UnexpectedFailure
+                    }
+                }
             }
             current.compareAndSet(running, State.Finished(running.task, outcome))
         }.invokeOnCompletion { failure ->
-            if (failure is CancellationException) {
-                current.compareAndSet(running, State.Finished(running.task, Outcome.Cancelled))
+            if (failure != null) {
+                val outcome = if (failure is CancellationException) Outcome.Cancelled else Outcome.UnexpectedFailure
+                current.compareAndSet(running, State.Finished(running.task, outcome))
             }
         }
     }
@@ -66,8 +77,9 @@ internal class ModelImportSession(
     }
 
     companion object {
+        private const val Tag = "ModelImportSession"
         val process = ModelImportSession(
-            CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate),
+            CoroutineScope(SupervisorJob() + Dispatchers.IO),
             ModelImports::importFiles,
         )
     }

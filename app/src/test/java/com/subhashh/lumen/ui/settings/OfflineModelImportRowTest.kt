@@ -19,6 +19,7 @@ import com.subhashh.lumen.ai.ModelPack
 import com.subhashh.lumen.ui.theme.LumenTheme
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -34,6 +35,7 @@ import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.GraphicsMode
+import org.robolectric.RuntimeEnvironment
 import java.io.FileNotFoundException
 import java.io.IOException
 
@@ -191,6 +193,7 @@ class OfflineModelImportRowTest {
             R.string.smart_import_io to { throw FileNotFoundException() },
             R.string.smart_import_io to { throw SecurityException() },
             R.string.smart_import_io to { throw IllegalArgumentException() },
+            R.string.smart_import_unexpected to { throw IllegalStateException("Unexpected provider failure") },
             R.string.smart_import_cancelled to { throw CancellationException() },
             R.string.smart_import_checksum to {
                 ModelImports.Result(0, ModelImports.Rejection("model.onnx", ModelImports.Error.ChecksumMismatch), emptySet())
@@ -226,6 +229,25 @@ class OfflineModelImportRowTest {
         } finally {
             controller.pause().stop().destroy()
         }
+    }
+
+    @Test fun unhandledFailureStillReleasesTheImportSlot() {
+        val app = RuntimeEnvironment.getApplication()
+        val failure = AssertionError("Simulated unhandled failure")
+        var reported: Throwable? = null
+        var calls = 0
+        val handler = CoroutineExceptionHandler { _, error -> reported = error }
+        val session = ModelImportSession(CoroutineScope(scope.coroutineContext + handler)) { _, _ ->
+            if (++calls == 1) throw failure
+            null
+        }
+        session.start(app, listOf(zip))
+        assertSame(failure, reported)
+        assertEquals(ModelImportSession.Outcome.UnexpectedFailure,
+            (session.state.value as ModelImportSession.State.Finished).outcome)
+        session.start(app, listOf(zip))
+        assertEquals(ModelImportSession.Outcome.Busy,
+            (session.state.value as ModelImportSession.State.Finished).outcome)
     }
 
     private fun assertMessage(message: String) {

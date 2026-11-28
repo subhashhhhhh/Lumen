@@ -1062,5 +1062,6 @@
     <string name="smart_import_io">无法读取或保存选中的文件</string>
     <string name="smart_import_rollback">导入失败后，部分模型文件无法恢复。</string>
     <string name="smart_import_cancelled">模型导入已取消。请检查模型状态后再试。</string>
+    <string name="smart_import_unexpected">模型导入意外停止。请检查模型状态后再试。</string>
     <string name="smart_import_activation_failed">已安装通过校验的文件，但未能完成模型检查或激活。</string>
 </resources>
