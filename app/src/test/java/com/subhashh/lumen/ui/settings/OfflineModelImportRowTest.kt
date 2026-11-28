@@ -25,6 +25,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Assert.assertSame
 import org.junit.After
@@ -36,6 +37,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.GraphicsMode
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.shadows.ShadowLog
 import java.io.FileNotFoundException
 import java.io.IOException
 
@@ -192,7 +194,7 @@ class OfflineModelImportRowTest {
             R.string.smart_import_io to { throw IOException() },
             R.string.smart_import_io to { throw FileNotFoundException() },
             R.string.smart_import_io to { throw SecurityException() },
-            R.string.smart_import_io to { throw IllegalArgumentException() },
+            R.string.smart_import_unexpected to { throw IllegalArgumentException("content://private/model.onnx") },
             R.string.smart_import_unexpected to { throw IllegalStateException("Unexpected provider failure") },
             R.string.smart_import_cancelled to { throw CancellationException() },
             R.string.smart_import_checksum to {
@@ -226,6 +228,10 @@ class OfflineModelImportRowTest {
                 compose.onNodeWithText(activity.getString(android.R.string.ok)).performClick()
                 assertEquals(ModelImportSession.State.Idle, session.state.value)
             }
+            val diagnostics = ShadowLog.getLogsForTag("ModelImportSession")
+            assertTrue(diagnostics.any { "IllegalArgumentException" in it.msg })
+            assertTrue(diagnostics.any { "SecurityException" in it.msg })
+            assertFalse(diagnostics.any { "content://private" in it.msg })
         } finally {
             controller.pause().stop().destroy()
         }

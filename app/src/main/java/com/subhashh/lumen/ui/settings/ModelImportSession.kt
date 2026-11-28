@@ -54,13 +54,12 @@ internal class ModelImportSession(
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (failure: Exception) {
+                // Record code locations only, since messages and causes can contain document URIs.
+                val location = failure.stackTrace.firstOrNull { it.className.startsWith("com.subhashh.lumen.") }
+                Log.w(Tag, "Import failed: ${failure.javaClass.name} at ${location?.className}:${location?.lineNumber}")
                 when (failure) {
-                    is IOException, is SecurityException, is IllegalArgumentException -> Outcome.AccessFailed
-                    else -> {
-                        // Provider exception messages and cause chains can contain document URIs.
-                        Log.w(Tag, "Unexpected import failure: ${failure.javaClass.name}")
-                        Outcome.UnexpectedFailure
-                    }
+                    is IOException, is SecurityException -> Outcome.AccessFailed
+                    else -> Outcome.UnexpectedFailure
                 }
             }
             current.compareAndSet(running, State.Finished(running.task, outcome))
